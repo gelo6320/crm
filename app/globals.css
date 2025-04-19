@@ -1,26 +1,166 @@
-@import "tailwindcss";
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary: #FF6B00;
+  --primary-hover: #FF8C38;
+  --secondary: #212121;
+  --text: #FFFFFF;
+  --dark-bg: #151515;
+  --light-accent: #333333;
+  --success: #27ae60;
+  --warning: #e67e22;
+  --danger: #e74c3c;
+  --info: #3498db;
+  --border: rgba(255, 255, 255, 0.1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    @apply bg-zinc-900 text-white antialiased;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-black/30;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary/50 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .btn {
+    @apply px-3 py-1.5 rounded font-medium text-sm transition-all duration-200;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-hover;
+  }
+  
+  .btn-outline {
+    @apply border border-zinc-700 hover:border-primary hover:bg-primary/10;
+  }
+  
+  .btn-success {
+    @apply bg-success/90 text-white hover:bg-success;
+  }
+  
+  .btn-danger {
+    @apply bg-danger/90 text-white hover:bg-danger;
+  }
+  
+  .card {
+    @apply bg-zinc-800 rounded-lg border border-zinc-700 shadow transition-all;
+  }
+  
+  .card-hover {
+    @apply hover:shadow-lg hover:-translate-y-1 hover:border-zinc-600;
+  }
+  
+  .input {
+    @apply bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary;
+  }
+  
+  .badge {
+    @apply px-2 py-0.5 text-xs font-medium rounded;
+  }
+  
+  .table-row {
+    @apply border-b border-zinc-800 hover:bg-zinc-800/50;
+  }
+  
+  /* Common status badges */
+  .badge-new { @apply bg-zinc-600 text-white; }
+  .badge-contacted { @apply bg-info text-white; }
+  .badge-qualified { @apply bg-primary text-white; }
+  .badge-opportunity { @apply bg-warning text-white; }
+  .badge-customer { @apply bg-success text-white; }
+  .badge-lost { @apply bg-danger text-white; }
+  .badge-pending { @apply bg-zinc-600 text-white; }
+  .badge-confirmed { @apply bg-primary text-white; }
+  .badge-completed { @apply bg-success text-white; }
+  .badge-cancelled { @apply bg-danger text-white; }
+  
+  /* Calendar styles */
+  .calendar-container {
+    @apply flex flex-col h-full;
+  }
+  
+  .day-cell {
+    @apply min-h-[5rem] border border-zinc-800 p-1 relative;
+  }
+  
+  .day-selected {
+    @apply bg-primary/10 border-primary;
+  }
+  
+  .day-today {
+    @apply bg-primary/5;
+  }
+  
+  .calendar-event {
+    @apply text-xs rounded px-1 py-0.5 mb-1 truncate cursor-pointer;
+  }
+  
+  /* Sales funnel column */
+  .funnel-column {
+    @apply flex flex-col min-w-[220px] bg-zinc-800 rounded-lg overflow-hidden;
+  }
+  
+  .funnel-header {
+    @apply p-2 flex justify-between items-center;
+  }
+  
+  .funnel-body {
+    @apply p-2 flex-1 overflow-y-auto max-h-[calc(100vh-200px)];
+  }
+  
+  .funnel-card {
+    @apply bg-zinc-900 rounded p-2 mb-2 border-l-4 border-primary shadow hover:shadow-md
+    transition-transform hover:-translate-y-0.5 cursor-grab;
+  }
+  
+  /* Dragging states */
+  .dragging {
+    @apply opacity-50 cursor-grabbing !important;
+  }
+  
+  .drag-over {
+    @apply bg-primary/10 !important;
+  }
+  
+  /* Modal styles */
+  .modal {
+    @apply fixed inset-0 z-50 flex items-center justify-center;
+  }
+  
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/60;
+  }
+  
+  .modal-content {
+    @apply bg-zinc-800 rounded-lg border border-zinc-700 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto;
+  }
+  
+  /* Transitions */
+  .fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }

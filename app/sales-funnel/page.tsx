@@ -1,0 +1,83 @@
+// app/sales-funnel/page.tsx
+"use client";
+
+import { useState, useEffect } from "react";
+import { RefreshCw } from "lucide-react";
+import FunnelBoard from "@/components/sales-funnel/FunnelBoard";
+import FunnelStats from "@/components/sales-funnel/FunnelStats";
+import { FunnelData, FunnelStats as FunnelStatsType } from "@/types";
+import { fetchFunnelData } from "@/lib/api/funnel";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+
+export default function SalesFunnelPage() {
+  const [funnelData, setFunnelData] = useState<FunnelData>({
+    new: [],
+    contacted: [],
+    qualified: [],
+    opportunity: [],
+    proposal: [],
+    customer: [],
+    lost: [],
+  });
+  
+  const [funnelStats, setFunnelStats] = useState<FunnelStatsType>({
+    totalLeads: 0,
+    conversionRate: 0,
+    potentialValue: 0,
+    realizedValue: 0,
+    lostValue: 0,
+    serviceDistribution: {},
+  });
+  
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    loadFunnelData();
+  }, []);
+  
+  const loadFunnelData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await fetchFunnelData();
+      setFunnelData(data.funnelData);
+      setFunnelStats(data.funnelStats);
+    } catch (error) {
+      console.error("Error loading funnel data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+  
+  return (
+    <div className="space-y-4 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-medium">Sales Funnel</h1>
+        <button 
+          onClick={loadFunnelData}
+          className="btn btn-outline p-1.5"
+          disabled={isLoading}
+        >
+          <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+        </button>
+      </div>
+      
+      <div className="flex flex-col xl:flex-row gap-4">
+        <div className="flex-1 overflow-x-auto pb-4">
+          <FunnelBoard 
+            funnelData={funnelData} 
+            setFunnelData={setFunnelData} 
+            onLeadMove={loadFunnelData}
+          />
+        </div>
+        
+        <div className="w-full xl:w-80 shrink-0">
+          <FunnelStats stats={funnelStats} />
+        </div>
+      </div>
+    </div>
+  );
+}
