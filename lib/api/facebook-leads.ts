@@ -1,7 +1,13 @@
 // lib/api/facebook-leads.ts
 import { Lead } from "@/types";
+import axios from "axios";
 
-// Mock data for demo purposes
+// Definisci un'URL base per le API
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+
+/**
+ * Recupera i lead Facebook dal server
+ */
 export async function fetchFacebookLeads(
   page = 1,
   status = "",
@@ -15,53 +21,70 @@ export async function fetchFacebookLeads(
     pages: number;
   };
 }> {
-  // In a real application, this would fetch from your API
-  
-  // Generate some mock data
-  const mockLeads: Lead[] = Array.from({ length: 20 }, (_, i) => ({
-    _id: `fb-${i + 1}`,
-    name: `Lead FB ${i + 1}`,
-    email: `lead${i + 1}@example.com`,
-    phone: `+39 3${i.toString().padStart(2, '0')}0 1234567`,
-    status: (i % 6 === 0) ? "new" : 
-           (i % 6 === 1) ? "contacted" : 
-           (i % 6 === 2) ? "qualified" : 
-           (i % 6 === 3) ? "opportunity" : 
-           (i % 6 === 4) ? "customer" : "lost",
-    source: "Facebook",
-    createdAt: new Date(2025, 0, 1 + i).toISOString(),
-    formId: `form-${5000 + i}`,
-    fbclid: `fb.1.${Date.now()}.${i}`,
-    crmEvents: [],
-  }));
-  
-  // Filter by status if provided
-  let filteredLeads = mockLeads;
-  if (status) {
-    filteredLeads = mockLeads.filter(lead => lead.status === status);
-  }
-  
-  // Filter by search query if provided
-  if (search) {
-    const lowerSearch = search.toLowerCase();
-    filteredLeads = filteredLeads.filter(lead => 
-      lead.name.toLowerCase().includes(lowerSearch) ||
-      lead.email.toLowerCase().includes(lowerSearch) ||
-      lead.phone.toLowerCase().includes(lowerSearch)
+  try {
+    // Costruisci l'URL con i parametri di query
+    const queryParams = new URLSearchParams();
+    queryParams.append("page", page.toString());
+    
+    if (status) {
+      queryParams.append("status", status);
+    }
+    
+    if (search) {
+      queryParams.append("search", search);
+    }
+    
+    // Effettua la richiesta al server
+    const response = await axios.get(
+      `${API_BASE_URL}/api/leads/facebook?${queryParams.toString()}`,
+      { withCredentials: true }
     );
+    
+    // Restituisci i dati ricevuti dal server
+    return response.data;
+  } catch (error) {
+    console.error("Errore durante il recupero dei lead Facebook:", error);
+    
+    // In caso di errore, restituisci un oggetto vuoto con la struttura corretta
+    return {
+      data: [],
+      pagination: {
+        total: 0,
+        page,
+        limit: 10,
+        pages: 0,
+      },
+    };
   }
-  
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredLeads.length / 10);
-  const paginatedLeads = filteredLeads.slice((page - 1) * 10, page * 10);
-  
-  return {
-    data: paginatedLeads,
-    pagination: {
-      total: filteredLeads.length,
-      page,
-      limit: 10,
-      pages: totalPages,
-    },
-  };
+}
+
+/**
+ * Aggiorna lo stato di un lead Facebook
+ */
+export async function updateFacebookLeadStatus(
+  id: string,
+  newStatus: string,
+  eventName: string,
+  eventMetadata: any = {}
+): Promise<{
+  success: boolean;
+  data: Lead;
+  facebookResult: any;
+}> {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/api/leads/facebook/${id}/update`,
+      {
+        newStatus,
+        eventName,
+        eventMetadata
+      },
+      { withCredentials: true }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error("Errore durante l'aggiornamento del lead Facebook:", error);
+    throw error;
+  }
 }

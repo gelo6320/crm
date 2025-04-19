@@ -1,7 +1,13 @@
 // lib/api/forms.ts
 import { Lead } from "@/types";
+import axios from "axios";
 
-// Mock data for demo purposes
+// Definisci un'URL base per le API
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+
+/**
+ * Recupera i dati dei form dal server
+ */
 export async function fetchForms(
   page = 1,
   status = "",
@@ -15,51 +21,70 @@ export async function fetchForms(
     pages: number;
   };
 }> {
-  // In a real application, this would fetch from your API
-  
-  // Generate some mock data
-  const mockForms: Lead[] = Array.from({ length: 20 }, (_, i) => ({
-    _id: `form-${i + 1}`,
-    name: `Cliente ${i + 1}`,
-    email: `cliente${i + 1}@example.com`,
-    phone: `+39 3${i.toString().padStart(2, '0')}0 1234567`,
-    status: (i % 6 === 0) ? "new" : 
-           (i % 6 === 1) ? "contacted" : 
-           (i % 6 === 2) ? "qualified" : 
-           (i % 6 === 3) ? "opportunity" : 
-           (i % 6 === 4) ? "customer" : "lost",
-    source: (i % 3 === 0) ? "Website" : (i % 3 === 1) ? "Facebook" : "Google",
-    createdAt: new Date(2025, 0, 1 + i).toISOString(),
-    crmEvents: [],
-  }));
-  
-  // Filter by status if provided
-  let filteredForms = mockForms;
-  if (status) {
-    filteredForms = mockForms.filter(form => form.status === status);
-  }
-  
-  // Filter by search query if provided
-  if (search) {
-    const lowerSearch = search.toLowerCase();
-    filteredForms = filteredForms.filter(form => 
-      form.name.toLowerCase().includes(lowerSearch) ||
-      form.email.toLowerCase().includes(lowerSearch) ||
-      form.phone.toLowerCase().includes(lowerSearch)
+  try {
+    // Costruisci l'URL con i parametri di query
+    const queryParams = new URLSearchParams();
+    queryParams.append("page", page.toString());
+    
+    if (status) {
+      queryParams.append("status", status);
+    }
+    
+    if (search) {
+      queryParams.append("search", search);
+    }
+    
+    // Effettua la richiesta al server
+    const response = await axios.get(
+      `${API_BASE_URL}/api/leads/forms?${queryParams.toString()}`,
+      { withCredentials: true }
     );
+    
+    // Restituisci i dati ricevuti dal server
+    return response.data;
+  } catch (error) {
+    console.error("Errore durante il recupero dei form:", error);
+    
+    // In caso di errore, restituisci un oggetto vuoto con la struttura corretta
+    return {
+      data: [],
+      pagination: {
+        total: 0,
+        page,
+        limit: 10,
+        pages: 0,
+      },
+    };
   }
-  
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredForms.length / 10);
-  const paginatedForms = filteredForms.slice((page - 1) * 10, page * 10);
-  
-  return {
-    data: paginatedForms,
-    pagination: {
-      total: filteredForms.length,
-      page,
-      limit: 10,
-      pages: totalPages,
-    },
-  };
+}
+
+/**
+ * Aggiorna lo stato di un form
+ */
+export async function updateFormStatus(
+  id: string,
+  newStatus: string,
+  eventName: string,
+  eventMetadata: any = {}
+): Promise<{
+  success: boolean;
+  data: Lead;
+  facebookResult: any;
+}> {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/api/leads/forms/${id}/update`,
+      {
+        newStatus,
+        eventName,
+        eventMetadata
+      },
+      { withCredentials: true }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error("Errore durante l'aggiornamento del form:", error);
+    throw error;
+  }
 }
