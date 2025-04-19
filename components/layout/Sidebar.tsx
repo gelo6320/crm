@@ -9,6 +9,8 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 interface SidebarProps {
   open: boolean;
@@ -17,7 +19,18 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
-  const pathname = usePathname();
+    const pathname = usePathname();
+    const { logout } = useAuth(); // Usa il hook useAuth
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        try {
+          await logout();
+          router.push('/login');
+        } catch (error) {
+          console.error('Errore durante il logout:', error);
+        }
+      };
   
   const links = [
     { name: "Dashboard", href: "/", icon: BarChart3 },
@@ -115,10 +128,13 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
           {/* Logout button */}
           <div className="mt-6 px-4">
             <div className="border-t border-zinc-800 pt-4">
-              <button className="flex items-center w-full px-3 py-2 text-sm font-medium text-zinc-400 rounded-md hover:text-white hover:bg-zinc-800 transition-colors">
-                <LogOut size={18} className="mr-2" />
-                Logout
-              </button>
+            <button 
+              onClick={handleLogout} 
+              className="flex items-center w-full px-3 py-2 text-sm font-medium text-zinc-400 rounded-md hover:text-white hover:bg-zinc-800 transition-colors"
+            >
+              <LogOut size={18} className="mr-2" />
+              Logout
+            </button>
             </div>
           </div>
         </div>

@@ -76,14 +76,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     setIsLoading(true);
     try {
-      // In a real app, you would call your API to logout
-      // await fetch("/api/logout", {...})
+      // Chiamata all'API di logout
+      await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
       
-      // Clear localStorage
+      // Elimina i dati utente dal local storage
       localStorage.removeItem("user");
       
+      // Resetta lo stato dell'utente
       setUser(null);
-      router.push("/login");
+      
+      // Reindirizza alla pagina di login 
+      // (questo è già gestito dal callback nel Sidebar)
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
