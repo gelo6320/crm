@@ -39,16 +39,17 @@ export async function login(username: string, password: string): Promise<{
  * Effettua il logout
  */
 export async function logout(): Promise<void> {
-  try {
-    await axios.get(
-      `${API_BASE_URL}/api/logout`,
-      { withCredentials: true }
-    );
-  } catch (error) {
-    console.error("Errore durante il logout:", error);
-    throw error;
+    try {
+      await axios.post(
+        `${API_BASE_URL}/api/logout`,
+        {}, // corpo vuoto della richiesta
+        { withCredentials: true }
+      );
+    } catch (error) {
+      console.error("Errore durante il logout:", error);
+      throw error;
+    }
   }
-}
 
 /**
  * Verifica lo stato dell'autenticazione

@@ -5,6 +5,9 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+
 interface User {
   id: string;
   email: string;
@@ -90,7 +93,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       // Chiama l'API di login
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
       const response = await axios.post(`${API_BASE_URL}/api/login`, {
         username: email,
         password
@@ -132,8 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       // Chiamata all'API di logout
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
-      await axios.get(`${API_BASE_URL}/api/logout`, {
+      await axios.post(`${API_BASE_URL}/api/logout`, {}, {
         withCredentials: true
       });
       
@@ -153,11 +154,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Reindirizza alla pagina di login usando window.location per un refresh completo
       window.location.href = redirectUrl;
     } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        console.error("Logout error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
   
   return (
     <AuthContext.Provider value={{ user, login, logout, isLoading }}>
