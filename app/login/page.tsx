@@ -16,7 +16,6 @@ function LoginForm() {
   const router = useRouter();
   
   // Ottieni il parametro redirectTo se presente
-  // Usiamo direttamente l'URL invece di useSearchParams per evitare l'errore
   const redirectTo = typeof window !== 'undefined' 
     ? new URLSearchParams(window.location.search).get('redirectTo') || "/"
     : "/";
@@ -106,7 +105,8 @@ function LoginForm() {
   );
 }
 
-// Componente principale con Suspense
+// Per garantire che non venga utilizzato il layout standard con header e sidebar,
+// possiamo creare un layout personalizzato solo per la pagina di login
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-900 px-4">

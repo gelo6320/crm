@@ -1,18 +1,14 @@
-// middleware.ts o lib/api/middleware.ts
+// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Questo middleware verifica l'autenticazione per le pagine protette
 export function middleware(request: NextRequest) {
-  console.log("Middleware eseguito per:", request.nextUrl.pathname);
-  
   // Controlla se l'utente è loggato verificando i cookie di sessione
   const isLoggedIn = request.cookies.has('connect.sid');
-  console.log("isLoggedIn:", isLoggedIn);
 
   // Percorsi che richiedono autenticazione
   const protectedPaths = [
-    '/',  // Aggiungi la home page del CRM
     '/dashboard',
     '/crm',
     '/forms',
@@ -24,32 +20,55 @@ export function middleware(request: NextRequest) {
     '/settings',
   ];
 
+  // URL di base per il CRM
+  const crmBaseDomain = process.env.NEXT_PUBLIC_CRM_DOMAIN || 'crm.costruzionedigitale.com';
+  const currentHost = request.headers.get('host') || '';
+
   // Verifica se il percorso corrente richiede autenticazione
   const isProtectedPath = protectedPaths.some(path => 
-    request.nextUrl.pathname === path || 
-    request.nextUrl.pathname.startsWith(`${path}/`)
+    request.nextUrl.pathname.startsWith(path)
   );
-  console.log("isProtectedPath:", isProtectedPath);
 
   // Se il percorso richiede autenticazione e l'utente non è loggato, reindirizza al login
   if (isProtectedPath && !isLoggedIn) {
-    console.log("Reindirizzamento a /login");
-    return NextResponse.redirect(new URL('/login', request.url));
+    // Memorizza l'URL originale per reindirizzare dopo il login
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirectTo', request.nextUrl.pathname);
+    
+    // Se siamo su crm.costruzionedigitale.com, assicuriamoci di rimanere sullo stesso dominio per il login
+    if (currentHost === crmBaseDomain) {
+      return NextResponse.redirect(loginUrl);
+    } else {
+      // Se siamo su un altro dominio, reindirizza al dominio CRM per il login
+      const fullLoginUrl = new URL(`https://${crmBaseDomain}/login`);
+      fullLoginUrl.searchParams.set('redirectTo', request.nextUrl.pathname);
+      return NextResponse.redirect(fullLoginUrl);
+    }
   }
 
   // Se l'utente è già loggato e sta tentando di accedere alla pagina di login,
-  // reindirizza alla dashboard
-  if (isLoggedIn && request.nextUrl.pathname === '/login') {
-    console.log("Reindirizzamento a /");
-    return NextResponse.redirect(new URL('/', request.url));
+  // reindirizza alla dashboard (solo se siamo nel dominio CRM)
+  if (isLoggedIn && request.nextUrl.pathname === '/login' && currentHost === crmBaseDomain) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
+  // Continua normalmente per gli altri casi
   return NextResponse.next();
 }
 
 // Configura su quali percorsi il middleware deve essere eseguito
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
-  ],
-};
+    matcher: [
+      '/',  // Aggiungi la home page
+      '/dashboard/:path*',
+      '/crm/:path*',
+      '/forms/:path*',
+      '/bookings/:path*',
+      '/events/:path*',
+      '/facebook-leads/:path*',
+      '/calendar/:path*',
+      '/sales-funnel/:path*',
+      '/settings/:path*',
+      '/login',
+    ],
+  };

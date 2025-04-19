@@ -30,11 +30,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user is already logged in
     const checkAuth = async () => {
       try {
-        // Chiama l'API per verificare l'autenticazione
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+        
+        // Chiama l'API per verificare l'autenticazione
         const response = await axios.get(`${API_BASE_URL}/api/check-auth`, {
           withCredentials: true
         });
+        
+        // Controlla se la risposta è HTML (pagina di login) invece di JSON
+        if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+          // È una pagina HTML, probabilmente la pagina di login
+          console.log("Ricevuta pagina HTML invece di JSON, reindirizzamento necessario");
+          setUser(null);
+          
+          // Reindirizza alla pagina di login
+          const currentPath = window.location.pathname;
+          router.push(`/login?redirectTo=${encodeURIComponent(currentPath)}`);
+          return;
+        }
         
         if (response.data.authenticated) {
           // Se l'utente è autenticato, imposta i dati utente
@@ -50,15 +63,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // Se ci troviamo in un percorso protetto, reindirizza al login
           const currentPath = window.location.pathname;
-          const protectedPaths = ['/dashboard', '/crm', '/forms', '/bookings', '/events', '/facebook-leads', '/calendar', '/sales-funnel', '/settings'];
+          const protectedPaths = ['/', '/dashboard', '/crm', '/forms', '/bookings', '/events', '/facebook-leads', '/calendar', '/sales-funnel', '/settings'];
           
-          if (protectedPaths.some(path => currentPath.startsWith(path))) {
+          if (protectedPaths.some(path => currentPath === path || currentPath.startsWith(`${path}/`))) {
             router.push(`/login?redirectTo=${encodeURIComponent(currentPath)}`);
           }
         }
       } catch (error) {
         console.error("Authentication check error:", error);
         setUser(null);
+        
+        // In caso di errore, è meglio reindirizzare al login
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login') {
+          router.push(`/login?redirectTo=${encodeURIComponent(currentPath)}`);
+        }
       } finally {
         setIsLoading(false);
       }

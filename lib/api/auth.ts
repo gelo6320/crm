@@ -54,22 +54,31 @@ export async function logout(): Promise<void> {
  * Verifica lo stato dell'autenticazione
  */
 export async function checkAuth(): Promise<{
-  authenticated: boolean;
-  user: string | null;
-}> {
-  try {
-    const response = await axios.get(
-      `${API_BASE_URL}/api/check-auth`,
-      { withCredentials: true }
-    );
-    
-    return response.data;
-  } catch (error) {
-    console.error("Errore durante la verifica dell'autenticazione:", error);
-    
-    return {
-      authenticated: false,
-      user: null
-    };
+    authenticated: boolean;
+    user: string | null;
+  }> {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/api/check-auth`,
+        { withCredentials: true }
+      );
+      
+      // Controlla se la risposta è HTML invece di JSON
+      if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+        // È una pagina HTML, l'utente probabilmente non è autenticato
+        return {
+          authenticated: false,
+          user: null
+        };
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error("Errore durante la verifica dell'autenticazione:", error);
+      
+      return {
+        authenticated: false,
+        user: null
+      };
+    }
   }
-}

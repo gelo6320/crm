@@ -36,29 +36,38 @@ export function handleApiError(error: any, defaultMessage = "Errore durante la r
  * Verifica lo stato dell'autenticazione e reindirizza se necessario
  */
 export async function checkAuthAndRedirect(): Promise<boolean> {
-  try {
-    const response = await apiClient.get("/api/check-auth");
-    
-    if (!response.data.authenticated) {
-      // Se l'utente non è autenticato, reindirizza alla pagina di login
+    try {
+      const response = await apiClient.get("/api/check-auth");
+      
+      // Controlla se la risposta è HTML invece di JSON
+      if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+        // È una pagina HTML, l'utente probabilmente non è autenticato
+        if (typeof window !== "undefined") {
+          window.location.href = "/login?redirectTo=" + encodeURIComponent(window.location.pathname);
+        }
+        return false;
+      }
+      
+      if (!response.data.authenticated) {
+        // Se l'utente non è autenticato, reindirizza alla pagina di login
+        if (typeof window !== "undefined") {
+          window.location.href = "/login?redirectTo=" + encodeURIComponent(window.location.pathname);
+        }
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Errore durante la verifica dell'autenticazione:", error);
+      
+      // In caso di errore, reindirizza alla pagina di login
       if (typeof window !== "undefined") {
         window.location.href = "/login";
       }
+      
       return false;
     }
-    
-    return true;
-  } catch (error) {
-    console.error("Errore durante la verifica dell'autenticazione:", error);
-    
-    // In caso di errore, reindirizza alla pagina di login
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
-    
-    return false;
   }
-}
 
 /**
  * Costruisce i parametri di query da un oggetto
