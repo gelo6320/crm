@@ -31,7 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkAuth = async () => {
       try {
         // Chiama l'API per verificare l'autenticazione
-        const response = await axios.get('/api/check-auth', {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+        const response = await axios.get(`${API_BASE_URL}/api/check-auth`, {
           withCredentials: true
         });
         
@@ -70,7 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       // Chiama l'API di login
-      const response = await axios.post('/api/login', {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+      const response = await axios.post(`${API_BASE_URL}/api/login`, {
         username: email,
         password
       }, {
@@ -79,9 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (response.data.success) {
         // Recupera le informazioni utente dopo il login
-        const userResponse = await axios.get('/api/check-auth', {
-          withCredentials: true
-        });
+        const userResponse = await axios.get(`${API_BASE_URL}/api/check-auth`, {
+            withCredentials: true
+          });
         
         if (userResponse.data.authenticated) {
           setUser({
@@ -111,7 +113,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       // Chiamata all'API di logout
-      await axios.get('/api/logout', {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+      await axios.get(`${API_BASE_URL}/api/logout`, {
         withCredentials: true
       });
       
