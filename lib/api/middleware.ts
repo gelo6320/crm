@@ -9,7 +9,6 @@ export function middleware(request: NextRequest) {
 
   // Percorsi che richiedono autenticazione
   const protectedPaths = [
-    '/dashboard',
     '/crm',
     '/forms',
     '/bookings',
@@ -47,9 +46,8 @@ export function middleware(request: NextRequest) {
   }
 
   // Se l'utente è già loggato e sta tentando di accedere alla pagina di login,
-  // reindirizza alla dashboard (solo se siamo nel dominio CRM)
   if (isLoggedIn && request.nextUrl.pathname === '/login' && currentHost === crmBaseDomain) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   // Continua normalmente per gli altri casi
@@ -60,7 +58,6 @@ export function middleware(request: NextRequest) {
 export const config = {
     matcher: [
       '/',  // Aggiungi la home page
-      '/dashboard/:path*',
       '/crm/:path*',
       '/forms/:path*',
       '/bookings/:path*',

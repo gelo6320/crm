@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // Se ci troviamo in un percorso protetto, reindirizza al login
           const currentPath = window.location.pathname;
-          const protectedPaths = ['/', '/dashboard', '/crm', '/forms', '/bookings', '/events', '/facebook-leads', '/calendar', '/sales-funnel', '/settings'];
+          const protectedPaths = ['/', '/crm', '/forms', '/bookings', '/events', '/facebook-leads', '/calendar', '/sales-funnel', '/settings'];
           
           if (protectedPaths.some(path => currentPath === path || currentPath.startsWith(`${path}/`))) {
             router.push(`/login?redirectTo=${encodeURIComponent(currentPath)}`);
@@ -116,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // Reindirizza alla pagina richiesta o alla dashboard
           const urlParams = new URLSearchParams(window.location.search);
-          const redirectTo = urlParams.get('redirectTo') || '/dashboard';
+          const redirectTo = urlParams.get('redirectTo') || '/';
           router.push(redirectTo);
         }
       } else {
