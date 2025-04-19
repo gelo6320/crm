@@ -60,13 +60,13 @@ export default function RootLayout({
           if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
             console.log("Ricevuta pagina HTML, reindirizzamento a login");
             setIsAuthenticated(false);
-            router.push(`/login?redirectTo=${encodeURIComponent(pathname)}`);
+            router.push(`/login?redirectTo=${encodeURIComponent(pathname || '/')}`);
             return;
           }
           
           setIsAuthenticated(response.data.authenticated);
           if (!response.data.authenticated) {
-            router.push(`/login?redirectTo=${encodeURIComponent(pathname)}`);
+            router.push(`/login?redirectTo=${encodeURIComponent(pathname || '/')}`);
           }
         } catch (error) {
           console.error("Errore verifica autenticazione:", error);
