@@ -25,8 +25,7 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
 
     const handleLogout = async () => {
         try {
-          await logout();
-          router.push('/login');
+          await logout(); // Questa funzione è già aggiornata in AuthContext
         } catch (error) {
           console.error('Errore durante il logout:', error);
         }

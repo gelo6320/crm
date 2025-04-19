@@ -3,6 +3,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
 interface User {
   id: string;
@@ -29,42 +30,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user is already logged in
     const checkAuth = async () => {
       try {
-        // In a real app, you would call your API to check auth status
-        const userData = localStorage.getItem("user");
+        // Chiama l'API per verificare l'autenticazione
+        const response = await axios.get('/api/check-auth', {
+          withCredentials: true
+        });
         
-        if (userData) {
-          setUser(JSON.parse(userData));
+        if (response.data.authenticated) {
+          // Se l'utente è autenticato, imposta i dati utente
+          setUser({
+            id: response.data.user?.id || '1',
+            email: response.data.user?.email || 'admin@costruzionedigitale.com',
+            name: response.data.user?.name || 'Amministratore',
+            role: response.data.user?.role || 'admin'
+          });
+        } else {
+          // Se non autenticato, assicurati che l'utente sia null
+          setUser(null);
+          
+          // Se ci troviamo in un percorso protetto, reindirizza al login
+          const currentPath = window.location.pathname;
+          const protectedPaths = ['/dashboard', '/crm', '/forms', '/bookings', '/events', '/facebook-leads', '/calendar', '/sales-funnel', '/settings'];
+          
+          if (protectedPaths.some(path => currentPath.startsWith(path))) {
+            router.push(`/login?redirectTo=${encodeURIComponent(currentPath)}`);
+          }
         }
       } catch (error) {
-        console.error("Authentication error:", error);
+        console.error("Authentication check error:", error);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
     };
     
     checkAuth();
-  }, []);
+  }, [router]);
   
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // In a real app, you would call your API to authenticate
-      // const response = await fetch("/api/login", {...})
+      // Chiama l'API di login
+      const response = await axios.post('/api/login', {
+        username: email,
+        password
+      }, {
+        withCredentials: true
+      });
       
-      // Mock successful login
-      const mockUser = {
-        id: "1",
-        email,
-        name: "Amministratore",
-        role: "admin",
-      };
-      
-      // Save to localStorage for demo purposes
-      // In a real app, you would rely on secure HTTP-only cookies
-      localStorage.setItem("user", JSON.stringify(mockUser));
-      
-      setUser(mockUser);
-      router.push("/");
+      if (response.data.success) {
+        // Recupera le informazioni utente dopo il login
+        const userResponse = await axios.get('/api/check-auth', {
+          withCredentials: true
+        });
+        
+        if (userResponse.data.authenticated) {
+          setUser({
+            id: userResponse.data.user?.id || '1',
+            email: userResponse.data.user?.email || email,
+            name: userResponse.data.user?.name || 'Amministratore',
+            role: userResponse.data.user?.role || 'admin'
+          });
+          
+          // Reindirizza alla pagina richiesta o alla dashboard
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirectTo = urlParams.get('redirectTo') || '/dashboard';
+          router.push(redirectTo);
+        }
+      } else {
+        throw new Error(response.data.message || 'Login fallito');
+      }
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -77,22 +111,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       // Chiamata all'API di logout
-      await fetch("/api/logout", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        }
+      await axios.get('/api/logout', {
+        withCredentials: true
       });
-      
-      // Elimina i dati utente dal local storage
-      localStorage.removeItem("user");
       
       // Resetta lo stato dell'utente
       setUser(null);
       
-      // Reindirizza alla pagina di login 
-      // (questo è già gestito dal callback nel Sidebar)
+      // IMPORTANTE: Reindirizza completamente fuori dall'area CRM
+      // Determina l'URL di base per il reindirizzamento
+      const crmDomain = process.env.NEXT_PUBLIC_CRM_DOMAIN || 'crm.costruzionedigitale.com';
+      const baseUrl = window.location.hostname === crmDomain 
+        ? `https://${crmDomain}/login` 
+        : '/login';
+      
+      // Aggiungi un timestamp per evitare problemi di cache
+      const redirectUrl = `${baseUrl}?t=${Date.now()}`;
+      
+      // Reindirizza alla pagina di login usando window.location per un refresh completo
+      window.location.href = redirectUrl;
     } catch (error) {
       console.error("Logout error:", error);
     } finally {

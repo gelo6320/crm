@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     // Crea un response che elimina il cookie di sessione
     const response = NextResponse.json({ 
@@ -10,13 +10,10 @@ export async function POST(request: NextRequest) {
       message: 'Logout effettuato con successo' 
     });
     
-    // Questo metodo varia in base a come hai configurato i tuoi cookie 
-    // di sessione, ma dovresti essenzialmente cancellare il cookie che 
-    // memorizza la sessione
-    response.cookies.delete('connect.sid'); // Usa il nome del cookie di sessione corretto
-    
-    // Puoi anche cancellare altri cookie potenzialmente sensibili
-    response.cookies.delete('user'); 
+    // Elimina tutti i cookie di sessione
+    response.cookies.delete('connect.sid');
+    response.cookies.delete('userId');
+    response.cookies.delete('user_cookie_consent');
     
     return response;
   } catch (error) {

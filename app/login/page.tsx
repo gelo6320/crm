@@ -1,141 +1,123 @@
-// app/page.tsx
+// app/login/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { BarChart, CheckCircle, Clock, XCircle, FileText, Bookmark, Share2 } from "lucide-react";
-import StatCard from "@/components/dashboard/StatCard";
-import RecentEventsTable from "@/components/dashboard/RecentEventsTable";
-import { fetchDashboardStats, fetchRecentEvents } from "@/lib/api/dashboard";
-import { Stat, Event } from "@/types";
-import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { useState } from "react";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 
-// Definizione dei valori predefiniti per gli stats
-const defaultStats = {
-  forms: { total: 0, converted: 0, conversionRate: 0 },
-  bookings: { total: 0, converted: 0, conversionRate: 0 },
-  events: { total: 0, success: 0, successRate: 0 },
-};
-
-export default function Dashboard() {
-  // Inizializza con i valori predefiniti
-  const [stats, setStats] = useState(defaultStats);
-  const [recentEvents, setRecentEvents] = useState<Event[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // Carica prima le statistiche della dashboard
-        const statsData = await fetchDashboardStats();
-        
-        // Verifica che i dati abbiano la struttura attesa
-        if (!statsData || !statsData.forms || !statsData.bookings || !statsData.events) {
-            console.error("Invalid stats data structure:", statsData);
-            // Imposta i valori predefiniti se la struttura è invalida
-            setStats(defaultStats);
-          } else {
-            // Assicurati che tutti i valori siano definiti usando l'operatore ?? per fornire default
-            const sanitizedStatsData = {
-              forms: {
-                total: statsData.forms.total ?? 0,
-                converted: statsData.forms.converted ?? 0, 
-                conversionRate: statsData.forms.conversionRate ?? 0
-              },
-              bookings: {
-                total: statsData.bookings.total ?? 0,
-                converted: statsData.bookings.converted ?? 0, 
-                conversionRate: statsData.bookings.conversionRate ?? 0
-              },
-              events: {
-                total: statsData.events.total ?? 0,
-                success: statsData.events.success ?? 0, 
-                successRate: statsData.events.successRate ?? 0
-              }
-            };
-            
-            setStats(sanitizedStatsData);
-          }
-      } finally {
-        setIsLoading(false);
-      }
-    };
+export default function LoginPage() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Ottieni il parametro redirectTo se presente
+  const redirectTo = searchParams?.get('redirectTo') || "/dashboard";
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setError("Inserisci username e password");
+      return;
+    }
     
-    loadData();
-  }, []);
-
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-
+    setError("");
+    setIsLoading(true);
+    
+    try {
+      await login(username, password);
+      // Il reindirizzamento è gestito nel metodo login
+    } catch (err: any) {
+      setError(err.message || "Errore durante il login");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   return (
-    <div className="space-y-6 animate-fade-in">
-      {error && (
-        <div className="alert alert-danger">
-          <XCircle size={16} />
-          <span>{error}</span>
+    <div className="min-h-screen flex items-center justify-center bg-zinc-900 px-4">
+      <div className="max-w-md w-full space-y-8 p-6 bg-zinc-800 rounded-lg shadow-lg">
+        <div className="text-center">
+          <Image 
+            src="/logosito.webp" 
+            width={120} 
+            height={60} 
+            alt="Logo" 
+            className="mx-auto"
+          />
+          <h2 className="mt-6 text-3xl font-bold text-white">
+            Accedi al CRM
+          </h2>
+          <p className="mt-2 text-sm text-zinc-400">
+            Inserisci le tue credenziali per accedere al pannello di controllo
+          </p>
         </div>
-      )}
-      
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard 
-          title="Form di contatto"
-          icon={<FileText size={18} className="text-primary" />}
-          value={stats?.forms?.total ?? 0}
-          rate={`${stats?.forms?.conversionRate ?? 0}%`}
-          href="/forms"
-          color="primary"
-        />
         
-        <StatCard 
-          title="Prenotazioni"
-          icon={<Bookmark size={18} className="text-success" />}
-          value={stats?.bookings?.total ?? 0}
-          rate={`${stats?.bookings?.conversionRate ?? 0}%`}
-          href="/bookings"
-          color="success"
-        />
-        
-        <StatCard 
-          title="Eventi Facebook"
-          icon={<Share2 size={18} className="text-info" />}
-          value={stats?.events?.total ?? 0}
-          rate={`${stats?.events?.successRate ?? 0}%`}
-          href="/events"
-          color="info"
-        />
-      </div>
-      
-      {/* Recent events */}
-      <div className="card">
-        <div className="flex items-center justify-between p-4 border-b border-zinc-700">
-          <h2 className="text-sm font-semibold">Ultimi eventi CRM inviati a Facebook</h2>
-          <button 
-            className="btn btn-outline p-1.5"
-            onClick={() => {
-              setIsLoading(true);
-              fetchRecentEvents()
-                .then(data => setRecentEvents(Array.isArray(data) ? data : []))
-                .catch(err => console.error("Error refreshing events:", err))
-                .finally(() => setIsLoading(false));
-            }}
-          >
-            <Clock size={16} />
-          </button>
-        </div>
-        <div className="p-4">
-          {recentEvents.length > 0 ? (
-            <RecentEventsTable events={recentEvents} />
-          ) : (
-            <div className="text-center py-4 text-zinc-500">
-              Nessun evento recente trovato
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <div className="p-3 bg-danger/10 border border-danger/20 rounded-md text-sm text-danger">
+              {error}
             </div>
           )}
-        </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-zinc-300">
+                Username
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                className="input w-full mt-1"
+                placeholder="Inserisci il tuo username"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-zinc-300">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="input w-full mt-1"
+                placeholder="Inserisci la tua password"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn btn-primary w-full py-2"
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Accesso in corso...
+                </span>
+              ) : (
+                "Accedi"
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
