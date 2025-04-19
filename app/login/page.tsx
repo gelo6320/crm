@@ -34,22 +34,31 @@ export default function Dashboard() {
         
         // Verifica che i dati abbiano la struttura attesa
         if (!statsData || !statsData.forms || !statsData.bookings || !statsData.events) {
-          console.error("Invalid stats data structure:", statsData);
-          // Imposta i valori predefiniti se la struttura è invalida
-          setStats(defaultStats);
-        } else {
-          setStats(statsData);
-        }
-        
-        // Carica gli eventi recenti
-        const eventsData = await fetchRecentEvents();
-        setRecentEvents(Array.isArray(eventsData) ? eventsData : []);
-        
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
-        setError("Impossibile caricare i dati della dashboard. Riprova più tardi.");
-        // Imposta i valori predefiniti in caso di errore
-        setStats(defaultStats);
+            console.error("Invalid stats data structure:", statsData);
+            // Imposta i valori predefiniti se la struttura è invalida
+            setStats(defaultStats);
+          } else {
+            // Assicurati che tutti i valori siano definiti usando l'operatore ?? per fornire default
+            const sanitizedStatsData = {
+              forms: {
+                total: statsData.forms.total ?? 0,
+                converted: statsData.forms.converted ?? 0, 
+                conversionRate: statsData.forms.conversionRate ?? 0
+              },
+              bookings: {
+                total: statsData.bookings.total ?? 0,
+                converted: statsData.bookings.converted ?? 0, 
+                conversionRate: statsData.bookings.conversionRate ?? 0
+              },
+              events: {
+                total: statsData.events.total ?? 0,
+                success: statsData.events.success ?? 0, 
+                successRate: statsData.events.successRate ?? 0
+              }
+            };
+            
+            setStats(sanitizedStatsData);
+          }
       } finally {
         setIsLoading(false);
       }

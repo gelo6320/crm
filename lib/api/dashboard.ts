@@ -7,10 +7,15 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzione
 
 // Valori predefiniti per i dati
 const defaultStats = {
-  forms: { total: 0, converted: 0, conversionRate: 0 },
-  bookings: { total: 0, converted: 0, conversionRate: 0 },
-  events: { total: 0, success: 0, successRate: 0 },
-};
+    forms: { total: 0, converted: 0, conversionRate: 0 },
+    bookings: { total: 0, converted: 0, conversionRate: 0 },
+    events: { 
+      total: 0, 
+      success: 0, 
+      successRate: 0, 
+      conversionRate: 0  // Aggiungi questa riga per risolvere l'errore
+    },
+  };
 
 /**
  * Recupera le statistiche della dashboard dal server

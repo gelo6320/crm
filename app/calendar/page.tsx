@@ -1,8 +1,8 @@
 // app/calendar/page.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Calendar as ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { fetchAppointments } from "@/lib/api/calendar";
 import { CalendarEvent } from "@/types";
 import CalendarView from "@/components/calendar/CalendarView";

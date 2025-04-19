@@ -16,6 +16,7 @@ export interface Stat {
     error?: string;
     userData?: Record<string, any>;
     customData?: Record<string, any>;
+    eventId?: string; // Aggiungi questa proprietà
   }
   
   export interface Lead {
@@ -47,6 +48,7 @@ export interface Stat {
     status: string;
     clientId?: string;
     description?: string;
+    location?: string; // Aggiungi questa proprietà
   }
   
   export interface FunnelItem extends Lead {

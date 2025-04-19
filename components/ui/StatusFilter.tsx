@@ -3,24 +3,33 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 
 interface StatusFilterProps {
-  selectedStatus: string;
-  onChange: (status: string) => void;
-  icon: React.ReactNode;
-}
-
-export default function StatusFilter({ selectedStatus, onChange, icon }: StatusFilterProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+    selectedStatus: string;
+    onChange: (status: string) => void;
+    icon: React.ReactNode;
+    options?: Array<{ value: string; label: string }>; // Aggiungi questa riga
+  }
   
-  const options = [
-    { value: "", label: "Tutti" },
-    { value: "new", label: "Nuovi" },
-    { value: "contacted", label: "Contattati" },
-    { value: "qualified", label: "Qualificati" },
-    { value: "opportunity", label: "Opportunità" },
-    { value: "customer", label: "Clienti" },
-    { value: "lost", label: "Persi" },
-  ];
+  export default function StatusFilter({ 
+    selectedStatus, 
+    onChange, 
+    icon, 
+    options: customOptions 
+  }: StatusFilterProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    
+    const defaultOptions = [
+      { value: "", label: "Tutti" },
+      { value: "new", label: "Nuovi" },
+      { value: "contacted", label: "Contattati" },
+      { value: "qualified", label: "Qualificati" },
+      { value: "opportunity", label: "Opportunità" },
+      { value: "customer", label: "Clienti" },
+      { value: "lost", label: "Persi" },
+    ];
+    
+    // Usa customOptions se fornito, altrimenti usa defaultOptions
+    const options = customOptions || defaultOptions;
   
   // Close the dropdown when clicking outside
   useEffect(() => {

@@ -1,6 +1,4 @@
-// components/sales-funnel/FunnelCard.tsx
-"use client";
-
+import { useRef, useEffect } from "react";
 import { Pencil } from "lucide-react";
 import { useDrag } from "react-dnd";
 import { FunnelItem } from "@/types";
@@ -13,8 +11,11 @@ interface FunnelCardProps {
 }
 
 export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
+  // Crea un ref React
+  const cardRef = useRef<HTMLDivElement>(null);
+  
   // Set up drag source
-  const [{ isDragging }, drag] = useDrag({
+  const [{ isDragging }, dragRef] = useDrag({
     type: 'LEAD',
     item: { lead },
     collect: (monitor) => ({
@@ -22,12 +23,20 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
     }),
   });
 
+  // Collega il ref drag al ref del componente
+  useEffect(() => {
+    if (cardRef.current) {
+      dragRef(cardRef.current);
+    }
+  }, [dragRef]);
+
   return (
     <div
-      ref={drag}
+      ref={cardRef}
       className={`funnel-card ${isDragging ? "dragging" : ""}`}
       style={{ borderLeftColor: getBorderColor(lead.status) }}
     >
+      {/* Resto del componente rimane invariato */}
       <div className="flex justify-between items-center mb-1">
         <div className="font-medium text-sm truncate pr-1">
           {lead.name}
@@ -58,6 +67,7 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
 }
 
 function getBorderColor(status: string): string {
+  // La funzione rimane invariata
   switch (status) {
     case "new": return "#71717a"; // zinc-500
     case "contacted": return "#3498db"; // info

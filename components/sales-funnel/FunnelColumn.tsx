@@ -1,6 +1,7 @@
 // components/sales-funnel/FunnelColumn.tsx
 "use client";
 
+import { useRef, useEffect } from "react";
 import { useDrop } from "react-dnd";
 import { FunnelItem } from "@/types";
 
@@ -13,8 +14,11 @@ interface FunnelColumnProps {
 }
 
 export default function FunnelColumn({ id, title, color, children, onMoveLead }: FunnelColumnProps) {
+  // Crea un ref React standard
+  const dropRef = useRef<HTMLDivElement>(null);
+  
   // Set up the drop target
-  const [{ isOver }, drop] = useDrop({
+  const [{ isOver }, dropTarget] = useDrop({
     accept: 'LEAD',
     drop: (item: { lead: FunnelItem }) => {
       // Only move if the status is different
@@ -27,6 +31,13 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead }:
     }),
   });
 
+  // Collega il ref drop al ref del componente
+  useEffect(() => {
+    if (dropRef.current) {
+      dropTarget(dropRef.current);
+    }
+  }, [dropTarget]);
+
   return (
     <div className="funnel-column">
       <div className={`funnel-header ${color}`}>
@@ -37,7 +48,7 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead }:
       </div>
       
       <div 
-        ref={drop} 
+        ref={dropRef} 
         className={`funnel-body ${isOver ? "drag-over" : ""}`}
       >
         {Array.isArray(children) && children.length > 0 ? (

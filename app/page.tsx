@@ -17,7 +17,12 @@ export default function Dashboard() {
   }>({
     forms: { total: 0, converted: 0, conversionRate: 0 },
     bookings: { total: 0, converted: 0, conversionRate: 0 },
-    events: { total: 0, success: 0, successRate: 0 },
+    events: { 
+      total: 0, 
+      success: 0, 
+      successRate: 0, 
+      conversionRate: 0  // Aggiungi questa riga
+    },
   });
   
   const [recentEvents, setRecentEvents] = useState<Event[]>([]);

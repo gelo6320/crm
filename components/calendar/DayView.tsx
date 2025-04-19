@@ -1,5 +1,6 @@
 // components/calendar/DayView.tsx
-import { useDrop, useDrag } from "react-dnd";
+import { useRef, useEffect } from "react";
+import { useDrag } from "react-dnd";
 import { CalendarEvent } from "@/types";
 import { getEventColor } from "@/lib/utils/calendar";
 import { formatTime } from "@/lib/utils/date";
@@ -17,52 +18,58 @@ interface EventItemProps {
 
 // Event item component with drag functionality
 function EventItem({ event, onSelect }: EventItemProps) {
-  const [{ isDragging }, drag] = useDrag({
-    type: 'EVENT',
-    item: { event },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-  
-  const start = new Date(event.start);
-  const end = new Date(event.end);
-  
-  // Calculate positioning
-  const hour = start.getHours();
-  const minutes = start.getMinutes();
-  const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-  
-  // Each hour is 60px tall, so 1 minute = 1px
-  const top = (minutes / 60) * 60; // Relative position within hour cell
-  const height = durationMinutes;
-  
-  return (
-    <div
-      ref={drag}
-      className={`
-        absolute left-0 right-0 rounded px-2 py-1 cursor-pointer
-        text-white shadow-md border-l-4 z-10 overflow-hidden
-        ${isDragging ? 'opacity-50' : ''}
-      `}
-      style={{
-        top: `${top}px`,
-        height: `${height}px`,
-        backgroundColor: getEventColor(event.status),
-        borderLeftColor: getEventColor(event.status, true),
-      }}
-      onClick={() => onSelect(event)}
-    >
-      <div className="text-xs font-medium mb-0.5">
-        {formatTime(start)} - {formatTime(end)}
+    const ref = useRef<HTMLDivElement>(null);
+    
+    const [{ isDragging }, dragRef, dragPreview] = useDrag({
+      type: 'EVENT',
+      item: { event },
+      collect: (monitor) => ({
+        isDragging: monitor.isDragging(),
+      }),
+    });
+    
+    // Usa dragPreview per collegare il componente all'elemento trascinabile
+    useEffect(() => {
+      dragPreview(ref.current);
+    }, [dragPreview]);
+    
+    const start = new Date(event.start);
+    const end = new Date(event.end);
+    
+    // Calcola il posizionamento
+    const minutes = start.getMinutes();
+    const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+    
+    // Ogni ora è alta 60px, quindi 1 minuto = 1px
+    const top = (minutes / 60) * 60; // Posizione relativa all'interno della cella dell'ora
+    const height = durationMinutes;
+    
+    return (
+      <div
+        ref={ref}
+        className={`
+          absolute left-0 right-0 rounded px-2 py-1 cursor-pointer
+          text-white shadow-md border-l-4 z-10 overflow-hidden
+          ${isDragging ? 'opacity-50' : ''}
+        `}
+        style={{
+          top: `${top}px`,
+          height: `${height}px`,
+          backgroundColor: getEventColor(event.status),
+          borderLeftColor: getEventColor(event.status, true),
+        }}
+        onClick={() => onSelect(event)}
+      >
+        <div className="text-xs font-medium mb-0.5">
+          {formatTime(start)} - {formatTime(end)}
+        </div>
+        <div className="font-medium truncate">{event.title}</div>
+        {height > 60 && (
+          <div className="text-xs truncate opacity-80">{event.description}</div>
+        )}
       </div>
-      <div className="font-medium truncate">{event.title}</div>
-      {height > 60 && (
-        <div className="text-xs truncate opacity-80">{event.description}</div>
-      )}
-    </div>
-  );
-}
+    );
+  }
 
 export default function DayView({ selectedDate, events, onSelectEvent }: DayViewProps) {
   // Filter events for the selected date

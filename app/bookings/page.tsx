@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bookmark, Filter, RefreshCw } from "lucide-react";
+import { Filter, RefreshCw } from "lucide-react";
 import BookingTable from "@/components/bookings/BookingTable";
 import Pagination from "@/components/ui/Pagination";
 import StatusFilter from "@/components/ui/StatusFilter";
@@ -17,17 +17,16 @@ export default function BookingsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   
   useEffect(() => {
     loadBookings();
-  }, [currentPage, selectedStatus, searchQuery]);
+  }, [currentPage, selectedStatus]);
   
   const loadBookings = async () => {
     try {
       setIsLoading(true);
-      const response = await fetchBookings(currentPage, selectedStatus, searchQuery);
+      const response = await fetchBookings(currentPage, selectedStatus);
       setBookings(response.data);
       setTotalPages(response.pagination.pages);
     } catch (error) {
@@ -88,7 +87,6 @@ export default function BookingsPage() {
             selectedStatus={selectedStatus}
             onChange={handleStatusFilter}
             icon={<Filter size={16} />}
-            options={getBookingStatusOptions()}
           />
         </div>
       </div>

@@ -3,18 +3,22 @@
 
 import { useState, useEffect } from "react";
 import { X, Share2 } from "lucide-react";
-import { Lead } from "@/types";
+import { Lead, Booking } from "@/types";
 import { formatDateTime } from "@/lib/utils/date";
 import StatusBadge from "@/components/ui/StatusBadge";
 
 interface EditLeadModalProps {
-  lead: Lead;
-  onClose: () => void;
-  onSave: () => void;
-  type: "form" | "booking" | "facebook";
-}
+    lead: Lead | Booking;  // Ora può accettare entrambi i tipi
+    onClose: () => void;
+    onSave: () => void;
+    type: "form" | "booking" | "facebook";
+  }
 
-export default function EditLeadModal({ lead, onClose, onSave, type }: EditLeadModalProps) {
+  function isBooking(lead: Lead | Booking): lead is Booking {
+    return (lead as Booking).bookingDate !== undefined;
+  }
+  
+  export default function EditLeadModal({ lead, onClose, onSave, type }: EditLeadModalProps) {
   const [newStatus, setNewStatus] = useState(lead.status);
   const [eventName, setEventName] = useState("");
   const [eventNote, setEventNote] = useState("");
@@ -121,7 +125,7 @@ export default function EditLeadModal({ lead, onClose, onSave, type }: EditLeadM
                 <div className="text-zinc-400">Telefono:</div>
                 <div className="col-span-2">{lead.phone}</div>
                 
-                {type === "booking" && lead.bookingDate && (
+                {type === "booking" && isBooking(lead) && (
                   <>
                     <div className="text-zinc-400">Prenotazione:</div>
                     <div className="col-span-2">{lead.bookingDate} {lead.bookingTime}</div>

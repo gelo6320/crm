@@ -1,7 +1,11 @@
 // lib/api/apiClient.ts
-import axios from "axios";
+import axios, { AxiosError, AxiosRequestConfig } from "axios";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+
+interface ErrorResponse {
+    message?: string;
+  }
 
 // Crea una istanza di axios con configurazione di base
 const apiClient = axios.create({
@@ -45,7 +49,8 @@ apiClient.interceptors.response.use(
     }
     
     // Ottieni il messaggio di errore dalla risposta (se disponibile)
-    const errorMessage = error.response?.data?.message || error.message || "Si è verificato un errore";
+    const errorData = error.response?.data as ErrorResponse;
+    const errorMessage = errorData?.message || error.message || "Si è verificato un errore";
     
     // Log dell'errore per debugging
     console.error(`API Error (${error.response?.status || 'network error'}):`, errorMessage);
