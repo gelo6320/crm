@@ -66,16 +66,7 @@ function EventItem({ event, onSelect, onResize }: EventItemProps) {
       setStartY(e.touches[0].clientY);
       setHeight(durationMinutes);
     };
-    
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isResizing) return;
-      e.stopPropagation();
-      
-      const deltaY = e.touches[0].clientY - startY;
-      const newHeight = Math.max(30, durationMinutes + deltaY); // Minimo 30 minuti
-      setHeight(newHeight);
-    };
-    
+
     const handleTouchEnd = (e: TouchEvent) => {
       if (!isResizing) return;
       e.stopPropagation();
@@ -89,6 +80,15 @@ function EventItem({ event, onSelect, onResize }: EventItemProps) {
         updatedEvent.end = newEnd;
         onResize(updatedEvent, height);
       }
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isResizing) return;
+      e.stopPropagation();
+      
+      const deltaY = e.touches[0].clientY - startY;
+      const newHeight = Math.max(30, durationMinutes + deltaY); // Minimo 30 minuti
+      setHeight(newHeight);
     };
     
     resizeHandle.addEventListener('touchstart', handleTouchStart, { passive: false });
@@ -164,14 +164,15 @@ function DayHeader({ date, onChangeDate }: { date: Date, onChangeDate: (date: Da
   const touchMoveRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
   
-  // Creazione array di giorni per la visualizzazione scorrevole (2 settimane)
-  const daysToShow = 14;
   const weekDays = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
   const today = new Date();
   
-  // Crea una data di partenza 7 giorni prima della data selezionata
+  // Mostra 6 settimane (42 giorni)
+  const daysToShow = 42;
+  
+  // Crea una data di partenza 21 giorni prima della data selezionata
   const startDate = new Date(date);
-  startDate.setDate(startDate.getDate() - 7);
+  startDate.setDate(startDate.getDate() - 21);
   
   // Creazione array di giorni
   const weekDates = Array.from({ length: daysToShow }, (_, i) => {
@@ -179,6 +180,44 @@ function DayHeader({ date, onChangeDate }: { date: Date, onChangeDate: (date: Da
     d.setDate(d.getDate() + i);
     return d;
   });
+  
+  // Aggiungi uno stato e logica per caricare più giorni durante lo scorrimento
+  const [isScrollingRight, setIsScrollingRight] = useState(false);
+  const [isScrollingLeft, setIsScrollingLeft] = useState(false);
+  const [lastScrollPosition, setLastScrollPosition] = useState(0);
+  
+  // Gestione dello scrolling per caricare più giorni
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollLeft = e.currentTarget.scrollLeft;
+    const maxScroll = e.currentTarget.scrollWidth - e.currentTarget.clientWidth;
+    
+    // Determina la direzione dello scorrimento
+    if (scrollLeft > lastScrollPosition) {
+      // Scorrendo verso destra
+      if (scrollLeft > maxScroll - 100 && !isScrollingRight) {
+        setIsScrollingRight(true);
+        // Qui puoi aggiungere logica per caricare più giorni a destra
+      }
+    } else {
+      // Scorrendo verso sinistra
+      if (scrollLeft < 100 && !isScrollingLeft) {
+        setIsScrollingLeft(true);
+        // Qui puoi aggiungere logica per caricare più giorni a sinistra
+      }
+    }
+    
+    setLastScrollPosition(scrollLeft);
+  };
+  
+  // Reset degli stati di scrolling
+  useEffect(() => {
+    if (isScrollingRight || isScrollingLeft) {
+      setTimeout(() => {
+        setIsScrollingRight(false);
+        setIsScrollingLeft(false);
+      }, 500);
+    }
+  }, [isScrollingRight, isScrollingLeft]);
   
   // Scorri all'inizio per mostrare più giorni futuri
   useEffect(() => {
@@ -204,14 +243,14 @@ function DayHeader({ date, onChangeDate }: { date: Date, onChangeDate: (date: Da
       setIsDragging(true);
     }
   };
-  
+
   const handleTouchEnd = (d: Date, e: React.TouchEvent) => {
     // Se non è un trascinamento, considera un tap
     if (!isDragging) {
       onChangeDate(d);
     }
     setIsDragging(false);
-  };
+  };  
   
   return (
     <div className="md:hidden bg-black sticky top-0 z-20 w-full border-b border-zinc-800">
@@ -219,6 +258,7 @@ function DayHeader({ date, onChangeDate }: { date: Date, onChangeDate: (date: Da
       <div 
         ref={scrollRef}
         className="flex overflow-x-auto scrollbar-none touch-pan-x"
+        onScroll={handleScroll}
       >
         {weekDates.map((d, i) => {
           const isSelected = d.toDateString() === date.toDateString();
@@ -337,12 +377,11 @@ export default function DayView({
   const currentMinute = now.getMinutes();
   const timePosition = (currentMinute / 60) * 60;
   
-  // Gestione dei long press per creare eventi
+  // Modifica handleTouchStart
   const handleTouchStart = (hour: number, e: React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); // Aggiungi per prevenire comportamenti predefiniti
     
-    // Il resto rimane invariato
+    // Memorizza l'ora e la posizione iniziale
     setLongPressHour(hour);
     setTouchStartPos({
       x: e.touches[0].clientX,
@@ -350,30 +389,61 @@ export default function DayView({
     });
     
     // Avvia il timer per il long press
-    const timer = setTimeout(() => {
+    const longPressTimer = setTimeout(() => {
       // Se il touch è ancora attivo dopo 500ms, considera un long press
-      if (longPressHour === hour && !isDraggingTimeslot) {
-        setLongPressActive(true);
-        
-        // Calcola l'orario preciso in base alla posizione Y all'interno della cella
-        if (containerRef.current) {
-          const hourCell = containerRef.current.querySelector(`[data-hour="${hour}"]`);
-          if (hourCell) {
-            const rect = hourCell.getBoundingClientRect();
-            const relativeY = e.touches[0].clientY - rect.top;
-            const percentInHour = relativeY / rect.height;
-            const minutes = Math.floor(percentInHour * 60);
-            
-            // Crea una data per l'orario di inizio
-            const startTime = new Date(selectedDate);
-            startTime.setHours(hour, minutes, 0, 0);
-            setLongPressStartTime(startTime);
-          }
+      setLongPressActive(true);
+      
+      // Calcola l'orario preciso in base alla posizione Y all'interno della cella
+      if (containerRef.current) {
+        const hourCell = containerRef.current.querySelector(`[data-hour="${hour}"]`);
+        if (hourCell) {
+          const rect = hourCell.getBoundingClientRect();
+          const relativeY = e.touches[0].clientY - rect.top;
+          const percentInHour = relativeY / rect.height;
+          const minutes = Math.floor(percentInHour * 60);
+          
+          // Crea una data per l'orario di inizio
+          const startTime = new Date(selectedDate);
+          startTime.setHours(hour, minutes, 0, 0);
+          setLongPressStartTime(startTime);
         }
       }
     }, 500);
     
-    return () => clearTimeout(timer);
+    // Salva il riferimento al timer
+    longPressTimerRef.current = longPressTimer;
+    
+    return () => {
+      // Pulisci il timer se il componente viene smontato
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    };
+  };
+  
+  // Aggiungi il riferimento per salvare il timer
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Cancella sempre il timer quando il touch finisce
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    
+    // Se era attivo un long press, crea un nuovo evento
+    if (longPressActive && longPressStartTime && onCreateEvent) {
+      // Calcola l'orario di fine (default: 1 ora dopo)
+      const endTime = new Date(longPressStartTime.getTime() + 60 * 60000);
+      onCreateEvent(longPressStartTime, endTime);
+    }
+    
+    // Reset dello stato
+    setLongPressActive(false);
+    setLongPressStartTime(null);
+    setLongPressHour(null);
+    setTouchStartPos(null);
+    setIsDraggingTimeslot(false);
   };
   
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -393,22 +463,6 @@ export default function DayView({
     if (longPressActive && longPressStartTime) {
       // Implementare la logica per ridimensionare l'evento in base al movimento del dito
     }
-  };
-  
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    // Se era attivo un long press, crea un nuovo evento
-    if (longPressActive && longPressStartTime && onCreateEvent) {
-      // Calcola l'orario di fine (default: 1 ora dopo)
-      const endTime = new Date(longPressStartTime.getTime() + 60 * 60000);
-      onCreateEvent(longPressStartTime, endTime);
-    }
-    
-    // Reset dello stato
-    setLongPressActive(false);
-    setLongPressStartTime(null);
-    setLongPressHour(null);
-    setTouchStartPos(null);
-    setIsDraggingTimeslot(false);
   };
   
   return (
