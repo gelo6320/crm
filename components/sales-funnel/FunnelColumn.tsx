@@ -35,28 +35,41 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
       const isHovering = monitor.isOver({ shallow: true });
       setIsOver(isHovering);
       
-      // Auto-scroll laterale quando si arriva al bordo
-      const boardContainer = document.getElementById('funnel-board-container');
-      if (boardContainer && isHovering) {
-        const containerRect = boardContainer.getBoundingClientRect();
-        const columnRect = dropRef.current.getBoundingClientRect();
-        
-        // Usa l'intera larghezza visibile come zona di scorrimento
-        const viewportWidth = window.innerWidth;
-        const scrollSensitivity = viewportWidth * 0.25; // 25% della larghezza dello schermo
-        
-        // Ottieni la posizione del mouse
-        const clientOffset = monitor.getClientOffset();
-        if (!clientOffset) return;
-        
-        // Se siamo vicini al bordo destro, scorri a destra (scrollSensitivity px dal bordo)
-        if (viewportWidth - clientOffset.x < scrollSensitivity) {
-          boardContainer.scrollBy({ left: 15, behavior: 'smooth' });
+      // Ottieni la posizione del mouse
+      const clientOffset = monitor.getClientOffset();
+      if (!clientOffset) return;
+      
+      // Auto-scroll laterale - ora funziona su tutta la viewport
+      const viewportWidth = window.innerWidth;
+      
+      // Dividiamo lo schermo in tre parti: 30% a sinistra, 40% al centro, 30% a destra
+      const leftZone = viewportWidth * 0.3;
+      const rightZone = viewportWidth * 0.7;
+      
+      // Velocità di scorrimento progressiva - più vicino al bordo, più veloce lo scorrimento
+      const calculateScrollSpeed = (distance: number, max: number) => {
+        // Velocità di base: da 5px a 25px per scorrimento
+        const baseSpeed = 5;
+        const maxAdditionalSpeed = 20;
+        const ratio = 1 - (distance / max);
+        return baseSpeed + (maxAdditionalSpeed * ratio);
+      };
+      
+      // Se siamo nella zona sinistra, scorriamo a sinistra con velocità proporzionale
+      if (clientOffset.x < leftZone) {
+        const speed = calculateScrollSpeed(clientOffset.x, leftZone);
+        const boardContainer = document.getElementById('funnel-board-container');
+        if (boardContainer) {
+          boardContainer.scrollBy({ left: -speed, behavior: 'auto' });
         }
-        
-        // Se siamo vicini al bordo sinistro, scorri a sinistra (scrollSensitivity px dal bordo)
-        if (clientOffset.x < scrollSensitivity) {
-          boardContainer.scrollBy({ left: -15, behavior: 'smooth' });
+      }
+      
+      // Se siamo nella zona destra, scorriamo a destra con velocità proporzionale
+      else if (clientOffset.x > rightZone) {
+        const speed = calculateScrollSpeed(viewportWidth - clientOffset.x, viewportWidth - rightZone);
+        const boardContainer = document.getElementById('funnel-board-container');
+        if (boardContainer) {
+          boardContainer.scrollBy({ left: speed, behavior: 'auto' });
         }
       }
     },

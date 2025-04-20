@@ -1,10 +1,14 @@
 // components/sales-funnel/FunnelCard.tsx
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Pencil } from "lucide-react";
 import { useDrag, DragPreviewImage } from "react-dnd";
 import { FunnelItem } from "@/types";
 import { formatDate } from "@/lib/utils/date";
 import { formatMoney } from "@/lib/utils/format";
+
+const [isTouched, setIsTouched] = useState(false);
+const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
+
 
 interface FunnelCardProps {
   lead: FunnelItem;
@@ -38,6 +42,77 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
       }
     }
   });
+
+  useEffect(() => {
+    const cardElement = cardRef.current;
+    if (!cardElement) return;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      console.log(`[DnD Debug] Touch start su card ${lead._id} (${lead.name})`, e.touches[0].clientX, e.touches[0].clientY);
+      
+      // Imposta lo stato di touch attivo
+      setIsTouched(true);
+      
+      // Crea un timer per indicare all'utente quando può iniziare a trascinare
+      const timer = setTimeout(() => {
+        // Aggiungi una classe per l'animazione "pronto per il trascinamento"
+        if (cardElement) {
+          cardElement.classList.add('touch-ready-to-drag');
+        }
+      }, 120); // Breve ritardo per attivare l'animazione
+      
+      setTouchTimer(timer);
+    };
+    
+    const handleTouchEnd = () => {
+      // Resetta lo stato di touch
+      setIsTouched(false);
+      
+      // Rimuovi la classe per l'animazione
+      if (cardElement) {
+        cardElement.classList.remove('touch-ready-to-drag');
+      }
+      
+      // Cancella il timer se esiste
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        setTouchTimer(null);
+      }
+    };
+    
+    const handleTouchMove = () => {
+      // Se l'utente inizia a trascinare, la classe verrà rimossa automaticamente
+      // quando il dragging prende il controllo
+      if (cardElement) {
+        cardElement.classList.remove('touch-ready-to-drag');
+      }
+      
+      // Cancella il timer se esiste
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        setTouchTimer(null);
+      }
+    };
+    
+    // Aggiungi event listener
+    cardElement.addEventListener('touchstart', handleTouchStart);
+    cardElement.addEventListener('touchend', handleTouchEnd);
+    cardElement.addEventListener('touchcancel', handleTouchEnd);
+    cardElement.addEventListener('touchmove', handleTouchMove);
+    
+    return () => {
+      // Rimuovi event listener alla pulizia
+      cardElement.removeEventListener('touchstart', handleTouchStart);
+      cardElement.removeEventListener('touchend', handleTouchEnd);
+      cardElement.removeEventListener('touchcancel', handleTouchEnd);
+      cardElement.removeEventListener('touchmove', handleTouchMove);
+      
+      // Cancella il timer se esiste
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+      }
+    };
+  }, [lead._id, lead.name, touchTimer]);
 
   // Aggiungere log all'inizio del trascinamento usando useEffect
   useEffect(() => {
@@ -81,7 +156,7 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
       />
       <div
         ref={cardRef}
-        className={`funnel-card ${isDragging ? "dragging" : ""}`}
+        className={`funnel-card ${isDragging ? "dragging" : ""} ${isTouched ? "touched" : ""}`}
         style={{ 
           borderLeftColor: getBorderColor(lead.status),
           opacity: isDragging ? 0.5 : 1

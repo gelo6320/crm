@@ -32,16 +32,16 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
     enableTouchEvents: true,
     enableMouseEvents: true, // Supporta anche il mouse su dispositivi touch
     enableKeyboardEvents: true,
-    delayTouchStart: 40, // Ridotto ulteriormente per migliorare la reattività
-    touchSlop: 15, // Ridotto ulteriormente per migliorare la sensibilità del touch
+    delayTouchStart: 200, // Aumentato per dare tempo all'animazione di feedback
+    touchSlop: 10, // Ridotto per migliorare sensibilità
     ignoreContextMenu: true,
+    enableHoverOutsideTarget: true,
+    enableTapClick: true, // Migliora l'esperienza sui dispositivi mobile
+    // Modifica le scroll angle ranges per avere più controllo
     scrollAngleRanges: [
       { start: 30, end: 150 },
       { start: 210, end: 330 }
-    ],
-    // Aggiungi logging per debug
-    enableHoverOutsideTarget: true,
-    enableTapClick: true, // Migliora l'esperienza sui dispositivi mobile
+    ]
   };
   
   // When the component mounts, we mark DnD as ready (client-side only)

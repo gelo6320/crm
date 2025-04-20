@@ -759,3 +759,44 @@ html.has-touch .funnel-card {
 .no-scroll {
   overflow: hidden;
 }
+
+/* Aggiungi questo al tuo file globale CSS (globals.css o il file dove hai gli stili del funnel) */
+
+/* Stile per quando l'utente tocca una card */
+.funnel-card.touched {
+  transform: scale(0.98);
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.5);
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+
+/* Animazione per indicare che si può iniziare a trascinare */
+.funnel-card.touch-ready-to-drag {
+  animation: readyToDrag 1s ease-in-out infinite;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.7);
+}
+
+@keyframes readyToDrag {
+  0% {
+    transform: scale(0.98);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(0.98);
+  }
+}
+
+/* Modifica allo stile della card durante il trascinamento */
+.funnel-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.3);
+}
+
+/* Stile per il custom drag layer per renderlo più visibile su mobile */
+.drag-preview-enhanced {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  transform-origin: center center;
+  transition: transform 0.05s linear;
+}
