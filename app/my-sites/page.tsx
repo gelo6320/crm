@@ -63,7 +63,6 @@ export default function MySitesPage() {
             onClick={() => setShowAddModal(true)}
             className="btn btn-primary"
           >
-            <Plus size={16} className="mr-1" />
             Aggiungi sito
           </button>
         </div>
