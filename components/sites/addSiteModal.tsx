@@ -6,7 +6,7 @@ import { Site } from "@/types";
 
 interface AddSiteModalProps {
   onClose: () => void;
-  onSave: (site: Site) => void;
+  onSave: (site: Site) => void; 
 }
 
 export default function AddSiteModal({ onClose, onSave }: AddSiteModalProps) {
