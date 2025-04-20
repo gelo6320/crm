@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { RefreshCw, Plus } from "lucide-react";
 import SiteCard from "@/components/sites/SiteCard";
 import AddSiteModal from "@/components/sites/AddSiteModal";
-import { fetchUserSites } from "@/lib/api/sites";
+import { fetchUserSites } from "@/lib/api/sites"; 
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "@/components/ui/toaster";
 import { Site } from "@/types";
