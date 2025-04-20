@@ -109,7 +109,7 @@ export default function RootLayout({
               <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} isMobile={isMobile} />
               <div className="flex-1 flex flex-col overflow-hidden">
                 <Header setSidebarOpen={setSidebarOpen} />
-                <main className="flex-1 overflow-y-auto bg-zinc-900 pt-2">
+                <main className="flex-1 overflow-y-auto bg-zinc-900 pt-2 no-scroll">
                   <div className="px-3 py-2 md:p-6 max-w-full">
                     {children}
                   </div>

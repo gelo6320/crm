@@ -19,7 +19,7 @@
 
 @layer base {
   body {
-    @apply bg-zinc-900 text-white antialiased;
+    @apply overflow-hidden bg-zinc-900 text-white antialiased;
   }
   
   /* Custom scrollbar */
@@ -754,4 +754,8 @@ html.has-touch .funnel-card {
 
 .auto-scroll-indicator.active {
   opacity: 1;
+}
+
+.no-scroll {
+  overflow: hidden;
 }
