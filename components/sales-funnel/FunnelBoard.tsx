@@ -9,6 +9,7 @@ import { FunnelData, FunnelItem } from "@/types";
 import FunnelColumn from "./FunnelColumn";
 import FunnelCard from "./FunnelCard";
 import EditValueModal from "./ValueModal";
+import FacebookEventModal from "./FacebookEventModal";
 import { isTouchDevice } from "@/lib/utils/device";
 import { updateLeadStage } from "@/lib/api/funnel";
 import { toast } from "@/components/ui/toaster";
@@ -24,31 +25,30 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
   const [editingLead, setEditingLead] = useState<FunnelItem | null>(null);
   const [isDndReady, setIsDndReady] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
+  const [movedLead, setMovedLead] = useState<{lead: FunnelItem, previousStatus: string} | null>(null);
   
-  const isTouchDevice = () =>
-    typeof window !== 'undefined' &&
-    ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  
-  const backend = isTouchDevice() ? TouchBackend : HTML5Backend;
-  
-  const options = isTouchDevice()
-    ? {
-        enableTouchEvents: true,
-        enableKeyboardEvents: true,
-        delay: 50,
-        touchSlop: 25,
-        ignoreContextMenu: true,
-        scrollAngleRanges: [
-          { start: 30, end: 150 },
-          { start: 210, end: 330 }
-        ]
-      }
-    : undefined;
+  // Opzioni migliorate per il touch backend
+  const touchBackendOptions = {
+    enableTouchEvents: true,
+    enableMouseEvents: true, // Supporta anche il mouse su dispositivi touch
+    enableKeyboardEvents: true,
+    delayTouchStart: 50, // Ridotto da 200ms
+    touchSlop: 20, // Ridotto per migliorare responsività
+    ignoreContextMenu: true,
+    scrollAngleRanges: [
+      { start: 30, end: 150 },
+      { start: 210, end: 330 }
+    ]
+  };
   
   // When the component mounts, we mark DnD as ready (client-side only)
   useEffect(() => {
     setIsDndReady(true);
   }, []);
+  
+  // Setta il backend in base al dispositivo
+  const backend = isTouchDevice() ? TouchBackend : HTML5Backend;
+  const backendOptions = isTouchDevice() ? touchBackendOptions : undefined;
   
   const handleMoveLead = async (lead: FunnelItem, targetStatus: string) => {
     if (lead.status === targetStatus) return;
@@ -75,43 +75,42 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
     // Update the UI immediately
     setFunnelData(updatedFunnelData);
     
-    try {
-      // Call the server to actually update the status
-      await updateLeadStage(
-        lead._id,
-        lead.type,
-        lead.status,
-        targetStatus
-      );
-      
-      // Notify the user
-      toast("success", "Lead moved successfully", `${lead.name} moved to ${targetStatus}`);
-      
-      // Update data from server
-      onLeadMove();
-    } catch (error) {
-      console.error("Error while moving lead:", error);
-      
-      // Restore previous state in case of error
-      toast("error", "Error moving lead", "An error occurred, please try again.");
-      
-      // Undo the optimistic update
-      const fallbackData = { ...funnelData };
-      // Remove from target column where we just added it
-      fallbackData[targetColumn] = fallbackData[targetColumn].filter(
-        item => item._id !== lead._id
-      );
-      
-      // Add back to original column
-      fallbackData[sourceColumn] = [
-        ...fallbackData[sourceColumn],
-        lead
-      ];
-      
-      setFunnelData(fallbackData);
-    } finally {
-      setIsMoving(false);
-    }
+    // Mostra il popup di conferma per l'invio a Facebook
+    setMovedLead({lead: {...lead, status: targetStatus}, previousStatus: lead.status});
+  };
+  
+  // Annulla l'operazione di spostamento (in caso di errore o cancellazione dall'utente)
+  const handleUndoMove = () => {
+    if (!movedLead) return;
+    
+    const lead = movedLead.lead;
+    const sourceColumn = movedLead.previousStatus as keyof FunnelData;
+    const targetColumn = lead.status as keyof FunnelData;
+    
+    const updatedFunnelData = { ...funnelData };
+    
+    // Remove from target column
+    updatedFunnelData[targetColumn] = updatedFunnelData[targetColumn].filter(
+      item => item._id !== lead._id
+    );
+    
+    // Add back to source column with previous status
+    updatedFunnelData[sourceColumn] = [
+      ...updatedFunnelData[sourceColumn],
+      { ...lead, status: movedLead.previousStatus }
+    ];
+    
+    // Update the UI
+    setFunnelData(updatedFunnelData);
+    setMovedLead(null);
+    setIsMoving(false);
+  };
+  
+  // Conferma l'operazione di spostamento e aggiorna dati dal server
+  const handleConfirmMove = () => {
+    onLeadMove(); // Aggiorna dati dal server
+    setMovedLead(null);
+    setIsMoving(false);
   };
   
   const handleEditValue = (lead: FunnelItem) => {
@@ -166,13 +165,15 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
     { id: "lost", name: "Perso", color: "bg-danger" },
   ];
   
-  // Use a container with overflow-x-auto to enable horizontal scrolling
   return (
     <>
       {isDndReady && (
-        <DndProvider backend={backend} options={options}>
+        <DndProvider backend={backend} options={backendOptions}>
           <CustomDragLayer />
-          <div id="funnel-board-container" className="funnel-board-container flex space-x-4 min-w-max pb-2 overflow-x-auto">
+          <div 
+            id="funnel-board-container" 
+            className="funnel-board-container flex space-x-4 min-w-max pb-2 overflow-x-auto scroll-smooth"
+          >
             {columns.map((column) => (
               <FunnelColumn
                 key={column.id}
@@ -191,17 +192,29 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
                 ))}
               </FunnelColumn>
             ))}
-           </div>
-       </DndProvider>
-     )}
-     
-     {editingLead && (
-       <EditValueModal
-         lead={editingLead}
-         onClose={() => setEditingLead(null)}
-         onSave={handleSaveValue}
-       />
-     )}
-   </>
- );
+          </div>
+        </DndProvider>
+      )}
+      
+      {/* Modal per modificare valore e servizio */}
+      {editingLead && (
+        <EditValueModal
+          lead={editingLead}
+          onClose={() => setEditingLead(null)}
+          onSave={handleSaveValue}
+        />
+      )}
+      
+      {/* Modal per confermare invio a Facebook */}
+      {movedLead && (
+        <FacebookEventModal
+          lead={movedLead.lead}
+          previousStatus={movedLead.previousStatus}
+          onClose={() => setMovedLead(null)}
+          onSave={handleConfirmMove}
+          onUndo={handleUndoMove}
+        />
+      )}
+    </>
+  );
 }

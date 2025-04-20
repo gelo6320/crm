@@ -114,11 +114,6 @@
     @apply text-xs rounded px-1 py-0.5 mb-1 truncate cursor-pointer;
   }
   
-  /* Sales funnel column */
-  .funnel-column {
-    @apply flex flex-col min-w-[220px] bg-zinc-800 rounded-lg overflow-hidden;
-  }
-  
   .funnel-header {
     @apply p-2 flex justify-between items-center;
   }
@@ -127,18 +122,9 @@
     @apply p-2 flex-1 overflow-y-auto max-h-[calc(100vh-200px)];
   }
   
-  .funnel-card {
-    @apply bg-zinc-900 rounded p-2 mb-2 border-l-4 border-primary shadow hover:shadow-md
-    transition-transform hover:-translate-y-0.5 cursor-grab;
-  }
-  
   /* Dragging states */
   .dragging {
     @apply opacity-50 cursor-grabbing !important;
-  }
-  
-  .drag-over {
-    @apply bg-primary/10 !important;
   }
   
   /* Modal styles */
@@ -165,30 +151,6 @@
   }
 }
 
-/* Aggiungi questi stili al file app/globals.css */
-
-/* Funnel board container per auto-scroll */
-.funnel-board-container {
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Stile per il card durante il trascinamento */
-.funnel-card.dragging {
-  opacity: 0.6 !important;
-  transform: scale(1.05) !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
-  cursor: grabbing !important;
-  z-index: 100 !important;
-}
-
-/* Animazione pulsante per la colonna durante l'hover */
-.drag-over.pulse-animation {
-  animation: pulse 1.5s infinite;
-  background-color: rgba(255, 107, 0, 0.15);
-  border: 2px dashed #FF6B00 !important;
-}
-
 @keyframes pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.4);
@@ -202,25 +164,6 @@
 }
 
 /* Animazione per la colonna durante il movimento dei lead */
-.column-fade-transition {
-  transition: opacity 0.3s ease;
-}
-
-/* Responsive styling for better mobile experience */
-@media (max-width: 768px) {
-  .funnel-column {
-    min-width: 200px;
-    max-width: 300px;
-  }
-  
-  .funnel-card {
-    touch-action: none; /* Prevents scrolling while dragging on mobile */
-  }
-  
-  .funnel-card.dragging {
-    transform: scale(1.1) !important;
-  }
-}
 
 /* Custom drag preview for better visibility */
 .drag-preview {
@@ -584,4 +527,174 @@ input, textarea {
   opacity: 0.8;
   z-index: 100;
   transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+/* Stile per il card durante il trascinamento */
+.funnel-card.dragging {
+  opacity: 0.6 !important;
+  transform: scale(1.02) !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2) !important;
+  cursor: grabbing !important;
+  z-index: 10 !important;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+/* Sostituzione per l'animazione pulsante - più sottile/elegante */
+.drag-over {
+  background-color: rgba(255, 107, 0, 0.1) !important;
+  border: 1px dashed #FF6B00 !important;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Animazione più soft per la colonna durante il trascinamento */
+.column-fade-transition {
+  transition: opacity 0.3s ease, transform 0.2s ease;
+}
+
+/* Responsive styling per miglior esperienza mobile */
+@media (max-width: 768px) {
+  .funnel-column {
+    min-width: 200px;
+    max-width: 280px;
+  }
+  
+  .funnel-card {
+    touch-action: none; /* Prevent scrolling while dragging on mobile */
+  }
+  
+  .funnel-card.dragging {
+    transform: scale(1.05) !important;
+  }
+}
+
+/* Stile migliorato per la drag preview */
+.drag-preview-enhanced {
+  max-width: 230px;
+  opacity: 0.9;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 1000;
+  transition: transform 0.2s ease;
+  transform-origin: center center;
+}
+
+/* Migliore supporto per touch devices */
+html.has-touch .funnel-card {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  user-select: none;
+}
+
+/* Migliora la reattività su dispositivi mobili */
+@media (max-width: 768px) {
+  /* Rendi le colonne più compatte su mobile */
+  .funnel-column {
+    min-width: 190px;
+    max-width: 250px;
+  }
+  
+  /* Riduci il padding nelle cards */
+  .funnel-card {
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Migliora la visibilità delle cards durante il drag su mobile */
+  .funnel-card.dragging {
+    opacity: 0.7 !important;
+    transform: scale(1.03) !important;
+    background-color: rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  /* Rendi lo scroll orizzontale più fluido */
+  .funnel-board-container::-webkit-scrollbar {
+    height: 4px;
+  }
+  
+  /* Rendi evidente la possibilità di scorrere orizzontalmente */
+  .funnel-board-container::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 50px;
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.2));
+    pointer-events: none;
+    opacity: 0.6;
+  }
+}
+
+/* Aggiungi una classe per gestire il touchstart su mobile */
+.touch-active {
+  opacity: 0.8;
+  transform: scale(0.98);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Migliora lo stile di base della funnel card */
+.funnel-card {
+  background-color: rgb(24, 24, 27);
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-left-width: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  cursor: grab;
+}
+
+.funnel-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Migliora lo stile visivo quando si rilascia un elemento */
+.funnel-drop-success {
+  animation: drop-success 0.5s ease;
+}
+
+@keyframes drop-success {
+  0% { box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.2); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 107, 0, 0); }
+}
+
+/* Garantisci che il contenitore del board sia scrollabile anche durante il drag */
+.funnel-board-container {
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 1rem;
+  position: relative;
+  min-height: 300px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 107, 0, 0.5) transparent;
+}
+
+/* Stile per l'indicatore di auto-scroll */
+.auto-scroll-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.auto-scroll-indicator.left {
+  left: 0;
+  background: linear-gradient(90deg, rgba(255, 107, 0, 0.2), transparent);
+}
+
+.auto-scroll-indicator.right {
+  right: 0;
+  background: linear-gradient(-90deg, rgba(255, 107, 0, 0.2), transparent);
+}
+
+.auto-scroll-indicator.active {
+  opacity: 1;
 }

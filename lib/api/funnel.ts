@@ -152,35 +152,44 @@ function calculateFunnelStats(items: FunnelItem[]): FunnelStats {
   };
 }
 
-// Il resto delle funzioni originali rimane invariato...
-export async function updateLeadStage(
-  leadId: string,
-  leadType: string,
-  fromStage: string,
-  toStage: string
-): Promise<{
-  success: boolean;
-  message: string;
-  facebookResult?: any;
-}> {
-  try {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/sales-funnel/move`,
-      {
-        leadId,
-        leadType,
-        fromStage,
-        toStage
-      },
-      { withCredentials: true }
-    );
-    
-    return response.data;
-  } catch (error) {
-    console.error("Errore durante l'aggiornamento del lead nel funnel:", error);
-    throw error;
+interface FacebookEventOptions {
+    eventName: string;
+    eventMetadata?: Record<string, any>;
   }
-}
+
+// Modifica la funzione per supportare l'invio di eventi Facebook
+export async function updateLeadStage(
+    leadId: string,
+    leadType: string,
+    fromStage: string,
+    toStage: string,
+    facebookOptions?: FacebookEventOptions
+  ): Promise<{
+    success: boolean;
+    message: string;
+    facebookResult?: any;
+  }> {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/api/sales-funnel/move`,
+        {
+          leadId,
+          leadType,
+          fromStage,
+          toStage,
+          sendToFacebook: !!facebookOptions,
+          facebookEvent: facebookOptions?.eventName || null,
+          eventMetadata: facebookOptions?.eventMetadata || null
+        },
+        { withCredentials: true }
+      );
+      
+      return response.data;
+    } catch (error) {
+      console.error("Errore durante l'aggiornamento del lead nel funnel:", error);
+      throw error;
+    }
+  }
 
 export async function updateLeadMetadata(
   leadId: string,

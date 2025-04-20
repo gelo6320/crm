@@ -21,25 +21,26 @@ export default function CustomDragLayer(props: CustomDragLayerProps) {
   
   return (
     <div
-      className="fixed pointer-events-none z-50 drag-preview"
+      className="fixed pointer-events-none z-50 drag-preview-enhanced"
       style={{
         left: currentOffset.x,
         top: currentOffset.y,
         transform: 'translate(-50%, -50%)',
-        width: '200px',
       }}
     >
-      <div className="font-medium text-sm truncate mb-1">
-        {lead.name}
-      </div>
-      <div className="text-xs text-zinc-400">
-        {lead.email}
-      </div>
-      {lead.value && (
-        <div className="text-primary font-medium mt-1">
-          €{lead.value}
+      <div className="bg-zinc-900 p-3 rounded border-l-4 border-primary shadow-lg">
+        <div className="font-medium text-sm truncate mb-1">
+          {lead.name}
         </div>
-      )}
+        <div className="text-xs text-zinc-400">
+          {lead.email}
+        </div>
+        {lead.value && (
+          <div className="text-primary font-medium mt-1">
+            €{lead.value.toLocaleString('it-IT')}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -79,7 +79,7 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
       
       <div 
         ref={dropRef} 
-        className={`funnel-body ${isOverCurrent ? "drag-over pulse-animation" : ""}`}
+        className={`funnel-body ${isOverCurrent ? "drag-over" : ""}`}
       >
         {Array.isArray(children) && children.length > 0 ? (
           children
