@@ -27,9 +27,22 @@ export default function CalendarView({
   onSelectEvent,
 }: CalendarViewProps) {
   const [isDndReady, setIsDndReady] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Set up the correct backend based on device type
   const backendForDND = isTouchDevice() ? TouchBackend : HTML5Backend;
+  
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
   
   // When the component mounts, we mark DnD as ready (client-side only)
   useEffect(() => {
@@ -37,7 +50,7 @@ export default function CalendarView({
   }, []);
   
   return (
-    <div className="h-full">
+    <div className={`h-full transition-all duration-300 ${view === "day" && isMobile ? "bg-black" : ""}`}>
       {isDndReady ? (
         <DndProvider backend={backendForDND}>
           {view === "month" && (
@@ -54,6 +67,7 @@ export default function CalendarView({
               selectedDate={selectedDate}
               events={events}
               onSelectEvent={onSelectEvent}
+              onChangeDate={onSelectDate} // Pass the date change handler
             />
           )}
           

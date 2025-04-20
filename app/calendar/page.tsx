@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar as ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Menu } from "lucide-react";
 import { fetchAppointments } from "@/lib/api/calendar";
 import { CalendarEvent } from "@/types";
 import CalendarView from "@/components/calendar/CalendarView";
@@ -19,10 +19,16 @@ export default function CalendarPage() {
   const [currentAppointment, setCurrentAppointment] = useState<CalendarEvent | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const isMobileDevice = window.innerWidth < 768;
+      setIsMobile(isMobileDevice);
+      // Close sidebar automatically on mobile when changing to mobile view
+      if (isMobileDevice && showSidebar) {
+        setShowSidebar(false);
+      }
     };
     
     checkMobile();
@@ -64,6 +70,11 @@ export default function CalendarPage() {
     });
     
     setSelectedEvents(filtered);
+    
+    // Auto show sidebar if there are events and we're on mobile
+    if (isMobile && filtered.length > 0 && view === "day") {
+      setShowSidebar(true);
+    }
   };
   
   const navigateCalendar = (direction: "prev" | "next" | "today") => {
@@ -170,6 +181,10 @@ export default function CalendarPage() {
     return date.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
   };
   
+  const toggleSidebar = () => {
+    setShowSidebar(!showSidebar);
+  };
+  
   if (isLoading && events.length === 0) {
     return <LoadingSpinner />;
   }
@@ -177,10 +192,13 @@ export default function CalendarPage() {
   return (
     <div className="h-[calc(100vh-130px)] flex flex-col animate-fade-in">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-medium">Calendario</h1>
+        <h1 className="text-lg font-medium flex items-center">
+          <CalendarIcon className="mr-2 hidden md:inline" size={20} />
+          Calendario
+        </h1>
         
         <div className="flex">
-          <div className="bg-zinc-800 rounded-lg flex mr-4">
+          <div className="bg-zinc-800 rounded-lg flex mr-2 md:mr-4">
             <button
               onClick={() => navigateCalendar("prev")}
               className="p-2 text-zinc-400 hover:text-white"
@@ -207,7 +225,7 @@ export default function CalendarPage() {
             {formatMonthTitle(selectedDate)}
           </div>
           
-          <div className="bg-zinc-800 rounded-lg flex mr-4">
+          <div className="bg-zinc-800 rounded-lg hidden md:flex mr-4">
             <button
               onClick={() => setView("month")}
               className={`px-3 py-2 text-sm font-medium ${
@@ -236,6 +254,16 @@ export default function CalendarPage() {
             </button>
           </div>
           
+          {/* Mobile view toggle */}
+          <div className="mr-2 bg-zinc-800 rounded-lg flex md:hidden">
+            <button
+              onClick={toggleSidebar}
+              className={`p-2 ${selectedEvents.length > 0 ? 'text-primary' : 'text-zinc-400'}`}
+            >
+              <Menu size={18} />
+            </button>
+          </div>
+          
           <button
             onClick={handleNewAppointment}
             className="btn btn-primary"
@@ -246,9 +274,41 @@ export default function CalendarPage() {
         </div>
       </div>
       
-      <div className="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden">
+      {/* Mobile view selector */}
+      <div className="flex md:hidden bg-zinc-800 rounded-lg mb-4 overflow-hidden">
+        <button
+          onClick={() => setView("month")}
+          className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+            view === "month" ? "bg-primary text-white" : ""
+          }`}
+        >
+          Mese
+        </button>
+        
+        <button
+          onClick={() => setView("day")}
+          className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+            view === "day" ? "bg-primary text-white" : ""
+          }`}
+        >
+          Giorno
+        </button>
+        
+        <button
+          onClick={() => setView("list")}
+          className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+            view === "list" ? "bg-primary text-white" : ""
+          }`}
+        >
+          Lista
+        </button>
+      </div>
+      
+      <div className="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden relative">
         {/* Calendar View */}
-        <div className="flex-1 bg-zinc-800 rounded-lg overflow-hidden min-h-[500px]">
+        <div className={`flex-1 bg-zinc-800 rounded-lg overflow-hidden min-h-[500px] ${
+          isMobile && showSidebar ? 'hidden' : ''
+        }`}>
           <CalendarView
             view={view}
             selectedDate={selectedDate}
@@ -259,12 +319,18 @@ export default function CalendarPage() {
         </div>
         
         {/* Sidebar with day events */}
-        <div className="w-full md:w-80 bg-zinc-800 rounded-lg overflow-hidden">
+        <div className={`
+          w-full md:w-80 bg-zinc-800 rounded-lg overflow-hidden
+          ${isMobile ? 'absolute inset-0 z-10' : ''}
+          ${isMobile && !showSidebar ? 'hidden' : ''}
+          ${isMobile && showSidebar ? 'animate-slide-in' : ''}
+        `}>
           <CalendarSidebar
             selectedDate={selectedDate}
             events={selectedEvents}
             onEditEvent={handleEditAppointment}
             onDeleteEvent={handleDeleteAppointment}
+            onClose={isMobile ? toggleSidebar : undefined}
           />
         </div>
       </div>

@@ -25,21 +25,25 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
   const [isDndReady, setIsDndReady] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   
-  // Set up the correct backend based on device type
-  const backendForDND = isTouchDevice() ? 
-  TouchBackend({
-    enableMouseEvents: true,
-    enableKeyboardEvents: true,
-    delay: 50,
-    delayTouchStart: 50,
-    touchSlop: 25, // Distanza che deve essere trascinata prima che venga considerata un drag
-    ignoreContextMenu: true,
-    scrollAngleRanges: [
-      { start: 30, end: 150 },
-      { start: 210, end: 330 }
-    ]
-  }) : 
-  HTML5Backend;
+  const isTouchDevice = () =>
+    typeof window !== 'undefined' &&
+    ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  
+  const backend = isTouchDevice() ? TouchBackend : HTML5Backend;
+  
+  const options = isTouchDevice()
+    ? {
+        enableTouchEvents: true,
+        enableKeyboardEvents: true,
+        delay: 50,
+        touchSlop: 25,
+        ignoreContextMenu: true,
+        scrollAngleRanges: [
+          { start: 30, end: 150 },
+          { start: 210, end: 330 }
+        ]
+      }
+    : undefined;
   
   // When the component mounts, we mark DnD as ready (client-side only)
   useEffect(() => {
@@ -51,7 +55,7 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
     
     setIsMoving(true);
     
-    // Ottimisticamente aggiorna l'UI prima della risposta del server
+    // Optimistically update the UI before the server response
     const sourceColumn = lead.status as keyof FunnelData;
     const targetColumn = targetStatus as keyof FunnelData;
     
@@ -68,11 +72,11 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
       { ...lead, status: targetStatus }
     ];
     
-    // Aggiorna l'UI immediatamente
+    // Update the UI immediately
     setFunnelData(updatedFunnelData);
     
     try {
-      // Chiama il server per aggiornare effettivamente lo stato
+      // Call the server to actually update the status
       await updateLeadStage(
         lead._id,
         lead.type,
@@ -80,25 +84,25 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
         targetStatus
       );
       
-      // Notifica all'utente
-      toast("success", "Lead spostato con successo", `${lead.name} spostato a ${targetStatus}`);
+      // Notify the user
+      toast("success", "Lead moved successfully", `${lead.name} moved to ${targetStatus}`);
       
-      // Aggiorna i dati dal server
+      // Update data from server
       onLeadMove();
     } catch (error) {
-      console.error("Errore durante lo spostamento del lead:", error);
+      console.error("Error while moving lead:", error);
       
-      // Ripristina lo stato precedente in caso di errore
-      toast("error", "Errore durante lo spostamento", "Si è verificato un errore, riprovare.");
+      // Restore previous state in case of error
+      toast("error", "Error moving lead", "An error occurred, please try again.");
       
-      // Annulla la modifica ottimistica
+      // Undo the optimistic update
       const fallbackData = { ...funnelData };
-      // Rimuovi dalla colonna di destinazione dove l'abbiamo appena aggiunto
+      // Remove from target column where we just added it
       fallbackData[targetColumn] = fallbackData[targetColumn].filter(
         item => item._id !== lead._id
       );
       
-      // Riaggiungi nella colonna originale
+      // Add back to original column
       fallbackData[sourceColumn] = [
         ...fallbackData[sourceColumn],
         lead
@@ -118,7 +122,7 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
     if (!editingLead) return;
     
     try {
-      // Ottimisticamente aggiorna l'UI prima della risposta del server
+      // Optimistically update the UI before the server response
       const column = editingLead.status as keyof FunnelData;
       const updatedFunnelData = { ...funnelData };
       
@@ -130,7 +134,7 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
       
       setFunnelData(updatedFunnelData);
       
-      // Chiama il server per aggiornare effettivamente il valore e il servizio
+      // Call the server to actually update the value and service
       const { updateLeadMetadata } = await import("@/lib/api/funnel");
       await updateLeadMetadata(
         editingLead._id,
@@ -139,14 +143,14 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
         service
       );
       
-      // Notifica all'utente
-      toast("success", "Lead aggiornato", "Valore e servizio aggiornati con successo");
+      // Notify the user
+      toast("success", "Lead updated", "Value and service updated successfully");
       
-      // Aggiorna i dati dal server
+      // Update data from server
       onLeadMove();
     } catch (error) {
-      console.error("Errore durante l'aggiornamento del lead:", error);
-      toast("error", "Errore aggiornamento", "Si è verificato un errore, riprovare.");
+      console.error("Error updating lead:", error);
+      toast("error", "Update error", "An error occurred, please try again.");
     } finally {
       setEditingLead(null);
     }
@@ -166,7 +170,7 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
   return (
     <>
       {isDndReady && (
-        <DndProvider backend={backendForDND}>
+        <DndProvider backend={backend} options={options}>
           <CustomDragLayer />
           <div id="funnel-board-container" className="funnel-board-container flex space-x-4 min-w-max pb-2 overflow-x-auto">
             {columns.map((column) => (
