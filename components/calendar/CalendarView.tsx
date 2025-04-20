@@ -7,7 +7,7 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import { CalendarEvent } from "@/types";
 import MonthView from "./MonthView";
-import DayView from "./DayView";
+import DayView from "./DayView"; 
 import ListView from "./ListView";
 import { isTouchDevice } from "@/lib/utils/device";
 
