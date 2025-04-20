@@ -114,6 +114,11 @@
     @apply text-xs rounded px-1 py-0.5 mb-1 truncate cursor-pointer;
   }
   
+  /* Sales funnel column */
+  .funnel-column {
+    @apply flex flex-col min-w-[220px] bg-zinc-800 rounded-lg overflow-hidden;
+  }
+  
   .funnel-header {
     @apply p-2 flex justify-between items-center;
   }
@@ -122,9 +127,18 @@
     @apply p-2 flex-1 overflow-y-auto max-h-[calc(100vh-200px)];
   }
   
+  .funnel-card {
+    @apply bg-zinc-900 rounded p-2 mb-2 border-l-4 border-primary shadow hover:shadow-md
+    transition-transform hover:-translate-y-0.5 cursor-grab;
+  }
+  
   /* Dragging states */
   .dragging {
     @apply opacity-50 cursor-grabbing !important;
+  }
+  
+  .drag-over {
+    @apply bg-primary/10 !important;
   }
   
   /* Modal styles */
@@ -151,6 +165,23 @@
   }
 }
 
+/* Aggiungi questi stili al file app/globals.css */
+
+/* Funnel board container per auto-scroll */
+.funnel-board-container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Stile per il card durante il trascinamento */
+.funnel-card.dragging {
+  opacity: 0.6 !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+  cursor: grabbing !important;
+  z-index: 100 !important;
+}
+
 @keyframes pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.4);
@@ -164,6 +195,25 @@
 }
 
 /* Animazione per la colonna durante il movimento dei lead */
+.column-fade-transition {
+  transition: opacity 0.3s ease;
+}
+
+/* Responsive styling for better mobile experience */
+@media (max-width: 768px) {
+  .funnel-column {
+    min-width: 200px;
+    max-width: 300px;
+  }
+  
+  .funnel-card {
+    touch-action: none; /* Prevents scrolling while dragging on mobile */
+  }
+  
+  .funnel-card.dragging {
+    transform: scale(1.1) !important;
+  }
+}
 
 /* Custom drag preview for better visibility */
 .drag-preview {
@@ -527,6 +577,13 @@ input, textarea {
   opacity: 0.8;
   z-index: 100;
   transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+/* Funnel board container per auto-scroll */
+.funnel-board-container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 1rem;
 }
 
 /* Stile per il card durante il trascinamento */
