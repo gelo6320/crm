@@ -7,12 +7,11 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import { CalendarEvent } from "@/types";
 import MonthView from "./MonthView";
-import DayView from "./DayView";
 import ListView from "./ListView";
 import { isTouchDevice } from "@/lib/utils/device";
 
 interface CalendarViewProps {
-  view: "month" | "day" | "list";
+  view: "month" | "list";
   selectedDate: Date;
   events: CalendarEvent[];
   onSelectDate: (date: Date) => void;
@@ -52,7 +51,7 @@ export default function CalendarView({
   }, []);
   
   return (
-    <div className={`h-full transition-all duration-300 ${view === "day" && isMobile ? "bg-black" : ""} w-full`}>
+    <div className={`h-full transition-all duration-300 ${view === "list" && isMobile ? "bg-black" : ""} w-full`}>
       {isDndReady ? (
         <DndProvider backend={backendForDND}>
           {view === "month" && (
@@ -61,16 +60,6 @@ export default function CalendarView({
               events={events}
               onSelectDate={onSelectDate}
               onSelectEvent={onSelectEvent}
-            />
-          )}
-          
-          {view === "day" && (
-            <DayView
-              selectedDate={selectedDate}
-              events={events}
-              onSelectEvent={onSelectEvent}
-              onChangeDate={onSelectDate}
-              onCreateEvent={onCreateEvent}
             />
           )}
           

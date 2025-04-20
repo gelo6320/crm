@@ -11,7 +11,7 @@ import AppointmentModal from "@/components/calendar/AppointmentModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 export default function CalendarPage() {
-  const [view, setView] = useState<"month" | "day" | "list">("day");
+  const [view, setView] = useState<"month" | "list">("month");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedEvents, setSelectedEvents] = useState<CalendarEvent[]>([]);
@@ -72,7 +72,7 @@ export default function CalendarPage() {
     setSelectedEvents(filtered);
     
     // Auto show sidebar if there are events and we're on mobile
-    if (isMobile && filtered.length > 0 && view === "day") {
+    if (isMobile && filtered.length > 0 && view === "list") {
       setShowSidebar(true);
     }
   };
@@ -81,17 +81,9 @@ export default function CalendarPage() {
     const newDate = new Date(selectedDate);
     
     if (direction === "prev") {
-      if (view === "month") {
-        newDate.setMonth(newDate.getMonth() - 1);
-      } else {
-        newDate.setDate(newDate.getDate() - 1);
-      }
+      newDate.setMonth(newDate.getMonth() - 1);
     } else if (direction === "next") {
-      if (view === "month") {
-        newDate.setMonth(newDate.getMonth() + 1);
-      } else {
-        newDate.setDate(newDate.getDate() + 1);
-      }
+      newDate.setMonth(newDate.getMonth() + 1);
     } else if (direction === "today") {
       return setSelectedDate(new Date());
     }
@@ -102,7 +94,7 @@ export default function CalendarPage() {
   const handleSelectDate = (date: Date) => {
     setSelectedDate(date);
     if (view === "month") {
-      setView("day");
+      setView("list");
     }
   };
   
@@ -249,15 +241,6 @@ export default function CalendarPage() {
             </button>
             
             <button
-              onClick={() => setView("day")}
-              className={`px-3 py-2 text-sm font-medium ${
-                view === "day" ? "bg-primary text-white rounded-lg" : ""
-              }`}
-            >
-              Giorno
-            </button>
-            
-            <button
               onClick={() => setView("list")}
               className={`px-3 py-2 text-sm font-medium ${
                 view === "list" ? "bg-primary text-white rounded-lg" : ""
@@ -296,15 +279,6 @@ export default function CalendarPage() {
           }`}
         >
           Mese
-        </button>
-        
-        <button
-          onClick={() => setView("day")}
-          className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
-            view === "day" ? "bg-primary text-white" : ""
-          }`}
-        >
-          Giorno
         </button>
         
         <button
