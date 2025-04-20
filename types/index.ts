@@ -73,3 +73,27 @@ export interface Stat {
     lostValue: number;
     serviceDistribution: Record<string, number>;
   }
+
+  export interface SiteMetrics {
+    performance: number;
+    accessibility: number;
+    bestPractices: number;
+    seo: number;
+    firstContentfulPaint?: number;
+    speedIndex?: number;
+    largestContentfulPaint?: number;
+    timeToInteractive?: number;
+    totalBlockingTime?: number;
+    cumulativeLayoutShift?: number;
+  }
+  
+  export interface Site {
+    _id: string;
+    url: string;
+    domain: string;
+    screenshotUrl: string;
+    metrics: SiteMetrics;
+    lastScan: string;
+    createdAt: string;
+    updatedAt: string;
+  }
