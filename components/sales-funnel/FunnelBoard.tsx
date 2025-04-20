@@ -1,15 +1,18 @@
 // components/sales-funnel/FunnelBoard.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import { FunnelData, FunnelItem } from "@/types";
 import FunnelColumn from "./FunnelColumn";
 import FunnelCard from "./FunnelCard";
-import EditValueModal from "./EditValueModal";
+import EditValueModal from "./ValueModal";
 import { isTouchDevice } from "@/lib/utils/device";
+import { updateLeadStage } from "@/lib/api/funnel";
+import { toast } from "@/components/ui/toaster";
+import CustomDragLayer from './CustomDragLayer';
 
 interface FunnelBoardProps {
   funnelData: FunnelData;
@@ -20,20 +23,35 @@ interface FunnelBoardProps {
 export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: FunnelBoardProps) {
   const [editingLead, setEditingLead] = useState<FunnelItem | null>(null);
   const [isDndReady, setIsDndReady] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
   
   // Set up the correct backend based on device type
-  const backendForDND = isTouchDevice() ? TouchBackend : HTML5Backend;
+  const backendForDND = isTouchDevice() ? 
+  TouchBackend({
+    enableMouseEvents: true,
+    enableKeyboardEvents: true,
+    delay: 50,
+    delayTouchStart: 50,
+    touchSlop: 25, // Distanza che deve essere trascinata prima che venga considerata un drag
+    ignoreContextMenu: true,
+    scrollAngleRanges: [
+      { start: 30, end: 150 },
+      { start: 210, end: 330 }
+    ]
+  }) : 
+  HTML5Backend;
   
   // When the component mounts, we mark DnD as ready (client-side only)
-  useState(() => {
+  useEffect(() => {
     setIsDndReady(true);
-  });
+  }, []);
   
   const handleMoveLead = async (lead: FunnelItem, targetStatus: string) => {
-    // In a real app, make an API call to update the lead status
-    console.log(`Moving lead ${lead._id} from ${lead.status} to ${targetStatus}`);
+    if (lead.status === targetStatus) return;
     
-    // Update local state
+    setIsMoving(true);
+    
+    // Ottimisticamente aggiorna l'UI prima della risposta del server
     const sourceColumn = lead.status as keyof FunnelData;
     const targetColumn = targetStatus as keyof FunnelData;
     
@@ -50,10 +68,46 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
       { ...lead, status: targetStatus }
     ];
     
+    // Aggiorna l'UI immediatamente
     setFunnelData(updatedFunnelData);
     
-    // Trigger refresh from the server
-    onLeadMove();
+    try {
+      // Chiama il server per aggiornare effettivamente lo stato
+      await updateLeadStage(
+        lead._id,
+        lead.type,
+        lead.status,
+        targetStatus
+      );
+      
+      // Notifica all'utente
+      toast("success", "Lead spostato con successo", `${lead.name} spostato a ${targetStatus}`);
+      
+      // Aggiorna i dati dal server
+      onLeadMove();
+    } catch (error) {
+      console.error("Errore durante lo spostamento del lead:", error);
+      
+      // Ripristina lo stato precedente in caso di errore
+      toast("error", "Errore durante lo spostamento", "Si è verificato un errore, riprovare.");
+      
+      // Annulla la modifica ottimistica
+      const fallbackData = { ...funnelData };
+      // Rimuovi dalla colonna di destinazione dove l'abbiamo appena aggiunto
+      fallbackData[targetColumn] = fallbackData[targetColumn].filter(
+        item => item._id !== lead._id
+      );
+      
+      // Riaggiungi nella colonna originale
+      fallbackData[sourceColumn] = [
+        ...fallbackData[sourceColumn],
+        lead
+      ];
+      
+      setFunnelData(fallbackData);
+    } finally {
+      setIsMoving(false);
+    }
   };
   
   const handleEditValue = (lead: FunnelItem) => {
@@ -63,21 +117,39 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
   const handleSaveValue = async (value: number, service: string) => {
     if (!editingLead) return;
     
-    // In a real app, make an API call to update the lead value and service
-    console.log(`Updating lead ${editingLead._id} with value ${value} and service ${service}`);
-    
-    // Update local state
-    const column = editingLead.status as keyof FunnelData;
-    const updatedFunnelData = { ...funnelData };
-    
-    updatedFunnelData[column] = updatedFunnelData[column].map(lead => 
-      lead._id === editingLead._id 
-        ? { ...lead, value, service }
-        : lead
-    );
-    
-    setFunnelData(updatedFunnelData);
-    setEditingLead(null);
+    try {
+      // Ottimisticamente aggiorna l'UI prima della risposta del server
+      const column = editingLead.status as keyof FunnelData;
+      const updatedFunnelData = { ...funnelData };
+      
+      updatedFunnelData[column] = updatedFunnelData[column].map(lead => 
+        lead._id === editingLead._id 
+          ? { ...lead, value, service }
+          : lead
+      );
+      
+      setFunnelData(updatedFunnelData);
+      
+      // Chiama il server per aggiornare effettivamente il valore e il servizio
+      const { updateLeadMetadata } = await import("@/lib/api/funnel");
+      await updateLeadMetadata(
+        editingLead._id,
+        editingLead.type,
+        value,
+        service
+      );
+      
+      // Notifica all'utente
+      toast("success", "Lead aggiornato", "Valore e servizio aggiornati con successo");
+      
+      // Aggiorna i dati dal server
+      onLeadMove();
+    } catch (error) {
+      console.error("Errore durante l'aggiornamento del lead:", error);
+      toast("error", "Errore aggiornamento", "Si è verificato un errore, riprovare.");
+    } finally {
+      setEditingLead(null);
+    }
   };
   
   const columns = [
@@ -95,7 +167,8 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
     <>
       {isDndReady && (
         <DndProvider backend={backendForDND}>
-          <div className="flex space-x-4 min-w-max pb-2">
+          <CustomDragLayer />
+          <div id="funnel-board-container" className="funnel-board-container flex space-x-4 min-w-max pb-2 overflow-x-auto">
             {columns.map((column) => (
               <FunnelColumn
                 key={column.id}
@@ -103,6 +176,7 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
                 title={column.name}
                 color={column.color}
                 onMoveLead={handleMoveLead}
+                isMoving={isMoving}
               >
                 {funnelData[column.id as keyof FunnelData].map((lead) => (
                   <FunnelCard
@@ -113,17 +187,17 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
                 ))}
               </FunnelColumn>
             ))}
-          </div>
-        </DndProvider>
-      )}
-      
-      {editingLead && (
-        <EditValueModal
-          lead={editingLead}
-          onClose={() => setEditingLead(null)}
-          onSave={handleSaveValue}
-        />
-      )}
-    </>
-  );
+           </div>
+       </DndProvider>
+     )}
+     
+     {editingLead && (
+       <EditValueModal
+         lead={editingLead}
+         onClose={() => setEditingLead(null)}
+         onSave={handleSaveValue}
+       />
+     )}
+   </>
+ );
 }

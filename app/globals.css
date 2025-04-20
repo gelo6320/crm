@@ -164,3 +164,71 @@
     to { opacity: 1; transform: translateY(0); }
   }
 }
+
+/* Aggiungi questi stili al file app/globals.css */
+
+/* Funnel board container per auto-scroll */
+.funnel-board-container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Stile per il card durante il trascinamento */
+.funnel-card.dragging {
+  opacity: 0.6 !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+  cursor: grabbing !important;
+  z-index: 100 !important;
+}
+
+/* Animazione pulsante per la colonna durante l'hover */
+.drag-over.pulse-animation {
+  animation: pulse 1.5s infinite;
+  background-color: rgba(255, 107, 0, 0.15);
+  border: 2px dashed #FF6B00 !important;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 107, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 0, 0);
+  }
+}
+
+/* Animazione per la colonna durante il movimento dei lead */
+.column-fade-transition {
+  transition: opacity 0.3s ease;
+}
+
+/* Responsive styling for better mobile experience */
+@media (max-width: 768px) {
+  .funnel-column {
+    min-width: 200px;
+    max-width: 300px;
+  }
+  
+  .funnel-card {
+    touch-action: none; /* Prevents scrolling while dragging on mobile */
+  }
+  
+  .funnel-card.dragging {
+    transform: scale(1.1) !important;
+  }
+}
+
+/* Custom drag preview for better visibility */
+.drag-preview {
+  background-color: #1a1a1a;
+  border: 2px solid #FF6B00;
+  padding: 12px;
+  border-radius: 6px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 1000;
+}
