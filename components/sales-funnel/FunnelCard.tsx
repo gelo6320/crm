@@ -6,10 +6,6 @@ import { FunnelItem } from "@/types";
 import { formatDate } from "@/lib/utils/date";
 import { formatMoney } from "@/lib/utils/format";
 
-const [isTouched, setIsTouched] = useState(false);
-const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
-
-
 interface FunnelCardProps {
   lead: FunnelItem;
   onEdit: (lead: FunnelItem) => void;
@@ -19,6 +15,10 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
   // Crea un ref React
   const cardRef = useRef<HTMLDivElement>(null);
   
+  // Sposta gli stati all'interno del componente
+  const [isTouched, setIsTouched] = useState(false);
+  const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
+  
   // Set up drag source with preview
   const [{ isDragging }, dragRef, preview] = useDrag({
     type: 'LEAD',
@@ -26,7 +26,6 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-    // Rimuoviamo begin che non è supportato nell'API
     end: (item, monitor) => {
       // Pulizia dopo il drag
       const cardElement = cardRef.current;
@@ -43,6 +42,7 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
     }
   });
 
+  // Effetto per il touch feedback
   useEffect(() => {
     const cardElement = cardRef.current;
     if (!cardElement) return;
@@ -120,25 +120,6 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
       console.log(`[DnD Debug] Inizio drag per: ${lead.name} (${lead._id})`);
     }
   }, [isDragging, lead._id, lead.name]);
-  
-  // Aggiungere debug event listener per i dispositivi touch nel useEffect
-  useEffect(() => {
-    const cardElement = cardRef.current;
-    if (!cardElement) return;
-    
-    const handleTouchStart = (e: TouchEvent) => {
-      console.log(`[DnD Debug] Touch start su card ${lead._id} (${lead.name})`, e.touches[0].clientX, e.touches[0].clientY);
-    };
-    
-    // Aggiunta di event listener solo in modalità di sviluppo o condizionalmente
-    if (process.env.NODE_ENV === 'development' || true) {
-      cardElement.addEventListener('touchstart', handleTouchStart);
-    }
-    
-    return () => {
-      cardElement.removeEventListener('touchstart', handleTouchStart);
-    };
-  }, [lead._id, lead.name]);
 
   // Collega il ref drag al ref del componente
   useEffect(() => {
