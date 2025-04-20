@@ -503,3 +503,32 @@ html, body {
   overflow-x: hidden;
   max-width: 100vw;
 }
+
+/* Previeni selezione testo su touch */
+.day-view-container, 
+.calendar-event, 
+.time-cell,
+.calendar-header-days {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Disabilita comportamenti predefiniti di touch su elementi chiave */
+.calendar-hour-cell,
+.calendar-header-days {
+  touch-action: none;
+}
+
+/* Disabilita effetto "pull to refresh" su iOS */
+body {
+  overscroll-behavior-y: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-calendar-container {
+    width: calc(100% + 4%);
+    margin-left: -2%;
+  }
+}

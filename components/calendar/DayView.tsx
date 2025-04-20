@@ -180,26 +180,14 @@ function DayHeader({ date, onChangeDate }: { date: Date, onChangeDate: (date: Da
     return d;
   });
   
-  // Scorrimento al giorno selezionato all'apertura
+  // Scorri all'inizio per mostrare più giorni futuri
   useEffect(() => {
     if (scrollRef.current) {
-      // Trova l'indice del giorno selezionato
-      const selectedIndex = weekDates.findIndex(d => 
-        d.getDate() === date.getDate() && 
-        d.getMonth() === date.getMonth() &&
-        d.getFullYear() === date.getFullYear()
-      );
-      
-      if (selectedIndex >= 0) {
-        // Calcola la posizione di scorrimento
-        const itemWidth = scrollRef.current.scrollWidth / weekDates.length;
-        const scrollPosition = itemWidth * selectedIndex - (scrollRef.current.clientWidth / 2) + (itemWidth / 2);
-        
-        // Scorri alla posizione
-        scrollRef.current.scrollLeft = Math.max(0, scrollPosition);
-      }
+      // Scorri a circa 1/3 della larghezza totale per mostrare più giorni futuri
+      const scrollPosition = scrollRef.current.scrollWidth / 3;
+      scrollRef.current.scrollLeft = scrollPosition;
     }
-  }, [date, weekDates]);
+  }, []);
   
   // Gestione touch per scorrimento più fluido
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -351,7 +339,10 @@ export default function DayView({
   
   // Gestione dei long press per creare eventi
   const handleTouchStart = (hour: number, e: React.TouchEvent) => {
-    // Memorizza l'ora e la posizione iniziale
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Il resto rimane invariato
     setLongPressHour(hour);
     setTouchStartPos({
       x: e.touches[0].clientX,
@@ -443,6 +434,7 @@ export default function DayView({
               onTouchStart={(e) => handleTouchStart(hour, e)}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
             >
               {/* Time label */}
               <div className="w-12 py-1 pr-1 text-right text-xs font-medium text-zinc-400 sticky left-0 z-10 bg-inherit">

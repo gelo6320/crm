@@ -200,7 +200,9 @@ export default function CalendarPage() {
   }
   
   return (
-    <div className="h-[calc(100vh-60px)] sm:h-[calc(100vh-100px)] flex flex-col animate-fade-in w-full">
+    <div className="h-[calc(100vh-60px)] sm:h-[calc(100vh-100px)] flex flex-col animate-fade-in w-full"
+    style={{ WebkitTouchCallout: "none" }}
+    >
       <div className="flex items-center justify-between mb-2 px-1 sm:px-0">
         <h1 className="text-lg font-medium flex items-center">
           <CalendarIcon className="mr-2 hidden md:inline" size={20} />
@@ -315,7 +317,7 @@ export default function CalendarPage() {
         </button>
       </div>
       
-      <div className="flex flex-col md:flex-row gap-0 md:gap-4 flex-1 overflow-hidden relative w-full">
+      <div className="flex flex-col md:flex-row gap-0 md:gap-4 flex-1 overflow-hidden relative w-full mobile-calendar-container">
         {/* Calendar View */}
         <div className={`flex-1 bg-zinc-800 md:bg-zinc-800 bg-black rounded-lg overflow-hidden min-h-[500px] ${
           isMobile && showSidebar ? 'hidden' : ''
