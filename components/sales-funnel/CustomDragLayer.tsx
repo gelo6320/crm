@@ -25,7 +25,7 @@ export default function CustomDragLayer(props: CustomDragLayerProps) {
       style={{
         left: currentOffset.x,
         top: currentOffset.y,
-        transform: 'translate(-50%, -50%)',
+        transform: 'translate(-50%, -50%)', // Questo mantiene il centro della card sotto il cursore
       }}
     >
       <div className="bg-zinc-900 p-3 rounded border-l-4 border-primary shadow-lg">

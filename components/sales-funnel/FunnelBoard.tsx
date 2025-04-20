@@ -32,18 +32,23 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
     enableTouchEvents: true,
     enableMouseEvents: true, // Supporta anche il mouse su dispositivi touch
     enableKeyboardEvents: true,
-    delayTouchStart: 50, // Ridotto da 200ms
-    touchSlop: 20, // Ridotto per migliorare responsività
+    delayTouchStart: 40, // Ridotto ulteriormente per migliorare la reattività
+    touchSlop: 15, // Ridotto ulteriormente per migliorare la sensibilità del touch
     ignoreContextMenu: true,
     scrollAngleRanges: [
       { start: 30, end: 150 },
       { start: 210, end: 330 }
-    ]
+    ],
+    // Aggiungi logging per debug
+    enableHoverOutsideTarget: true,
+    enableTapClick: true, // Migliora l'esperienza sui dispositivi mobile
   };
   
   // When the component mounts, we mark DnD as ready (client-side only)
   useEffect(() => {
     setIsDndReady(true);
+    console.log("[DnD Debug] Drag and drop sistema inizializzato");
+    console.log("[DnD Debug] Usando backend:", isTouchDevice() ? "TouchBackend" : "HTML5Backend");
   }, []);
   
   // Setta il backend in base al dispositivo
@@ -52,6 +57,9 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
   
   const handleMoveLead = async (lead: FunnelItem, targetStatus: string) => {
     if (lead.status === targetStatus) return;
+    
+    console.log(`[DnD Debug] Spostamento: ${lead.name} da ${lead.status} a ${targetStatus}`);
+    setIsMoving(true);
     
     setIsMoving(true);
     
@@ -164,6 +172,33 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
     { id: "customer", name: "Chiuso", color: "bg-success" },
     { id: "lost", name: "Perso", color: "bg-danger" },
   ];
+
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      console.log("[DnD Debug] Touch start event detected", e.touches[0].clientX, e.touches[0].clientY);
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      console.log("[DnD Debug] Touch move event detected", e.touches[0].clientX, e.touches[0].clientY);
+    };
+    
+    const handleTouchEnd = (e: TouchEvent) => {
+      console.log("[DnD Debug] Touch end event detected");
+    };
+    
+    // Aggiungi listener solo in modalità di sviluppo o condizionalmente
+    if (process.env.NODE_ENV === 'development' || true) {
+      document.addEventListener('touchstart', handleTouchStart);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleTouchEnd);
+    }
+    
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, []);
   
   return (
     <>

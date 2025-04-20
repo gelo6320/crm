@@ -41,18 +41,22 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
         const containerRect = boardContainer.getBoundingClientRect();
         const columnRect = dropRef.current.getBoundingClientRect();
         
-        // Calcola la distanza dal bordo destro e sinistro
-        const rightEdgeDistance = containerRect.right - columnRect.right;
-        const leftEdgeDistance = columnRect.left - containerRect.left;
+        // Usa l'intera larghezza visibile come zona di scorrimento
+        const viewportWidth = window.innerWidth;
+        const scrollSensitivity = viewportWidth * 0.25; // 25% della larghezza dello schermo
         
-        // Se siamo vicini al bordo destro, scorri a destra
-        if (rightEdgeDistance < 100) {
-          boardContainer.scrollBy({ left: 10, behavior: 'smooth' });
+        // Ottieni la posizione del mouse
+        const clientOffset = monitor.getClientOffset();
+        if (!clientOffset) return;
+        
+        // Se siamo vicini al bordo destro, scorri a destra (scrollSensitivity px dal bordo)
+        if (viewportWidth - clientOffset.x < scrollSensitivity) {
+          boardContainer.scrollBy({ left: 15, behavior: 'smooth' });
         }
         
-        // Se siamo vicini al bordo sinistro, scorri a sinistra
-        if (leftEdgeDistance < 100) {
-          boardContainer.scrollBy({ left: -10, behavior: 'smooth' });
+        // Se siamo vicini al bordo sinistro, scorri a sinistra (scrollSensitivity px dal bordo)
+        if (clientOffset.x < scrollSensitivity) {
+          boardContainer.scrollBy({ left: -15, behavior: 'smooth' });
         }
       }
     },

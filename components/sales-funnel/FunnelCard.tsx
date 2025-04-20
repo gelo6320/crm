@@ -22,6 +22,7 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
+    // Rimuoviamo begin che non è supportato nell'API
     end: (item, monitor) => {
       // Pulizia dopo il drag
       const cardElement = cardRef.current;
@@ -29,20 +30,40 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
         cardElement.style.transform = "";
         cardElement.style.webkitTransform = "";
       }
+      
+      console.log(`[DnD Debug] Fine drag per: ${lead.name} (${lead._id}), drop avvenuto: ${monitor.didDrop()}`);
+      
+      if (!monitor.didDrop()) {
+        console.log('[DnD Debug] Drop non avvenuto - torna alla posizione originale');
+      }
     }
   });
 
-  // Effetto per l'animazione durante il trascinamento
+  // Aggiungere log all'inizio del trascinamento usando useEffect
+  useEffect(() => {
+    if (isDragging) {
+      console.log(`[DnD Debug] Inizio drag per: ${lead.name} (${lead._id})`);
+    }
+  }, [isDragging, lead._id, lead.name]);
+  
+  // Aggiungere debug event listener per i dispositivi touch nel useEffect
   useEffect(() => {
     const cardElement = cardRef.current;
-    if (cardElement) {
-      if (isDragging) {
-        cardElement.classList.add('dragging');
-      } else {
-        cardElement.classList.remove('dragging');
-      }
+    if (!cardElement) return;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      console.log(`[DnD Debug] Touch start su card ${lead._id} (${lead.name})`, e.touches[0].clientX, e.touches[0].clientY);
+    };
+    
+    // Aggiunta di event listener solo in modalità di sviluppo o condizionalmente
+    if (process.env.NODE_ENV === 'development' || true) {
+      cardElement.addEventListener('touchstart', handleTouchStart);
     }
-  }, [isDragging]);
+    
+    return () => {
+      cardElement.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, [lead._id, lead.name]);
 
   // Collega il ref drag al ref del componente
   useEffect(() => {
