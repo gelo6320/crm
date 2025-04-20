@@ -5,20 +5,76 @@ import axios from "axios";
 // Definisci un'URL base per le API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
-/**
- * Recupera i dati del funnel di vendita dal server
- */
 export async function fetchFunnelData(): Promise<{
   funnelData: FunnelData;
   funnelStats: FunnelStats;
 }> {
   try {
-    const response = await axios.get(
-      `${API_BASE_URL}/api/sales-funnel`,
-      { withCredentials: true }
-    );
+    // Recupera tutti i dati dai diversi endpoint
+    const [formsResponse, bookingsResponse, facebookLeadsResponse] = await Promise.all([
+      axios.get(`${API_BASE_URL}/api/leads/forms?limit=100`, { withCredentials: true }),
+      axios.get(`${API_BASE_URL}/api/leads/bookings?limit=100`, { withCredentials: true }),
+      axios.get(`${API_BASE_URL}/api/leads/facebook?limit=100`, { withCredentials: true })
+    ]);
     
-    return response.data;
+    const formsData = formsResponse.data.data || [];
+    const bookingsData = bookingsResponse.data.data || [];
+    const facebookLeadsData = facebookLeadsResponse.data.data || [];
+    
+    // Mappa i lead in FunnelItem
+    const formItems: FunnelItem[] = formsData.map((form: any) => ({
+      ...form,
+      type: 'form'
+    }));
+    
+    const bookingItems: FunnelItem[] = bookingsData.map((booking: any) => ({
+      ...booking,
+      type: 'booking'
+    }));
+    
+    const facebookItems: FunnelItem[] = facebookLeadsData.map((lead: any) => ({
+      ...lead,
+      type: 'facebook'
+    }));
+    
+    // Combina tutti i lead
+    const allItems = [...formItems, ...bookingItems, ...facebookItems];
+    
+    // Inizializza il FunnelData con array vuoti
+    const funnelData: FunnelData = {
+      new: [],
+      contacted: [],
+      qualified: [],
+      opportunity: [],
+      proposal: [],
+      customer: [],
+      lost: []
+    };
+    
+    // Raggruppa i lead per stato
+    allItems.forEach(item => {
+      if (funnelData[item.status as keyof FunnelData]) {
+        funnelData[item.status as keyof FunnelData].push(item);
+      } else if (item.status === 'pending' || item.status === 'confirmed' || item.status === 'completed') {
+        // Mappa gli stati specifici delle prenotazioni
+        const mappedStatus = mapBookingStatusToFunnelStatus(item.status);
+        funnelData[mappedStatus as keyof FunnelData].push({
+          ...item,
+          status: mappedStatus
+        });
+      } else {
+        // Fallback per stati sconosciuti
+        funnelData.new.push(item);
+      }
+    });
+    
+    // Calcola le statistiche
+    const funnelStats: FunnelStats = calculateFunnelStats(allItems);
+    
+    return {
+      funnelData,
+      funnelStats
+    };
   } catch (error) {
     console.error("Errore durante il recupero dei dati del funnel:", error);
     
@@ -45,9 +101,58 @@ export async function fetchFunnelData(): Promise<{
   }
 }
 
-/**
- * Aggiorna lo stato di un lead nel funnel
- */
+// Mappa gli stati delle prenotazioni agli stati del funnel
+function mapBookingStatusToFunnelStatus(bookingStatus: string): string {
+  switch (bookingStatus) {
+    case 'pending': return 'new';
+    case 'confirmed': return 'contacted';
+    case 'completed': return 'qualified';
+    case 'cancelled': return 'lost';
+    default: return 'new';
+  }
+}
+
+// Calcola le statistiche del funnel
+function calculateFunnelStats(items: FunnelItem[]): FunnelStats {
+  const totalLeads = items.length;
+  const customers = items.filter(item => item.status === 'customer').length;
+  const conversionRate = totalLeads > 0 ? Math.round((customers / totalLeads) * 100) : 0;
+  
+  let potentialValue = 0;
+  let realizedValue = 0;
+  let lostValue = 0;
+  
+  // Conteggio dei servizi
+  const serviceDistribution: Record<string, number> = {};
+  
+  items.forEach(item => {
+    const value = item.value || 0;
+    
+    if (item.status === 'customer') {
+      realizedValue += value;
+    } else if (item.status === 'lost') {
+      lostValue += value;
+    } else {
+      potentialValue += value;
+    }
+    
+    // Aggiorna la distribuzione dei servizi
+    if (item.service) {
+      serviceDistribution[item.service] = (serviceDistribution[item.service] || 0) + 1;
+    }
+  });
+  
+  return {
+    totalLeads,
+    conversionRate,
+    potentialValue,
+    realizedValue,
+    lostValue,
+    serviceDistribution
+  };
+}
+
+// Il resto delle funzioni originali rimane invariato...
 export async function updateLeadStage(
   leadId: string,
   leadType: string,
@@ -77,9 +182,6 @@ export async function updateLeadStage(
   }
 }
 
-/**
- * Aggiorna i metadati di un lead (valore e servizio)
- */
 export async function updateLeadMetadata(
   leadId: string,
   leadType: string,
