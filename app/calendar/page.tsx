@@ -106,21 +106,31 @@ export default function CalendarPage() {
     }
   };
   
-  const handleNewAppointment = () => {
+  const handleNewAppointment = (start?: Date, end?: Date) => {
     const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const roundedMinutes = Math.ceil(minutes / 15) * 15;
+    let newStart: Date;
+    let newEnd: Date;
     
-    now.setMinutes(roundedMinutes === 60 ? 0 : roundedMinutes);
-    now.setHours(roundedMinutes === 60 ? hours + 1 : hours);
-    
-    // Create default appointment starting from selected date
-    const newStart = new Date(selectedDate);
-    newStart.setHours(now.getHours(), now.getMinutes());
-    
-    const newEnd = new Date(newStart);
-    newEnd.setMinutes(newEnd.getMinutes() + 60);
+    if (start && end) {
+      // Usa i parametri forniti
+      newStart = new Date(start);
+      newEnd = new Date(end);
+    } else {
+      // Usa la logica predefinita
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      const roundedMinutes = Math.ceil(minutes / 15) * 15;
+      
+      now.setMinutes(roundedMinutes === 60 ? 0 : roundedMinutes);
+      now.setHours(roundedMinutes === 60 ? hours + 1 : hours);
+      
+      // Create default appointment starting from selected date
+      newStart = new Date(selectedDate);
+      newStart.setHours(now.getHours(), now.getMinutes());
+      
+      newEnd = new Date(newStart);
+      newEnd.setMinutes(newEnd.getMinutes() + 60);
+    }
     
     const newAppointment: CalendarEvent = {
       id: "",
@@ -190,15 +200,16 @@ export default function CalendarPage() {
   }
   
   return (
-    <div className="h-[calc(100vh-130px)] flex flex-col animate-fade-in">
-      <div className="flex items-center justify-between mb-4">
+    <div className="h-[calc(100vh-60px)] sm:h-[calc(100vh-100px)] flex flex-col animate-fade-in w-full">
+      <div className="flex items-center justify-between mb-2 px-1 sm:px-0">
         <h1 className="text-lg font-medium flex items-center">
           <CalendarIcon className="mr-2 hidden md:inline" size={20} />
           Calendario
         </h1>
         
         <div className="flex">
-          <div className="bg-zinc-800 rounded-lg flex mr-2 md:mr-4">
+          {/* Desktop navigation controls */}
+          <div className="bg-zinc-800 rounded-lg hidden md:flex mr-4">
             <button
               onClick={() => navigateCalendar("prev")}
               className="p-2 text-zinc-400 hover:text-white"
@@ -265,7 +276,7 @@ export default function CalendarPage() {
           </div>
           
           <button
-            onClick={handleNewAppointment}
+            onClick={() => handleNewAppointment()}
             className="btn btn-primary"
           >
             <Plus size={18} className="mr-1" />
@@ -275,7 +286,7 @@ export default function CalendarPage() {
       </div>
       
       {/* Mobile view selector */}
-      <div className="flex md:hidden bg-zinc-800 rounded-lg mb-4 overflow-hidden">
+      <div className="flex md:hidden bg-zinc-800 rounded-lg mb-2 overflow-hidden">
         <button
           onClick={() => setView("month")}
           className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
@@ -304,9 +315,9 @@ export default function CalendarPage() {
         </button>
       </div>
       
-      <div className="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden relative">
+      <div className="flex flex-col md:flex-row gap-0 md:gap-4 flex-1 overflow-hidden relative w-full">
         {/* Calendar View */}
-        <div className={`flex-1 bg-zinc-800 rounded-lg overflow-hidden min-h-[500px] ${
+        <div className={`flex-1 bg-zinc-800 md:bg-zinc-800 bg-black rounded-lg overflow-hidden min-h-[500px] ${
           isMobile && showSidebar ? 'hidden' : ''
         }`}>
           <CalendarView
@@ -315,13 +326,14 @@ export default function CalendarPage() {
             events={events}
             onSelectDate={handleSelectDate}
             onSelectEvent={handleEditAppointment}
+            onCreateEvent={handleNewAppointment}
           />
         </div>
         
         {/* Sidebar with day events */}
         <div className={`
           w-full md:w-80 bg-zinc-800 rounded-lg overflow-hidden
-          ${isMobile ? 'absolute inset-0 z-10' : ''}
+          ${isMobile ? 'absolute inset-0 z-30' : ''}
           ${isMobile && !showSidebar ? 'hidden' : ''}
           ${isMobile && showSidebar ? 'animate-slide-in' : ''}
         `}>

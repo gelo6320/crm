@@ -349,3 +349,157 @@
     padding: 0.1rem 0.2rem;
   }
 }
+
+/* Stili aggiuntivi per funzionalità touch su mobile - da aggiungere a globals.css */
+
+/* Touch handling */
+.touch-pan-x {
+  touch-action: pan-x;
+}
+
+.touch-pan-y {
+  touch-action: pan-y;
+}
+
+.touch-none {
+  touch-action: none;
+}
+
+/* Resize styling */
+.resize-active {
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.7);
+  z-index: 30 !important;
+}
+
+/* Rimuove il ritardo sul touch per migliorare reattività */
+@media (pointer: coarse) {
+  a, button, [role="button"], input, label, select, textarea {
+    touch-action: manipulation;
+  }
+}
+
+/* Fix per header fullscreen su mobile */
+.calendar-header-fullwidth {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+}
+
+/* Adatta la visualizzazione alla larghezza dello schermo su mobile */
+@media (max-width: 768px) {
+  .calendar-fullscreen {
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    width: calc(100% + 1rem);
+  }
+  
+  .time-cell {
+    width: 36px !important;
+    flex-shrink: 0;
+  }
+  
+  .time-content {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  /* Stile per il dragging di eventi */
+  .event-dragging {
+    opacity: 0.7;
+    transform: scale(1.02);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Animazioni migliorata per gli eventi del calendario */
+@keyframes eventAppear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.event-appear {
+  animation: eventAppear 0.3s ease forwards;
+}
+
+/* Indicatore di long-press */
+@keyframes longpress {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+.longpress-indicator {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 107, 0, 0.3);
+  pointer-events: none;
+  z-index: 100;
+  animation: longpress 1s infinite;
+}
+
+/* Stile per la maniglia di ridimensionamento */
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: ns-resize;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.resize-handle:hover,
+.resize-handle:active {
+  opacity: 1;
+}
+
+.resize-handle::after {
+  content: "";
+  width: 20px;
+  height: 3px;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Miglioramento per la vista giornaliera */
+.day-view-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: #000;
+}
+
+/* Per le visualizzazioni a schermo intero */
+.full-height {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+/* Fix per evitare problemi di overflow su iOS */
+html, body {
+  position: relative;
+  overflow-x: hidden;
+  max-width: 100vw;
+}

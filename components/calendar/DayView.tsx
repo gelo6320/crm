@@ -4,23 +4,29 @@ import { useDrag } from "react-dnd";
 import { CalendarEvent } from "@/types";
 import { getEventColor } from "@/lib/utils/calendar";
 import { formatTime } from "@/lib/utils/date";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 interface DayViewProps {
   selectedDate: Date;
   events: CalendarEvent[];
   onSelectEvent: (event: CalendarEvent) => void;
   onChangeDate?: (date: Date) => void;
+  onCreateEvent?: (start: Date, end: Date) => void;
 }
 
 interface EventItemProps {
   event: CalendarEvent;
   onSelect: (event: CalendarEvent) => void;
+  onResize?: (event: CalendarEvent, newHeight: number) => void;
 }
 
-// Event item component with drag functionality
-function EventItem({ event, onSelect }: EventItemProps) {
+// Componente per l'evento con funzionalità di drag e resize
+function EventItem({ event, onSelect, onResize }: EventItemProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const resizeHandleRef = useRef<HTMLDivElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [startY, setStartY] = useState(0);
+  const [height, setHeight] = useState(0);
   
   const [{ isDragging }, dragRef, dragPreview] = useDrag({
     type: 'EVENT',
@@ -44,7 +50,75 @@ function EventItem({ event, onSelect }: EventItemProps) {
   
   // Ogni ora è alta 60px, quindi 1 minuto = 1px
   const top = (minutes / 60) * 60; // Posizione relativa all'interno della cella dell'ora
-  const height = durationMinutes;
+  
+  useEffect(() => {
+    setHeight(durationMinutes);
+  }, [durationMinutes]);
+  
+  // Gestione resize tramite touch
+  useEffect(() => {
+    const resizeHandle = resizeHandleRef.current;
+    if (!resizeHandle) return;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      e.stopPropagation();
+      setIsResizing(true);
+      setStartY(e.touches[0].clientY);
+      setHeight(durationMinutes);
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isResizing) return;
+      e.stopPropagation();
+      
+      const deltaY = e.touches[0].clientY - startY;
+      const newHeight = Math.max(30, durationMinutes + deltaY); // Minimo 30 minuti
+      setHeight(newHeight);
+    };
+    
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!isResizing) return;
+      e.stopPropagation();
+      
+      setIsResizing(false);
+      
+      if (onResize && Math.abs(height - durationMinutes) > 5) {
+        // Solo se la modifica è significativa (più di 5 minuti)
+        const updatedEvent = { ...event };
+        const newEnd = new Date(start.getTime() + height * 60000);
+        updatedEvent.end = newEnd;
+        onResize(updatedEvent, height);
+      }
+    };
+    
+    resizeHandle.addEventListener('touchstart', handleTouchStart, { passive: false });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+    
+    return () => {
+      resizeHandle.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isResizing, startY, durationMinutes, event, onResize, height, start]);
+  
+  // Prevenire il default touch per evitare lo scroll durante il drag
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    
+    const preventDefaultTouch = (e: TouchEvent) => {
+      if (isDragging || isResizing) {
+        e.preventDefault();
+      }
+    };
+    
+    element.addEventListener('touchmove', preventDefaultTouch, { passive: false });
+    
+    return () => {
+      element.removeEventListener('touchmove', preventDefaultTouch);
+    };
+  }, [isDragging, isResizing]);
   
   return (
     <div
@@ -53,6 +127,7 @@ function EventItem({ event, onSelect }: EventItemProps) {
         absolute left-0 right-0 rounded px-2 py-1 cursor-pointer
         text-white shadow-md border-l-4 z-10 overflow-hidden
         ${isDragging ? 'opacity-50' : ''}
+        ${isResizing ? 'resize-active' : ''}
         animate-fade-in
       `}
       style={{
@@ -61,7 +136,7 @@ function EventItem({ event, onSelect }: EventItemProps) {
         backgroundColor: getEventColor(event.status),
         borderLeftColor: getEventColor(event.status, true),
       }}
-      onClick={() => onSelect(event)}
+      onClick={() => !isResizing && onSelect(event)}
     >
       <div className="text-xs font-medium mb-0.5">
         {formatTime(start)} - {formatTime(end)}
@@ -70,58 +145,93 @@ function EventItem({ event, onSelect }: EventItemProps) {
       {height > 60 && (
         <div className="text-xs truncate opacity-80">{event.description}</div>
       )}
+      
+      {/* Maniglia per resize */}
+      <div 
+        ref={resizeHandleRef}
+        className="absolute bottom-0 left-0 right-0 h-6 cursor-ns-resize flex justify-center items-end opacity-60 hover:opacity-100"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ChevronDown size={14} />
+      </div>
     </div>
   );
 }
 
 function DayHeader({ date, onChangeDate }: { date: Date, onChangeDate: (date: Date) => void }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef(0);
+  const touchMoveRef = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
+  
+  // Creazione array di giorni per la visualizzazione scorrevole (2 settimane)
+  const daysToShow = 14;
   const weekDays = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
   const today = new Date();
   
-  // Creazione array di giorni per la settimana corrente
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(date);
-    const diff = d.getDay() - i;
-    d.setDate(d.getDate() - diff);
+  // Crea una data di partenza 7 giorni prima della data selezionata
+  const startDate = new Date(date);
+  startDate.setDate(startDate.getDate() - 7);
+  
+  // Creazione array di giorni
+  const weekDates = Array.from({ length: daysToShow }, (_, i) => {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + i);
     return d;
   });
   
-  // Navigazione del giorno
-  const navigateDay = (direction: 'prev' | 'next') => {
-    const newDate = new Date(date);
-    if (direction === 'prev') {
-      newDate.setDate(newDate.getDate() - 1);
-    } else {
-      newDate.setDate(newDate.getDate() + 1);
+  // Scorrimento al giorno selezionato all'apertura
+  useEffect(() => {
+    if (scrollRef.current) {
+      // Trova l'indice del giorno selezionato
+      const selectedIndex = weekDates.findIndex(d => 
+        d.getDate() === date.getDate() && 
+        d.getMonth() === date.getMonth() &&
+        d.getFullYear() === date.getFullYear()
+      );
+      
+      if (selectedIndex >= 0) {
+        // Calcola la posizione di scorrimento
+        const itemWidth = scrollRef.current.scrollWidth / weekDates.length;
+        const scrollPosition = itemWidth * selectedIndex - (scrollRef.current.clientWidth / 2) + (itemWidth / 2);
+        
+        // Scorri alla posizione
+        scrollRef.current.scrollLeft = Math.max(0, scrollPosition);
+      }
     }
-    onChangeDate(newDate);
+  }, [date, weekDates]);
+  
+  // Gestione touch per scorrimento più fluido
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartRef.current = e.touches[0].clientX;
+    touchMoveRef.current = 0;
+    setIsDragging(false);
   };
-
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchMoveRef.current = e.touches[0].clientX - touchStartRef.current;
+    
+    // Se lo spostamento è significativo, considera un trascinamento
+    if (Math.abs(touchMoveRef.current) > 10) {
+      setIsDragging(true);
+    }
+  };
+  
+  const handleTouchEnd = (d: Date, e: React.TouchEvent) => {
+    // Se non è un trascinamento, considera un tap
+    if (!isDragging) {
+      onChangeDate(d);
+    }
+    setIsDragging(false);
+  };
+  
   return (
     <div className="md:hidden bg-black sticky top-0 z-20 w-full border-b border-zinc-800">
-      {/* Day Navigation Control */}
-      <div className="flex items-center justify-between px-2 py-2 bg-zinc-900">
-        <button
-          onClick={() => navigateDay('prev')}
-          className="p-1 text-zinc-400 hover:text-white transition-colors"
-        >
-          <ChevronLeft size={18} />
-        </button>
-        
-        <div className="font-medium">
-          {date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
-        </div>
-        
-        <button
-          onClick={() => navigateDay('next')}
-          className="p-1 text-zinc-400 hover:text-white transition-colors"
-        >
-          <ChevronRight size={18} />
-        </button>
-      </div>
-      
       {/* Days of week scroller */}
-      <div className="flex overflow-x-auto scrollbar-none">
+      <div 
+        ref={scrollRef}
+        className="flex overflow-x-auto scrollbar-none touch-pan-x"
+      >
         {weekDates.map((d, i) => {
           const isSelected = d.toDateString() === date.toDateString();
           const isToday = d.toDateString() === today.toDateString();
@@ -130,12 +240,14 @@ function DayHeader({ date, onChangeDate }: { date: Date, onChangeDate: (date: Da
             <div 
               key={i} 
               className={`
-                flex-1 min-w-[3rem] flex flex-col items-center py-2
+                flex-shrink-0 min-w-[3rem] flex flex-col items-center py-2
                 ${isSelected ? 'bg-primary/20' : ''}
                 ${isToday ? 'text-primary' : ''}
                 transition-all duration-300 ease-in-out
               `}
-              onClick={() => onChangeDate(d)}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={(e) => handleTouchEnd(d, e)}
             >
               <div className="text-xs text-zinc-400">{weekDays[d.getDay()]}</div>
               <div className={`
@@ -153,8 +265,20 @@ function DayHeader({ date, onChangeDate }: { date: Date, onChangeDate: (date: Da
   );
 }
 
-export default function DayView({ selectedDate, events, onSelectEvent, onChangeDate }: DayViewProps) {
+export default function DayView({ 
+  selectedDate, 
+  events, 
+  onSelectEvent, 
+  onChangeDate,
+  onCreateEvent
+}: DayViewProps) {
   const [scrollPos, setScrollPos] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [longPressActive, setLongPressActive] = useState(false);
+  const [longPressStartTime, setLongPressStartTime] = useState<Date | null>(null);
+  const [longPressHour, setLongPressHour] = useState<number | null>(null);
+  const [touchStartPos, setTouchStartPos] = useState<{x: number, y: number} | null>(null);
+  const [isDraggingTimeslot, setIsDraggingTimeslot] = useState(false);
   
   // Auto-scroll to current time on mount
   useEffect(() => {
@@ -175,13 +299,21 @@ export default function DayView({ selectedDate, events, onSelectEvent, onChangeD
   
   // Auto-scroll to the calculated position
   useEffect(() => {
-    if (scrollPos > 0) {
-      window.scrollTo({
-        top: scrollPos,
-        behavior: 'smooth'
-      });
+    if (scrollPos > 0 && containerRef.current) {
+      containerRef.current.scrollTop = scrollPos;
     }
   }, [scrollPos]);
+  
+  // Gestione degli eventi di resize
+  const handleResizeEvent = (event: CalendarEvent, newHeight: number) => {
+    const updatedEvent = { ...event };
+    const start = new Date(event.start);
+    const newEnd = new Date(start.getTime() + newHeight * 60000);
+    updatedEvent.end = newEnd;
+    
+    // Invia l'evento aggiornato al componente parent
+    onSelectEvent(updatedEvent);
+  };
   
   // Filter events for the selected date
   const filteredEvents = events.filter(event => {
@@ -217,22 +349,103 @@ export default function DayView({ selectedDate, events, onSelectEvent, onChangeD
   const currentMinute = now.getMinutes();
   const timePosition = (currentMinute / 60) * 60;
   
+  // Gestione dei long press per creare eventi
+  const handleTouchStart = (hour: number, e: React.TouchEvent) => {
+    // Memorizza l'ora e la posizione iniziale
+    setLongPressHour(hour);
+    setTouchStartPos({
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    });
+    
+    // Avvia il timer per il long press
+    const timer = setTimeout(() => {
+      // Se il touch è ancora attivo dopo 500ms, considera un long press
+      if (longPressHour === hour && !isDraggingTimeslot) {
+        setLongPressActive(true);
+        
+        // Calcola l'orario preciso in base alla posizione Y all'interno della cella
+        if (containerRef.current) {
+          const hourCell = containerRef.current.querySelector(`[data-hour="${hour}"]`);
+          if (hourCell) {
+            const rect = hourCell.getBoundingClientRect();
+            const relativeY = e.touches[0].clientY - rect.top;
+            const percentInHour = relativeY / rect.height;
+            const minutes = Math.floor(percentInHour * 60);
+            
+            // Crea una data per l'orario di inizio
+            const startTime = new Date(selectedDate);
+            startTime.setHours(hour, minutes, 0, 0);
+            setLongPressStartTime(startTime);
+          }
+        }
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // Se non c'è una posizione iniziale, non fare nulla
+    if (!touchStartPos) return;
+    
+    // Calcola lo spostamento
+    const deltaX = e.touches[0].clientX - touchStartPos.x;
+    const deltaY = e.touches[0].clientY - touchStartPos.y;
+    
+    // Se lo spostamento è significativo, marca come trascinamento
+    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+      setIsDraggingTimeslot(true);
+    }
+    
+    // Se è attivo un long press, aggiorna la durata dell'evento
+    if (longPressActive && longPressStartTime) {
+      // Implementare la logica per ridimensionare l'evento in base al movimento del dito
+    }
+  };
+  
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Se era attivo un long press, crea un nuovo evento
+    if (longPressActive && longPressStartTime && onCreateEvent) {
+      // Calcola l'orario di fine (default: 1 ora dopo)
+      const endTime = new Date(longPressStartTime.getTime() + 60 * 60000);
+      onCreateEvent(longPressStartTime, endTime);
+    }
+    
+    // Reset dello stato
+    setLongPressActive(false);
+    setLongPressStartTime(null);
+    setLongPressHour(null);
+    setTouchStartPos(null);
+    setIsDraggingTimeslot(false);
+  };
+  
   return (
     <div className="h-full bg-black flex flex-col">
-      {/* Mobile Day Header with horizontal scroll */}
+      {/* Mobile Day Header con scroll orizzontale */}
       {onChangeDate && (
         <DayHeader date={selectedDate} onChangeDate={onChangeDate} />
       )}
       
-      <div className="flex-1 overflow-y-auto">
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-y-auto w-full"
+      >
         {workingHours.map(hour => {
           const hourEvents = eventsByHour[hour] || [];
           const isCurrentHour = isToday && currentHour === hour;
           
           return (
-            <div key={hour} className="flex border-b border-zinc-700 last:border-b-0 group bg-black hover:bg-zinc-900/40 transition-colors">
+            <div 
+              key={hour} 
+              data-hour={hour}
+              className="flex border-b border-zinc-700 last:border-b-0 group bg-black hover:bg-zinc-900/40 transition-colors w-full"
+              onTouchStart={(e) => handleTouchStart(hour, e)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
               {/* Time label */}
-              <div className="w-16 py-1 pr-4 text-right text-xs font-medium text-zinc-400 sticky left-0 z-10 bg-inherit">
+              <div className="w-12 py-1 pr-1 text-right text-xs font-medium text-zinc-400 sticky left-0 z-10 bg-inherit">
                 {hour}:00
               </div>
               
@@ -243,6 +456,7 @@ export default function DayView({ selectedDate, events, onSelectEvent, onChangeD
                     key={event.id}
                     event={event}
                     onSelect={onSelectEvent}
+                    onResize={handleResizeEvent}
                   />
                 ))}
                 
@@ -252,8 +466,19 @@ export default function DayView({ selectedDate, events, onSelectEvent, onChangeD
                     className="absolute left-0 right-0 border-t border-red-500 z-20 pointer-events-none"
                     style={{ top: `${timePosition}px` }}
                   >
-                    <div className="absolute -left-1 -top-2 w-4 h-4 rounded-full bg-red-500 animate-pulse" />
+                    <div className="absolute -left-1 -top-2 w-3 h-3 rounded-full bg-red-500 animate-pulse" />
                   </div>
+                )}
+                
+                {/* Preview di creazione evento se long press è attivo */}
+                {longPressActive && longPressStartTime && longPressHour === hour && (
+                  <div 
+                    className="absolute left-0 right-0 bg-primary/30 border border-primary z-5 rounded"
+                    style={{
+                      top: `${(longPressStartTime.getMinutes() / 60) * 60}px`,
+                      height: '60px'
+                    }}
+                  ></div>
                 )}
               </div>
             </div>
