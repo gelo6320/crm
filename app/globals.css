@@ -552,19 +552,38 @@ body {
   height: 100%;
 }
 
-/* Aggiungi questi stili a globals.css */
-*, *::before, *::after {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
+/* Animazione per il long press */
+@keyframes longPressExpand {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  50% { transform: scale(1.02); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-/* Riabilita la selezione solo dove necessario (input, textarea) */
-input, textarea {
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-  user-select: text;
+.long-press-active {
+  animation: longPressExpand 0.3s ease-out forwards;
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.5);
+}
+
+/* Miglioramento dell'animazione di selezione dei giorni */
+.day-item {
+  transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.day-item:active {
+  transform: scale(0.95);
+}
+
+.day-item.selected {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(255, 107, 0, 0.3);
+  transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+}
+
+/* Miglioramento dell'animazione di drag and drop */
+.dragging-event {
+  transform: scale(1.03);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  opacity: 0.8;
+  z-index: 100;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
 }
