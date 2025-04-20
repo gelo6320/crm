@@ -61,7 +61,6 @@ function EventItem({ event, onSelect, onResize }: EventItemProps) {
     if (!resizeHandle) return;
     
     const handleTouchStart = (e: TouchEvent) => {
-      e.preventDefault(); 
       e.stopPropagation();
       setIsResizing(true);
       setStartY(e.touches[0].clientY);
@@ -109,23 +108,15 @@ function EventItem({ event, onSelect, onResize }: EventItemProps) {
     if (!element) return;
     
     const preventDefaultTouch = (e: TouchEvent) => {
-      e.stopPropagation(); // Aggiungi questa riga
       if (isDragging || isResizing) {
         e.preventDefault();
       }
     };
     
-    // Aggiungi stopPropagation anche al touchstart
-    const handleTouchStartPropagation = (e: TouchEvent) => {
-      e.stopPropagation();
-    };
-    
     element.addEventListener('touchmove', preventDefaultTouch, { passive: false });
-    element.addEventListener('touchstart', handleTouchStartPropagation, { passive: false });
     
     return () => {
       element.removeEventListener('touchmove', preventDefaultTouch);
-      element.removeEventListener('touchstart', handleTouchStartPropagation);
     };
   }, [isDragging, isResizing]);
   
@@ -284,15 +275,12 @@ function DayHeader({ date, onChangeDate }: { date: Date, onChangeDate: (date: Da
   
   // Gestione touch per scorrimento più fluido
   const handleTouchStart = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
     touchStartRef.current = e.touches[0].clientX;
     touchMoveRef.current = 0;
     setIsDragging(false);
   };
   
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault(); // Aggiungi questa riga
     touchMoveRef.current = e.touches[0].clientX - touchStartRef.current;
     
     // Se lo spostamento è significativo, considera un trascinamento
@@ -311,7 +299,7 @@ function DayHeader({ date, onChangeDate }: { date: Date, onChangeDate: (date: Da
   };  
   
   return (
-    <div className="md:hidden bg-black sticky top-0 z-30 w-full border-b border-zinc-800">
+    <div className="md:hidden bg-black sticky top-0 z-20 w-full border-b border-zinc-800">
       {/* Days of week scroller */}
       <div 
         ref={scrollRef}
@@ -440,8 +428,7 @@ export default function DayView({
   
   // Modifica handleTouchStart
   const handleTouchStart = (hour: number, e: React.TouchEvent) => {
-    e.preventDefault(); 
-    e.stopPropagation();
+    e.preventDefault(); // Aggiungi per prevenire comportamenti predefiniti
     
     // Memorizza l'ora e la posizione iniziale
     setLongPressHour(hour);
@@ -492,21 +479,19 @@ export default function DayView({
     const deltaY = e.touches[0].clientY - touchStartPos.y;
     
     // Se lo spostamento è significativo, marca come trascinamento
-    if (Math.abs(deltaX) > 15 || Math.abs(deltaY) > 15) { // Aumentato da 10 a 15
+    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
       setIsDraggingTimeslot(true);
     }
     
     // Se è attivo un long press, aggiorna la posizione dell'evento
     if (longPressActive && longPressStartTime) {
-      // Aggiungi un fattore di smorzamento (0.5) per rendere il movimento più lento
+      // Calcola la nuova posizione in base al movimento del dito
       if (containerRef.current) {
         const hourHeight = 60; // Altezza di una cella oraria in pixel
-        const dampingFactor = 0.5; // Fattore di smorzamento
-        const dampedDeltaY = deltaY * dampingFactor;
-        const newMinutes = Math.max(0, Math.min(59, Math.floor(dampedDeltaY / hourHeight * 60)));
+        const newMinutes = Math.max(0, Math.min(59, Math.floor(deltaY / hourHeight * 60)));
         
         // Calcola l'offset di ora in base al movimento verticale significativo
-        const hourOffset = Math.floor(dampedDeltaY / hourHeight);
+        const hourOffset = Math.floor(deltaY / hourHeight);
         const newHour = Math.max(7, Math.min(22, (longPressHour || 0) + hourOffset));
         
         // Aggiorna la data di inizio
@@ -543,25 +528,6 @@ export default function DayView({
     setTouchStartPos(null);
     setIsDraggingTimeslot(false);
   };
-
-  useEffect(() => {
-    if (containerRef.current) {
-      const preventScrollPropagation = (e: WheelEvent | TouchEvent) => {
-        e.stopPropagation();
-        // Non chiamiamo preventDefault qui per permettere lo scroll naturale
-      };
-      
-      containerRef.current.addEventListener('wheel', preventScrollPropagation);
-      containerRef.current.addEventListener('touchstart', preventScrollPropagation, { passive: true });
-      
-      return () => {
-        if (containerRef.current) {
-          containerRef.current.removeEventListener('wheel', preventScrollPropagation);
-          containerRef.current.removeEventListener('touchstart', preventScrollPropagation);
-        }
-      };
-    }
-  }, []);
   
   return (
     <div className="h-full bg-black flex flex-col">
