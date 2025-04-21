@@ -143,10 +143,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // IMPORTANTE: Reindirizza completamente fuori dall'area CRM
       // Determina l'URL di base per il reindirizzamento
-      const crmDomain = process.env.NEXT_PUBLIC_CRM_DOMAIN || 'costruzionedigitale.com';
+      const crmDomain = process.env.NEXT_PUBLIC_CRM_DOMAIN || 'crm.costruzionedigitale.com';
       const baseUrl = window.location.hostname === crmDomain 
-        ? `https://${crmDomain}/` 
-        : '/';
+        ? `https://${crmDomain}/login` 
+        : '/login';
       
       // Aggiungi un timestamp per evitare problemi di cache
       const redirectUrl = `${baseUrl}?t=${Date.now()}`;
