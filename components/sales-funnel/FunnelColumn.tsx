@@ -31,31 +31,44 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
     hover: (item, monitor) => {
       if (!dropRef.current) return;
       
+      // LOG: Inizio della funzione hover
+      console.log(`[SCROLL DEBUG] Hover in colonna ${id}`);
+      
       // Quando l'elemento è sopra questa colonna, imposta isOver a true
       const isHovering = monitor.isOver({ shallow: true });
       setIsOver(isHovering);
       
       // Ottieni la posizione del mouse
       const clientOffset = monitor.getClientOffset();
-      if (!clientOffset) return;
+      if (!clientOffset) {
+        console.log("[SCROLL DEBUG] Nessun clientOffset disponibile");
+        return;
+      }
+      
+      console.log(`[SCROLL DEBUG] Mouse position - clientX: ${clientOffset.x}, clientY: ${clientOffset.y}`);
       
       // Ottieni il contenitore delle colonne
       const boardContainer = document.getElementById('funnel-board-container');
-      if (!boardContainer) return;
+      if (!boardContainer) {
+        console.error("[SCROLL DEBUG] ERRORE: Elemento #funnel-board-container non trovato!");
+        return;
+      }
       
       // Calcola le dimensioni e la posizione del contenitore
       const containerRect = boardContainer.getBoundingClientRect();
+      console.log(`[SCROLL DEBUG] Container bounds - left: ${containerRect.left}, width: ${containerRect.width}, right: ${containerRect.right}`);
       
       // Calcola la posizione del mouse relativa al contenitore
       const relativeMouseX = clientOffset.x - containerRect.left;
+      console.log(`[SCROLL DEBUG] Mouse X relativo al container: ${relativeMouseX}`);
       
       // Larghezza totale del contenitore
       const containerWidth = containerRect.width;
       
       // Dividiamo il contenitore in tre parti: 15% a sinistra, 70% al centro, 15% a destra
-      // Usiamo percentuali più piccole per il contenitore rispetto alla viewport
       const leftZone = containerWidth * 0.15;
       const rightZone = containerWidth * 0.85;
+      console.log(`[SCROLL DEBUG] Zone - leftZone: 0-${leftZone}, rightZone: ${rightZone}-${containerWidth}`);
       
       // Velocità di scorrimento progressiva - più vicino al bordo, più veloce lo scorrimento
       const calculateScrollSpeed = (distance: number, max: number) => {
@@ -66,22 +79,46 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
         return baseSpeed + (maxAdditionalSpeed * ratio);
       };
       
-      // Log per debug
-      console.log(`[DnD Debug] Mouse relativo: ${relativeMouseX}/${containerWidth}, ` + 
-                 `Limiti zone: L=${leftZone}, R=${rightZone}`);
-      
       // Se siamo nella zona sinistra, scorriamo a sinistra con velocità proporzionale
       if (relativeMouseX < leftZone) {
         const speed = calculateScrollSpeed(relativeMouseX, leftZone);
-        console.log(`[DnD Debug] Scrolling LEFT at speed ${speed}px`);
-        boardContainer.scrollBy({ left: -speed, behavior: 'auto' });
+        console.log(`[SCROLL DEBUG] SCROLLING LEFT con velocità ${speed}px (relativeMouseX ${relativeMouseX} < leftZone ${leftZone})`);
+        
+        // Controlla se è possibile scorrere (non siamo già all'inizio)
+        if (boardContainer.scrollLeft > 0) {
+          console.log(`[SCROLL DEBUG] Esecuzione scrollBy(-${speed}). scrollLeft attuale: ${boardContainer.scrollLeft}`);
+          boardContainer.scrollBy({ left: -speed, behavior: 'auto' });
+          
+          // LOG dello scrollLeft dopo lo scroll per verifica
+          setTimeout(() => {
+            console.log(`[SCROLL DEBUG] Nuovo scrollLeft dopo LEFT scroll: ${boardContainer.scrollLeft}`);
+          }, 10);
+        } else {
+          console.log(`[SCROLL DEBUG] Già all'inizio del container, scrollLeft: ${boardContainer.scrollLeft}`);
+        }
       }
       
       // Se siamo nella zona destra, scorriamo a destra con velocità proporzionale
       else if (relativeMouseX > rightZone) {
         const speed = calculateScrollSpeed(containerWidth - relativeMouseX, containerWidth - rightZone);
-        console.log(`[DnD Debug] Scrolling RIGHT at speed ${speed}px`);
-        boardContainer.scrollBy({ left: speed, behavior: 'auto' });
+        console.log(`[SCROLL DEBUG] SCROLLING RIGHT con velocità ${speed}px (relativeMouseX ${relativeMouseX} > rightZone ${rightZone})`);
+        
+        // Controlla se è possibile scorrere (non siamo già alla fine)
+        const maxScroll = boardContainer.scrollWidth - boardContainer.clientWidth;
+        if (boardContainer.scrollLeft < maxScroll) {
+          console.log(`[SCROLL DEBUG] Esecuzione scrollBy(${speed}). scrollLeft attuale: ${boardContainer.scrollLeft}, maxScroll: ${maxScroll}`);
+          boardContainer.scrollBy({ left: speed, behavior: 'auto' });
+          
+          // LOG dello scrollLeft dopo lo scroll per verifica
+          setTimeout(() => {
+            console.log(`[SCROLL DEBUG] Nuovo scrollLeft dopo RIGHT scroll: ${boardContainer.scrollLeft}`);
+          }, 10);
+        } else {
+          console.log(`[SCROLL DEBUG] Già alla fine del container, scrollLeft: ${boardContainer.scrollLeft}, maxScroll: ${maxScroll}`);
+        }
+      }
+      else {
+        console.log(`[SCROLL DEBUG] In zona centrale - nessuno scroll (${leftZone} < ${relativeMouseX} < ${rightZone})`);
       }
     },
     collect: (monitor) => ({
@@ -95,6 +132,24 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
       dropTarget(dropRef.current);
     }
   }, [dropTarget]);
+
+  // Log delle dimensioni del container quando il componente viene montato
+  useEffect(() => {
+    const logContainerDimensions = () => {
+      const boardContainer = document.getElementById('funnel-board-container');
+      if (boardContainer) {
+        const rect = boardContainer.getBoundingClientRect();
+        console.log(`[SCROLL DEBUG] Dimensioni iniziali container - width: ${rect.width}, height: ${rect.height}`);
+        console.log(`[SCROLL DEBUG] Scroll info - scrollWidth: ${boardContainer.scrollWidth}, clientWidth: ${boardContainer.clientWidth}`);
+        console.log(`[SCROLL DEBUG] Overflow scroll disponibile: ${boardContainer.scrollWidth > boardContainer.clientWidth ? 'SÌ' : 'NO'}`);
+      } else {
+        console.error("[SCROLL DEBUG] Elemento #funnel-board-container non trovato durante l'inizializzazione!");
+      }
+    };
+    
+    // Esegui dopo che il DOM è completamente caricato
+    setTimeout(logContainerDimensions, 500);
+  }, []);
 
   return (
     <div className={`funnel-column ${isMoving ? 'column-fade-transition' : ''}`}>
