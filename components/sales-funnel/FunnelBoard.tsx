@@ -47,7 +47,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const boardRef = useRef<HTMLDivElement>(null);
   const dragItemRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  
+  const draggedLeadRef = useRef<FunnelItem | null>(null);
+  const dragOriginRef = useRef<{ status: string, x: number, y: number } | null>(null);
+  const dragPositionRef = useRef<{ x: number, y: number } | null>(null);
+    
   // Clean up interval on unmount
   useEffect(() => {
     return () => {
@@ -75,8 +78,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     
     console.log(`[DRAG DEBUG] 🟢 Iniziando drag per lead: ${lead.name} (${lead._id})`);
     
-    // Store the lead being dragged
+    // Store the lead being dragged in both state and ref
     setDraggedLead(lead);
+    draggedLeadRef.current = lead;
     
     // Get client coordinates based on event type
     let clientX: number;
@@ -94,7 +98,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       console.log(`[DRAG DEBUG] 🖱️ Evento mouse - Coordinate: (${clientX}, ${clientY})`);
     }
     
-    // Store drag origin
+    // Store drag origin in both state and ref
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const originX = clientX - rect.left;
     const originY = clientY - rect.top;
@@ -102,14 +106,20 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     console.log(`[DRAG DEBUG] 📌 Origine drag - Offset relativo al card: (${originX}, ${originY})`);
     console.log(`[DRAG DEBUG] 📐 Dimensioni card: ${rect.width}x${rect.height}, Posizione: (${rect.left}, ${rect.top})`);
     
-    setDragOrigin({
+    const originData = {
       status: lead.status,
       x: originX,
       y: originY
-    });
+    };
     
-    // Set initial drag position
-    setDragPosition({ x: clientX, y: clientY });
+    setDragOrigin(originData);
+    dragOriginRef.current = originData;
+    
+    // Set initial drag position in both state and ref
+    const positionData = { x: clientX, y: clientY };
+    setDragPosition(positionData);
+    dragPositionRef.current = positionData;
+    
     console.log(`[DRAG DEBUG] 🎯 Posizione drag iniziale impostata: (${clientX}, ${clientY})`);
     
     // Add event listeners for drag motion and end
@@ -146,13 +156,19 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         </div>
       `;
       
-      // Mostra il preview e imposta la posizione iniziale
+      // Imposta la posizione iniziale corretta
+      const left = clientX - originX;
+      const top = clientY - originY;
+      
+      dragItemRef.current.style.left = `${left}px`;
+      dragItemRef.current.style.top = `${top}px`;
+      dragItemRef.current.style.borderLeftColor = getBorderColor(lead.status);
       dragItemRef.current.style.display = 'block';
-      updateDragPreviewPosition(clientX, clientY);
       
       // Log per vedere le proprietà CSS del preview
       const computedStyle = window.getComputedStyle(dragItemRef.current);
       console.log(`[DRAG DEBUG] 🎨 Stile preview - Position: ${computedStyle.position}, Z-Index: ${computedStyle.zIndex}, Display: ${computedStyle.display}`);
+      console.log(`[DRAG DEBUG] 📍 Posizione iniziale del preview: left=${left}px, top=${top}px`);
     } else {
       console.error(`[DRAG DEBUG] ❌ ERRORE: dragItemRef.current è null!`);
     }
@@ -160,18 +176,31 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   
   // Handle drag movement
   const handleDragMove = (e: MouseEvent): void => {
-    if (!draggedLead || !dragOrigin) {
-      console.log(`[DRAG DEBUG] ❌ handleDragMove chiamato ma draggedLead o dragOrigin è null`);
+    // Usa le ref per un accesso immediato invece degli stati
+    if (!draggedLeadRef.current || !dragOriginRef.current) {
+      console.log(`[DRAG DEBUG] ❌ handleDragMove chiamato ma draggedLeadRef o dragOriginRef è null`);
       return;
     }
     
     console.log(`[DRAG DEBUG] 🔄 Mouse in movimento - Coordinate: (${e.clientX}, ${e.clientY})`);
     
-    // Update drag position state
-    setDragPosition({ x: e.clientX, y: e.clientY });
+    // Update drag position state and ref
+    const positionData = { x: e.clientX, y: e.clientY };
+    setDragPosition(positionData);
+    dragPositionRef.current = positionData;
     
     // Aggiorna direttamente la posizione del preview DOM
-    updateDragPreviewPosition(e.clientX, e.clientY);
+    if (dragItemRef.current) {
+      const left = e.clientX - dragOriginRef.current.x;
+      const top = e.clientY - dragOriginRef.current.y;
+      
+      dragItemRef.current.style.left = `${left}px`;
+      dragItemRef.current.style.top = `${top}px`;
+      
+      console.log(`[DRAG DEBUG] 📍 Aggiornata posizione preview: left=${left}px, top=${top}px`);
+    } else {
+      console.log(`[DRAG DEBUG] ❌ dragItemRef.current è null durante il movimento!`);
+    }
     
     // Check which column we're over
     const columns = document.querySelectorAll('.funnel-column');
@@ -196,9 +225,11 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   };
   
   // Handler for touch move events
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!draggedLead || !dragOrigin) {
-      console.log(`[DRAG DEBUG] ❌ handleTouchMove chiamato ma draggedLead o dragOrigin è null`);
+  // Handler per eventi touch
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>): void => {
+    // Usa le ref per un accesso immediato invece degli stati
+    if (!draggedLeadRef.current || !dragOriginRef.current) {
+      console.log(`[DRAG DEBUG] ❌ handleTouchMove chiamato ma draggedLeadRef o dragOriginRef è null`);
       return;
     }
     
@@ -208,24 +239,22 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     const touch = e.touches[0];
     console.log(`[DRAG DEBUG] 👆 Touch in movimento - Coordinate: (${touch.clientX}, ${touch.clientY})`);
     
-    // Update drag position
-    setDragPosition({ x: touch.clientX, y: touch.clientY });
+    // Update drag position state and ref
+    const positionData = { x: touch.clientX, y: touch.clientY };
+    setDragPosition(positionData);
+    dragPositionRef.current = positionData;
     
-    // Log la posizione prevista del preview di drag
-    if (dragOrigin) {
-      const previewLeft = touch.clientX - dragOrigin.x;
-      const previewTop = touch.clientY - dragOrigin.y;
-      console.log(`[DRAG DEBUG] 🖼️ Posizione prevista del preview (touch): (${previewLeft}, ${previewTop})`);
+    // Aggiorna direttamente la posizione del preview DOM
+    if (dragItemRef.current) {
+      const left = touch.clientX - dragOriginRef.current.x;
+      const top = touch.clientY - dragOriginRef.current.y;
       
-      // Verifica se il preview è visibile
-      if (dragItemRef.current) {
-        const displayStyle = window.getComputedStyle(dragItemRef.current).display;
-        console.log(`[DRAG DEBUG] 👁️ Preview display (touch): ${displayStyle}`);
-        
-        // Verifica posizione effettiva
-        const rect = dragItemRef.current.getBoundingClientRect();
-        console.log(`[DRAG DEBUG] 📏 Posizione effettiva preview (touch): (${rect.left}, ${rect.top})`);
-      }
+      dragItemRef.current.style.left = `${left}px`;
+      dragItemRef.current.style.top = `${top}px`;
+      
+      console.log(`[DRAG DEBUG] 📍 Aggiornata posizione preview (touch): left=${left}px, top=${top}px`);
+    } else {
+      console.log(`[DRAG DEBUG] ❌ dragItemRef.current è null durante il movimento touch!`);
     }
     
     // Check which column we're over
@@ -312,7 +341,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   };
   
   // End dragging
-  const handleDragEnd = (e: MouseEvent) => {
+  const handleDragEnd = (e: MouseEvent): void => {
     console.log(`[DRAG DEBUG] 🛑 Fine drag (mouse) - Coordinate: (${e.clientX}, ${e.clientY})`);
     
     // Clean up event listeners
@@ -329,7 +358,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   };
   
   // Handle touch end for mobile
-  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>): void => {
     console.log(`[DRAG DEBUG] 🛑 Fine drag (touch)`);
     
     // Registra la posizione finale del drag preview prima della pulizia
@@ -342,7 +371,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   };
   
   // Common end drag logic
-  const endDrag = () => {
+  const endDrag = (): void => {
     console.log(`[DRAG DEBUG] 🧹 Esecuzione pulizia drag comune`);
     
     // Clear any scroll interval
@@ -353,15 +382,16 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
     
     // Handle the drop if over a valid column
-    if (draggedLead && targetColumn) {
-      if (targetColumn !== draggedLead.status) {
-        console.log(`[DRAG DEBUG] ✅ Drop completato - Spostamento lead da ${draggedLead.status} a ${targetColumn}`);
-        handleMoveLead(draggedLead, targetColumn);
+    // Usiamo le ref invece degli stati per la validazione finale
+    if (draggedLeadRef.current && targetColumn) {
+      if (targetColumn !== draggedLeadRef.current.status) {
+        console.log(`[DRAG DEBUG] ✅ Drop completato - Spostamento lead da ${draggedLeadRef.current.status} a ${targetColumn}`);
+        handleMoveLead(draggedLeadRef.current, targetColumn);
       } else {
         console.log(`[DRAG DEBUG] ℹ️ Drop nella stessa colonna (${targetColumn}) - Nessun'azione`);
       }
     } else {
-      console.log(`[DRAG DEBUG] ⚠️ Drop non valido - draggedLead: ${!!draggedLead}, targetColumn: ${targetColumn}`);
+      console.log(`[DRAG DEBUG] ⚠️ Drop non valido - draggedLeadRef: ${!!draggedLeadRef.current}, targetColumn: ${targetColumn}`);
     }
     
     // Hide the drag preview
@@ -381,10 +411,16 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
     
     console.log(`[DRAG DEBUG] 🗑️ Reset degli stati di drag`);
-    // Reset drag state
+    // Reset drag state e anche le ref
     setDraggedLead(null);
+    draggedLeadRef.current = null;
+    
     setDragOrigin(null);
+    dragOriginRef.current = null;
+    
     setDragPosition(null);
+    dragPositionRef.current = null;
+    
     setTargetColumn(null);
   };
 
