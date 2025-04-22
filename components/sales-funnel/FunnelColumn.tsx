@@ -19,13 +19,6 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
   const dropRef = useRef<HTMLDivElement>(null);
   const [isOver, setIsOver] = useState(false);
   
-  // Stato per il debug
-  const [mousePosition, setMousePosition] = useState<{x: number, y: number} | null>(null);
-  const [scrollInfo, setScrollInfo] = useState<{
-    zone: 'left' | 'center' | 'right',
-    speed: number
-  } | null>(null);
-  
   // Set up the drop target
   const [{ isOverCurrent }, dropTarget] = useDrop({
     accept: 'LEAD',
@@ -46,15 +39,23 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
       const clientOffset = monitor.getClientOffset();
       if (!clientOffset) return;
       
-      // Aggiorna la posizione del mouse per il debug
-      setMousePosition(clientOffset);
+      // Ottieni il contenitore delle colonne
+      const boardContainer = document.getElementById('funnel-board-container');
+      if (!boardContainer) return;
       
-      // Auto-scroll laterale - ora funziona su tutta la viewport
-      const viewportWidth = window.innerWidth;
+      // Calcola le dimensioni e la posizione del contenitore
+      const containerRect = boardContainer.getBoundingClientRect();
       
-      // Dividiamo lo schermo in tre parti: 30% a sinistra, 40% al centro, 30% a destra
-      const leftZone = viewportWidth * 0.3;
-      const rightZone = viewportWidth * 0.7;
+      // Calcola la posizione del mouse relativa al contenitore
+      const relativeMouseX = clientOffset.x - containerRect.left;
+      
+      // Larghezza totale del contenitore
+      const containerWidth = containerRect.width;
+      
+      // Dividiamo il contenitore in tre parti: 15% a sinistra, 70% al centro, 15% a destra
+      // Usiamo percentuali più piccole per il contenitore rispetto alla viewport
+      const leftZone = containerWidth * 0.15;
+      const rightZone = containerWidth * 0.85;
       
       // Velocità di scorrimento progressiva - più vicino al bordo, più veloce lo scorrimento
       const calculateScrollSpeed = (distance: number, max: number) => {
@@ -65,41 +66,22 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
         return baseSpeed + (maxAdditionalSpeed * ratio);
       };
       
+      // Log per debug
+      console.log(`[DnD Debug] Mouse relativo: ${relativeMouseX}/${containerWidth}, ` + 
+                 `Limiti zone: L=${leftZone}, R=${rightZone}`);
+      
       // Se siamo nella zona sinistra, scorriamo a sinistra con velocità proporzionale
-      if (clientOffset.x < leftZone) {
-        const speed = calculateScrollSpeed(clientOffset.x, leftZone);
-        const boardContainer = document.getElementById('funnel-board-container');
-        if (boardContainer) {
-          boardContainer.scrollBy({ left: -speed, behavior: 'auto' });
-          
-          // Aggiorna info di debug
-          setScrollInfo({
-            zone: 'left',
-            speed: speed
-          });
-        }
+      if (relativeMouseX < leftZone) {
+        const speed = calculateScrollSpeed(relativeMouseX, leftZone);
+        console.log(`[DnD Debug] Scrolling LEFT at speed ${speed}px`);
+        boardContainer.scrollBy({ left: -speed, behavior: 'auto' });
       }
       
       // Se siamo nella zona destra, scorriamo a destra con velocità proporzionale
-      else if (clientOffset.x > rightZone) {
-        const speed = calculateScrollSpeed(viewportWidth - clientOffset.x, viewportWidth - rightZone);
-        const boardContainer = document.getElementById('funnel-board-container');
-        if (boardContainer) {
-          boardContainer.scrollBy({ left: speed, behavior: 'auto' });
-          
-          // Aggiorna info di debug
-          setScrollInfo({
-            zone: 'right',
-            speed: speed
-          });
-        }
-      }
-      // Zona centrale - nessuno scrolling
-      else {
-        setScrollInfo({
-          zone: 'center',
-          speed: 0
-        });
+      else if (relativeMouseX > rightZone) {
+        const speed = calculateScrollSpeed(containerWidth - relativeMouseX, containerWidth - rightZone);
+        console.log(`[DnD Debug] Scrolling RIGHT at speed ${speed}px`);
+        boardContainer.scrollBy({ left: speed, behavior: 'auto' });
       }
     },
     collect: (monitor) => ({
@@ -114,16 +96,6 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
     }
   }, [dropTarget]);
 
-  // Reset delle info di debug quando il mouse non sta più trascinando
-  useEffect(() => {
-    if (!isOverCurrent) {
-      setTimeout(() => {
-        setMousePosition(null);
-        setScrollInfo(null);
-      }, 200);
-    }
-  }, [isOverCurrent]);
-
   return (
     <div className={`funnel-column ${isMoving ? 'column-fade-transition' : ''}`}>
       <div className={`funnel-header ${color}`}>
@@ -137,25 +109,6 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
         ref={dropRef} 
         className={`funnel-body ${isOverCurrent ? "drag-over" : ""}`}
       >
-        {/* Debug info */}
-        {isOverCurrent && mousePosition && scrollInfo && (
-          <div className="absolute top-0 left-0 right-0 bg-black/80 text-white text-xs p-1 z-50 rounded">
-            <div>Mouse: x:{mousePosition.x}</div>
-            <div>
-              Zona: <span className={
-                scrollInfo.zone === 'left' ? 'text-red-400' : 
-                scrollInfo.zone === 'right' ? 'text-blue-400' : 
-                'text-green-400'
-              }>
-                {scrollInfo.zone}
-              </span>
-            </div>
-            {scrollInfo.speed > 0 && (
-              <div>Velocità: {scrollInfo.speed.toFixed(1)}px</div>
-            )}
-          </div>
-        )}
-        
         {Array.isArray(children) && children.length > 0 ? (
           children
         ) : (
