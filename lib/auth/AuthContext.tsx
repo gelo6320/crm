@@ -54,11 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (response.data.authenticated) {
           // Se l'utente è autenticato, imposta i dati utente
+          console.log("Utente autenticato:", response.data.user);
+          console.log("Ruolo utente:", response.data.user?.role || 'user');
+          
           setUser({
             id: response.data.user?.id || '1',
             email: response.data.user?.email || 'admin@costruzionedigitale.com',
             name: response.data.user?.name || 'Amministratore',
-            role: response.data.user?.role || 'user'  // Imposta il ruolo di default a 'user'
+            role: response.data.user?.role || 'user'
           });
         } else {
           // Se non autenticato, assicurati che l'utente sia null

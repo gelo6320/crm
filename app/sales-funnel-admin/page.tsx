@@ -8,24 +8,29 @@ import useAuthz from "@/lib/auth/useAuthz";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 export default function SalesFunnelAdminPage() {
-  const { isAdmin } = useAuthz();
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Verifica che l'utente sia un amministratore
-  useEffect(() => {
-    const checkAccess = () => {
-      setIsLoading(false);
-      if (!isAdmin()) {
-        // Reindirizza alla home page se non è un amministratore
-        router.push('/');
-      }
-    };
+    const { isAdmin } = useAuthz();
+    const router = useRouter();
+    const [isLoading, setIsLoading] = useState(true);
     
-    const timeout = setTimeout(checkAccess, 500); // Breve ritardo per mostrare il loader
-    
-    return () => clearTimeout(timeout);
-  }, [isAdmin, router]);
+    // Verifica che l'utente sia un amministratore
+    useEffect(() => {
+      const checkAccess = () => {
+        setIsLoading(false);
+        
+        const isAdminUser = isAdmin();
+        console.log(`SalesFunnelAdminPage: Accesso verificato - L'utente ${isAdminUser ? 'è' : 'non è'} un amministratore`);
+        
+        if (!isAdminUser) {
+          console.log("SalesFunnelAdminPage: Accesso negato - Reindirizzamento alla home page");
+          router.push('/');
+        } else {
+          console.log("SalesFunnelAdminPage: Accesso consentito");
+        }
+      };
+      
+      const timeout = setTimeout(checkAccess, 500);
+      return () => clearTimeout(timeout);
+    }, [isAdmin, router]);
   
   if (isLoading) {
     return <LoadingSpinner />;

@@ -28,10 +28,12 @@ interface SidebarLink {
 }
 
 export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
-    const pathname = usePathname();
-    const { logout } = useAuth();
-    const { isAdmin } = useAuthz(); // Usiamo il nuovo hook per le autorizzazioni
-    const router = useRouter();
+  const pathname = usePathname();
+  const { logout, user } = useAuth();
+  const { isAdmin } = useAuthz();
+  const isAdminUser = isAdmin();
+  
+  console.log(`Sidebar: Utente attuale: ${user?.email || 'Nessuno'}, Ruolo: ${user?.role || 'Nessuno'}, È admin: ${isAdminUser}`);
 
     const handleLogout = async () => {
         try {
@@ -65,7 +67,7 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
   // Filtra i link admin se necessario
   const links: SidebarLink[] = [
     ...commonLinks,
-    ...(isAdmin() ? adminLinks : []),
+    ...(isAdminUser ? (console.log("Sidebar: Aggiungendo link admin"), adminLinks) : []),
     settingsLink
   ];
   

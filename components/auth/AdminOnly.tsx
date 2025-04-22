@@ -12,9 +12,12 @@ interface AdminOnlyProps {
  */
 export default function AdminOnly({ children, fallback = null }: AdminOnlyProps) {
   const { isAdmin } = useAuthz();
+  const isAdminUser = isAdmin();
+  
+  console.log(`AdminOnly: L'utente ${isAdminUser ? 'è' : 'non è'} un amministratore - ${isAdminUser ? 'mostrando' : 'nascondendo'} il contenuto riservato`);
   
   // Se l'utente è un amministratore, mostra il contenuto
-  if (isAdmin()) {
+  if (isAdminUser) {
     return <>{children}</>;
   }
   
