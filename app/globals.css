@@ -833,3 +833,146 @@ html.has-touch .funnel-card {
     transform: scaleY(1);
   }
 }
+/* app/funnel-styles.css */
+.funnel-board-container {
+  overflow-x: auto;
+  padding-bottom: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937;
+}
+
+.funnel-board {
+  display: flex;
+  min-width: max-content;
+  gap: 12px;
+  padding: 0 12px;
+}
+
+.funnel-column {
+  min-width: 250px;
+  max-width: 250px;
+  background-color: #27272a; /* zinc-800 */
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  transition: all 0.2s ease;
+}
+
+.funnel-header {
+  padding: 12px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.funnel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.funnel-card {
+  padding: 12px;
+  background-color: #18181b; /* zinc-900 */
+  border-left-width: 3px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.funnel-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.funnel-card:active {
+  cursor: grabbing;
+}
+
+.drop-target-active {
+  background-color: #3f3f46; /* zinc-700 */
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.5);
+}
+
+.column-fade-transition {
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+/* Scroll zones visualization for debugging */
+.scroll-zone-left {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  background-color: rgba(239, 68, 68, 0.15);
+  pointer-events: none;
+  z-index: 100;
+}
+
+.scroll-zone-right {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  background-color: rgba(59, 130, 246, 0.15);
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* Custom scrollbars for Webkit browsers */
+.funnel-board-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.funnel-board-container::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 4px;
+}
+
+.funnel-board-container::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+  border-radius: 4px;
+}
+
+.funnel-board-container::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}
+
+.funnel-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.funnel-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.funnel-body::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+  border-radius: 4px;
+}
+
+@keyframes card-dragging {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(1deg);
+  }
+  75% {
+    transform: rotate(-1deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .funnel-column {
+    min-width: 220px;
+    max-width: 220px;
+  }
+}

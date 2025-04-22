@@ -3,11 +3,12 @@
 
 import { useState, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
-import FunnelBoard from "@/components/sales-funnel/FunnelBoard";
+import CustomFunnelBoard from "@/components/sales-funnel/FunnelBoard";
 import FunnelStats from "@/components/sales-funnel/FunnelStats";
 import { FunnelData, FunnelStats as FunnelStatsType } from "@/types";
 import { fetchFunnelData } from "@/lib/api/funnel";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import "../funnel-styles.css";
 
 export default function SalesFunnelPage() {
   const [funnelData, setFunnelData] = useState<FunnelData>({
@@ -66,8 +67,8 @@ export default function SalesFunnelPage() {
       </div>
       
       <div className="flex flex-col gap-4">
-        <div className="flex-1 overflow-x-auto pb-4">
-          <FunnelBoard 
+        <div className="flex-1 overflow-hidden">
+          <CustomFunnelBoard 
             funnelData={funnelData} 
             setFunnelData={setFunnelData} 
             onLeadMove={loadFunnelData}
