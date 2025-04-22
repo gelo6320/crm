@@ -34,7 +34,36 @@ export default function ContactsPage() {
   const [selectedStatus, setSelectedStatus] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
+  const [isSourceDropdownOpen, setIsSourceDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const router = useRouter();
+  
+  // Gestisci il click fuori dai dropdown per chiuderli
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Chiudi i dropdown se si clicca fuori da essi
+      setIsSourceDropdownOpen(false);
+      setIsStatusDropdownOpen(false);
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // Toggle dei dropdown
+  const toggleSourceDropdown = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Previeni che l'evento raggiunga il document
+    setIsSourceDropdownOpen(!isSourceDropdownOpen);
+    setIsStatusDropdownOpen(false); // Chiudi l'altro dropdown
+  };
+  
+  const toggleStatusDropdown = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Previeni che l'evento raggiunga il document
+    setIsStatusDropdownOpen(!isStatusDropdownOpen);
+    setIsSourceDropdownOpen(false); // Chiudi l'altro dropdown
+  };
   
   // Carica i contatti all'avvio e quando cambiano i filtri
   useEffect(() => {
@@ -128,12 +157,14 @@ export default function ContactsPage() {
   const handleStatusFilter = (status: string) => {
     setSelectedStatus(status);
     setCurrentPage(1);
+    setIsStatusDropdownOpen(false);
   };
   
   // Gestisce il cambio di filtro per source
   const handleSourceFilter = (source: string) => {
     setSourceFilter(source);
     setCurrentPage(1);
+    setIsSourceDropdownOpen(false);
   };
   
   // Gestisce la ricerca
@@ -219,123 +250,133 @@ export default function ContactsPage() {
           {/* Filtro per fonte */}
           <div className="relative">
             <button
-              onClick={() => setSourceFilter("")}
+              onClick={toggleSourceDropdown}
               className={`btn ${sourceFilter ? 'btn-primary' : 'btn-outline'} flex items-center space-x-1 p-1.5`}
             >
               <Filter size={16} />
-              <span className="hidden sm:inline">Fonte</span>
+              <span className="hidden sm:inline">{getSourceFilterLabel()}</span>
               <ChevronDown size={14} />
             </button>
             
-            <div className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-zinc-800 border border-zinc-700 z-10">
-              <div className="py-1">
-                <button
-                  onClick={() => handleSourceFilter("")}
-                  className={`w-full text-left px-4 py-2 text-sm ${
-                    sourceFilter === "" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                  }`}
-                >
-                  Tutte le fonti
-                </button>
-                <button
-                  onClick={() => handleSourceFilter("form")}
-                  className={`w-full text-left px-4 py-2 text-sm ${
-                    sourceFilter === "form" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                  }`}
-                >
-                  Form di Contatto
-                </button>
-                <button
-                  onClick={() => handleSourceFilter("facebook")}
-                  className={`w-full text-left px-4 py-2 text-sm ${
-                    sourceFilter === "facebook" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                  }`}
-                >
-                  Lead Facebook
-                </button>
-                <button
-                  onClick={() => handleSourceFilter("booking")}
-                  className={`w-full text-left px-4 py-2 text-sm ${
-                    sourceFilter === "booking" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                  }`}
-                >
-                  Prenotazioni
-                </button>
+            {isSourceDropdownOpen && (
+              <div 
+                className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-zinc-800 border border-zinc-700 z-10"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="py-1">
+                  <button
+                    onClick={() => handleSourceFilter("")}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      sourceFilter === "" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
+                    }`}
+                  >
+                    Tutte le fonti
+                  </button>
+                  <button
+                    onClick={() => handleSourceFilter("form")}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      sourceFilter === "form" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
+                    }`}
+                  >
+                    Form di Contatto
+                  </button>
+                  <button
+                    onClick={() => handleSourceFilter("facebook")}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      sourceFilter === "facebook" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
+                    }`}
+                  >
+                    Lead Facebook
+                  </button>
+                  <button
+                    onClick={() => handleSourceFilter("booking")}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      sourceFilter === "booking" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
+                    }`}
+                  >
+                    Prenotazioni
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           
           {/* Filtro per stato */}
           <div className="relative">
             <button
-              onClick={() => setSelectedStatus("")}
+              onClick={toggleStatusDropdown}
               className={`btn ${selectedStatus ? 'btn-primary' : 'btn-outline'} flex items-center space-x-1 p-1.5`}
             >
               <Filter size={16} />
-              <span className="hidden sm:inline">Stato</span>
+              <span className="hidden sm:inline">{selectedStatus || "Tutti gli stati"}</span>
               <ChevronDown size={14} />
             </button>
             
-            <div className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-zinc-800 border border-zinc-700 z-10">
-              <div className="py-1">
-                <button
-                  onClick={() => handleStatusFilter("")}
-                  className={`w-full text-left px-4 py-2 text-sm ${
-                    selectedStatus === "" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                  }`}
-                >
-                  Tutti gli stati
-                </button>
-                <button
-                  onClick={() => handleStatusFilter("new")}
-                  className={`w-full text-left px-4 py-2 text-sm ${
-                    selectedStatus === "new" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                  }`}
-                >
-                  Nuovi
-                </button>
-                <button
-                  onClick={() => handleStatusFilter("contacted")}
-                  className={`w-full text-left px-4 py-2 text-sm ${
-                    selectedStatus === "contacted" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                  }`}
-                >
-                  Contattati
-                </button>
-                <button
-                  onClick={() => handleStatusFilter("qualified")}
-                  className={`w-full text-left px-4 py-2 text-sm ${
-                    selectedStatus === "qualified" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                  }`}
-                >
-                  Qualificati
-                </button>
-                <button
-                  onClick={() => handleStatusFilter("opportunity")}
-                  className={`w-full text-left px-4 py-2 text-sm ${
-                    selectedStatus === "opportunity" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                  }`}
-                >
-                  Opportunità
-                </button>
-                <button
-                  onClick={() => handleStatusFilter("customer")}
-                  className={`w-full text-left px-4 py-2 text-sm ${
-                    selectedStatus === "customer" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                  }`}
-                >
-                  Clienti
-                </button>
-                <button
-                  onClick={() => handleStatusFilter("lost")}
-                  className={`w-full text-left px-4 py-2 text-sm ${
-                    selectedStatus === "lost" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                  }`}
-                >
-                  Persi
-                </button>
+            {isStatusDropdownOpen && (
+              <div 
+                className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-zinc-800 border border-zinc-700 z-10"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="py-1">
+                  <button
+                    onClick={() => handleStatusFilter("")}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      selectedStatus === "" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
+                    }`}
+                  >
+                    Tutti gli stati
+                  </button>
+                  <button
+                    onClick={() => handleStatusFilter("new")}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      selectedStatus === "new" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
+                    }`}
+                  >
+                    Nuovi
+                  </button>
+                  <button
+                    onClick={() => handleStatusFilter("contacted")}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      selectedStatus === "contacted" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
+                    }`}
+                  >
+                    Contattati
+                  </button>
+                  <button
+                    onClick={() => handleStatusFilter("qualified")}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      selectedStatus === "qualified" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
+                    }`}
+                  >
+                    Qualificati
+                  </button>
+                  <button
+                    onClick={() => handleStatusFilter("opportunity")}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      selectedStatus === "opportunity" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
+                    }`}
+                  >
+                    Opportunità
+                  </button>
+                  <button
+                    onClick={() => handleStatusFilter("customer")}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      selectedStatus === "customer" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
+                    }`}
+                  >
+                    Clienti
+                  </button>
+                  <button
+                    onClick={() => handleStatusFilter("lost")}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      selectedStatus === "lost" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
+                    }`}
+                  >
+                    Persi
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
           
           {/* Ricerca */}
