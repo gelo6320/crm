@@ -301,7 +301,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
     
     // Velocità costante più alta
-    const SCROLL_SPEED = 20; // Velocità costante per lo scroll
+    const SCROLL_SPEED = 50; // Velocità costante per lo scroll
     
     // Check if the mouse is in a scroll zone
     if (clientX < leftScrollZone) {
