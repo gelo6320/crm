@@ -86,6 +86,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   };
   
   // Handle drag movement
+ // Updated event handlers for the drag implementation
+
+  // Handle drag movement
   const handleDragMove = (e: MouseEvent) => {
     if (!draggedLead || !dragOrigin) return;
     
@@ -286,6 +289,48 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       }
     }
   };
+
+  const renderFunnelCard = (lead: FunnelItem) => (
+    <div 
+      key={lead._id}
+      className={`funnel-card ${draggedLead?._id === lead._id ? 'opacity-40' : ''}`}
+      style={{ 
+        borderLeftColor: getBorderColor(lead.status),
+      }}
+      onMouseDown={(e) => handleDragStart(lead, e)}
+      onTouchStart={(e) => handleTouchStart(lead, e)}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div className="flex justify-between items-center mb-1">
+        <div className="font-medium text-sm truncate pr-1">
+          {lead.name}
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEditLead(lead);
+          }}
+          className="p-1 rounded-full hover:bg-zinc-700 transition-colors"
+        >
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+          </svg>
+        </button>
+      </div>
+      <div className="text-xs text-zinc-400">
+        <div>{formatDate(lead.createdAt)}</div>
+        {lead.value && (
+          <div className="text-primary font-medium my-1">
+            €{formatMoney(lead.value)}
+          </div>
+        )}
+        {lead.service && (
+          <div className="italic">{lead.service}</div>
+        )}
+      </div>
+    </div>
+  );
   
   // Handle touch end for mobile
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -450,8 +495,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     return {
       display: 'block',
       position: 'fixed' as 'fixed',
-      left: `${dragPosition.x - (dragOrigin?.x || 0)}px`,
-      top: `${dragPosition.y - (dragOrigin?.y || 0)}px`,
+      left: `${dragPosition.x - dragOrigin.x}px`,
+      top: `${dragPosition.y - dragOrigin.y}px`,
       opacity: 0.8,
       zIndex: 1000,
       pointerEvents: 'none' as 'none',
