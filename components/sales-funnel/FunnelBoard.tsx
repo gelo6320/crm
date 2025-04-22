@@ -6,6 +6,7 @@ import { FunnelData, FunnelItem } from "@/types";
 import { updateLeadMetadata } from "@/lib/api/funnel";
 import FacebookEventModal from "./FacebookEventModal";
 import ValueModal from "./ValueModal";
+import FunnelCard from "./FunnelCard";
 
 interface CustomFunnelBoardProps {
   funnelData: FunnelData;
@@ -57,27 +58,45 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   }, []);
   
   // Start dragging a lead
-  const handleDragStart = (lead: FunnelItem, e: React.MouseEvent<HTMLDivElement>) => {
+  const handleDragStart = (lead: FunnelItem, e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
     // Prevent default browser drag behavior
     e.preventDefault();
     
     // Store the lead being dragged
     setDraggedLead(lead);
     
+    // Get client coordinates based on event type
+    let clientX, clientY;
+    
+    if ('touches' in e) {
+      // Touch event
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      // Mouse event
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
     // Store drag origin
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setDragOrigin({
       status: lead.status,
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      x: clientX - rect.left,
+      y: clientY - rect.top
     });
     
     // Set initial drag position
-    setDragPosition({ x: e.clientX, y: e.clientY });
+    setDragPosition({ x: clientX, y: clientY });
     
     // Add event listeners for drag motion and end
-    document.addEventListener('mousemove', handleDragMove);
-    document.addEventListener('mouseup', handleDragEnd);
+    if ('touches' in e) {
+      // Touch events are handled within the component itself
+    } else {
+      // Mouse events
+      document.addEventListener('mousemove', handleDragMove);
+      document.addEventListener('mouseup', handleDragEnd);
+    }
     
     // Show the drag preview
     if (dragItemRef.current) {
@@ -85,9 +104,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
   
-  // Handle drag movement
- // Updated event handlers for the drag implementation
-
   // Handle drag movement
   const handleDragMove = (e: MouseEvent) => {
     if (!draggedLead || !dragOrigin) return;
@@ -110,11 +126,41 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     setTargetColumn(hoveredColumn ? (hoveredColumn as HTMLElement).id : null);
     
     // Handle auto-scrolling
-    handleAutoScroll(e);
+    handleAutoScroll(e.clientX);
+  };
+  
+  // Handler for touch move events
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!draggedLead || !dragOrigin) return;
+    
+    // Prevent default to disable page scrolling while dragging
+    e.preventDefault();
+    
+    const touch = e.touches[0];
+    
+    // Update drag position
+    setDragPosition({ x: touch.clientX, y: touch.clientY });
+    
+    // Check which column we're over
+    const columns = document.querySelectorAll('.funnel-column');
+    let hoveredColumn: Element | null = null;
+    
+    columns.forEach(column => {
+      const rect = column.getBoundingClientRect();
+      if (touch.clientX >= rect.left && touch.clientX <= rect.right) {
+        hoveredColumn = column;
+      }
+    });
+    
+    // Update target column
+    setTargetColumn(hoveredColumn ? (hoveredColumn as HTMLElement).id : null);
+    
+    // Handle auto-scrolling
+    handleAutoScroll(touch.clientX);
   };
   
   // Handle auto-scrolling when dragging near the edges
-  const handleAutoScroll = (e: MouseEvent) => {
+  const handleAutoScroll = (clientX: number) => {
     if (!boardRef.current) return;
     
     const board = boardRef.current;
@@ -135,9 +181,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
     
     // Check if the mouse is in a scroll zone
-    if (e.clientX < leftScrollZone) {
+    if (clientX < leftScrollZone) {
       // Calculate scroll speed - faster as you get closer to the edge
-      const distanceFromEdge = e.clientX - boardRect.left;
+      const distanceFromEdge = clientX - boardRect.left;
       const scrollSpeed = calculateScrollSpeed(distanceFromEdge, leftScrollZoneWidth);
       
       // Start scrolling left
@@ -145,9 +191,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         board.scrollLeft -= scrollSpeed;
       }, 16); // ~60fps
     } 
-    else if (e.clientX > rightScrollZone) {
+    else if (clientX > rightScrollZone) {
       // Calculate scroll speed
-      const distanceFromEdge = boardRect.right - e.clientX;
+      const distanceFromEdge = boardRect.right - clientX;
       const scrollSpeed = calculateScrollSpeed(distanceFromEdge, rightScrollZoneWidth);
       
       // Start scrolling right
@@ -175,165 +221,21 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   };
   
   // End dragging
-  const handleDragEnd = (e: MouseEvent) => {
+  const handleDragEnd = () => {
     // Clean up event listeners
     document.removeEventListener('mousemove', handleDragMove);
     document.removeEventListener('mouseup', handleDragEnd);
     
-    // Clear any scroll interval
-    if (scrollIntervalRef.current) {
-      clearInterval(scrollIntervalRef.current);
-      scrollIntervalRef.current = null;
-    }
-    
-    // Handle the drop if over a valid column
-    if (draggedLead && targetColumn && targetColumn !== draggedLead.status) {
-      handleMoveLead(draggedLead, targetColumn);
-    }
-    
-    // Hide the drag preview
-    if (dragItemRef.current) {
-      dragItemRef.current.style.display = 'none';
-    }
-    
-    // Reset drag state
-    setDraggedLead(null);
-    setDragOrigin(null);
-    setDragPosition(null);
-    setTargetColumn(null);
+    endDrag();
   };
-  
-  // Handle touch start for mobile
-  const handleTouchStart = (lead: FunnelItem, e: React.TouchEvent<HTMLDivElement>) => {
-    const touch = e.touches[0];
-    
-    // Store the lead being dragged
-    setDraggedLead(lead);
-    
-    // Store drag origin
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setDragOrigin({
-      status: lead.status,
-      x: touch.clientX - rect.left,
-      y: touch.clientY - rect.top
-    });
-    
-    // Set initial drag position
-    setDragPosition({ x: touch.clientX, y: touch.clientY });
-    
-    // Show the drag preview
-    if (dragItemRef.current) {
-      dragItemRef.current.style.display = 'block';
-    }
-  };
-  
-  // Handle touch move for mobile
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!draggedLead || !dragOrigin) return;
-    
-    // Prevent scrolling
-    e.preventDefault();
-    
-    const touch = e.touches[0];
-    
-    // Update drag position
-    setDragPosition({ x: touch.clientX, y: touch.clientY });
-    
-    // Check which column we're over
-    const columns = document.querySelectorAll('.funnel-column');
-    let hoveredColumn: Element | null = null;
-    
-    columns.forEach(column => {
-      const rect = column.getBoundingClientRect();
-      if (touch.clientX >= rect.left && touch.clientX <= rect.right) {
-        hoveredColumn = column;
-      }
-    });
-    
-    // Update target column
-    setTargetColumn(hoveredColumn ? (hoveredColumn as HTMLElement).id : null);
-    
-    // Handle auto-scrolling for touch
-    if (boardRef.current) {
-      const board = boardRef.current;
-      const boardRect = board.getBoundingClientRect();
-      
-      // Calculate scroll zones (percentage of viewport width)
-      const leftScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
-      const rightScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
-      
-      // Clear any existing scroll interval
-      if (scrollIntervalRef.current) {
-        clearInterval(scrollIntervalRef.current);
-        scrollIntervalRef.current = null;
-      }
-      
-      // Check if touch is in a scroll zone
-      if (touch.clientX < boardRect.left + leftScrollZoneWidth) {
-        // Start scrolling left
-        const distanceFromEdge = touch.clientX - boardRect.left;
-        const scrollSpeed = calculateScrollSpeed(distanceFromEdge, leftScrollZoneWidth);
-        
-        scrollIntervalRef.current = setInterval(() => {
-          board.scrollLeft -= scrollSpeed;
-        }, 16);
-      } 
-      else if (touch.clientX > boardRect.right - rightScrollZoneWidth) {
-        // Start scrolling right
-        const distanceFromEdge = boardRect.right - touch.clientX;
-        const scrollSpeed = calculateScrollSpeed(distanceFromEdge, rightScrollZoneWidth);
-        
-        scrollIntervalRef.current = setInterval(() => {
-          board.scrollLeft += scrollSpeed;
-        }, 16);
-      }
-    }
-  };
-
-  const renderFunnelCard = (lead: FunnelItem) => (
-    <div 
-      key={lead._id}
-      className={`funnel-card ${draggedLead?._id === lead._id ? 'opacity-40' : ''}`}
-      style={{ 
-        borderLeftColor: getBorderColor(lead.status),
-      }}
-      onMouseDown={(e) => handleDragStart(lead, e)}
-      onTouchStart={(e) => handleTouchStart(lead, e)}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      <div className="flex justify-between items-center mb-1">
-        <div className="font-medium text-sm truncate pr-1">
-          {lead.name}
-        </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleEditLead(lead);
-          }}
-          className="p-1 rounded-full hover:bg-zinc-700 transition-colors"
-        >
-          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-          </svg>
-        </button>
-      </div>
-      <div className="text-xs text-zinc-400">
-        <div>{formatDate(lead.createdAt)}</div>
-        {lead.value && (
-          <div className="text-primary font-medium my-1">
-            €{formatMoney(lead.value)}
-          </div>
-        )}
-        {lead.service && (
-          <div className="italic">{lead.service}</div>
-        )}
-      </div>
-    </div>
-  );
   
   // Handle touch end for mobile
-  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchEnd = () => {
+    endDrag();
+  };
+  
+  // Common end drag logic
+  const endDrag = () => {
     // Clear any scroll interval
     if (scrollIntervalRef.current) {
       clearInterval(scrollIntervalRef.current);
@@ -355,29 +257,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     setDragOrigin(null);
     setDragPosition(null);
     setTargetColumn(null);
-  };
-
-  // Debugging functions for drag positions
-  const DEBUG = false;
-  const logDragPos = () => {
-    if (!DEBUG || !dragPosition) return null;
-    
-    const leftZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
-    const rightZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
-    
-    const inLeftZone = dragPosition.x < leftZoneWidth;
-    const inRightZone = dragPosition.x > window.innerWidth - rightZoneWidth;
-    
-    return (
-      <div className="fixed bottom-4 right-4 bg-black/80 text-white p-2 rounded text-xs">
-        <div>Mouse X: {dragPosition.x}</div>
-        <div>Mouse Y: {dragPosition.y}</div>
-        <div>
-          Zone: {inLeftZone ? "LEFT" : inRightZone ? "RIGHT" : "CENTER"}
-        </div>
-        <div>Target: {targetColumn || "none"}</div>
-      </div>
-    );
   };
 
   // Handle lead movement between columns
@@ -531,45 +410,15 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
               <div className="funnel-body">
                 {funnelData[column.id as keyof FunnelData].length > 0 ? (
                   funnelData[column.id as keyof FunnelData].map((lead) => (
-                    <div 
+                    <FunnelCard
                       key={lead._id}
-                      className={`funnel-card ${draggedLead?._id === lead._id ? 'opacity-40' : ''}`}
-                      style={{ 
-                        borderLeftColor: getBorderColor(lead.status),
-                      }}
-                      onMouseDown={(e) => handleDragStart(lead, e)}
-                      onTouchStart={(e) => handleTouchStart(lead, e)}
+                      lead={lead}
+                      onEdit={handleEditLead}
+                      onDragStart={handleDragStart}
                       onTouchMove={handleTouchMove}
                       onTouchEnd={handleTouchEnd}
-                    >
-                      <div className="flex justify-between items-center mb-1">
-                        <div className="font-medium text-sm truncate pr-1">
-                          {lead.name}
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditLead(lead);
-                          }}
-                          className="p-1 rounded-full hover:bg-zinc-700 transition-colors"
-                        >
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="text-xs text-zinc-400">
-                        <div>{formatDate(lead.createdAt)}</div>
-                        {lead.value && (
-                          <div className="text-primary font-medium my-1">
-                            €{formatMoney(lead.value)}
-                          </div>
-                        )}
-                        {lead.service && (
-                          <div className="italic">{lead.service}</div>
-                        )}
-                      </div>
-                    </div>
+                      isDragging={draggedLead?._id === lead._id}
+                    />
                   ))
                 ) : (
                   <div className="text-center text-zinc-500 text-xs italic py-4">
@@ -615,9 +464,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           </div>
         </div>
       )}
-      
-      {/* Debug overlay */}
-      {logDragPos()}
 
       {/* Facebook Event Modal for Lead Movement */}
       {movingLead && (

@@ -1,7 +1,6 @@
 // components/sales-funnel/FunnelCard.tsx
 import { useRef, useEffect, useState } from "react";
 import { Pencil } from "lucide-react";
-import { useDrag, DragPreviewImage } from "react-dnd";
 import { FunnelItem } from "@/types";
 import { formatDate } from "@/lib/utils/date";
 import { formatMoney } from "@/lib/utils/format";
@@ -9,38 +8,26 @@ import { formatMoney } from "@/lib/utils/format";
 interface FunnelCardProps {
   lead: FunnelItem;
   onEdit: (lead: FunnelItem) => void;
+  onDragStart: (lead: FunnelItem, e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => void;
+  onTouchMove: (e: React.TouchEvent<HTMLDivElement>) => void;
+  onTouchEnd: (e: React.TouchEvent<HTMLDivElement>) => void;
+  isDragging: boolean;
 }
 
-export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
+export default function FunnelCard({ 
+  lead, 
+  onEdit, 
+  onDragStart, 
+  onTouchMove, 
+  onTouchEnd, 
+  isDragging 
+}: FunnelCardProps) {
   // Crea un ref React
   const cardRef = useRef<HTMLDivElement>(null);
   
   // Sposta gli stati all'interno del componente
   const [isTouched, setIsTouched] = useState(false);
   const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
-  
-  // Set up drag source with preview
-  const [{ isDragging }, dragRef, preview] = useDrag({
-    type: 'LEAD',
-    item: { lead },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-    end: (item, monitor) => {
-      // Pulizia dopo il drag
-      const cardElement = cardRef.current;
-      if (cardElement) {
-        cardElement.style.transform = "";
-        cardElement.style.webkitTransform = "";
-      }
-      
-      console.log(`[DnD Debug] Fine drag per: ${lead.name} (${lead._id}), drop avvenuto: ${monitor.didDrop()}`);
-      
-      if (!monitor.didDrop()) {
-        console.log('[DnD Debug] Drop non avvenuto - torna alla posizione originale');
-      }
-    }
-  });
 
   // Effetto per il touch feedback
   useEffect(() => {
@@ -48,7 +35,7 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
     if (!cardElement) return;
     
     const handleTouchStart = (e: TouchEvent) => {
-      console.log(`[DnD Debug] Touch start su card ${lead._id} (${lead.name})`, e.touches[0].clientX, e.touches[0].clientY);
+      console.log(`[Touch Debug] Touch start su card ${lead._id} (${lead.name})`, e.touches[0].clientX, e.touches[0].clientY);
       
       // Imposta lo stato di touch attivo
       setIsTouched(true);
@@ -82,7 +69,6 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
     
     const handleTouchMove = () => {
       // Se l'utente inizia a trascinare, la classe verrà rimossa automaticamente
-      // quando il dragging prende il controllo
       if (cardElement) {
         cardElement.classList.remove('touch-ready-to-drag');
       }
@@ -114,62 +100,44 @@ export default function FunnelCard({ lead, onEdit }: FunnelCardProps) {
     };
   }, [lead._id, lead.name, touchTimer]);
 
-  // Aggiungere log all'inizio del trascinamento usando useEffect
-  useEffect(() => {
-    if (isDragging) {
-      console.log(`[DnD Debug] Inizio drag per: ${lead.name} (${lead._id})`);
-    }
-  }, [isDragging, lead._id, lead.name]);
-
-  // Collega il ref drag al ref del componente
-  useEffect(() => {
-    if (cardRef.current) {
-      dragRef(cardRef.current);
-    }
-  }, [dragRef]);
-
   return (
-    <>
-      {/* Preview personalizzata durante il dragging */}
-      <DragPreviewImage 
-        connect={preview} 
-        src={`data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0"></svg>`} 
-      />
-      <div
-        ref={cardRef}
-        className={`funnel-card ${isDragging ? "dragging" : ""} ${isTouched ? "touched" : ""}`}
-        style={{ 
-          borderLeftColor: getBorderColor(lead.status),
-          opacity: isDragging ? 0.5 : 1
-        }}
-      >
-        <div className="flex justify-between items-center mb-1">
-          <div className="font-medium text-sm truncate pr-1">
-            {lead.name}
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(lead);
-            }}
-            className="p-1 rounded-full hover:bg-zinc-700 transition-colors"
-          >
-            <Pencil size={12} />
-          </button>
+    <div
+      ref={cardRef}
+      className={`funnel-card ${isDragging ? "opacity-40" : ""} ${isTouched ? "touched" : ""}`}
+      style={{ 
+        borderLeftColor: getBorderColor(lead.status)
+      }}
+      onMouseDown={(e) => onDragStart(lead, e)}
+      onTouchStart={(e) => onDragStart(lead, e)}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      <div className="flex justify-between items-center mb-1">
+        <div className="font-medium text-sm truncate pr-1">
+          {lead.name}
         </div>
-        <div className="text-xs text-zinc-400">
-          <div>{formatDate(lead.createdAt)}</div>
-          {lead.value && (
-            <div className="text-primary font-medium my-1">
-              €{formatMoney(lead.value)}
-            </div>
-          )}
-          {lead.service && (
-            <div className="italic">{lead.service}</div>
-          )}
-        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(lead);
+          }}
+          className="p-1 rounded-full hover:bg-zinc-700 transition-colors"
+        >
+          <Pencil size={12} />
+        </button>
       </div>
-    </>
+      <div className="text-xs text-zinc-400">
+        <div>{formatDate(lead.createdAt)}</div>
+        {lead.value && (
+          <div className="text-primary font-medium my-1">
+            €{formatMoney(lead.value)}
+          </div>
+        )}
+        {lead.service && (
+          <div className="italic">{lead.service}</div>
+        )}
+      </div>
+    </div>
   );
 }
 
