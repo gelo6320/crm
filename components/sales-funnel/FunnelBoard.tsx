@@ -14,6 +14,7 @@ import { isTouchDevice } from "@/lib/utils/device";
 import { updateLeadStage } from "@/lib/api/funnel";
 import { toast } from "@/components/ui/toaster";
 import CustomDragLayer from './CustomDragLayer';
+import DebugScrollZones from './DebugScrollZones'; // Importa il nuovo componente
 
 interface FunnelBoardProps {
   funnelData: FunnelData;
@@ -26,6 +27,7 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
   const [isDndReady, setIsDndReady] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [movedLead, setMovedLead] = useState<{lead: FunnelItem, previousStatus: string} | null>(null);
+  const [showDebugZones, setShowDebugZones] = useState(true); // Stato per mostrare/nascondere le zone di debug
   
   // Opzioni migliorate per il touch backend
   const touchBackendOptions = {
@@ -49,7 +51,20 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
     setIsDndReady(true);
     console.log("[DnD Debug] Drag and drop sistema inizializzato");
     console.log("[DnD Debug] Usando backend:", isTouchDevice() ? "TouchBackend" : "HTML5Backend");
-  }, []);
+    
+    // Aggiungi shortcut da tastiera per attivare/disattivare debug zones
+    const toggleDebugZones = (e: KeyboardEvent) => {
+      // Ctrl+D oppure Cmd+D per Toggle Debug zones
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        setShowDebugZones(prev => !prev);
+        console.log(`[DnD Debug] Zone di debug ${!showDebugZones ? 'attivate' : 'disattivate'}`);
+      }
+    };
+    
+    window.addEventListener('keydown', toggleDebugZones);
+    return () => window.removeEventListener('keydown', toggleDebugZones);
+  }, [showDebugZones]);
   
   // Setta il backend in base al dispositivo
   const backend = isTouchDevice() ? TouchBackend : HTML5Backend;
@@ -59,8 +74,6 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
     if (lead.status === targetStatus) return;
     
     console.log(`[DnD Debug] Spostamento: ${lead.name} da ${lead.status} a ${targetStatus}`);
-    setIsMoving(true);
-    
     setIsMoving(true);
     
     // Optimistically update the UI before the server response
@@ -202,6 +215,8 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
   
   return (
     <>
+      {showDebugZones && <DebugScrollZones />} {/* Visualizza le zone di debug quando attive */}
+      
       {isDndReady && (
         <DndProvider backend={backend} options={backendOptions}>
           <CustomDragLayer />
@@ -250,6 +265,16 @@ export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: F
           onUndo={handleUndoMove}
         />
       )}
+      
+      {/* Pulsante per attivare/disattivare debug zones */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <button
+          onClick={() => setShowDebugZones(prev => !prev)}
+          className="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-2 rounded-full shadow-lg flex items-center space-x-1"
+        >
+          <span>{showDebugZones ? 'Nascondi' : 'Mostra'} Zone Debug</span>
+        </button>
+      </div>
     </>
   );
 }

@@ -19,6 +19,13 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
   const dropRef = useRef<HTMLDivElement>(null);
   const [isOver, setIsOver] = useState(false);
   
+  // Stato per il debug
+  const [mousePosition, setMousePosition] = useState<{x: number, y: number} | null>(null);
+  const [scrollInfo, setScrollInfo] = useState<{
+    zone: 'left' | 'center' | 'right',
+    speed: number
+  } | null>(null);
+  
   // Set up the drop target
   const [{ isOverCurrent }, dropTarget] = useDrop({
     accept: 'LEAD',
@@ -38,6 +45,9 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
       // Ottieni la posizione del mouse
       const clientOffset = monitor.getClientOffset();
       if (!clientOffset) return;
+      
+      // Aggiorna la posizione del mouse per il debug
+      setMousePosition(clientOffset);
       
       // Auto-scroll laterale - ora funziona su tutta la viewport
       const viewportWidth = window.innerWidth;
@@ -61,6 +71,12 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
         const boardContainer = document.getElementById('funnel-board-container');
         if (boardContainer) {
           boardContainer.scrollBy({ left: -speed, behavior: 'auto' });
+          
+          // Aggiorna info di debug
+          setScrollInfo({
+            zone: 'left',
+            speed: speed
+          });
         }
       }
       
@@ -70,7 +86,20 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
         const boardContainer = document.getElementById('funnel-board-container');
         if (boardContainer) {
           boardContainer.scrollBy({ left: speed, behavior: 'auto' });
+          
+          // Aggiorna info di debug
+          setScrollInfo({
+            zone: 'right',
+            speed: speed
+          });
         }
+      }
+      // Zona centrale - nessuno scrolling
+      else {
+        setScrollInfo({
+          zone: 'center',
+          speed: 0
+        });
       }
     },
     collect: (monitor) => ({
@@ -85,6 +114,16 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
     }
   }, [dropTarget]);
 
+  // Reset delle info di debug quando il mouse non sta più trascinando
+  useEffect(() => {
+    if (!isOverCurrent) {
+      setTimeout(() => {
+        setMousePosition(null);
+        setScrollInfo(null);
+      }, 200);
+    }
+  }, [isOverCurrent]);
+
   return (
     <div className={`funnel-column ${isMoving ? 'column-fade-transition' : ''}`}>
       <div className={`funnel-header ${color}`}>
@@ -98,6 +137,25 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
         ref={dropRef} 
         className={`funnel-body ${isOverCurrent ? "drag-over" : ""}`}
       >
+        {/* Debug info */}
+        {isOverCurrent && mousePosition && scrollInfo && (
+          <div className="absolute top-0 left-0 right-0 bg-black/80 text-white text-xs p-1 z-50 rounded">
+            <div>Mouse: x:{mousePosition.x}</div>
+            <div>
+              Zona: <span className={
+                scrollInfo.zone === 'left' ? 'text-red-400' : 
+                scrollInfo.zone === 'right' ? 'text-blue-400' : 
+                'text-green-400'
+              }>
+                {scrollInfo.zone}
+              </span>
+            </div>
+            {scrollInfo.speed > 0 && (
+              <div>Velocità: {scrollInfo.speed.toFixed(1)}px</div>
+            )}
+          </div>
+        )}
+        
         {Array.isArray(children) && children.length > 0 ? (
           children
         ) : (
