@@ -300,44 +300,22 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       scrollIntervalRef.current = null;
     }
     
+    // Velocità costante più alta
+    const SCROLL_SPEED = 20; // Velocità costante per lo scroll
+    
     // Check if the mouse is in a scroll zone
     if (clientX < leftScrollZone) {
-      // Calculate scroll speed - faster as you get closer to the edge
-      const distanceFromEdge = clientX - boardRect.left;
-      const scrollSpeed = calculateScrollSpeed(distanceFromEdge, leftScrollZoneWidth);
-      
-      // Start scrolling left
+      // Start scrolling left with constant speed
       scrollIntervalRef.current = setInterval(() => {
-        board.scrollLeft -= scrollSpeed;
+        board.scrollLeft -= SCROLL_SPEED;
       }, 16); // ~60fps
     } 
     else if (clientX > rightScrollZone) {
-      // Calculate scroll speed
-      const distanceFromEdge = boardRect.right - clientX;
-      const scrollSpeed = calculateScrollSpeed(distanceFromEdge, rightScrollZoneWidth);
-      
-      // Start scrolling right
+      // Start scrolling right with constant speed
       scrollIntervalRef.current = setInterval(() => {
-        board.scrollLeft += scrollSpeed;
+        board.scrollLeft += SCROLL_SPEED;
       }, 16);
     }
-  };
-  
-  // Calculate scroll speed based on distance from edge
-  const calculateScrollSpeed = (distance: number, maxDistance: number): number => {
-    // Map distance to a speed between 5 and 25 pixels per tick
-    // Closer to the edge = faster scrolling
-    const minSpeed = 5;
-    const maxSpeed = 25;
-    const speedRange = maxSpeed - minSpeed;
-    
-    // Calculate normalized distance (0 = edge, 1 = farthest from edge)
-    const normalizedDistance = Math.min(1, distance / maxDistance);
-    
-    // Invert and scale to get higher speed closer to edge
-    const speed = minSpeed + speedRange * (1 - normalizedDistance);
-    
-    return Math.round(speed);
   };
 
   // Aggiungi questa funzione per fare un rilevamento della colonna più accurato
@@ -684,22 +662,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           onClose={() => setEditingLead(null)}
           onSave={handleSaveLeadValue}
         />
-      )}
-      
-      {/* Debug Panel */}
-      {dragPosition && (
-        <div className="fixed bottom-4 right-4 bg-black/80 text-white p-2 rounded text-xs z-50">
-          <div className="font-bold mb-1">Debug Drag</div>
-          <div>Position: ({dragPosition.x}, {dragPosition.y})</div>
-          {dragOrigin && <div>Origin: ({dragOrigin.x}, {dragOrigin.y})</div>}
-          <div>Target: {targetColumn || "None"}</div>
-          {draggedLead && <div>Lead: {draggedLead.name}</div>}
-          {dragItemRef.current && (
-            <div>
-              Preview visible: {window.getComputedStyle(dragItemRef.current).display !== 'none' ? 'Yes' : 'No'}
-            </div>
-          )}
-        </div>
       )}
     </>
   );
