@@ -65,7 +65,7 @@ export default function SalesFunnelPage() {
         </button>
       </div>
       
-      <div className="flex flex-col xl:flex-row gap-4">
+      <div className="flex flex-col gap-4">
         <div className="flex-1 overflow-x-auto pb-4">
           <FunnelBoard 
             funnelData={funnelData} 
@@ -74,7 +74,7 @@ export default function SalesFunnelPage() {
           />
         </div>
         
-        <div className="w-full xl:w-80 shrink-0">
+        <div className="w-full shrink-0">
           <FunnelStats stats={funnelStats} />
         </div>
       </div>
