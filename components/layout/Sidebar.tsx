@@ -4,13 +4,14 @@
 import { 
   BarChart3, Calendar, FileText, Bookmark, 
   Facebook, Share2, Users, Settings, LogOut,
-  X, Globe 
+  X, Globe, Shield
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
+import useAuthz from "@/lib/auth/useAuthz";
 
 interface SidebarProps {
   open: boolean;
@@ -18,20 +19,30 @@ interface SidebarProps {
   isMobile: boolean;
 }
 
+// Definizione dell'interfaccia per i link della sidebar
+interface SidebarLink {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  adminOnly?: boolean; // Proprietà opzionale per indicare i link solo per admin
+}
+
 export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
     const pathname = usePathname();
-    const { logout } = useAuth(); // Usa il hook useAuth
+    const { logout } = useAuth();
+    const { isAdmin } = useAuthz(); // Usiamo il nuovo hook per le autorizzazioni
     const router = useRouter();
 
     const handleLogout = async () => {
         try {
-          await logout(); // Questa funzione è già aggiornata in AuthContext
+          await logout();
         } catch (error) {
           console.error('Errore durante il logout:', error);
         }
       };
   
-  const links = [
+  // Links comuni a tutti gli utenti
+  const commonLinks: SidebarLink[] = [
     { name: "Dashboard", href: "/", icon: BarChart3 },
     { name: "Form di contatto", href: "/forms", icon: FileText },
     { name: "Lead Facebook", href: "/facebook-leads", icon: Facebook },
@@ -40,7 +51,22 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
     { name: "Eventi Facebook", href: "/events", icon: Share2 },
     { name: "Sales Funnel", href: "/sales-funnel", icon: Users },
     { name: "I tuoi siti", href: "/my-sites", icon: Globe },
-    { name: "Impostazioni", href: "/settings", icon: Settings },
+  ];
+  
+  // Links solo per admin
+  const adminLinks: SidebarLink[] = [
+    { name: "Sales Funnel Admin", href: "/sales-funnel-admin", icon: Shield, adminOnly: true },
+    // Puoi aggiungere altri link per admin qui
+  ];
+  
+  // Settings è disponibile per tutti ma lo manteniamo separato
+  const settingsLink: SidebarLink = { name: "Impostazioni", href: "/settings", icon: Settings };
+  
+  // Filtra i link admin se necessario
+  const links: SidebarLink[] = [
+    ...commonLinks,
+    ...(isAdmin() ? adminLinks : []),
+    settingsLink
   ];
   
   // Close sidebar function for mobile
@@ -116,6 +142,7 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
                     ${isActive 
                       ? 'bg-primary/10 text-primary border-l-2 border-primary' 
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}
+                    ${link.adminOnly ? 'border-r-2 border-primary' : ''}
                   `}
                 >
                   <Icon size={18} className={`mr-2 ${isActive ? 'text-primary' : ''}`} />

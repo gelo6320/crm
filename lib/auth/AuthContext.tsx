@@ -12,7 +12,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: string;
+  role: string; 
 }
 
 interface AuthContextType {
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: response.data.user?.id || '1',
             email: response.data.user?.email || 'admin@costruzionedigitale.com',
             name: response.data.user?.name || 'Amministratore',
-            role: response.data.user?.role || 'admin'
+            role: response.data.user?.role || 'user'  // Imposta il ruolo di default a 'user'
           });
         } else {
           // Se non autenticato, assicurati che l'utente sia null
@@ -106,13 +106,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             withCredentials: true
           });
         
-        if (userResponse.data.authenticated) {
-          setUser({
-            id: userResponse.data.user?.id || '1',
-            email: userResponse.data.user?.email || email,
-            name: userResponse.data.user?.name || 'Amministratore',
-            role: userResponse.data.user?.role || 'admin'
-          });
+          if (userResponse.data.authenticated) {
+            setUser({
+              id: userResponse.data.user?.id || '1',
+              email: userResponse.data.user?.email || email,
+              name: userResponse.data.user?.name || 'Amministratore',
+              role: userResponse.data.user?.role || 'user'  // Imposta il ruolo di default a 'user'
+            });
           
           // Reindirizza alla pagina richiesta o alla dashboard
           const urlParams = new URLSearchParams(window.location.search);
