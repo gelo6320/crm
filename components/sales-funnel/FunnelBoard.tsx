@@ -50,7 +50,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const draggedLeadRef = useRef<FunnelItem | null>(null);
   const dragOriginRef = useRef<{ status: string, x: number, y: number } | null>(null);
   const dragPositionRef = useRef<{ x: number, y: number } | null>(null);
-  const AUTO_SCROLL_SPEED = 15; // velocità di scroll in pixel
+  const AUTO_SCROLL_SPEED = 50; // velocità di scroll in pixel
   const AUTO_SCROLL_INTERVAL = 16; // intervallo in ms (circa 60fps)
   const isScrollingRef = useRef<{ direction: 'left' | 'right' | null }>({ direction: null });
     
