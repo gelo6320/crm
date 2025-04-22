@@ -42,8 +42,6 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
         return;
       }
       
-      console.log(`[SCROLL DEBUG] Mouse position - clientX: ${clientOffset.x}, clientY: ${clientOffset.y}`);
-      
       // Ottieni il contenitore delle colonne
       const boardContainer = document.getElementById('funnel-board-container');
       if (!boardContainer) {
@@ -51,71 +49,69 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
         return;
       }
       
-      // *** CORREZIONE: Usa la viewport invece del container per le zone ***
+      // NUOVO APPROCCIO: Calcola il viewport effettivo del container visibile
+      const containerRect = boardContainer.getBoundingClientRect();
       
-      // Ottieni la larghezza della viewport (finestra)
-      const viewportWidth = window.innerWidth;
+      // Qui otteniamo i limiti visibili del container nella viewport
+      const visibleLeft = Math.max(0, containerRect.left);
+      const visibleRight = Math.min(window.innerWidth, containerRect.right);
+      const visibleWidth = visibleRight - visibleLeft;
       
-      // Log delle dimensioni della viewport e scrollLeft del container
-      console.log(`[SCROLL DEBUG] Viewport width: ${viewportWidth}, Container scrollLeft: ${boardContainer.scrollLeft}, scrollWidth: ${boardContainer.scrollWidth}`);
+      // Creiamo zone di scroll ai bordi dell'area visibile del container
+      // Le zone saranno del 15% a sinistra e a destra dell'area visibile
+      const scrollZoneSize = Math.min(150, visibleWidth * 0.15); // 15% o max 150px
       
-      // Dividiamo la viewport in tre parti: 10% a sinistra, 80% al centro, 10% a destra
-      const leftZone = viewportWidth * 0.1;              // 10% sinistra
-      const rightZone = viewportWidth * 0.9;             // 90% (quindi 10% destra)
-      console.log(`[SCROLL DEBUG] Zone basate sulla viewport - leftZone: 0-${leftZone}, rightZone: ${rightZone}-${viewportWidth}`);
+      const leftScrollZone = visibleLeft + scrollZoneSize;
+      const rightScrollZone = visibleRight - scrollZoneSize;
+      
+      // Log per debug
+      console.log(`[SCROLL DEBUG] Container visibile: ${visibleLeft}-${visibleRight}, larghezza: ${visibleWidth}px`);
+      console.log(`[SCROLL DEBUG] Zone di scroll: sinistra <${leftScrollZone}, destra >${rightScrollZone}`);
+      console.log(`[SCROLL DEBUG] Mouse position: ${clientOffset.x}`);
       
       // Velocità di scorrimento progressiva - più vicino al bordo, più veloce lo scorrimento
       const calculateScrollSpeed = (distance: number, max: number) => {
-        // Velocità di base: da 5px a 25px per scorrimento
-        const baseSpeed = 5;
+        // Velocità di base: da 8px a 28px per scorrimento
+        const baseSpeed = 8;
         const maxAdditionalSpeed = 20;
-        const ratio = 1 - (distance / max);
-        return baseSpeed + (maxAdditionalSpeed * ratio);
+        const ratio = Math.min(1, 1 - (distance / max));
+        return Math.round(baseSpeed + (maxAdditionalSpeed * ratio));
       };
       
-      // Qui non facciamo calcoli complicati, usiamo direttamente la posizione del mouse nella viewport
-      const mouseX = clientOffset.x;
-      
       // Se siamo nella zona sinistra, scorriamo a sinistra con velocità proporzionale
-      if (mouseX < leftZone) {
-        const speed = calculateScrollSpeed(mouseX, leftZone);
-        console.log(`[SCROLL DEBUG] SCROLLING LEFT con velocità ${speed}px (mouseX ${mouseX} < leftZone ${leftZone})`);
+      if (clientOffset.x < leftScrollZone) {
+        // Calcola quanto siamo "dentro" la zona di scroll
+        const distanceFromEdge = clientOffset.x - visibleLeft;
+        const speed = calculateScrollSpeed(distanceFromEdge, scrollZoneSize);
+        
+        console.log(`[SCROLL DEBUG] SCROLLING LEFT con velocità ${speed}px (distanza dal bordo: ${distanceFromEdge}px)`);
         
         // Controlla se è possibile scorrere (non siamo già all'inizio)
         if (boardContainer.scrollLeft > 0) {
-          console.log(`[SCROLL DEBUG] Esecuzione scrollBy(-${speed}). scrollLeft attuale: ${boardContainer.scrollLeft}`);
           boardContainer.scrollBy({ left: -speed, behavior: 'auto' });
-          
-          // LOG dello scrollLeft dopo lo scroll per verifica
-          setTimeout(() => {
-            console.log(`[SCROLL DEBUG] Nuovo scrollLeft dopo LEFT scroll: ${boardContainer.scrollLeft}`);
-          }, 10);
         } else {
           console.log(`[SCROLL DEBUG] Già all'inizio del container, scrollLeft: ${boardContainer.scrollLeft}`);
         }
       }
       
       // Se siamo nella zona destra, scorriamo a destra con velocità proporzionale
-      else if (mouseX > rightZone) {
-        const speed = calculateScrollSpeed(viewportWidth - mouseX, viewportWidth - rightZone);
-        console.log(`[SCROLL DEBUG] SCROLLING RIGHT con velocità ${speed}px (mouseX ${mouseX} > rightZone ${rightZone})`);
+      else if (clientOffset.x > rightScrollZone) {
+        // Calcola quanto siamo "dentro" la zona di scroll
+        const distanceFromEdge = visibleRight - clientOffset.x;
+        const speed = calculateScrollSpeed(distanceFromEdge, scrollZoneSize);
+        
+        console.log(`[SCROLL DEBUG] SCROLLING RIGHT con velocità ${speed}px (distanza dal bordo: ${distanceFromEdge}px)`);
         
         // Controlla se è possibile scorrere (non siamo già alla fine)
         const maxScroll = boardContainer.scrollWidth - boardContainer.clientWidth;
         if (boardContainer.scrollLeft < maxScroll) {
-          console.log(`[SCROLL DEBUG] Esecuzione scrollBy(${speed}). scrollLeft attuale: ${boardContainer.scrollLeft}, maxScroll: ${maxScroll}`);
           boardContainer.scrollBy({ left: speed, behavior: 'auto' });
-          
-          // LOG dello scrollLeft dopo lo scroll per verifica
-          setTimeout(() => {
-            console.log(`[SCROLL DEBUG] Nuovo scrollLeft dopo RIGHT scroll: ${boardContainer.scrollLeft}`);
-          }, 10);
         } else {
           console.log(`[SCROLL DEBUG] Già alla fine del container, scrollLeft: ${boardContainer.scrollLeft}, maxScroll: ${maxScroll}`);
         }
       }
       else {
-        console.log(`[SCROLL DEBUG] In zona centrale - nessuno scroll (${leftZone} < ${mouseX} < ${rightZone})`);
+        console.log(`[SCROLL DEBUG] In zona centrale - nessuno scroll (${leftScrollZone} < ${clientOffset.x} < ${rightScrollZone})`);
       }
     },
     collect: (monitor) => ({
@@ -129,25 +125,6 @@ export default function FunnelColumn({ id, title, color, children, onMoveLead, i
       dropTarget(dropRef.current);
     }
   }, [dropTarget]);
-
-  // Log delle dimensioni iniziali del container quando il componente viene montato
-  useEffect(() => {
-    const logContainerDimensions = () => {
-      const boardContainer = document.getElementById('funnel-board-container');
-      if (boardContainer) {
-        const rect = boardContainer.getBoundingClientRect();
-        console.log(`[SCROLL DEBUG] Dimensioni iniziali container - left: ${rect.left}, width: ${rect.width}, right: ${rect.right}`);
-        console.log(`[SCROLL DEBUG] Viewport width: ${window.innerWidth}`);
-        console.log(`[SCROLL DEBUG] Scroll info - scrollWidth: ${boardContainer.scrollWidth}, clientWidth: ${boardContainer.clientWidth}`);
-        console.log(`[SCROLL DEBUG] Overflow scroll disponibile: ${boardContainer.scrollWidth > boardContainer.clientWidth ? 'SÌ' : 'NO'}, overflow: ${boardContainer.scrollWidth - boardContainer.clientWidth}px`);
-      } else {
-        console.error("[SCROLL DEBUG] Elemento #funnel-board-container non trovato durante l'inizializzazione!");
-      }
-    };
-    
-    // Esegui dopo che il DOM è completamente caricato
-    setTimeout(logContainerDimensions, 500);
-  }, []);
 
   return (
     <div className={`funnel-column ${isMoving ? 'column-fade-transition' : ''}`}>
