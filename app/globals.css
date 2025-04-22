@@ -800,3 +800,36 @@ html.has-touch .funnel-card {
   transform-origin: center center;
   transition: transform 0.05s linear;
 }
+
+/* Aggiungi queste classi al tuo file globals.css */
+
+/* Animazione per fade-in degli elementi */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Animazione per slide-down dei sottomenu */
+.animate-slide-down {
+  animation: slideDown 0.3s ease-in-out;
+  transform-origin: top;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
