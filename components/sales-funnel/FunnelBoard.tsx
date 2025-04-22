@@ -214,7 +214,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     });
     
     // Update target column
-    const newTargetColumn = hoveredColumn ? (hoveredColumn as HTMLElement).id : null;
+    const newTargetColumn = detectTargetColumn(e.clientX, e.clientY);
     if (newTargetColumn !== targetColumn) {
       console.log(`[DRAG DEBUG] 🎯 Cambiato target column: ${targetColumn} -> ${newTargetColumn}`);
       setTargetColumn(newTargetColumn);
@@ -269,7 +269,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     });
     
     // Update target column
-    const newTargetColumn = hoveredColumn ? (hoveredColumn as HTMLElement).id : null;
+    const newTargetColumn = detectTargetColumn(touch.clientX, touch.clientY);
     if (newTargetColumn !== targetColumn) {
       console.log(`[DRAG DEBUG] 🎯 Cambiato target column (touch): ${targetColumn} -> ${newTargetColumn}`);
       setTargetColumn(newTargetColumn);
@@ -339,10 +339,35 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     
     return Math.round(speed);
   };
+
+  // Aggiungi questa funzione per fare un rilevamento della colonna più accurato
+  const detectTargetColumn = (clientX: number, clientY: number): string | null => {
+    const columns = document.querySelectorAll('.funnel-column');
+    let foundColumn: Element | null = null;
+    
+    columns.forEach(column => {
+      const rect = column.getBoundingClientRect();
+      if (clientX >= rect.left && 
+          clientX <= rect.right && 
+          clientY >= rect.top && 
+          clientY <= rect.bottom) {
+        foundColumn = column;
+      }
+    });
+    
+    return foundColumn ? (foundColumn as HTMLElement).id : null;
+  };
   
   // End dragging
   const handleDragEnd = (e: MouseEvent): void => {
     console.log(`[DRAG DEBUG] 🛑 Fine drag (mouse) - Coordinate: (${e.clientX}, ${e.clientY})`);
+    
+    // Controllo finale della colonna al rilascio
+    const finalTargetColumn = detectTargetColumn(e.clientX, e.clientY);
+    if (finalTargetColumn && finalTargetColumn !== targetColumn) {
+      console.log(`[DRAG DEBUG] 🎯 Colonna target finale aggiornata: ${targetColumn} -> ${finalTargetColumn}`);
+      setTargetColumn(finalTargetColumn);
+    }
     
     // Clean up event listeners
     document.removeEventListener('mousemove', handleDragMove);
@@ -354,7 +379,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       console.log(`[DRAG DEBUG] 📏 Posizione finale preview prima della pulizia: (${rect.left}, ${rect.top})`);
     }
     
-    endDrag();
+    endDrag(finalTargetColumn || targetColumn);
   };
   
   // Handle touch end for mobile
@@ -371,7 +396,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   };
   
   // Common end drag logic
-  const endDrag = (): void => {
+  const endDrag = (finalTargetColumn?: string | null): void => {
+    // Usa la colonna passata, altrimenti usa targetColumn
+    const effectiveTargetColumn = finalTargetColumn || targetColumn;
     console.log(`[DRAG DEBUG] 🧹 Esecuzione pulizia drag comune`);
     
     // Clear any scroll interval
@@ -382,16 +409,15 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
     
     // Handle the drop if over a valid column
-    // Usiamo le ref invece degli stati per la validazione finale
-    if (draggedLeadRef.current && targetColumn) {
-      if (targetColumn !== draggedLeadRef.current.status) {
-        console.log(`[DRAG DEBUG] ✅ Drop completato - Spostamento lead da ${draggedLeadRef.current.status} a ${targetColumn}`);
-        handleMoveLead(draggedLeadRef.current, targetColumn);
+    if (draggedLeadRef.current && effectiveTargetColumn) {
+      if (effectiveTargetColumn !== draggedLeadRef.current.status) {
+        console.log(`[DRAG DEBUG] ✅ Drop completato - Spostamento lead da ${draggedLeadRef.current.status} a ${effectiveTargetColumn}`);
+        handleMoveLead(draggedLeadRef.current, effectiveTargetColumn);
       } else {
-        console.log(`[DRAG DEBUG] ℹ️ Drop nella stessa colonna (${targetColumn}) - Nessun'azione`);
+        console.log(`[DRAG DEBUG] ℹ️ Drop nella stessa colonna (${effectiveTargetColumn}) - Nessun'azione`);
       }
     } else {
-      console.log(`[DRAG DEBUG] ⚠️ Drop non valido - draggedLeadRef: ${!!draggedLeadRef.current}, targetColumn: ${targetColumn}`);
+      console.log(`[DRAG DEBUG] ⚠️ Drop non valido - draggedLeadRef: ${!!draggedLeadRef.current}, targetColumn: ${effectiveTargetColumn}`);
     }
     
     // Hide the drag preview
