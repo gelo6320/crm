@@ -1,280 +1,76 @@
-// components/sales-funnel/FunnelBoard.tsx
+// components/sales-funnel/FunnelColumn.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
-import { TouchBackend } from "react-dnd-touch-backend";
-import { FunnelData, FunnelItem } from "@/types";
-import FunnelColumn from "./FunnelColumn";
-import FunnelCard from "./FunnelCard";
-import EditValueModal from "./ValueModal";
-import FacebookEventModal from "./FacebookEventModal";
-import { isTouchDevice } from "@/lib/utils/device";
-import { updateLeadStage } from "@/lib/api/funnel";
-import { toast } from "@/components/ui/toaster";
-import CustomDragLayer from './CustomDragLayer';
-import DebugScrollZones from './DebugScrollZones'; // Importa il nuovo componente
+import { useRef, useEffect, useState } from "react";
+import { useDrop } from "react-dnd";
+import { FunnelItem } from "@/types";
 
-interface FunnelBoardProps {
-  funnelData: FunnelData;
-  setFunnelData: React.Dispatch<React.SetStateAction<FunnelData>>;
-  onLeadMove: () => void;
+interface FunnelColumnProps {
+  id: string;
+  title: string;
+  color: string;
+  children: React.ReactNode;
+  onMoveLead: (lead: FunnelItem, targetStatus: string) => void;
+  isMoving: boolean;
 }
 
-export default function FunnelBoard({ funnelData, setFunnelData, onLeadMove }: FunnelBoardProps) {
-  const [editingLead, setEditingLead] = useState<FunnelItem | null>(null);
-  const [isDndReady, setIsDndReady] = useState(false);
-  const [isMoving, setIsMoving] = useState(false);
-  const [movedLead, setMovedLead] = useState<{lead: FunnelItem, previousStatus: string} | null>(null);
-  const [showDebugZones, setShowDebugZones] = useState(true); // Stato per mostrare/nascondere le zone di debug
+export default function FunnelColumn({ id, title, color, children, onMoveLead, isMoving }: FunnelColumnProps) {
+  // Crea un ref React standard
+  const dropRef = useRef<HTMLDivElement>(null);
+  const [isOver, setIsOver] = useState(false);
   
-  // Opzioni migliorate per il touch backend
-  const touchBackendOptions = {
-    enableTouchEvents: true,
-    enableMouseEvents: true, // Supporta anche il mouse su dispositivi touch
-    enableKeyboardEvents: true,
-    delayTouchStart: 200, // Aumentato per dare tempo all'animazione di feedback
-    touchSlop: 10, // Ridotto per migliorare sensibilità
-    ignoreContextMenu: true,
-    enableHoverOutsideTarget: true,
-    enableTapClick: true, // Migliora l'esperienza sui dispositivi mobile
-    // Modifica le scroll angle ranges per avere più controllo
-    scrollAngleRanges: [
-      { start: 30, end: 150 },
-      { start: 210, end: 330 }
-    ]
-  };
-  
-  // When the component mounts, we mark DnD as ready (client-side only)
-  useEffect(() => {
-    setIsDndReady(true);
-    console.log("[DnD Debug] Drag and drop sistema inizializzato");
-    console.log("[DnD Debug] Usando backend:", isTouchDevice() ? "TouchBackend" : "HTML5Backend");
-    
-    // Aggiungi shortcut da tastiera per attivare/disattivare debug zones
-    const toggleDebugZones = (e: KeyboardEvent) => {
-      // Ctrl+D oppure Cmd+D per Toggle Debug zones
-      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-        e.preventDefault();
-        setShowDebugZones(prev => !prev);
-        console.log(`[DnD Debug] Zone di debug ${!showDebugZones ? 'attivate' : 'disattivate'}`);
+  // Set up the drop target
+  const [{ isOverCurrent }, dropTarget] = useDrop({
+    accept: 'LEAD',
+    drop: (item: { lead: FunnelItem }) => {
+      // Only move if the status is different
+      if (item.lead.status !== id) {
+        onMoveLead(item.lead, id);
       }
-    };
-    
-    window.addEventListener('keydown', toggleDebugZones);
-    return () => window.removeEventListener('keydown', toggleDebugZones);
-  }, [showDebugZones]);
-  
-  // Setta il backend in base al dispositivo
-  const backend = isTouchDevice() ? TouchBackend : HTML5Backend;
-  const backendOptions = isTouchDevice() ? touchBackendOptions : undefined;
-  
-  const handleMoveLead = async (lead: FunnelItem, targetStatus: string) => {
-    if (lead.status === targetStatus) return;
-    
-    console.log(`[DnD Debug] Spostamento: ${lead.name} da ${lead.status} a ${targetStatus}`);
-    setIsMoving(true);
-    
-    // Optimistically update the UI before the server response
-    const sourceColumn = lead.status as keyof FunnelData;
-    const targetColumn = targetStatus as keyof FunnelData;
-    
-    const updatedFunnelData = { ...funnelData };
-    
-    // Remove from source column
-    updatedFunnelData[sourceColumn] = updatedFunnelData[sourceColumn].filter(
-      item => item._id !== lead._id
-    );
-    
-    // Add to target column with updated status
-    updatedFunnelData[targetColumn] = [
-      ...updatedFunnelData[targetColumn],
-      { ...lead, status: targetStatus }
-    ];
-    
-    // Update the UI immediately
-    setFunnelData(updatedFunnelData);
-    
-    // Mostra il popup di conferma per l'invio a Facebook
-    setMovedLead({lead: {...lead, status: targetStatus}, previousStatus: lead.status});
-  };
-  
-  // Annulla l'operazione di spostamento (in caso di errore o cancellazione dall'utente)
-  const handleUndoMove = () => {
-    if (!movedLead) return;
-    
-    const lead = movedLead.lead;
-    const sourceColumn = movedLead.previousStatus as keyof FunnelData;
-    const targetColumn = lead.status as keyof FunnelData;
-    
-    const updatedFunnelData = { ...funnelData };
-    
-    // Remove from target column
-    updatedFunnelData[targetColumn] = updatedFunnelData[targetColumn].filter(
-      item => item._id !== lead._id
-    );
-    
-    // Add back to source column with previous status
-    updatedFunnelData[sourceColumn] = [
-      ...updatedFunnelData[sourceColumn],
-      { ...lead, status: movedLead.previousStatus }
-    ];
-    
-    // Update the UI
-    setFunnelData(updatedFunnelData);
-    setMovedLead(null);
-    setIsMoving(false);
-  };
-  
-  // Conferma l'operazione di spostamento e aggiorna dati dal server
-  const handleConfirmMove = () => {
-    onLeadMove(); // Aggiorna dati dal server
-    setMovedLead(null);
-    setIsMoving(false);
-  };
-  
-  const handleEditValue = (lead: FunnelItem) => {
-    setEditingLead(lead);
-  };
-  
-  const handleSaveValue = async (value: number, service: string) => {
-    if (!editingLead) return;
-    
-    try {
-      // Optimistically update the UI before the server response
-      const column = editingLead.status as keyof FunnelData;
-      const updatedFunnelData = { ...funnelData };
+    },
+    hover: (item, monitor) => {
+      if (!dropRef.current) return;
       
-      updatedFunnelData[column] = updatedFunnelData[column].map(lead => 
-        lead._id === editingLead._id 
-          ? { ...lead, value, service }
-          : lead
-      );
+      // Quando l'elemento è sopra questa colonna, imposta isOver a true
+      const isHovering = monitor.isOver({ shallow: true });
+      setIsOver(isHovering);
       
-      setFunnelData(updatedFunnelData);
-      
-      // Call the server to actually update the value and service
-      const { updateLeadMetadata } = await import("@/lib/api/funnel");
-      await updateLeadMetadata(
-        editingLead._id,
-        editingLead.type,
-        value,
-        service
-      );
-      
-      // Notify the user
-      toast("success", "Lead updated", "Value and service updated successfully");
-      
-      // Update data from server
-      onLeadMove();
-    } catch (error) {
-      console.error("Error updating lead:", error);
-      toast("error", "Update error", "An error occurred, please try again.");
-    } finally {
-      setEditingLead(null);
-    }
-  };
-  
-  const columns = [
-    { id: "new", name: "Nuovo", color: "bg-zinc-600" },
-    { id: "contacted", name: "Contattato", color: "bg-info" },
-    { id: "qualified", name: "Qualificato", color: "bg-primary" },
-    { id: "opportunity", name: "Opportunità", color: "bg-warning" },
-    { id: "proposal", name: "Preventivo", color: "bg-primary-hover" },
-    { id: "customer", name: "Chiuso", color: "bg-success" },
-    { id: "lost", name: "Perso", color: "bg-danger" },
-  ];
+      // NOTA: Tutta la logica di auto-scroll è stata rimossa
+      // Puoi implementare qui la tua logica personalizzata se necessario
+    },
+    collect: (monitor) => ({
+      isOverCurrent: monitor.isOver({ shallow: true })
+    }),
+  });
 
+  // Collega il ref drop al ref del componente
   useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      console.log("[DnD Debug] Touch start event detected", e.touches[0].clientX, e.touches[0].clientY);
-    };
-    
-    const handleTouchMove = (e: TouchEvent) => {
-      console.log("[DnD Debug] Touch move event detected", e.touches[0].clientX, e.touches[0].clientY);
-    };
-    
-    const handleTouchEnd = (e: TouchEvent) => {
-      console.log("[DnD Debug] Touch end event detected");
-    };
-    
-    // Aggiungi listener solo in modalità di sviluppo o condizionalmente
-    if (process.env.NODE_ENV === 'development' || true) {
-      document.addEventListener('touchstart', handleTouchStart);
-      document.addEventListener('touchmove', handleTouchMove);
-      document.addEventListener('touchend', handleTouchEnd);
+    if (dropRef.current) {
+      dropTarget(dropRef.current);
     }
-    
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, []);
-  
+  }, [dropTarget]);
+
   return (
-    <>
-      {showDebugZones && <DebugScrollZones />} {/* Visualizza le zone di debug quando attive */}
-      
-      {isDndReady && (
-        <DndProvider backend={backend} options={backendOptions}>
-          <CustomDragLayer />
-          <div 
-            id="funnel-board-container" 
-            className="funnel-board-container flex space-x-4 min-w-max pb-2 overflow-x-auto scroll-smooth"
-          >
-            {columns.map((column) => (
-              <FunnelColumn
-                key={column.id}
-                id={column.id}
-                title={column.name}
-                color={column.color}
-                onMoveLead={handleMoveLead}
-                isMoving={isMoving}
-              >
-                {funnelData[column.id as keyof FunnelData].map((lead) => (
-                  <FunnelCard
-                    key={lead._id}
-                    lead={lead}
-                    onEdit={handleEditValue}
-                  />
-                ))}
-              </FunnelColumn>
-            ))}
-          </div>
-        </DndProvider>
-      )}
-      
-      {/* Modal per modificare valore e servizio */}
-      {editingLead && (
-        <EditValueModal
-          lead={editingLead}
-          onClose={() => setEditingLead(null)}
-          onSave={handleSaveValue}
-        />
-      )}
-      
-      {/* Modal per confermare invio a Facebook */}
-      {movedLead && (
-        <FacebookEventModal
-          lead={movedLead.lead}
-          previousStatus={movedLead.previousStatus}
-          onClose={() => setMovedLead(null)}
-          onSave={handleConfirmMove}
-          onUndo={handleUndoMove}
-        />
-      )}
-      
-      {/* Pulsante per attivare/disattivare debug zones */}
-      <div className="fixed bottom-4 right-4 z-50">
-        <button
-          onClick={() => setShowDebugZones(prev => !prev)}
-          className="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-2 rounded-full shadow-lg flex items-center space-x-1"
-        >
-          <span>{showDebugZones ? 'Nascondi' : 'Mostra'} Zone Debug</span>
-        </button>
+    <div className={`funnel-column ${isMoving ? 'column-fade-transition' : ''}`}>
+      <div className={`funnel-header ${color}`}>
+        <h3 className="text-sm font-medium">{title}</h3>
+        <div className="w-5 h-5 rounded-full bg-black/25 flex items-center justify-center text-xs font-medium">
+          {Array.isArray(children) ? children.length : 0}
+        </div>
       </div>
-    </>
+      
+      <div 
+        ref={dropRef} 
+        className={`funnel-body ${isOverCurrent ? "drag-over" : ""}`}
+      >
+        {Array.isArray(children) && children.length > 0 ? (
+          children
+        ) : (
+          <div className="text-center text-zinc-500 text-xs italic py-4">
+            Nessun lead
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
