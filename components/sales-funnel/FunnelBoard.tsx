@@ -56,9 +56,20 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       }
     };
   }, []);
+
+  const updateDragPreviewPosition = (clientX: number, clientY: number): void => {
+    if (!dragItemRef.current || !dragOrigin) return;
+    
+    const left = clientX - dragOrigin.x;
+    const top = clientY - dragOrigin.y;
+    
+    dragItemRef.current.style.left = `${left}px`;
+    dragItemRef.current.style.top = `${top}px`;
+    dragItemRef.current.style.borderLeftColor = draggedLead ? getBorderColor(draggedLead.status) : '';
+  };
   
   // Start dragging a lead
-  const handleDragStart = (lead: FunnelItem, e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+  const handleDragStart = (lead: FunnelItem, e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>): void => {
     // Prevent default browser drag behavior
     e.preventDefault();
     
@@ -68,7 +79,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     setDraggedLead(lead);
     
     // Get client coordinates based on event type
-    let clientX, clientY;
+    let clientX: number;
+    let clientY: number;
     
     if ('touches' in e) {
       // Touch event
@@ -111,10 +123,32 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       document.addEventListener('mouseup', handleDragEnd);
     }
     
-    // Show the drag preview
+    // Inizializza il preview drag prima che inizi il movimento
     if (dragItemRef.current) {
       console.log(`[DRAG DEBUG] 🖼️ Mostrando il preview del drag`);
+      
+      // Imposta il contenuto del preview
+      dragItemRef.current.innerHTML = `
+        <div class="flex justify-between items-center mb-1">
+          <div class="font-medium text-sm truncate pr-1">
+            ${lead.name}
+          </div>
+          <button class="p-1 rounded-full hover:bg-zinc-700 transition-colors">
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+            </svg>
+          </button>
+        </div>
+        <div class="text-xs text-zinc-400">
+          <div>${formatDate(lead.createdAt)}</div>
+          ${lead.value ? `<div class="text-primary font-medium my-1">€${formatMoney(lead.value)}</div>` : ''}
+          ${lead.service ? `<div class="italic">${lead.service}</div>` : ''}
+        </div>
+      `;
+      
+      // Mostra il preview e imposta la posizione iniziale
       dragItemRef.current.style.display = 'block';
+      updateDragPreviewPosition(clientX, clientY);
       
       // Log per vedere le proprietà CSS del preview
       const computedStyle = window.getComputedStyle(dragItemRef.current);
@@ -125,7 +159,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   };
   
   // Handle drag movement
-  const handleDragMove = (e: MouseEvent) => {
+  const handleDragMove = (e: MouseEvent): void => {
     if (!draggedLead || !dragOrigin) {
       console.log(`[DRAG DEBUG] ❌ handleDragMove chiamato ma draggedLead o dragOrigin è null`);
       return;
@@ -133,32 +167,11 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     
     console.log(`[DRAG DEBUG] 🔄 Mouse in movimento - Coordinate: (${e.clientX}, ${e.clientY})`);
     
-    // Update drag position
+    // Update drag position state
     setDragPosition({ x: e.clientX, y: e.clientY });
     
-    // Log la posizione prevista del preview di drag
-    if (dragOrigin) {
-      const previewLeft = e.clientX - dragOrigin.x;
-      const previewTop = e.clientY - dragOrigin.y;
-      console.log(`[DRAG DEBUG] 🖼️ Posizione prevista del preview: (${previewLeft}, ${previewTop})`);
-      
-      // Verifica se il preview è visibile
-      if (dragItemRef.current) {
-        const displayStyle = window.getComputedStyle(dragItemRef.current).display;
-        console.log(`[DRAG DEBUG] 👁️ Preview display: ${displayStyle}`);
-        
-        // Verifica posizione effettiva
-        const rect = dragItemRef.current.getBoundingClientRect();
-        console.log(`[DRAG DEBUG] 📏 Posizione effettiva preview: (${rect.left}, ${rect.top})`);
-        
-        // Controlla la discrepanza
-        const deltaX = previewLeft - rect.left;
-        const deltaY = previewTop - rect.top;
-        if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
-          console.warn(`[DRAG DEBUG] ⚠️ Discrepanza nella posizione preview: deltaX=${deltaX}, deltaY=${deltaY}`);
-        }
-      }
-    }
+    // Aggiorna direttamente la posizione del preview DOM
+    updateDragPreviewPosition(e.clientX, e.clientY);
     
     // Check which column we're over
     const columns = document.querySelectorAll('.funnel-column');
@@ -559,41 +572,27 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           ))}
         </div>
       </div>
-      
-      {/* Drag preview */}
-      {draggedLead && (
-        <div 
-          ref={dragItemRef}
-          className="funnel-card drag-preview"
-          style={{ 
-            ...getDragPreviewStyle(),
-            borderLeftColor: getBorderColor(draggedLead.status),
-          }}
-        >
-          <div className="flex justify-between items-center mb-1">
-            <div className="font-medium text-sm truncate pr-1">
-              {draggedLead.name}
-            </div>
-            <button className="p-1 rounded-full hover:bg-zinc-700 transition-colors">
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-              </svg>
-            </button>
-          </div>
-          <div className="text-xs text-zinc-400">
-            <div>{formatDate(draggedLead.createdAt)}</div>
-            {draggedLead.value && (
-              <div className="text-primary font-medium my-1">
-                €{formatMoney(draggedLead.value)}
-              </div>
-            )}
-            {draggedLead.service && (
-              <div className="italic">{draggedLead.service}</div>
-            )}
-          </div>
-        </div>
-      )}
 
+      {/* Drag preview - sempre presente ma nascosto di default */}
+      <div 
+        ref={dragItemRef}
+        className="funnel-card drag-preview"
+        style={{ 
+          display: 'none',
+          position: 'fixed',
+          left: '0px',
+          top: '0px',
+          opacity: 0.8,
+          zIndex: 1000,
+          pointerEvents: 'none',
+          transform: 'rotate(4deg)',
+          width: '250px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+        }}
+      >
+        {/* Contenuto vuoto che verrà popolato dinamicamente */}
+      </div>
+      
       {/* CSS extra per il debugging */}
       <style jsx global>{`
         .drag-preview {
