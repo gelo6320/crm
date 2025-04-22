@@ -1,64 +1,62 @@
 import React, { useState, useEffect } from 'react';
 
 const DebugScrollZones = () => {
-  const [containerRect, setContainerRect] = useState({
-    left: 0,
-    top: 0,
-    width: 0,
-    height: 0
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [containerInfo, setContainerInfo] = useState({
+    scrollLeft: 0,
+    scrollWidth: 0,
+    clientWidth: 0,
+    maxScroll: 0
   });
 
+  // Calcola le zone basate sulla viewport
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+  const leftZone = viewportWidth * 0.1;    // 10% sinistra
+  const rightZone = viewportWidth * 0.9;   // 90% (10% destra)
+
   useEffect(() => {
-    // Funzione per calcolare e aggiornare le dimensioni del contenitore
-    const updateContainerDimensions = () => {
+    // Funzione per aggiornare le informazioni sul container
+    const updateContainerInfo = () => {
       const container = document.getElementById('funnel-board-container');
       if (container) {
-        const rect = container.getBoundingClientRect();
-        setContainerRect({
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height
+        setContainerInfo({
+          scrollLeft: container.scrollLeft,
+          scrollWidth: container.scrollWidth,
+          clientWidth: container.clientWidth,
+          maxScroll: container.scrollWidth - container.clientWidth
         });
       }
     };
 
-    // Esegui immediatamente e ad ogni resize
-    updateContainerDimensions();
-    window.addEventListener('resize', updateContainerDimensions);
+    // Aggiorna le informazioni all'avvio
+    updateContainerInfo();
     
-    // Set up un intervallo per aggiornare periodicamente le dimensioni
-    // Utile quando l'UI può cambiare senza un evento resize
-    const interval = setInterval(updateContainerDimensions, 2000);
+    // Traccia la posizione del mouse
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+
+    // Impostare un intervallo per aggiornare le informazioni del container
+    const interval = setInterval(updateContainerInfo, 100);
+    
+    // Aggiungi listener per il movimento del mouse
+    window.addEventListener('mousemove', handleMouseMove);
 
     return () => {
-      window.removeEventListener('resize', updateContainerDimensions);
       clearInterval(interval);
+      window.removeEventListener('mousemove', handleMouseMove);
     };
   }, []);
 
-  // Calcolo delle zone rispetto al contenitore
-  const leftZoneWidth = containerRect.width * 0.15;
-  const rightZoneStart = containerRect.width * 0.85;
-
-  if (containerRect.width === 0) {
-    return null; // Non renderizzare nulla finché non abbiamo le dimensioni
-  }
-
   return (
-    <div className="fixed pointer-events-none z-40" style={{
-      left: `${containerRect.left}px`,
-      top: `${containerRect.top}px`,
-      width: `${containerRect.width}px`,
-      height: `${containerRect.height}px`
-    }}>
+    <div className="fixed inset-0 pointer-events-none z-40">
       {/* Zona sinistra - scrolling negativo */}
       <div 
         className="absolute top-0 bottom-0 left-0 bg-red-500/20"
-        style={{ width: `${leftZoneWidth}px` }}
+        style={{ width: `${leftZone}px` }}
       >
-        <div className="absolute top-4 left-4 bg-red-500 text-white px-2 py-1 rounded text-xs">
-          Scroll Left Zone (15%)
+        <div className="absolute top-4 left-4 bg-red-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap">
+          Scroll LEFT Zone (10%)
         </div>
       </div>
 
@@ -66,29 +64,55 @@ const DebugScrollZones = () => {
       <div 
         className="absolute top-0 bottom-0 bg-green-500/10"
         style={{ 
-          left: `${leftZoneWidth}px`, 
-          width: `${rightZoneStart - leftZoneWidth}px` 
+          left: `${leftZone}px`, 
+          width: `${rightZone - leftZone}px` 
         }}
       >
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-2 py-1 rounded text-xs">
-          No Scroll Zone (70%)
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap">
+          No Scroll Zone (80%)
         </div>
       </div>
 
       {/* Zona destra - scrolling positivo */}
       <div 
         className="absolute top-0 bottom-0 right-0 bg-blue-500/20"
-        style={{ width: `${containerRect.width - rightZoneStart}px` }}
+        style={{ width: `${viewportWidth - rightZone}px` }}
       >
-        <div className="absolute top-4 right-4 bg-blue-500 text-white px-2 py-1 rounded text-xs">
-          Scroll Right Zone (15%)
+        <div className="absolute top-4 right-4 bg-blue-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap">
+          Scroll RIGHT Zone (10%)
         </div>
       </div>
       
-      {/* Indicatore di mouse tracking */}
-      <div className="absolute bottom-4 left-4 bg-black/80 text-white px-2 py-1 rounded text-xs">
-        Container: {Math.round(containerRect.width)}×{Math.round(containerRect.height)}
+      {/* Pannello di debug in basso con info */}
+      <div className="absolute bottom-4 left-4 bg-black/80 text-white p-2 rounded text-xs max-w-xs">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          <div>Mouse X:</div>
+          <div>{mousePosition.x}px</div>
+          
+          <div>Viewport width:</div>
+          <div>{viewportWidth}px</div>
+          
+          <div>Container scroll:</div>
+          <div>{containerInfo.scrollLeft}/{containerInfo.maxScroll}px</div>
+          
+          <div>Zona attiva:</div>
+          <div>
+            {mousePosition.x < leftZone ? (
+              <span className="text-red-400">LEFT</span>
+            ) : mousePosition.x > rightZone ? (
+              <span className="text-blue-400">RIGHT</span>
+            ) : (
+              <span className="text-green-400">CENTRO</span>
+            )}
+          </div>
+        </div>
       </div>
+      
+      {/* Indicatore posizione mouse */}
+      <div 
+        className="absolute w-1 h-screen bg-yellow-500/50" 
+        style={{ left: `${mousePosition.x}px` }}
+      />
     </div>
   );
 };
