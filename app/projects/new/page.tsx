@@ -187,12 +187,14 @@ export default function NewProjectPage() {
                     type="date"
                     value={formData.startDate}
                     onChange={handleChange}
-                    className="input w-full pl-10"
+                    className="input w-full opacity-0 absolute inset-0 cursor-pointer z-10"
                   />
-                  <Calendar 
-                    size={18} 
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white" 
-                  />
+                  <div className="input w-full flex items-center pl-10">
+                    <Calendar size={18} className="absolute left-3 text-white" />
+                    <span className="text-white">
+                      {formData.startDate ? new Date(formData.startDate).toLocaleDateString('it-IT') : 'Seleziona una data'}
+                    </span>
+                  </div>
                 </div>
               </div>
               
