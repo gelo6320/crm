@@ -201,50 +201,75 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const handleDragMove = (e: MouseEvent): void => {
     // Usa le ref per un accesso immediato invece degli stati
     if (!draggedLeadRef.current || !dragOriginRef.current) {
-      console.log(`[DRAG DEBUG] ❌ handleDragMove chiamato ma draggedLeadRef o dragOriginRef è null`);
       return;
     }
     
-    console.log(`[DRAG DEBUG] 🔄 Mouse in movimento - Coordinate: (${e.clientX}, ${e.clientY})`);
-    
-    // Update drag position state and ref
+    // Update drag position state e ref (minimizzando gli aggiornamenti di stato)
     const positionData = { x: e.clientX, y: e.clientY };
-    setDragPosition(positionData);
     dragPositionRef.current = positionData;
     
-    // Aggiorna direttamente la posizione del preview DOM
+    // Aggiorna direttamente la posizione del preview DOM senza passare per lo stato React
     if (dragItemRef.current) {
       const left = e.clientX - dragOriginRef.current.x;
       const top = e.clientY - dragOriginRef.current.y;
       
       dragItemRef.current.style.left = `${left}px`;
       dragItemRef.current.style.top = `${top}px`;
-      
-      console.log(`[DRAG DEBUG] 📍 Aggiornata posizione preview: left=${left}px, top=${top}px`);
-    } else {
-      console.log(`[DRAG DEBUG] ❌ dragItemRef.current è null durante il movimento!`);
     }
     
-    // Check which column we're over
-    const columns = document.querySelectorAll('.funnel-column');
-    let hoveredColumn: Element | null = null;
+    // Throttling del rilevamento della colonna (esegui solo ogni 5 pixel di movimento)
+    const lastPos = dragPositionRef.current;
+    const lastTarget = targetColumn;
     
-    columns.forEach(column => {
-      const rect = column.getBoundingClientRect();
-      if (e.clientX >= rect.left && e.clientX <= rect.right) {
-        hoveredColumn = column;
+    // Calcola la distanza dal precedente rilevamento
+    const distance = lastPos ? Math.sqrt(
+      Math.pow(positionData.x - lastPos.x, 2) + 
+      Math.pow(positionData.y - lastPos.y, 2)
+    ) : Infinity;
+    
+    // Ottimizzazione: rileva la colonna target solo se ci siamo spostati abbastanza
+    // o se non abbiamo ancora un target
+    if (distance > 10 || !lastTarget) {
+      // Update target column - versione più leggera
+      const newTargetColumn = detectTargetColumn(e.clientX, e.clientY);
+      if (newTargetColumn !== targetColumn) {
+        setTargetColumn(newTargetColumn);
       }
-    });
-    
-    // Update target column
-    const newTargetColumn = detectTargetColumn(e.clientX, e.clientY);
-    if (newTargetColumn !== targetColumn) {
-      console.log(`[DRAG DEBUG] 🎯 Cambiato target column: ${targetColumn} -> ${newTargetColumn}`);
-      setTargetColumn(newTargetColumn);
     }
+    
+    // Aggiorniamo lo stato solo alla fine per ridurre i re-render
+    setDragPosition(positionData);
     
     // Handle auto-scrolling
     handleAutoScroll(e.clientX);
+  };
+
+  let funnelColumnsCache: NodeListOf<Element> | null = null;
+
+  const detectTargetColumn = (clientX: number, clientY: number): string | null => {
+    // Memorizza il risultato delle query DOM
+    if (!funnelColumnsCache) {
+      funnelColumnsCache = document.querySelectorAll('.funnel-column');
+    }
+    
+    const columns = funnelColumnsCache;
+    let foundColumn: Element | null = null;
+    
+    // Controllo rapido solo su X prima di fare il controllo completo
+    for (let i = 0; i < columns.length; i++) {
+      const column = columns[i];
+      const rect = column.getBoundingClientRect();
+      
+      if (clientX >= rect.left && clientX <= rect.right) {
+        // Controllo completo solo se l'X è già dentro
+        if (clientY >= rect.top && clientY <= rect.bottom) {
+          foundColumn = column;
+          break;
+        }
+      }
+    }
+    
+    return foundColumn ? (foundColumn as HTMLElement).id : null;
   };
   
   // Handler for touch move events
@@ -342,24 +367,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         animationFrameRef.current = requestAnimationFrame(scrollAnimation);
       }
     }
-  };
-
-  // Aggiungi questa funzione per fare un rilevamento della colonna più accurato
-  const detectTargetColumn = (clientX: number, clientY: number): string | null => {
-    const columns = document.querySelectorAll('.funnel-column');
-    let foundColumn: Element | null = null;
-    
-    columns.forEach(column => {
-      const rect = column.getBoundingClientRect();
-      if (clientX >= rect.left && 
-          clientX <= rect.right && 
-          clientY >= rect.top && 
-          clientY <= rect.bottom) {
-        foundColumn = column;
-      }
-    });
-    
-    return foundColumn ? (foundColumn as HTMLElement).id : null;
   };
   
   // End dragging
