@@ -52,7 +52,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const dragPositionRef = useRef<{ x: number, y: number } | null>(null);
   const isScrollingRef = useRef<{ direction: 'left' | 'right' | null }>({ direction: null });
   const animationFrameRef = useRef<number | null>(null); // Per requestAnimationFrame
-  const scrollSpeedRef = useRef<number>(15); // Velocità di scroll costante
+  const scrollSpeedRef = useRef<number>(50); // Velocità di scroll costante
   
   // Clean up interval on unmount
   useEffect(() => {
