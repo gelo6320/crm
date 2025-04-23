@@ -50,18 +50,38 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const draggedLeadRef = useRef<FunnelItem | null>(null);
   const dragOriginRef = useRef<{ status: string, x: number, y: number } | null>(null);
   const dragPositionRef = useRef<{ x: number, y: number } | null>(null);
-  const AUTO_SCROLL_SPEED = 50; // velocità di scroll in pixel
-  const AUTO_SCROLL_INTERVAL = 16; // intervallo in ms (circa 60fps)
   const isScrollingRef = useRef<{ direction: 'left' | 'right' | null }>({ direction: null });
-    
+  const animationFrameRef = useRef<number | null>(null); // Per requestAnimationFrame
+  const scrollSpeedRef = useRef<number>(15); // Velocità di scroll costante
+  
   // Clean up interval on unmount
   useEffect(() => {
     return () => {
-      if (scrollIntervalRef.current) {
-        clearInterval(scrollIntervalRef.current);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
     };
   }, []);
+
+  // Funzione di scroll che utilizza requestAnimationFrame
+  const scrollAnimation = () => {
+    if (!boardRef.current) return;
+    
+    const board = boardRef.current;
+    const direction = isScrollingRef.current.direction;
+    
+    if (direction === 'left') {
+      board.scrollLeft -= scrollSpeedRef.current;
+    } else if (direction === 'right') {
+      board.scrollLeft += scrollSpeedRef.current;
+    }
+    
+    // Continua l'animazione solo se stiamo ancora scrollando
+    if (direction) {
+      animationFrameRef.current = requestAnimationFrame(scrollAnimation);
+    }
+  };
 
   const updateDragPreviewPosition = (clientX: number, clientY: number): void => {
     if (!dragItemRef.current || !dragOrigin) return;
@@ -284,55 +304,45 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   
   // Handle auto-scrolling when dragging near the edges
   const handleAutoScroll = (clientX: number) => {
-   if (!boardRef.current) return;
-   
-   const board = boardRef.current;
-   const boardRect = board.getBoundingClientRect();
-   
-   // Calcola le zone di scroll (percentuale della larghezza del viewport)
-   const leftScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
-   const rightScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
-   
-   // Limiti sinistro e destro per le zone di scroll
-   const leftScrollZone = boardRect.left + leftScrollZoneWidth;
-   const rightScrollZone = boardRect.right - rightScrollZoneWidth;
-   
-   // Determina la direzione dello scroll con velocità costante
-   let newScrollDirection: 'left' | 'right' | null = null;
-   
-   if (clientX < leftScrollZone) {
-     newScrollDirection = 'left';
-   } else if (clientX > rightScrollZone) {
-     newScrollDirection = 'right';
-   }
-   
-   // Se la direzione è cambiata, aggiorna lo scroll
-   if (newScrollDirection !== isScrollingRef.current.direction) {
-     // Pulisci l'intervallo esistente
-     if (scrollIntervalRef.current) {
-       clearInterval(scrollIntervalRef.current);
-       scrollIntervalRef.current = null;
-     }
-     
-     // Aggiorna la direzione corrente
-     isScrollingRef.current.direction = newScrollDirection;
-     
-     // Se abbiamo una nuova direzione, crea un nuovo intervallo con velocità costante
-     if (newScrollDirection) {
-       scrollIntervalRef.current = setInterval(() => {
-         if (board) {
-           const SCROLL_SPEED = 15; // Velocità di scroll costante in pixel
-           
-           if (newScrollDirection === 'left') {
-             board.scrollLeft -= SCROLL_SPEED;
-           } else if (newScrollDirection === 'right') {
-             board.scrollLeft += SCROLL_SPEED;
-           }
-         }
-       }, 16); // ~60fps per uno scrolling fluido
-     }
-   }
- };
+    if (!boardRef.current) return;
+    
+    const board = boardRef.current;
+    const boardRect = board.getBoundingClientRect();
+    
+    // Calcola le zone di scroll (percentuale della larghezza del viewport)
+    const leftScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
+    const rightScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
+    
+    // Limiti sinistro e destro per le zone di scroll
+    const leftScrollZone = boardRect.left + leftScrollZoneWidth;
+    const rightScrollZone = boardRect.right - rightScrollZoneWidth;
+    
+    // Determina la direzione dello scroll
+    let newScrollDirection: 'left' | 'right' | null = null;
+    
+    if (clientX < leftScrollZone) {
+      newScrollDirection = 'left';
+    } else if (clientX > rightScrollZone) {
+      newScrollDirection = 'right';
+    }
+    
+    // Se la direzione è cambiata
+    if (newScrollDirection !== isScrollingRef.current.direction) {
+      // Ferma l'animazione corrente
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      
+      // Aggiorna la direzione corrente
+      isScrollingRef.current.direction = newScrollDirection;
+      
+      // Se abbiamo una nuova direzione, avvia l'animazione
+      if (newScrollDirection) {
+        animationFrameRef.current = requestAnimationFrame(scrollAnimation);
+      }
+    }
+  };
 
   // Aggiungi questa funzione per fare un rilevamento della colonna più accurato
   const detectTargetColumn = (clientX: number, clientY: number): string | null => {
@@ -395,10 +405,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     const effectiveTargetColumn = finalTargetColumn || targetColumn;
     console.log(`[DRAG DEBUG] 🧹 Esecuzione pulizia drag comune`);
     
-    // Clear any scroll interval
-    if (scrollIntervalRef.current) {
-      clearInterval(scrollIntervalRef.current);
-      scrollIntervalRef.current = null;
+    // Cancella l'animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
     
     // Reimposta la direzione di scroll

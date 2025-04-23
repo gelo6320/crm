@@ -1,7 +1,7 @@
 // app/projects/[id]/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { 
   ArrowLeft, Edit, Trash2, Clock, Calendar, Tag, MapPin, 
@@ -131,7 +131,8 @@ const getStatusText = (status: string): string => {
   }
 };
 
-export default function ProjectDetailPage({ params }: { params: { id: string } }) {
+export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -165,7 +166,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     const fetchProject = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/projects/${params.id}`);
+        const response = await fetch(`/api/projects/${id}`);
         
         if (!response.ok) {
           throw new Error('Errore nel recupero del progetto');
@@ -183,7 +184,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     };
     
     fetchProject();
-  }, [params.id]);
+  }, [id]);
   
   // Gestisce l'eliminazione del progetto
   const handleDeleteProject = async () => {
@@ -193,7 +194,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     
     try {
       setIsDeleting(true);
-      const response = await fetch(`/api/projects/${params.id}`, {
+      const response = await fetch(`/api/projects/${id}`, {
         method: 'DELETE'
       });
       
@@ -221,7 +222,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     
     try {
       setIsAddingNote(true);
-      const response = await fetch(`/api/projects/${params.id}/notes`, {
+      const response = await fetch(`/api/projects/${id}/notes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -256,7 +257,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     
     try {
       setIsAddingTask(true);
-      const response = await fetch(`/api/projects/${params.id}/tasks`, {
+      const response = await fetch(`/api/projects/${id}/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -297,7 +298,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     
     try {
       setIsAddingDocument(true);
-      const response = await fetch(`/api/projects/${params.id}/documents`, {
+      const response = await fetch(`/api/projects/${id}/documents`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -338,7 +339,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     
     try {
       setIsAddingImage(true);
-      const response = await fetch(`/api/projects/${params.id}/images`, {
+      const response = await fetch(`/api/projects/${id}/images`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -378,7 +379,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
       // Aggiorna solo se il valore è cambiato
       if (progressValue === project.progress) return;
       
-      const response = await fetch(`/api/projects/${params.id}`, {
+      const response = await fetch(`/api/projects/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -436,7 +437,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
         </h1>
         
         <div className="flex items-center space-x-2">
-          <Link href={`/projects/${params.id}/edit`} className="btn btn-outline">
+          <Link href={`/projects/${id}/edit`} className="btn btn-outline">
             <Edit size={16} className="mr-1" />
             <span>Modifica</span>
           </Link>
@@ -583,7 +584,6 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                       <MapPin size={16} className="mr-1 mt-0.5 text-zinc-500 flex-shrink-0" />
                       <span>{project.address}</span>
                     </p>
-                    // app/projects/[id]/page.tsx (continuazione)
                   </div>
                   
                   <div className="mb-4">
@@ -771,386 +771,386 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {project.images.map((image, index) => (
                   <div key={index} className="card overflow-hidden bg-zinc-900 relative">
-                    <img 
-                      src={image.imageUrl} 
-                      alt={image.name}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="p-3">
-                      <h3 className="font-medium text-sm mb-1">{image.name}</h3>
-                      {image.caption && (
-                        <p className="text-xs text-zinc-400 mb-2 line-clamp-2">{image.caption}</p>
-                      )}
-                      <p className="text-xs text-zinc-500">
-                        {formatDate(image.uploadDate)}
-                      </p>
-                    </div>
+                  <img 
+                    src={image.imageUrl} 
+                    alt={image.name}
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="p-3">
+                    <h3 className="font-medium text-sm mb-1">{image.name}</h3>
+                    {image.caption && (
+                      <p className="text-xs text-zinc-400 mb-2 line-clamp-2">{image.caption}</p>
+                    )}
+                    <p className="text-xs text-zinc-500">
+                      {formatDate(image.uploadDate)}
+                    </p>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="card p-6 text-center">
-                <Image size={40} className="text-zinc-500 mx-auto mb-4" />
-                <p className="text-zinc-400 mb-3">
-                  Nessuna immagine disponibile per questo progetto.
-                </p>
-                <button 
-                  onClick={() => setIsAddingImage(true)}
-                  className="btn btn-primary btn-sm"
-                >
-                  <Plus size={16} className="mr-1" />
-                  Aggiungi la prima immagine
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* Documenti */}
-        {activeTab === 'documents' && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-medium">Documenti del progetto</h2>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card p-6 text-center">
+              <Image size={40} className="text-zinc-500 mx-auto mb-4" />
+              <p className="text-zinc-400 mb-3">
+                Nessuna immagine disponibile per questo progetto.
+              </p>
               <button 
-                onClick={() => setIsAddingDocument(!isAddingDocument)}
-                className="btn btn-outline btn-sm"
+                onClick={() => setIsAddingImage(true)}
+                className="btn btn-primary btn-sm"
               >
                 <Plus size={16} className="mr-1" />
-                Aggiungi documento
+                Aggiungi la prima immagine
               </button>
             </div>
-            
-            {/* Form per aggiungere un nuovo documento */}
-            {isAddingDocument && (
-              <div className="card p-4 mb-6 animate-slide-down">
-                <h3 className="text-sm font-medium mb-3">Aggiungi nuovo documento</h3>
-                <form onSubmit={handleAddDocument} className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="newDocumentName" className="block text-xs font-medium mb-1">
-                        Nome documento <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="newDocumentName"
-                        type="text"
-                        value={newDocumentName}
-                        onChange={(e) => setNewDocumentName(e.target.value)}
-                        className="input w-full py-1.5 text-sm"
-                        placeholder="Es. Piano di lavoro"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="newDocumentType" className="block text-xs font-medium mb-1">
-                        Tipo documento
-                      </label>
-                      <select
-                        id="newDocumentType"
-                        value={newDocumentType}
-                        onChange={(e) => setNewDocumentType(e.target.value)}
-                        className="input w-full py-1.5 text-sm"
-                      >
-                        <option value="">Seleziona tipo...</option>
-                        <option value="PDF">PDF</option>
-                        <option value="Word">Word</option>
-                        <option value="Excel">Excel</option>
-                        <option value="CAD">CAD</option>
-                        <option value="Immagine">Immagine</option>
-                        <option value="Altro">Altro</option>
-                      </select>
-                    </div>
-                  </div>
+          )}
+        </div>
+      )}
+      
+      {/* Documenti */}
+      {activeTab === 'documents' && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-base font-medium">Documenti del progetto</h2>
+            <button 
+              onClick={() => setIsAddingDocument(!isAddingDocument)}
+              className="btn btn-outline btn-sm"
+            >
+              <Plus size={16} className="mr-1" />
+              Aggiungi documento
+            </button>
+          </div>
+          
+          {/* Form per aggiungere un nuovo documento */}
+          {isAddingDocument && (
+            <div className="card p-4 mb-6 animate-slide-down">
+              <h3 className="text-sm font-medium mb-3">Aggiungi nuovo documento</h3>
+              <form onSubmit={handleAddDocument} className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="newDocumentUrl" className="block text-xs font-medium mb-1">
-                      URL documento <span className="text-red-500">*</span>
+                    <label htmlFor="newDocumentName" className="block text-xs font-medium mb-1">
+                      Nome documento <span className="text-red-500">*</span>
                     </label>
                     <input
-                      id="newDocumentUrl"
-                      type="url"
-                      value={newDocumentUrl}
-                      onChange={(e) => setNewDocumentUrl(e.target.value)}
+                      id="newDocumentName"
+                      type="text"
+                      value={newDocumentName}
+                      onChange={(e) => setNewDocumentName(e.target.value)}
                       className="input w-full py-1.5 text-sm"
-                      placeholder="https://esempio.com/documento.pdf"
+                      placeholder="Es. Piano di lavoro"
                       required
                     />
                   </div>
-                  <div className="flex justify-end space-x-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingDocument(false)}
-                      className="btn btn-outline btn-sm"
-                    >
-                      Annulla
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isAddingDocument && (!newDocumentName || !newDocumentUrl)}
-                      className="btn btn-primary btn-sm"
-                    >
-                      {isAddingDocument ? (
-                        <span className="flex items-center">
-                          <Loader size={14} className="animate-spin mr-1" />
-                          Caricamento...
-                        </span>
-                      ) : (
-                        <span className="flex items-center">
-                          <Plus size={14} className="mr-1" />
-                          Aggiungi
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-            
-            {/* Visualizzazione documenti */}
-            {project.documents.length > 0 ? (
-              <div className="space-y-2">
-                {project.documents.map((doc, index) => (
-                  <div key={index} className="card p-4 flex items-center hover:bg-zinc-800/60 transition-colors">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 mr-4">
-                      <FileText size={20} />
-                    </div>
-                    <div className="flex-grow min-w-0">
-                      <h3 className="font-medium text-sm">{doc.name}</h3>
-                      <div className="flex items-center text-xs text-zinc-400 mt-1">
-                        {doc.fileType && <span className="bg-zinc-700 px-2 py-0.5 rounded text-xs mr-2">{doc.fileType}</span>}
-                        <span>{formatDate(doc.uploadDate)}</span>
-                      </div>
-                    </div>
-                    <a
-                      href={doc.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-outline btn-sm p-1.5 ml-2"
-                      title="Apri documento"
-                    >
-                      <FileCheck size={16} />
-                    </a>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="card p-6 text-center">
-                <FileText size={40} className="text-zinc-500 mx-auto mb-4" />
-                <p className="text-zinc-400 mb-3">
-                  Nessun documento disponibile per questo progetto.
-                </p>
-                <button 
-                  onClick={() => setIsAddingDocument(true)}
-                  className="btn btn-primary btn-sm"
-                >
-                  <Plus size={16} className="mr-1" />
-                  Aggiungi il primo documento
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* Attività */}
-        {activeTab === 'tasks' && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-medium">Attività del progetto</h2>
-              <button 
-                onClick={() => setIsAddingTask(!isAddingTask)}
-                className="btn btn-outline btn-sm"
-              >
-                <Plus size={16} className="mr-1" />
-                Aggiungi attività
-              </button>
-            </div>
-            
-            {/* Form per aggiungere una nuova attività */}
-            {isAddingTask && (
-              <div className="card p-4 mb-6 animate-slide-down">
-                <h3 className="text-sm font-medium mb-3">Aggiungi nuova attività</h3>
-                <form onSubmit={handleAddTask} className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="newTaskName" className="block text-xs font-medium mb-1">
-                        Nome attività <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="newTaskName"
-                        type="text"
-                        value={newTaskName}
-                        onChange={(e) => setNewTaskName(e.target.value)}
-                        className="input w-full py-1.5 text-sm"
-                        placeholder="Es. Preparazione cantiere"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="newTaskDueDate" className="block text-xs font-medium mb-1">
-                        Data scadenza
-                      </label>
-                      <input
-                        id="newTaskDueDate"
-                        type="date"
-                        value={newTaskDueDate}
-                        onChange={(e) => setNewTaskDueDate(e.target.value)}
-                        className="input w-full py-1.5 text-sm"
-                      />
-                    </div>
-                  </div>
                   <div>
-                    <label htmlFor="newTaskDescription" className="block text-xs font-medium mb-1">
-                      Descrizione
+                    <label htmlFor="newDocumentType" className="block text-xs font-medium mb-1">
+                      Tipo documento
                     </label>
-                    <textarea
-                      id="newTaskDescription"
-                      value={newTaskDescription}
-                      onChange={(e) => setNewTaskDescription(e.target.value)}
-                      rows={2}
+                    <select
+                      id="newDocumentType"
+                      value={newDocumentType}
+                      onChange={(e) => setNewDocumentType(e.target.value)}
                       className="input w-full py-1.5 text-sm"
-                      placeholder="Descrivi brevemente l'attività..."
-                    />
-                  </div>
-                  <div className="flex justify-end space-x-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingTask(false)}
-                      className="btn btn-outline btn-sm"
                     >
-                      Annulla
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isAddingTask && !newTaskName}
-                      className="btn btn-primary btn-sm"
-                    >
-                      {isAddingTask ? (
-                        <span className="flex items-center">
-                          <Loader size={14} className="animate-spin mr-1" />
-                          Caricamento...
-                        </span>
-                      ) : (
-                        <span className="flex items-center">
-                          <Plus size={14} className="mr-1" />
-                          Aggiungi
-                        </span>
-                      )}
-                    </button>
+                      <option value="">Seleziona tipo...</option>
+                      <option value="PDF">PDF</option>
+                      <option value="Word">Word</option>
+                      <option value="Excel">Excel</option>
+                      <option value="CAD">CAD</option>
+                      <option value="Immagine">Immagine</option>
+                      <option value="Altro">Altro</option>
+                    </select>
                   </div>
-                </form>
-              </div>
-            )}
-            
-            {/* Visualizzazione attività */}
-            {project.tasks.length > 0 ? (
-              <div className="space-y-3">
-                {project.tasks.map((task, index) => (
-                  <div key={index} className="card p-4 hover:bg-zinc-800/60 transition-colors">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-2">
-                      <h3 className="font-medium">{task.name}</h3>
-                      <div className="flex items-center space-x-2">
-                        {task.dueDate && (
-                          <div className="flex items-center text-xs text-zinc-400">
-                            <Calendar size={12} className="mr-1" />
-                            <span>{formatDate(task.dueDate)}</span>
-                          </div>
-                        )}
-                        <div>{getTaskStatusBadge(task.status)}</div>
-                      </div>
-                    </div>
-                    {task.description && (
-                      <p className="text-sm text-zinc-400 mt-2">{task.description}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="card p-6 text-center">
-                <ClipboardList size={40} className="text-zinc-500 mx-auto mb-4" />
-                <p className="text-zinc-400 mb-3">
-                  Nessuna attività disponibile per questo progetto.
-                </p>
-                <button 
-                  onClick={() => setIsAddingTask(true)}
-                  className="btn btn-primary btn-sm"
-                >
-                  <Plus size={16} className="mr-1" />
-                  Aggiungi la prima attività
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* Note */}
-        {activeTab === 'notes' && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-base font-medium">Note del progetto</h2>
-            </div>
-            
-            {/* Form per aggiungere una nuova nota */}
-            <div className="card p-4 mb-6">
-              <h3 className="text-sm font-medium mb-3">Aggiungi nuova nota</h3>
-              <form onSubmit={handleAddNote} className="space-y-3">
+                </div>
                 <div>
-                  <textarea
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    rows={2}
+                  <label htmlFor="newDocumentUrl" className="block text-xs font-medium mb-1">
+                    URL documento <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="newDocumentUrl"
+                    type="url"
+                    value={newDocumentUrl}
+                    onChange={(e) => setNewDocumentUrl(e.target.value)}
                     className="input w-full py-1.5 text-sm"
-                    placeholder="Scrivi una nota..."
+                    placeholder="https://esempio.com/documento.pdf"
                     required
                   />
                 </div>
-                <div className="flex justify-end">
+                <div className="flex justify-end space-x-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingDocument(false)}
+                    className="btn btn-outline btn-sm"
+                  >
+                    Annulla
+                  </button>
                   <button
                     type="submit"
-                    disabled={isAddingNote || !newNote.trim()}
+                    disabled={isAddingDocument && (!newDocumentName || !newDocumentUrl)}
                     className="btn btn-primary btn-sm"
                   >
-                    {isAddingNote ? (
+                    {isAddingDocument ? (
                       <span className="flex items-center">
                         <Loader size={14} className="animate-spin mr-1" />
-                        Salvataggio...
+                        Caricamento...
                       </span>
                     ) : (
                       <span className="flex items-center">
-                        <MessageSquare size={14} className="mr-1" />
-                        Aggiungi Nota
+                        <Plus size={14} className="mr-1" />
+                        Aggiungi
                       </span>
                     )}
                   </button>
                 </div>
               </form>
             </div>
-            
-            {/* Visualizzazione note */}
-            {project.notes && project.notes.length > 0 ? (
-              <div className="space-y-4">
-                {project.notes.slice().reverse().map((note, index) => (
-                  <div key={index} className="card p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="text-xs text-zinc-400">
-                        {note.createdBy} - {formatDateTime(note.createdAt)}
-                      </div>
-                    </div>
-                    <p className="text-sm whitespace-pre-wrap">{note.text}</p>
+          )}
+          
+          {/* Visualizzazione documenti */}
+          {project.documents.length > 0 ? (
+            <div className="space-y-2">
+              {project.documents.map((doc, index) => (
+                <div key={index} className="card p-4 flex items-center hover:bg-zinc-800/60 transition-colors">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 mr-4">
+                    <FileText size={20} />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="card p-6 text-center">
-                <MessageSquare size={40} className="text-zinc-500 mx-auto mb-4" />
-                <p className="text-zinc-400 mb-2">
-                  Nessuna nota disponibile per questo progetto.
-                </p>
-                <p className="text-zinc-500 text-sm mb-3">
-                  Utilizza il form sopra per aggiungere la prima nota.
-                </p>
-              </div>
-            )}
+                  <div className="flex-grow min-w-0">
+                    <h3 className="font-medium text-sm">{doc.name}</h3>
+                    <div className="flex items-center text-xs text-zinc-400 mt-1">
+                      {doc.fileType && <span className="bg-zinc-700 px-2 py-0.5 rounded text-xs mr-2">{doc.fileType}</span>}
+                      <span>{formatDate(doc.uploadDate)}</span>
+                    </div>
+                  </div>
+                  <a
+                    href={doc.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-outline btn-sm p-1.5 ml-2"
+                    title="Apri documento"
+                  >
+                    <FileCheck size={16} />
+                  </a>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card p-6 text-center">
+              <FileText size={40} className="text-zinc-500 mx-auto mb-4" />
+              <p className="text-zinc-400 mb-3">
+                Nessun documento disponibile per questo progetto.
+              </p>
+              <button 
+                onClick={() => setIsAddingDocument(true)}
+                className="btn btn-primary btn-sm"
+              >
+                <Plus size={16} className="mr-1" />
+                Aggiungi il primo documento
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Attività */}
+      {activeTab === 'tasks' && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-base font-medium">Attività del progetto</h2>
+            <button 
+              onClick={() => setIsAddingTask(!isAddingTask)}
+              className="btn btn-outline btn-sm"
+            >
+              <Plus size={16} className="mr-1" />
+              Aggiungi attività
+            </button>
           </div>
-        )}
-      </div>
+          
+          {/* Form per aggiungere una nuova attività */}
+          {isAddingTask && (
+            <div className="card p-4 mb-6 animate-slide-down">
+              <h3 className="text-sm font-medium mb-3">Aggiungi nuova attività</h3>
+              <form onSubmit={handleAddTask} className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="newTaskName" className="block text-xs font-medium mb-1">
+                      Nome attività <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="newTaskName"
+                      type="text"
+                      value={newTaskName}
+                      onChange={(e) => setNewTaskName(e.target.value)}
+                      className="input w-full py-1.5 text-sm"
+                      placeholder="Es. Preparazione cantiere"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="newTaskDueDate" className="block text-xs font-medium mb-1">
+                      Data scadenza
+                    </label>
+                    <input
+                      id="newTaskDueDate"
+                      type="date"
+                      value={newTaskDueDate}
+                      onChange={(e) => setNewTaskDueDate(e.target.value)}
+                      className="input w-full py-1.5 text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="newTaskDescription" className="block text-xs font-medium mb-1">
+                    Descrizione
+                  </label>
+                  <textarea
+                    id="newTaskDescription"
+                    value={newTaskDescription}
+                    onChange={(e) => setNewTaskDescription(e.target.value)}
+                    rows={2}
+                    className="input w-full py-1.5 text-sm"
+                    placeholder="Descrivi brevemente l'attività..."
+                  />
+                </div>
+                <div className="flex justify-end space-x-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingTask(false)}
+                    className="btn btn-outline btn-sm"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isAddingTask && !newTaskName}
+                    className="btn btn-primary btn-sm"
+                  >
+                    {isAddingTask ? (
+                      <span className="flex items-center">
+                        <Loader size={14} className="animate-spin mr-1" />
+                        Caricamento...
+                      </span>
+                    ) : (
+                      <span className="flex items-center">
+                        <Plus size={14} className="mr-1" />
+                        Aggiungi
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+          
+          {/* Visualizzazione attività */}
+          {project.tasks.length > 0 ? (
+            <div className="space-y-3">
+              {project.tasks.map((task, index) => (
+                <div key={index} className="card p-4 hover:bg-zinc-800/60 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-2">
+                    <h3 className="font-medium">{task.name}</h3>
+                    <div className="flex items-center space-x-2">
+                      {task.dueDate && (
+                        <div className="flex items-center text-xs text-zinc-400">
+                          <Calendar size={12} className="mr-1" />
+                          <span>{formatDate(task.dueDate)}</span>
+                        </div>
+                      )}
+                      <div>{getTaskStatusBadge(task.status)}</div>
+                    </div>
+                  </div>
+                  {task.description && (
+                    <p className="text-sm text-zinc-400 mt-2">{task.description}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card p-6 text-center">
+              <ClipboardList size={40} className="text-zinc-500 mx-auto mb-4" />
+              <p className="text-zinc-400 mb-3">
+                Nessuna attività disponibile per questo progetto.
+              </p>
+              <button 
+                onClick={() => setIsAddingTask(true)}
+                className="btn btn-primary btn-sm"
+              >
+                <Plus size={16} className="mr-1" />
+                Aggiungi la prima attività
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Note */}
+      {activeTab === 'notes' && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-base font-medium">Note del progetto</h2>
+          </div>
+          
+          {/* Form per aggiungere una nuova nota */}
+          <div className="card p-4 mb-6">
+            <h3 className="text-sm font-medium mb-3">Aggiungi nuova nota</h3>
+            <form onSubmit={handleAddNote} className="space-y-3">
+              <div>
+                <textarea
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  rows={2}
+                  className="input w-full py-1.5 text-sm"
+                  placeholder="Scrivi una nota..."
+                  required
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isAddingNote || !newNote.trim()}
+                  className="btn btn-primary btn-sm"
+                >
+                  {isAddingNote ? (
+                    <span className="flex items-center">
+                      <Loader size={14} className="animate-spin mr-1" />
+                      Salvataggio...
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <MessageSquare size={14} className="mr-1" />
+                      Aggiungi Nota
+                    </span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          {/* Visualizzazione note */}
+          {project.notes && project.notes.length > 0 ? (
+            <div className="space-y-4">
+              {project.notes.slice().reverse().map((note, index) => (
+                <div key={index} className="card p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="text-xs text-zinc-400">
+                      {note.createdBy} - {formatDateTime(note.createdAt)}
+                    </div>
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap">{note.text}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card p-6 text-center">
+              <MessageSquare size={40} className="text-zinc-500 mx-auto mb-4" />
+              <p className="text-zinc-400 mb-2">
+                Nessuna nota disponibile per questo progetto.
+              </p>
+              <p className="text-zinc-500 text-sm mb-3">
+                Utilizza il form sopra per aggiungere la prima nota.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
-  );
+  </div>
+);
 }
