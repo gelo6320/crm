@@ -128,7 +128,7 @@ export default function AddSiteModal({ onClose, onSave }: AddSiteModalProps) {
             <button
               type="submit"
               disabled={isSubmitting || !url}
-              className="btn btn-primary inline-flex items-center justify-center""
+              className="btn btn-primary inline-flex items-center justify-center"
             >
               {isSubmitting ? (
                 <span className="flex items-center">
