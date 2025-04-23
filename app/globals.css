@@ -976,3 +976,22 @@ html.has-touch .funnel-card {
     max-width: 220px;
   }
 }
+
+/* Migliora l'aspetto nel tema scuro */
+input[type="date"] {
+  color-scheme: dark;
+}
+
+/* Nascondi l'icona predefinita ma mantieni l'area cliccabile */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background: transparent;
+  color: transparent;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}

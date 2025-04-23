@@ -177,44 +177,34 @@ export default function NewProjectPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label htmlFor="startDate" className="block text-sm font-medium mb-1">
-                  Data inizio
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Calendar size={18} className="text-white" />
-                  </div>
-                  <input
-                    id="startDate"
-                    name="startDate"
-                    type="date"
-                    value={formData.startDate}
-                    onChange={handleChange}
-                    className="input w-full pl-10 cursor-pointer"
-                    style={{ colorScheme: "dark" }}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label htmlFor="estimatedEndDate" className="block text-sm font-medium mb-1">
-                  Data fine stimata
-                </label>
-                <div className="relative">
-                  <input
-                    id="estimatedEndDate"
-                    name="estimatedEndDate"
-                    type="date"
-                    value={formData.estimatedEndDate}
-                    onChange={handleChange}
-                    className="input w-full pl-10"
-                  />
-                  <Calendar 
-                    size={18} 
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white" 
-                  />
-                </div>
-              </div>
+               <label htmlFor="startDate" className="block text-sm font-medium mb-1">
+                 Data inizio
+               </label>
+               <input
+                 id="startDate"
+                 name="startDate"
+                 type="date"
+                 value={formData.startDate}
+                 onChange={handleChange}
+                 className="input w-full cursor-pointer"
+                 style={{ colorScheme: "dark" }}
+               />
+             </div>
+             
+             <div>
+               <label htmlFor="estimatedEndDate" className="block text-sm font-medium mb-1">
+                 Data fine stimata
+               </label>
+               <input
+                 id="estimatedEndDate"
+                 name="estimatedEndDate"
+                 type="date"
+                 value={formData.estimatedEndDate}
+                 onChange={handleChange}
+                 className="input w-full cursor-pointer"
+                 style={{ colorScheme: "dark" }}
+               />
+             </div>
               
               <div>
                 <label htmlFor="status" className="block text-sm font-medium mb-1">
