@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { toast } from "@/components/ui/toaster";
+import axios from 'axios';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -67,19 +69,11 @@ export default function NewProjectPage() {
       };
       
       // Chiamata API per creare il progetto
-      const response = await fetch('/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(projectData)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Errore nella creazione del progetto');
-      }
-      
-      const result = await response.json();
+      const response = await axios.post(`${API_BASE_URL}/api/projects`, 
+        projectData, 
+        { withCredentials: true }
+      );
+      const result = response.data;
       
       // Mostra notifica di successo
       toast("success", "Progetto creato", "Il progetto è stato creato con successo");

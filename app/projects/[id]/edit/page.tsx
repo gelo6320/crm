@@ -8,6 +8,8 @@ import { ArrowLeft, Save, Loader } from "lucide-react";
 import Link from "next/link";
 import { toast } from "@/components/ui/toaster";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import axios from 'axios';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
 export default function EditProjectPage({params}: {params: Promise<{ id: string }>}) {
   const router = useRouter();
@@ -39,13 +41,10 @@ export default function EditProjectPage({params}: {params: Promise<{ id: string 
     const fetchProject = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/projects/${id}`);
-        
-        if (!response.ok) {
-          throw new Error('Errore nel recupero del progetto');
-        }
-        
-        const project = await response.json();
+        const response = await axios.get(`${API_BASE_URL}/api/projects/${id}`, { 
+            withCredentials: true 
+          });
+          const project = response.data;
         
         // Formatta le date per il form
         const formatDateForInput = (dateString: string) => {
@@ -122,15 +121,12 @@ export default function EditProjectPage({params}: {params: Promise<{ id: string 
       };
       
       // Chiamata API per aggiornare il progetto
-      const response = await fetch(`/api/projects/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(projectData)
-      });
+      const response = await axios.put(`${API_BASE_URL}/api/projects/${id}`, 
+        projectData, 
+        { withCredentials: true }
+      );
       
-      if (!response.ok) {
+      if (response.status !== 200 && response.status !== 201) {
         throw new Error('Errore durante l\'aggiornamento del progetto');
       }
       

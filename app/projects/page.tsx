@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "@/components/ui/toaster";
 import Link from "next/link";
+import axios from 'axios';
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
@@ -79,18 +80,17 @@ export default function ProjectsPage() {
   }, [statusFilter]);
   
   // Funzione per caricare i progetti
-  const loadProjects = async () => {
+  
+    const loadProjects = async () => {
     try {
       setIsLoading(true);
       
-      // Chiamata all'API
-      const response = await fetch('/api/projects');
+      // Chiamata all'API modificata per usare axios
+      const response = await axios.get(`${API_BASE_URL}/api/projects`, { 
+        withCredentials: true 
+      });
       
-      if (!response.ok) {
-        throw new Error('Errore nel caricamento dei progetti');
-      }
-      
-      let data = await response.json();
+      let data = response.data;  // Con axios, i dati sono in response.data
       
       // Applica filtri lato client
       if (statusFilter) {

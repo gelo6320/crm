@@ -11,6 +11,8 @@ import {
 import Link from "next/link";
 import { toast } from "@/components/ui/toaster";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import axios from 'axios';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
 // Tipi
 interface ContactPerson {
@@ -166,13 +168,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const fetchProject = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/projects/${id}`);
-        
-        if (!response.ok) {
-          throw new Error('Errore nel recupero del progetto');
-        }
-        
-        const data = await response.json();
+        const response = await axios.get(`${API_BASE_URL}/api/projects/${id}`, { 
+            withCredentials: true 
+          });
+          const data = response.data;
         setProject(data);
         setProgressValue(data.progress);
       } catch (error) {
@@ -194,11 +193,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     
     try {
       setIsDeleting(true);
-      const response = await fetch(`/api/projects/${id}`, {
-        method: 'DELETE'
+      const response = await axios.delete(`${API_BASE_URL}/api/projects/${id}`, { 
+        withCredentials: true 
       });
       
-      if (!response.ok) {
+      if (response.status !== 200 && response.status !== 204) {
         throw new Error('Errore nell\'eliminazione del progetto');
       }
       
@@ -222,19 +221,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     
     try {
       setIsAddingNote(true);
-      const response = await fetch(`/api/projects/${id}/notes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ text: newNote })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Errore nell\'aggiunta della nota');
-      }
-      
-      const updatedProject = await response.json();
+      const response = await axios.post(`${API_BASE_URL}/api/projects/${id}/notes`, {
+        text: newNote
+      }, { withCredentials: true });
+      const updatedProject = response.data;
+
       setProject(updatedProject);
       setNewNote('');
       toast("success", "Nota aggiunta", "La nota è stata aggiunta con successo");
@@ -257,23 +248,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     
     try {
       setIsAddingTask(true);
-      const response = await fetch(`/api/projects/${id}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: newTaskName,
-          description: newTaskDescription,
-          dueDate: newTaskDueDate
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Errore nell\'aggiunta dell\'attività');
-      }
-      
-      const updatedProject = await response.json();
+      const response = await axios.post(`${API_BASE_URL}/api/projects/${id}/tasks`, {
+        name: newTaskName,
+        description: newTaskDescription,
+        dueDate: newTaskDueDate
+      }, { withCredentials: true });
+      const updatedProject = response.data;
       setProject(updatedProject);
       setNewTaskName('');
       setNewTaskDescription('');
@@ -298,23 +278,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     
     try {
       setIsAddingDocument(true);
-      const response = await fetch(`/api/projects/${id}/documents`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: newDocumentName,
-          fileUrl: newDocumentUrl,
-          fileType: newDocumentType
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Errore nell\'aggiunta del documento');
-      }
-      
-      const updatedProject = await response.json();
+      const response = await axios.post(`${API_BASE_URL}/api/projects/${id}/documents`, {
+        name: newDocumentName,
+        fileUrl: newDocumentUrl,
+        fileType: newDocumentType
+      }, { withCredentials: true });
+      const updatedProject = response.data;
+
       setProject(updatedProject);
       setNewDocumentName('');
       setNewDocumentUrl('');
@@ -339,23 +309,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     
     try {
       setIsAddingImage(true);
-      const response = await fetch(`/api/projects/${id}/images`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: newImageName,
-          imageUrl: newImageUrl,
-          caption: newImageCaption
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Errore nell\'aggiunta dell\'immagine');
-      }
-      
-      const updatedProject = await response.json();
+      const response = await axios.post(`${API_BASE_URL}/api/projects/${id}/images`, {
+        name: newImageName,
+        imageUrl: newImageUrl,
+        caption: newImageCaption
+      }, { withCredentials: true });
+      const updatedProject = response.data;
+
       setProject(updatedProject);
       setNewImageName('');
       setNewImageUrl('');
@@ -379,21 +339,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
       // Aggiorna solo se il valore è cambiato
       if (progressValue === project.progress) return;
       
-      const response = await fetch(`/api/projects/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          progress: progressValue
-        })
-      });
+      const response = await axios.put(`${API_BASE_URL}/api/projects/${id}`, {
+        progress: progressValue
+      }, { withCredentials: true });
+      const updatedProject = response.data;
       
-      if (!response.ok) {
-        throw new Error('Errore nell\'aggiornamento del progresso');
-      }
-      
-      const updatedProject = await response.json();
       setProject(updatedProject);
       toast("success", "Progresso aggiornato", "Il progresso è stato aggiornato con successo");
     } catch (error) {
