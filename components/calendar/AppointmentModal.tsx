@@ -278,7 +278,7 @@ export default function AppointmentModal({
               type="submit"
               onClick={handleSubmit}
               disabled={isSubmitting || !title || !date || !time}
-              className="btn btn-primary"
+              className="btn btn-primary inline-flex items-center justify-center"
             >
               {isSubmitting ? (
                 <span className="flex items-center">

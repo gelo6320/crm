@@ -135,7 +135,7 @@ export default function EditValueModal({ lead, onClose, onSave }: EditValueModal
             </button>
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn btn-primary inline-flex items-center justify-center"
               disabled={isSubmitting}
             >
               {isSubmitting ? (

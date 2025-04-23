@@ -262,7 +262,7 @@ export default function CalendarPage() {
           
           <button
             onClick={() => handleNewAppointment()}
-            className="btn btn-primary"
+            className="btn btn-primary inline-flex items-center justify-center"
           >
             <Plus size={18} className="mr-1" />
             <span className="hidden sm:inline">Nuovo</span>

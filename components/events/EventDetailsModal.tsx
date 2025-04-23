@@ -203,7 +203,7 @@ export default function EventDetailsModal({
             <button
               onClick={onRetry}
               disabled={isRetrying}
-              className="btn btn-primary"
+              className="btn btn-primary inline-flex items-center justify-center"
             >
               {isRetrying ? (
                 <span className="flex items-center">

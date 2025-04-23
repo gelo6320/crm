@@ -8,6 +8,8 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "@/components/ui/toaster";
 import Link from "next/link";
 
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+
 // Definizione dei tipi
 interface Project {
   _id: string;
@@ -172,7 +174,7 @@ export default function ProjectsPage() {
           </button>
           
           {/* Pulsante per aggiungere un progetto */}
-          <Link href="/projects/new" className="btn btn-primary">
+          <Link href="/projects/new" className="btn btn-primary inline-flex items-center justify-center">
             <Plus size={18} className="mr-1" />
             <span className="hidden sm:inline">Nuovo Progetto</span>
           </Link>
@@ -190,7 +192,7 @@ export default function ProjectsPage() {
                 "Non ci sono progetti che corrispondono ai filtri selezionati." : 
                 "Non hai ancora creato nessun progetto."}
             </p>
-            <Link href="/projects/new" className="btn btn-primary">
+            <Link href="/projects/new" className="btn btn-primary inline-flex items-center justify-center">
               <Plus size={18} className="mr-1" />
               Crea il tuo primo progetto
             </Link>

@@ -417,7 +417,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
           <p className="text-zinc-400 mb-6">
             Il progetto richiesto non esiste o è stato eliminato.
           </p>
-          <Link href="/projects" className="btn btn-primary">
+          <Link href="/projects" className="btn btn-primary inline-flex items-center justify-center">
             Torna all'elenco progetti
           </Link>
         </div>

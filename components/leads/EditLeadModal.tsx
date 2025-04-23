@@ -315,7 +315,7 @@ interface EditLeadModalProps {
           <button
             onClick={handleSubmit}
             disabled={isSubmitting || !newStatus || !eventName}
-            className="btn btn-primary"
+            className="btn btn-primary inline-flex items-center justify-center"
           >
             {isSubmitting ? (
               <span className="flex items-center">

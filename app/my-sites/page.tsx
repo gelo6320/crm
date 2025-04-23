@@ -61,7 +61,7 @@ export default function MySitesPage() {
           
           <button
             onClick={() => setShowAddModal(true)}
-            className="btn btn-primary"
+            className="btn btn-primary inline-flex items-center justify-center"
           >
             Aggiungi sito
           </button>
@@ -73,7 +73,7 @@ export default function MySitesPage() {
           <p className="text-zinc-400 mb-4">Nessun sito configurato</p>
           <button
             onClick={() => setShowAddModal(true)}
-            className="btn btn-primary"
+            className="btn btn-primary inline-flex items-center justify-center"
           >
             <Plus size={16} className="mr-1" />
             Aggiungi il tuo primo sito

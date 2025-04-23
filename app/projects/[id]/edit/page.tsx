@@ -395,7 +395,7 @@ export default function EditProjectPage({params}: {params: Promise<{ id: string 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="btn btn-primary"
+              className="btn btn-primary inline-flex items-center justify-center"
             >
               {isSubmitting ? (
                 <span className="flex items-center">
