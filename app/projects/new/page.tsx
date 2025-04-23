@@ -181,20 +181,18 @@ export default function NewProjectPage() {
                   Data inizio
                 </label>
                 <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Calendar size={18} className="text-white" />
+                  </div>
                   <input
                     id="startDate"
                     name="startDate"
                     type="date"
                     value={formData.startDate}
                     onChange={handleChange}
-                    className="input w-full opacity-0 absolute inset-0 cursor-pointer z-10"
+                    className="input w-full pl-10 cursor-pointer"
+                    style={{ colorScheme: "dark" }}
                   />
-                  <div className="input w-full flex items-center pl-10">
-                    <Calendar size={18} className="absolute left-3 text-white" />
-                    <span className="text-white">
-                      {formData.startDate ? new Date(formData.startDate).toLocaleDateString('it-IT') : 'Seleziona una data'}
-                    </span>
-                  </div>
                 </div>
               </div>
               
