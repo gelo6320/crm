@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Calendar } from "lucide-react";
 import Link from "next/link";
 import { toast } from "@/components/ui/toaster";
 import axios from 'axios';
@@ -180,28 +180,40 @@ export default function NewProjectPage() {
                 <label htmlFor="startDate" className="block text-sm font-medium mb-1">
                   Data inizio
                 </label>
-                <input
-                  id="startDate"
-                  name="startDate"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  className="input w-full"
-                />
+                <div className="relative">
+                  <input
+                    id="startDate"
+                    name="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={handleChange}
+                    className="input w-full pl-10"
+                  />
+                  <Calendar 
+                    size={18} 
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white" 
+                  />
+                </div>
               </div>
               
               <div>
                 <label htmlFor="estimatedEndDate" className="block text-sm font-medium mb-1">
                   Data fine stimata
                 </label>
-                <input
-                  id="estimatedEndDate"
-                  name="estimatedEndDate"
-                  type="date"
-                  value={formData.estimatedEndDate}
-                  onChange={handleChange}
-                  className="input w-full"
-                />
+                <div className="relative">
+                  <input
+                    id="estimatedEndDate"
+                    name="estimatedEndDate"
+                    type="date"
+                    value={formData.estimatedEndDate}
+                    onChange={handleChange}
+                    className="input w-full pl-10"
+                  />
+                  <Calendar 
+                    size={18} 
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white" 
+                  />
+                </div>
               </div>
               
               <div>
