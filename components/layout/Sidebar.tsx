@@ -4,7 +4,7 @@
 import { 
   BarChart3, Calendar, FileText, Bookmark, 
   Facebook, Share2, Users, Settings, LogOut,
-  X, Globe, Shield, ChevronDown, ChevronRight
+  X, Globe, Shield, ChevronDown, ChevronRight, HardHat
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,6 +13,10 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import useAuthz from "@/lib/auth/useAuthz";
 import { useState, useEffect } from "react";
+
+const ConstructionIcon = ({ size = 18, className = "" }) => {
+  return <HardHat size={size} className={className} />;
+};
 
 interface SidebarProps {
   open: boolean;
@@ -92,6 +96,7 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
       { name: "Eventi Facebook", href: "/events", icon: Share2 },
       { name: "Sales Funnel", href: "/sales-funnel", icon: Users },
       { name: "I tuoi siti", href: "/my-sites", icon: Globe },
+      { name: "Progetti", href: "/projects", icon: ConstructionIcon },
     ];
   
     // Links solo per admin

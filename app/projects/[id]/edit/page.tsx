@@ -1,0 +1,412 @@
+// app/projects/[id]/edit/page.tsx
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Save, Loader } from "lucide-react";
+import Link from "next/link";
+import { toast } from "@/components/ui/toaster";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+
+export default function EditProjectPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Stato del form
+  const [formData, setFormData] = useState({
+    name: "",
+    client: "",
+    address: "",
+    description: "",
+    startDate: "",
+    estimatedEndDate: "",
+    status: "pianificazione",
+    budget: "",
+    progress: 0,
+    contactPerson: {
+      name: "",
+      phone: "",
+      email: ""
+    }
+  });
+  
+  // Carica i dati del progetto
+  useEffect(() => {
+    const fetchProject = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/projects/${params.id}`);
+        
+        if (!response.ok) {
+          throw new Error('Errore nel recupero del progetto');
+        }
+        
+        const project = await response.json();
+        
+        // Formatta le date per il form
+        const formatDateForInput = (dateString: string) => {
+          if (!dateString) return '';
+          const date = new Date(dateString);
+          return date.toISOString().split('T')[0];
+        };
+        
+        setFormData({
+          name: project.name || '',
+          client: project.client || '',
+          address: project.address || '',
+          description: project.description || '',
+          startDate: formatDateForInput(project.startDate) || '',
+          estimatedEndDate: formatDateForInput(project.estimatedEndDate) || '',
+          status: project.status || 'pianificazione',
+          budget: project.budget?.toString() || '',
+          progress: project.progress || 0,
+          contactPerson: {
+            name: project.contactPerson?.name || '',
+            phone: project.contactPerson?.phone || '',
+            email: project.contactPerson?.email || ''
+          }
+        });
+    } catch (error) {
+        console.error('Errore nel recupero del progetto:', error);
+        toast("error", "Errore", "Impossibile caricare i dettagli del progetto");
+        router.push(`/projects/${params.id}`); // Torna alla pagina di dettaglio se c'è un errore
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProject();
+  }, [params.id, router]);
+  
+  // Gestione cambiamenti nei campi del form
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    if (name.includes('.')) {
+      // Gestione campi annidati (es. contactPerson.name)
+      const [parent, child] = name.split('.');
+      setFormData({
+        ...formData,
+        [parent]: {
+          ...formData[parent as keyof typeof formData] as any,
+          [child]: value
+        }
+      });
+    } else {
+      // Gestione campi normali
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
+  };
+  
+  // Invio del form
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Formattazione dei dati per l'API
+      const projectData = {
+        ...formData,
+        budget: formData.budget ? parseFloat(formData.budget) : 0,
+        progress: parseInt(formData.progress.toString(), 10) || 0
+      };
+      
+      // Chiamata API per aggiornare il progetto
+      const response = await fetch(`/api/projects/${params.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(projectData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Errore durante l\'aggiornamento del progetto');
+      }
+      
+      // Mostra notifica di successo
+      toast("success", "Progetto aggiornato", "Le modifiche sono state salvate con successo");
+      
+      // Reindirizza alla pagina del progetto
+      router.push(`/projects/${params.id}`);
+    } catch (error) {
+      console.error('Errore nell\'aggiornamento del progetto:', error);
+      toast("error", "Errore", "Si è verificato un errore durante il salvataggio delle modifiche");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // Visualizzazione di caricamento
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+  
+  return (
+    <div className="animate-fade-in">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-lg font-medium flex items-center">
+          <Link href={`/projects/${params.id}`} className="mr-2 p-1 rounded-full hover:bg-zinc-800">
+            <ArrowLeft size={20} />
+          </Link>
+          Modifica Progetto
+        </h1>
+      </div>
+      
+      <div className="card p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Sezione informazioni principali */}
+          <div className="space-y-4">
+            <h2 className="text-sm font-medium border-b border-zinc-700 pb-2 mb-4">Informazioni principali</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium mb-1">
+                  Nome del progetto <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="input w-full"
+                  placeholder="Es. Ristrutturazione appartamento via Roma"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="client" className="block text-sm font-medium mb-1">
+                  Cliente <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="client"
+                  name="client"
+                  type="text"
+                  required
+                  value={formData.client}
+                  onChange={handleChange}
+                  className="input w-full"
+                  placeholder="Es. Mario Rossi"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label htmlFor="address" className="block text-sm font-medium mb-1">
+                Indirizzo <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="address"
+                name="address"
+                type="text"
+                required
+                value={formData.address}
+                onChange={handleChange}
+                className="input w-full"
+                placeholder="Es. Via Roma 123, Milano"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium mb-1">
+                Descrizione
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                rows={3}
+                value={formData.description}
+                onChange={handleChange}
+                className="input w-full"
+                placeholder="Descrivi brevemente il progetto..."
+              />
+            </div>
+          </div>
+          
+          {/* Sezione tempi e stato */}
+          <div className="space-y-4">
+            <h2 className="text-sm font-medium border-b border-zinc-700 pb-2 mb-4">Tempi e Stato</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label htmlFor="startDate" className="block text-sm font-medium mb-1">
+                  Data inizio
+                </label>
+                <input
+                  id="startDate"
+                  name="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={handleChange}
+                  className="input w-full"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="estimatedEndDate" className="block text-sm font-medium mb-1">
+                  Data fine stimata
+                </label>
+                <input
+                  id="estimatedEndDate"
+                  name="estimatedEndDate"
+                  type="date"
+                  value={formData.estimatedEndDate}
+                  onChange={handleChange}
+                  className="input w-full"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="status" className="block text-sm font-medium mb-1">
+                  Stato
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="input w-full"
+                >
+                  <option value="pianificazione">Pianificazione</option>
+                  <option value="in corso">In corso</option>
+                  <option value="in pausa">In pausa</option>
+                  <option value="completato">Completato</option>
+                  <option value="cancellato">Cancellato</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          {/* Sezione budget e avanzamento */}
+          <div className="space-y-4">
+            <h2 className="text-sm font-medium border-b border-zinc-700 pb-2 mb-4">Budget e Avanzamento</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="budget" className="block text-sm font-medium mb-1">
+                  Budget (€)
+                </label>
+                <input
+                  id="budget"
+                  name="budget"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={formData.budget}
+                  onChange={handleChange}
+                  className="input w-full"
+                  placeholder="Es. 50000"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="progress" className="block text-sm font-medium mb-1">
+                  Percentuale completamento
+                </label>
+                <input
+                  id="progress"
+                  name="progress"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={formData.progress}
+                  onChange={handleChange}
+                  className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="flex justify-between text-xs text-zinc-500 mt-1">
+                  <span>0%</span>
+                  <span>{formData.progress}%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Sezione referente */}
+          <div className="space-y-4">
+            <h2 className="text-sm font-medium border-b border-zinc-700 pb-2 mb-4">Referente</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label htmlFor="contactPerson.name" className="block text-sm font-medium mb-1">
+                  Nome referente
+                </label>
+                <input
+                  id="contactPerson.name"
+                  name="contactPerson.name"
+                  type="text"
+                  value={formData.contactPerson.name}
+                  onChange={handleChange}
+                  className="input w-full"
+                  placeholder="Es. Mario Rossi"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="contactPerson.phone" className="block text-sm font-medium mb-1">
+                  Telefono
+                </label>
+                <input
+                  id="contactPerson.phone"
+                  name="contactPerson.phone"
+                  type="tel"
+                  value={formData.contactPerson.phone}
+                  onChange={handleChange}
+                  className="input w-full"
+                  placeholder="Es. 3471234567"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="contactPerson.email" className="block text-sm font-medium mb-1">
+                  Email
+                </label>
+                <input
+                  id="contactPerson.email"
+                  name="contactPerson.email"
+                  type="email"
+                  value={formData.contactPerson.email}
+                  onChange={handleChange}
+                  className="input w-full"
+                  placeholder="Es. mario.rossi@email.com"
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* Pulsanti */}
+          <div className="flex justify-end space-x-4 pt-4 border-t border-zinc-700">
+            <Link href={`/projects/${params.id}`} className="btn btn-outline">
+              Annulla
+            </Link>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn btn-primary"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center">
+                  <Loader size={16} className="animate-spin mr-2" />
+                  Salvataggio...
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <Save size={16} className="mr-2" />
+                  Salva Modifiche
+                </span>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

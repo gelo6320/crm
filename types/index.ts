@@ -97,3 +97,63 @@ export interface Stat {
     createdAt: string;
     updatedAt: string;
   }
+
+  // types/index.ts (aggiornamento per i progetti)
+// Aggiungi questo alla fine del file
+
+export interface ProjectDocument {
+  _id?: string;
+  name: string;
+  fileUrl: string;
+  fileType: string;
+  uploadDate: string;
+}
+
+export interface ProjectImage {
+  _id?: string;
+  name: string;
+  imageUrl: string;
+  caption: string;
+  uploadDate: string;
+}
+
+export interface ProjectTask {
+  _id?: string;
+  name: string;
+  description: string;
+  status: 'da iniziare' | 'in corso' | 'completato';
+  dueDate: string;
+}
+
+export interface ProjectNote {
+  _id?: string;
+  text: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface ProjectContactPerson {
+  name: string;
+  phone: string;
+  email: string;
+}
+
+export interface Project {
+  _id: string;
+  name: string;
+  client: string;
+  address: string;
+  description: string;
+  startDate: string;
+  estimatedEndDate: string;
+  status: 'pianificazione' | 'in corso' | 'in pausa' | 'completato' | 'cancellato';
+  budget: number;
+  progress: number;
+  documents: ProjectDocument[];
+  images: ProjectImage[];
+  notes: ProjectNote[];
+  tasks: ProjectTask[];
+  contactPerson: ProjectContactPerson;
+  createdAt: string;
+  updatedAt: string;
+}
