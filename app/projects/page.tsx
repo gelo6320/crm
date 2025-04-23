@@ -8,8 +8,7 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "@/components/ui/toaster";
 import Link from "next/link";
 import axios from 'axios';
-
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+import { API_BASE_URL } from '@/lib/api/api-utils';
 
 // Definizione dei tipi
 interface Project {

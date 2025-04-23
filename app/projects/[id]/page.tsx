@@ -12,7 +12,7 @@ import Link from "next/link";
 import { toast } from "@/components/ui/toaster";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import axios from 'axios';
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+import { API_BASE_URL } from '@/lib/api/api-utils';
 
 // Tipi
 interface ContactPerson {
@@ -343,7 +343,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         progress: progressValue
       }, { withCredentials: true });
       const updatedProject = response.data;
-      
+
       setProject(updatedProject);
       toast("success", "Progresso aggiornato", "Il progresso è stato aggiornato con successo");
     } catch (error) {

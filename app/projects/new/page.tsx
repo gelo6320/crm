@@ -7,7 +7,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { toast } from "@/components/ui/toaster";
 import axios from 'axios';
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+import { API_BASE_URL } from '@/lib/api/api-utils';
 
 export default function NewProjectPage() {
   const router = useRouter();

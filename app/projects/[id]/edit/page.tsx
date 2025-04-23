@@ -9,7 +9,7 @@ import Link from "next/link";
 import { toast } from "@/components/ui/toaster";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import axios from 'axios';
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+import { API_BASE_URL } from '@/lib/api/api-utils';
 
 export default function EditProjectPage({params}: {params: Promise<{ id: string }>}) {
   const router = useRouter();
