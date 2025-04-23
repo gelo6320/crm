@@ -631,7 +631,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               <h2 className="text-base font-medium">Immagini del progetto</h2>
               <button 
                 onClick={() => setIsAddingImage(!isAddingImage)}
-                className="btn btn-outline btn-sm"
+                className="btn btn-outline btn-sm inline-flex items-center justify-center"
               >
                 <Plus size={16} className="mr-1" />
                 Aggiungi immagine
@@ -690,14 +690,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <button
                       type="button"
                       onClick={() => setIsAddingImage(false)}
-                      className="btn btn-outline btn-sm"
+                      className="btn btn-outline btn-sm inline-flex items-center justify-center"
                     >
                       Annulla
                     </button>
                     <button
                       type="submit"
                       disabled={isAddingImage && (!newImageName || !newImageUrl)}
-                      className="btn btn-primary btn-sm inline-flex items-center justify-center "
+                      className="btn btn-primary btn-sm"
                     >
                       {isAddingImage ? (
                         <span className="flex items-center">
@@ -746,7 +746,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </p>
               <button 
                 onClick={() => setIsAddingImage(true)}
-                className="btn btn-primary btn-sm inline-flex items-center justify-center "
+                className="btn btn-primary btn-sm"
               >
                 <Plus size={16} className="mr-1" />
                 Aggiungi la prima immagine
@@ -763,7 +763,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <h2 className="text-base font-medium">Documenti del progetto</h2>
             <button 
               onClick={() => setIsAddingDocument(!isAddingDocument)}
-              className="btn btn-outline btn-sm"
+              className="btn btn-outline btn-sm inline-flex items-center justify-center"
             >
               <Plus size={16} className="mr-1" />
               Aggiungi documento
@@ -828,14 +828,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   <button
                     type="button"
                     onClick={() => setIsAddingDocument(false)}
-                    className="btn btn-outline btn-sm"
+                    className="btn btn-outline btn-sm inline-flex items-center justify-center"
                   >
                     Annulla
                   </button>
                   <button
                     type="submit"
                     disabled={isAddingDocument && (!newDocumentName || !newDocumentUrl)}
-                    className="btn btn-primary btn-sm inline-flex items-center justify-center "
+                    className="btn btn-primary btn-sm"
                   >
                     {isAddingDocument ? (
                       <span className="flex items-center">
@@ -873,7 +873,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     href={doc.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn btn-outline btn-sm p-1.5 ml-2"
+                    className="btn btn-outline btn-sm inline-flex items-center justify-center p-1.5 ml-2"
                     title="Apri documento"
                   >
                     <FileCheck size={16} />
@@ -889,7 +889,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </p>
               <button 
                 onClick={() => setIsAddingDocument(true)}
-                className="btn btn-primary btn-sm inline-flex items-center justify-center "
+                className="btn btn-primary btn-sm"
               >
                 <Plus size={16} className="mr-1" />
                 Aggiungi il primo documento
@@ -906,7 +906,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <h2 className="text-base font-medium">Attività del progetto</h2>
             <button 
               onClick={() => setIsAddingTask(!isAddingTask)}
-              className="btn btn-outline btn-sm"
+              className="btn btn-outline btn-sm inline-flex items-center justify-center"
             >
               <Plus size={16} className="mr-1" />
               Aggiungi attività
@@ -963,14 +963,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   <button
                     type="button"
                     onClick={() => setIsAddingTask(false)}
-                    className="btn btn-outline btn-sm"
+                    className="btn btn-outline btn-sm inline-flex items-center justify-center"
                   >
                     Annulla
                   </button>
                   <button
                     type="submit"
                     disabled={isAddingTask && !newTaskName}
-                    className="btn btn-primary btn-sm inline-flex items-center justify-center "
+                    className="btn btn-primary btn-sm"
                   >
                     {isAddingTask ? (
                       <span className="flex items-center">
@@ -1020,7 +1020,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </p>
               <button 
                 onClick={() => setIsAddingTask(true)}
-                className="btn btn-primary btn-sm inline-flex items-center justify-center "
+                className="btn btn-primary btn-sm"
               >
                 <Plus size={16} className="mr-1" />
                 Aggiungi la prima attività
@@ -1055,7 +1055,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <button
                   type="submit"
                   disabled={isAddingNote || !newNote.trim()}
-                  className="btn btn-primary btn-sm inline-flex items-center justify-center "
+                  className="btn btn-primary btn-sm"
                 >
                   {isAddingNote ? (
                     <span className="flex items-center">
