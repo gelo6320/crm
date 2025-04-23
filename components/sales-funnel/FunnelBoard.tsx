@@ -284,53 +284,55 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   
   // Handle auto-scrolling when dragging near the edges
   const handleAutoScroll = (clientX: number) => {
-    if (!boardRef.current) return;
-    
-    const board = boardRef.current;
-    const boardRect = board.getBoundingClientRect();
-    
-    // Calcola le zone di scroll (percentuale della larghezza del viewport)
-    const leftScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
-    const rightScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
-    
-    // Limiti sinistro e destro per le zone di scroll
-    const leftScrollZone = boardRect.left + leftScrollZoneWidth;
-    const rightScrollZone = boardRect.right - rightScrollZoneWidth;
-    
-    // Determina la direzione dello scroll
-    let newScrollDirection: 'left' | 'right' | null = null;
-    
-    if (clientX < leftScrollZone) {
-      newScrollDirection = 'left';
-    } else if (clientX > rightScrollZone) {
-      newScrollDirection = 'right';
-    }
-    
-    // Se la direzione è cambiata, aggiorna lo scroll
-    if (newScrollDirection !== isScrollingRef.current.direction) {
-      // Pulisci l'intervallo esistente
-      if (scrollIntervalRef.current) {
-        clearInterval(scrollIntervalRef.current);
-        scrollIntervalRef.current = null;
-      }
-      
-      // Aggiorna la direzione corrente
-      isScrollingRef.current.direction = newScrollDirection;
-      
-      // Se abbiamo una nuova direzione, crea un nuovo intervallo
-      if (newScrollDirection) {
-        scrollIntervalRef.current = setInterval(() => {
-          if (board) {
-            if (newScrollDirection === 'left') {
-              board.scrollLeft -= AUTO_SCROLL_SPEED;
-            } else if (newScrollDirection === 'right') {
-              board.scrollLeft += AUTO_SCROLL_SPEED;
-            }
-          }
-        }, AUTO_SCROLL_INTERVAL);
-      }
-    }
-  };
+   if (!boardRef.current) return;
+   
+   const board = boardRef.current;
+   const boardRect = board.getBoundingClientRect();
+   
+   // Calcola le zone di scroll (percentuale della larghezza del viewport)
+   const leftScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
+   const rightScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
+   
+   // Limiti sinistro e destro per le zone di scroll
+   const leftScrollZone = boardRect.left + leftScrollZoneWidth;
+   const rightScrollZone = boardRect.right - rightScrollZoneWidth;
+   
+   // Determina la direzione dello scroll con velocità costante
+   let newScrollDirection: 'left' | 'right' | null = null;
+   
+   if (clientX < leftScrollZone) {
+     newScrollDirection = 'left';
+   } else if (clientX > rightScrollZone) {
+     newScrollDirection = 'right';
+   }
+   
+   // Se la direzione è cambiata, aggiorna lo scroll
+   if (newScrollDirection !== isScrollingRef.current.direction) {
+     // Pulisci l'intervallo esistente
+     if (scrollIntervalRef.current) {
+       clearInterval(scrollIntervalRef.current);
+       scrollIntervalRef.current = null;
+     }
+     
+     // Aggiorna la direzione corrente
+     isScrollingRef.current.direction = newScrollDirection;
+     
+     // Se abbiamo una nuova direzione, crea un nuovo intervallo con velocità costante
+     if (newScrollDirection) {
+       scrollIntervalRef.current = setInterval(() => {
+         if (board) {
+           const SCROLL_SPEED = 15; // Velocità di scroll costante in pixel
+           
+           if (newScrollDirection === 'left') {
+             board.scrollLeft -= SCROLL_SPEED;
+           } else if (newScrollDirection === 'right') {
+             board.scrollLeft += SCROLL_SPEED;
+           }
+         }
+       }, 16); // ~60fps per uno scrolling fluido
+     }
+   }
+ };
 
   // Aggiungi questa funzione per fare un rilevamento della colonna più accurato
   const detectTargetColumn = (clientX: number, clientY: number): string | null => {
