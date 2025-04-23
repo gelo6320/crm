@@ -2,14 +2,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Save, Loader } from "lucide-react";
 import Link from "next/link";
 import { toast } from "@/components/ui/toaster";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
-export default function EditProjectPage({ params }: { params: { id: string } }) {
+export default function EditProjectPage() {
   const router = useRouter();
+  const params = useParams();
+  const projectId = params.id as string;
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -36,7 +39,7 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
     const fetchProject = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/projects/${params.id}`);
+        const response = await fetch(`/api/projects/${projectId}`);
         
         if (!response.ok) {
           throw new Error('Errore nel recupero del progetto');
@@ -67,17 +70,19 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
             email: project.contactPerson?.email || ''
           }
         });
-    } catch (error) {
+      } catch (error) {
         console.error('Errore nel recupero del progetto:', error);
         toast("error", "Errore", "Impossibile caricare i dettagli del progetto");
-        router.push(`/projects/${params.id}`); // Torna alla pagina di dettaglio se c'è un errore
+        router.push(`/projects/${projectId}`); // Torna alla pagina di dettaglio se c'è un errore
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchProject();
-  }, [params.id, router]);
+    if (projectId) {
+      fetchProject();
+    }
+  }, [projectId, router]);
   
   // Gestione cambiamenti nei campi del form
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -117,7 +122,7 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
       };
       
       // Chiamata API per aggiornare il progetto
-      const response = await fetch(`/api/projects/${params.id}`, {
+      const response = await fetch(`/api/projects/${projectId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -133,7 +138,7 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
       toast("success", "Progetto aggiornato", "Le modifiche sono state salvate con successo");
       
       // Reindirizza alla pagina del progetto
-      router.push(`/projects/${params.id}`);
+      router.push(`/projects/${projectId}`);
     } catch (error) {
       console.error('Errore nell\'aggiornamento del progetto:', error);
       toast("error", "Errore", "Si è verificato un errore durante il salvataggio delle modifiche");
@@ -151,7 +156,7 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-lg font-medium flex items-center">
-          <Link href={`/projects/${params.id}`} className="mr-2 p-1 rounded-full hover:bg-zinc-800">
+          <Link href={`/projects/${projectId}`} className="mr-2 p-1 rounded-full hover:bg-zinc-800">
             <ArrowLeft size={20} />
           </Link>
           Modifica Progetto
@@ -384,7 +389,7 @@ export default function EditProjectPage({ params }: { params: { id: string } }) 
           
           {/* Pulsanti */}
           <div className="flex justify-end space-x-4 pt-4 border-t border-zinc-700">
-            <Link href={`/projects/${params.id}`} className="btn btn-outline">
+            <Link href={`/projects/${projectId}`} className="btn btn-outline">
               Annulla
             </Link>
             <button
