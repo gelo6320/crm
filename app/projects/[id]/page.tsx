@@ -697,7 +697,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <button
                       type="submit"
                       disabled={isAddingImage && (!newImageName || !newImageUrl)}
-                      className="btn btn-primary btn-sm"
+                      className="btn btn-primary btn-sm inline-flex items-center justify-center "
                     >
                       {isAddingImage ? (
                         <span className="flex items-center">
@@ -746,7 +746,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </p>
               <button 
                 onClick={() => setIsAddingImage(true)}
-                className="btn btn-primary btn-sm"
+                className="btn btn-primary btn-sm inline-flex items-center justify-center "
               >
                 <Plus size={16} className="mr-1" />
                 Aggiungi la prima immagine
@@ -835,7 +835,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   <button
                     type="submit"
                     disabled={isAddingDocument && (!newDocumentName || !newDocumentUrl)}
-                    className="btn btn-primary btn-sm"
+                    className="btn btn-primary btn-sm inline-flex items-center justify-center "
                   >
                     {isAddingDocument ? (
                       <span className="flex items-center">
@@ -889,7 +889,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </p>
               <button 
                 onClick={() => setIsAddingDocument(true)}
-                className="btn btn-primary btn-sm"
+                className="btn btn-primary btn-sm inline-flex items-center justify-center "
               >
                 <Plus size={16} className="mr-1" />
                 Aggiungi il primo documento
@@ -970,7 +970,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                   <button
                     type="submit"
                     disabled={isAddingTask && !newTaskName}
-                    className="btn btn-primary btn-sm"
+                    className="btn btn-primary btn-sm inline-flex items-center justify-center "
                   >
                     {isAddingTask ? (
                       <span className="flex items-center">
@@ -1020,7 +1020,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               </p>
               <button 
                 onClick={() => setIsAddingTask(true)}
-                className="btn btn-primary btn-sm"
+                className="btn btn-primary btn-sm inline-flex items-center justify-center "
               >
                 <Plus size={16} className="mr-1" />
                 Aggiungi la prima attività
@@ -1055,7 +1055,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 <button
                   type="submit"
                   disabled={isAddingNote || !newNote.trim()}
-                  className="btn btn-primary btn-sm"
+                  className="btn btn-primary btn-sm inline-flex items-center justify-center "
                 >
                   {isAddingNote ? (
                     <span className="flex items-center">
