@@ -1,8 +1,8 @@
 // app/contacts/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { Users, Filter, Search, RefreshCw, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Users, Filter, Search, RefreshCw, ChevronDown, Phone, MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -12,6 +12,7 @@ import { Lead, Booking } from "@/types";
 import { fetchForms } from "@/lib/api/forms";
 import { fetchFacebookLeads } from "@/lib/api/facebook-leads";
 import { fetchBookings } from "@/lib/api/bookings";
+import { toast } from "@/components/ui/toaster";
 
 // Definizione dell'interfaccia per i contatti unificati
 interface Contact {
@@ -24,6 +25,144 @@ interface Contact {
   status: string;
   createdAt: string;
   updatedAt?: string;
+  message?: string;
+  service?: string;
+  value?: number;
+}
+
+// Tipo di filtro attivo
+type FilterType = "source" | "status";
+
+// Interfaccia per i dettagli di un contatto
+interface ContactDetailModalProps {
+  contact: Contact;
+  onClose: () => void;
+}
+
+// Componente modale per i dettagli di un contatto
+function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
+  const handleCall = () => {
+    if (contact.phone) {
+      window.location.href = `tel:${contact.phone}`;
+    } else {
+      toast("error", "Numero non disponibile", "Questo contatto non ha un numero di telefono.");
+    }
+  };
+
+  const handleWhatsApp = () => {
+    if (contact.phone) {
+      // Formatta il numero rimuovendo eventuali spazi o caratteri speciali
+      const formattedPhone = contact.phone.replace(/\s+/g, '').replace(/[()-]/g, '');
+      window.open(`https://wa.me/${formattedPhone.startsWith('+') ? formattedPhone.substring(1) : formattedPhone}`, '_blank');
+    } else {
+      toast("error", "Numero non disponibile", "Questo contatto non ha un numero di telefono.");
+    }
+  };
+
+  // Chiudi la modale quando si preme ESC
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      {/* Overlay per chiudere la modale cliccando fuori */}
+      <div className="absolute inset-0" onClick={onClose}></div>
+      
+      {/* Contenuto della modale */}
+      <div className="bg-zinc-800 rounded-lg shadow-xl w-full max-w-lg mx-4 z-10 animate-scale-in overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700 bg-zinc-900">
+          <h3 className="text-lg font-medium">Dettagli contatto</h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        
+        <div className="p-5">
+          {/* Intestazione con nome e stato */}
+          <div className="mb-6 flex justify-between items-center">
+            <h2 className="text-2xl font-bold">{contact.name}</h2>
+            <StatusBadge status={contact.status} />
+          </div>
+          
+          {/* Sezione info contatto */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-medium text-zinc-400 mb-1">Email</h4>
+                <p className="text-primary">{contact.email}</p>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium text-zinc-400 mb-1">Telefono</h4>
+                <p>{contact.phone || "Non disponibile"}</p>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium text-zinc-400 mb-1">Fonte</h4>
+                <p>{contact.source}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-medium text-zinc-400 mb-1">Data creazione</h4>
+                <p>{formatDate(contact.createdAt)}</p>
+              </div>
+              
+              {contact.service && (
+                <div>
+                  <h4 className="text-sm font-medium text-zinc-400 mb-1">Servizio</h4>
+                  <p>{contact.service}</p>
+                </div>
+              )}
+              
+              {contact.value !== undefined && (
+                <div>
+                  <h4 className="text-sm font-medium text-zinc-400 mb-1">Valore</h4>
+                  <p className="text-primary font-medium">€{contact.value.toLocaleString('it-IT')}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Messaggi o note */}
+          {contact.message && (
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-zinc-400 mb-1">Messaggio</h4>
+              <p className="p-3 bg-zinc-900 rounded text-sm">{contact.message}</p>
+            </div>
+          )}
+          
+          {/* Pulsanti azione */}
+          <div className="flex gap-3">
+            <button onClick={handleCall} className="flex-1 btn bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2">
+              <Phone size={18} />
+              <span>Chiama</span>
+            </button>
+            
+            <button onClick={handleWhatsApp} className="flex-1 btn bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2">
+              <MessageCircle size={18} />
+              <span>WhatsApp</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function ContactsPage() {
@@ -34,16 +173,18 @@ export default function ContactsPage() {
   const [selectedStatus, setSelectedStatus] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
-  const [isSourceDropdownOpen, setIsSourceDropdownOpen] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [activeFilterType, setActiveFilterType] = useState<FilterType | null>(null);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const router = useRouter();
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
   
-  // Gestisci il click fuori dai dropdown per chiuderli
+  // Gestisci il click fuori dal dropdown per chiuderlo
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Chiudi i dropdown se si clicca fuori da essi
-      setIsSourceDropdownOpen(false);
-      setIsStatusDropdownOpen(false);
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setIsFilterDropdownOpen(false);
+      }
     };
     
     document.addEventListener('mousedown', handleClickOutside);
@@ -52,17 +193,11 @@ export default function ContactsPage() {
     };
   }, []);
   
-  // Toggle dei dropdown
-  const toggleSourceDropdown = (e: React.MouseEvent) => {
+  // Toggle del dropdown
+  const toggleFilterDropdown = (e: React.MouseEvent, type: FilterType) => {
     e.stopPropagation(); // Previeni che l'evento raggiunga il document
-    setIsSourceDropdownOpen(!isSourceDropdownOpen);
-    setIsStatusDropdownOpen(false); // Chiudi l'altro dropdown
-  };
-  
-  const toggleStatusDropdown = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Previeni che l'evento raggiunga il document
-    setIsStatusDropdownOpen(!isStatusDropdownOpen);
-    setIsSourceDropdownOpen(false); // Chiudi l'altro dropdown
+    setIsFilterDropdownOpen(!isFilterDropdownOpen);
+    setActiveFilterType(type);
   };
   
   // Carica i contatti all'avvio e quando cambiano i filtri
@@ -145,6 +280,7 @@ export default function ContactsPage() {
     } catch (error) {
       console.error("Error loading contacts:", error);
       setIsLoading(false);
+      toast("error", "Errore", "Impossibile caricare i contatti");
     }
   };
   
@@ -157,14 +293,14 @@ export default function ContactsPage() {
   const handleStatusFilter = (status: string) => {
     setSelectedStatus(status);
     setCurrentPage(1);
-    setIsStatusDropdownOpen(false);
+    setIsFilterDropdownOpen(false);
   };
   
   // Gestisce il cambio di filtro per source
   const handleSourceFilter = (source: string) => {
     setSourceFilter(source);
     setCurrentPage(1);
-    setIsSourceDropdownOpen(false);
+    setIsFilterDropdownOpen(false);
   };
   
   // Gestisce la ricerca
@@ -176,20 +312,7 @@ export default function ContactsPage() {
   
   // Gestisce il click su un contatto
   const handleContactClick = (contact: Contact) => {
-    // In base al tipo di contatto, reindirizzare alla pagina di dettaglio appropriata
-    switch (contact.sourceType) {
-      case 'form':
-        router.push(`/forms/${contact._id}`);
-        break;
-      case 'facebook':
-        router.push(`/facebook-leads/${contact._id}`);
-        break;
-      case 'booking':
-        router.push(`/bookings/${contact._id}`);
-        break;
-      default:
-        break;
-    }
+    setSelectedContact(contact);
   };
   
   // Ottiene l'icona appropriata per il tipo di fonte
@@ -224,14 +347,33 @@ export default function ContactsPage() {
     }
   };
   
-  // Funzione per ottenere l'etichetta del filtro fonte
-  const getSourceFilterLabel = () => {
-    switch(sourceFilter) {
-      case "form": return "Form di contatto";
-      case "facebook": return "Lead Facebook";
-      case "booking": return "Prenotazioni";
-      default: return "Tutte le fonti";
+  // Ottiene l'etichetta del filtro attivo
+  const getActiveFilterLabel = () => {
+    if (sourceFilter) {
+      switch(sourceFilter) {
+        case "form": return "Form di contatto";
+        case "facebook": return "Lead Facebook";
+        case "booking": return "Prenotazioni";
+        default: return "";
+      }
     }
+    
+    if (selectedStatus) {
+      switch(selectedStatus) {
+        case "new": return "Nuovi";
+        case "contacted": return "Contattati";
+        case "qualified": return "Qualificati";
+        case "opportunity": return "Opportunità";
+        case "customer": return "Clienti";
+        case "lost": return "Persi";
+        case "pending": return "In attesa";
+        case "confirmed": return "Confermati";
+        case "completed": return "Completati";
+        default: return "";
+      }
+    }
+    
+    return "Filtra";
   };
   
   if (isLoading && contacts.length === 0) {
@@ -246,150 +388,138 @@ export default function ContactsPage() {
           Tutti i Contatti
         </h1>
         
-        <div className="flex items-center space-x-2">
-          {/* Filtro per fonte */}
-          <div className="relative">
-            <button
-              onClick={toggleSourceDropdown}
-              className={`btn ${sourceFilter ? 'btn-primary' : 'btn-outline'} flex items-center space-x-1 p-1.5`}
-            >
-              <Filter size={16} />
-              <span className="hidden sm:inline">{getSourceFilterLabel()}</span>
-              <ChevronDown size={14} />
-            </button>
-            
-            {isSourceDropdownOpen && (
-              <div 
-                className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-zinc-800 border border-zinc-700 z-10"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="py-1">
-                  <button
-                    onClick={() => handleSourceFilter("")}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      sourceFilter === "" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                    }`}
-                  >
-                    Tutte le fonti
-                  </button>
-                  <button
-                    onClick={() => handleSourceFilter("form")}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      sourceFilter === "form" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                    }`}
-                  >
-                    Form di Contatto
-                  </button>
-                  <button
-                    onClick={() => handleSourceFilter("facebook")}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      sourceFilter === "facebook" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                    }`}
-                  >
-                    Lead Facebook
-                  </button>
-                  <button
-                    onClick={() => handleSourceFilter("booking")}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      sourceFilter === "booking" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                    }`}
-                  >
-                    Prenotazioni
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Filtro per stato */}
-          <div className="relative">
-            <button
-              onClick={toggleStatusDropdown}
-              className={`btn ${selectedStatus ? 'btn-primary' : 'btn-outline'} flex items-center space-x-1 p-1.5`}
-            >
-              <Filter size={16} />
-              <span className="hidden sm:inline">{selectedStatus || "Tutti gli stati"}</span>
-              <ChevronDown size={14} />
-            </button>
-            
-            {isStatusDropdownOpen && (
-              <div 
-                className="absolute right-0 mt-1 w-40 rounded-md shadow-lg bg-zinc-800 border border-zinc-700 z-10"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="py-1">
-                  <button
-                    onClick={() => handleStatusFilter("")}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      selectedStatus === "" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                    }`}
-                  >
-                    Tutti gli stati
-                  </button>
-                  <button
-                    onClick={() => handleStatusFilter("new")}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      selectedStatus === "new" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                    }`}
-                  >
-                    Nuovi
-                  </button>
-                  <button
-                    onClick={() => handleStatusFilter("contacted")}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      selectedStatus === "contacted" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                    }`}
-                  >
-                    Contattati
-                  </button>
-                  <button
-                    onClick={() => handleStatusFilter("qualified")}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      selectedStatus === "qualified" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                    }`}
-                  >
-                    Qualificati
-                  </button>
-                  <button
-                    onClick={() => handleStatusFilter("opportunity")}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      selectedStatus === "opportunity" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                    }`}
-                  >
-                    Opportunità
-                  </button>
-                  <button
-                    onClick={() => handleStatusFilter("customer")}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      selectedStatus === "customer" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                    }`}
-                  >
-                    Clienti
-                  </button>
-                  <button
-                    onClick={() => handleStatusFilter("lost")}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      selectedStatus === "lost" ? "bg-primary/10 text-primary" : "hover:bg-zinc-700"
-                    }`}
-                  >
-                    Persi
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Ricerca */}
+        <div className="flex items-center gap-2">
+          {/* Barra di ricerca */}
           <form onSubmit={handleSearch} className="relative">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cerca..."
-              className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 pl-9 text-sm w-full md:w-auto focus:ring-primary focus:border-primary"
+              className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 pl-9 text-sm w-full focus:ring-primary focus:border-primary"
             />
             <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-zinc-400" />
           </form>
+          
+          {/* Componente filtro unificato */}
+          <div className="relative" ref={filterDropdownRef}>
+            <button
+              onClick={(e) => toggleFilterDropdown(e, 'status')}
+              className={`btn ${sourceFilter || selectedStatus ? 'btn-primary' : 'btn-outline'} flex items-center gap-2 py-1.5`}
+            >
+              <Filter size={16} />
+              <span className="hidden sm:inline">{getActiveFilterLabel()}</span>
+              <ChevronDown size={14} />
+            </button>
+            
+            {isFilterDropdownOpen && (
+              <div className="absolute right-0 mt-1 w-52 rounded-md shadow-lg bg-zinc-800 border border-zinc-700 z-20 animate-fade-in">
+                <div className="p-1">
+                  {/* Tab selector per tipo di filtro */}
+                  <div className="flex border-b border-zinc-700 mb-1">
+                    <button
+                      onClick={() => setActiveFilterType('status')}
+                      className={`flex-1 px-3 py-1.5 text-xs font-medium ${
+                        activeFilterType === 'status' 
+                          ? 'border-b-2 border-primary text-primary' 
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      Stato
+                    </button>
+                    <button
+                      onClick={() => setActiveFilterType('source')}
+                      className={`flex-1 px-3 py-1.5 text-xs font-medium ${
+                        activeFilterType === 'source' 
+                          ? 'border-b-2 border-primary text-primary' 
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      Fonte
+                    </button>
+                  </div>
+                  
+                  {/* Opzioni filtro stato */}
+                  {activeFilterType === 'status' && (
+                    <div className="py-1">
+                      <button
+                        onClick={() => handleStatusFilter("")}
+                        className={`w-full text-left px-3 py-1.5 text-sm rounded ${
+                          selectedStatus === "" 
+                            ? "bg-primary/10 text-primary" 
+                            : "hover:bg-zinc-700"
+                        }`}
+                      >
+                        Tutti gli stati
+                      </button>
+                      {["new", "contacted", "qualified", "opportunity", "customer", "lost"].map(status => (
+                        <button
+                          key={status}
+                          onClick={() => handleStatusFilter(status)}
+                          className={`w-full text-left px-3 py-1.5 text-sm rounded ${
+                            selectedStatus === status 
+                              ? "bg-primary/10 text-primary" 
+                              : "hover:bg-zinc-700"
+                          }`}
+                        >
+                          <StatusBadge status={status} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Opzioni filtro fonte */}
+                  {activeFilterType === 'source' && (
+                    <div className="py-1">
+                      <button
+                        onClick={() => handleSourceFilter("")}
+                        className={`w-full text-left px-3 py-1.5 text-sm rounded ${
+                          sourceFilter === "" 
+                            ? "bg-primary/10 text-primary" 
+                            : "hover:bg-zinc-700"
+                        }`}
+                      >
+                        Tutte le fonti
+                      </button>
+                      <button
+                        onClick={() => handleSourceFilter("form")}
+                        className={`w-full text-left px-3 py-1.5 text-sm rounded flex items-center ${
+                          sourceFilter === "form" 
+                            ? "bg-primary/10 text-primary" 
+                            : "hover:bg-zinc-700"
+                        }`}
+                      >
+                        {getSourceIcon('form')}
+                        <span className="ml-2">Form di contatto</span>
+                      </button>
+                      <button
+                        onClick={() => handleSourceFilter("facebook")}
+                        className={`w-full text-left px-3 py-1.5 text-sm rounded flex items-center ${
+                          sourceFilter === "facebook" 
+                            ? "bg-primary/10 text-primary" 
+                            : "hover:bg-zinc-700"
+                        }`}
+                      >
+                        {getSourceIcon('facebook')}
+                        <span className="ml-2">Lead Facebook</span>
+                      </button>
+                      <button
+                        onClick={() => handleSourceFilter("booking")}
+                        className={`w-full text-left px-3 py-1.5 text-sm rounded flex items-center ${
+                          sourceFilter === "booking" 
+                            ? "bg-primary/10 text-primary" 
+                            : "hover:bg-zinc-700"
+                        }`}
+                      >
+                        {getSourceIcon('booking')}
+                        <span className="ml-2">Prenotazioni</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           
           {/* Refresh button */}
           <button 
@@ -482,6 +612,14 @@ export default function ContactsPage() {
           </div>
         )}
       </div>
+      
+      {/* Modale dettagli contatto */}
+      {selectedContact && (
+        <ContactDetailModal 
+          contact={selectedContact}
+          onClose={() => setSelectedContact(null)}
+        />
+      )}
     </div>
   );
 }
