@@ -203,7 +203,7 @@ export default function ContactsPage() {
   // Carica i contatti all'avvio e quando cambiano i filtri
   useEffect(() => {
     loadContacts();
-  }, [currentPage, selectedStatus, searchQuery, sourceFilter]);
+  }, [currentPage, selectedStatus, sourceFilter]);
   
   // Funzione per caricare i contatti da tutte le fonti
   const loadContacts = async () => {
@@ -212,19 +212,19 @@ export default function ContactsPage() {
       
       // Chiamate parallele alle API esistenti
       const [formsResponse, facebookResponse, bookingsResponse] = await Promise.all([
-        // Carica i form solo se non c'è un filtro su un'altra fonte
+        // Carica i form solo se non c'è un filtro su un'altra fonte o il filtro è form
         sourceFilter === "" || sourceFilter === "form" 
-          ? fetchForms(1, selectedStatus, searchQuery)
+          ? fetchForms(1, selectedStatus, searchQuery) // Usa sempre pagina 1 per garantire consistenza
           : Promise.resolve({ data: [], pagination: { total: 0, pages: 0 } }),
           
-        // Carica i lead Facebook solo se non c'è un filtro su un'altra fonte
+        // Carica i lead Facebook solo se non c'è un filtro su un'altra fonte o il filtro è facebook
         sourceFilter === "" || sourceFilter === "facebook" 
-          ? fetchFacebookLeads(1, selectedStatus, searchQuery)
+          ? fetchFacebookLeads(1, selectedStatus, searchQuery) // Usa sempre pagina 1 per garantire consistenza
           : Promise.resolve({ data: [], pagination: { total: 0, pages: 0 } }),
           
-        // Carica le prenotazioni solo se non c'è un filtro su un'altra fonte
+        // Carica le prenotazioni solo se non c'è un filtro su un'altra fonte o il filtro è booking
         sourceFilter === "" || sourceFilter === "booking" 
-          ? fetchBookings(1, selectedStatus, searchQuery)
+          ? fetchBookings(1, selectedStatus, searchQuery) // Usa sempre pagina 1 per garantire consistenza
           : Promise.resolve({ data: [], pagination: { total: 0, pages: 0 } })
       ]);
       
