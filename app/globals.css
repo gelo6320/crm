@@ -993,3 +993,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 input[type="date"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
+
+html, body {
+  touch-action: none;  /* Disabilita tutte le azioni touch native */
+  -ms-touch-action: none;  /* Per supporto IE */
+  -webkit-touch-callout: none;  /* Previene il menu contestuale su iOS */
+  -webkit-user-select: none;  /* Previene la selezione del testo */
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
