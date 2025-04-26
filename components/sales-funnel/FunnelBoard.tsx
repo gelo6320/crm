@@ -43,17 +43,49 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   // Refs
   const boardRef = useRef<HTMLDivElement>(null);
   const dragItemRef = useRef<HTMLDivElement>(null);
-  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const draggedLeadRef = useRef<FunnelItem | null>(null);
   const dragOriginRef = useRef<{ status: string, x: number, y: number } | null>(null);
   const dragPositionRef = useRef<{ x: number, y: number } | null>(null);
   
-  // Clean up interval on unmount
+  // Auto scroll refs
+  const autoScrollRef = useRef<{
+    active: boolean;
+    animationId: number | null;
+    scrollSpeed: { x: number; y: number };
+  }>({
+    active: false,
+    animationId: null,
+    scrollSpeed: { x: 0, y: 0 }
+  });
+  
+  // Clean up animation frame on unmount
   useEffect(() => {
     return () => {
-      cleanupAutoScroll();
+      if (autoScrollRef.current.animationId !== null) {
+        cancelAnimationFrame(autoScrollRef.current.animationId);
+      }
     };
   }, []);
+
+  // Auto scroll animation
+  const autoScrollAnimation = () => {
+    if (!boardRef.current || !autoScrollRef.current.active) return;
+    
+    const { scrollSpeed } = autoScrollRef.current;
+    
+    if (scrollSpeed.x !== 0) {
+      boardRef.current.scrollLeft += scrollSpeed.x;
+    }
+    
+    if (scrollSpeed.y !== 0) {
+      boardRef.current.scrollTop += scrollSpeed.y;
+    }
+    
+    // Continue animation if still active
+    if (autoScrollRef.current.active) {
+      autoScrollRef.current.animationId = requestAnimationFrame(autoScrollAnimation);
+    }
+  };
 
   const updateDragPreviewPosition = (clientX: number, clientY: number): void => {
     if (!dragItemRef.current || !dragOrigin) return;
@@ -167,6 +199,13 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     } else {
       console.error(`[DRAG DEBUG] ❌ ERRORE: dragItemRef.current è null!`);
     }
+    
+    // Initialize auto scroll
+    autoScrollRef.current = {
+      active: true,
+      animationId: requestAnimationFrame(autoScrollAnimation),
+      scrollSpeed: { x: 0, y: 0 }
+    };
   };
   
   // Handle drag movement
@@ -212,8 +251,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     // Aggiorniamo lo stato solo alla fine per ridurre i re-render
     setDragPosition(positionData);
     
-    // Handle auto-scrolling
-    handleAutoScroll(e.clientX);
+    // Handle auto-scrolling with improved logic
+    updateAutoScroll(e.clientX, e.clientY);
   };
 
   let funnelColumnsCache: NodeListOf<Element> | null = null;
@@ -242,6 +281,47 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
     
     return foundColumn ? (foundColumn as HTMLElement).id : null;
+  };
+  
+  // Improved auto-scrolling logic
+  const updateAutoScroll = (clientX: number, clientY: number) => {
+    if (!boardRef.current || !autoScrollRef.current.active) return;
+    
+    const board = boardRef.current;
+    const boardRect = board.getBoundingClientRect();
+    
+    // Edge detection zones (in pixels from edge)
+    const edgeSize = 60; // pixels from edge to trigger scrolling
+    
+    // Calculate scroll speed - the closer to the edge, the faster it scrolls
+    let scrollSpeedX = 0;
+    let scrollSpeedY = 0;
+    
+    // Check horizontal scroll
+    if (clientX < boardRect.left + edgeSize) {
+      // Left edge - scroll left
+      scrollSpeedX = -Math.max(1, 15 * (1 - (clientX - boardRect.left) / edgeSize));
+    } else if (clientX > boardRect.right - edgeSize) {
+      // Right edge - scroll right
+      scrollSpeedX = Math.max(1, 15 * (1 - (boardRect.right - clientX) / edgeSize));
+    }
+    
+    // Check vertical scroll (if needed)
+    if (clientY < boardRect.top + edgeSize) {
+      // Top edge - scroll up
+      scrollSpeedY = -Math.max(1, 15 * (1 - (clientY - boardRect.top) / edgeSize));
+    } else if (clientY > boardRect.bottom - edgeSize) {
+      // Bottom edge - scroll down
+      scrollSpeedY = Math.max(1, 15 * (1 - (boardRect.bottom - clientY) / edgeSize));
+    }
+    
+    // Update scroll speed in ref
+    autoScrollRef.current.scrollSpeed = { x: scrollSpeedX, y: scrollSpeedY };
+    
+    // Ensure animation is running if needed
+    if ((scrollSpeedX !== 0 || scrollSpeedY !== 0) && autoScrollRef.current.animationId === null) {
+      autoScrollRef.current.animationId = requestAnimationFrame(autoScrollAnimation);
+    }
   };
   
   // Handler for touch move events
@@ -295,62 +375,20 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       setTargetColumn(newTargetColumn);
     }
     
-    // Handle auto-scrolling
-    handleAutoScroll(touch.clientX);
-  };
-
-  const SCROLL_ZONE_SIZE = 25; // 25% su ciascun lato
-  const SCROLL_SPEED = 15;
-  
-  // Handle auto-scrolling when dragging near the edges
-  const handleAutoScroll = (clientX: number) => {
-    if (!boardRef.current) return;
-    
-    // Ferma qualsiasi scroll precedente
-    if (scrollIntervalRef.current) {
-      clearInterval(scrollIntervalRef.current);
-      scrollIntervalRef.current = null;
-    }
-    
-    const board = boardRef.current;
-    const boardRect = board.getBoundingClientRect();
-    
-    // Calcola le zone di scroll (percentuale della larghezza del viewport)
-    const leftScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
-    const rightScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
-    
-    // Limiti delle zone di scroll
-    const leftScrollZone = boardRect.left + leftScrollZoneWidth;
-    const rightScrollZone = boardRect.right - rightScrollZoneWidth;
-    
-    // Determina se dobbiamo fare scroll e in quale direzione
-    if (clientX < leftScrollZone) {
-      // Scroll verso sinistra a velocità costante
-      scrollIntervalRef.current = setInterval(() => {
-        board.scrollLeft -= SCROLL_SPEED;
-      }, 16); // Circa 60fps
-    } else if (clientX > rightScrollZone) {
-      // Scroll verso destra a velocità costante
-      scrollIntervalRef.current = setInterval(() => {
-        board.scrollLeft += SCROLL_SPEED;
-      }, 16); // Circa 60fps
-    }
-  };
-  
-  // Non dimenticare di pulire l'intervallo quando il drag termina
-  const cleanupAutoScroll = () => {
-    if (scrollIntervalRef.current) {
-      clearInterval(scrollIntervalRef.current);
-      scrollIntervalRef.current = null;
-    }
+    // Update auto-scrolling with touch position
+    updateAutoScroll(touch.clientX, touch.clientY);
   };
   
   // End dragging
   const handleDragEnd = (e: MouseEvent): void => {
     console.log(`[DRAG DEBUG] 🛑 Fine drag (mouse) - Coordinate: (${e.clientX}, ${e.clientY})`);
     
-    // Cleanup autoscroll
-    cleanupAutoScroll();
+    // Stop auto-scrolling
+    if (autoScrollRef.current.animationId !== null) {
+      cancelAnimationFrame(autoScrollRef.current.animationId);
+      autoScrollRef.current.animationId = null;
+      autoScrollRef.current.active = false;
+    }
     
     // Controllo finale della colonna al rilascio
     const finalTargetColumn = detectTargetColumn(e.clientX, e.clientY);
@@ -375,8 +413,12 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>): void => {
     console.log(`[DRAG DEBUG] 🛑 Fine drag (touch)`);
     
-    // Cleanup autoscroll
-    cleanupAutoScroll();
+    // Stop auto-scrolling
+    if (autoScrollRef.current.animationId !== null) {
+      cancelAnimationFrame(autoScrollRef.current.animationId);
+      autoScrollRef.current.animationId = null;
+      autoScrollRef.current.active = false;
+    }
     
     // Registra la posizione finale del drag preview prima della pulizia
     if (dragItemRef.current) {
@@ -393,8 +435,12 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     const effectiveTargetColumn = finalTargetColumn || targetColumn;
     console.log(`[DRAG DEBUG] 🧹 Esecuzione pulizia drag comune`);
     
-    // Ferma lo scroll automatico
-    cleanupAutoScroll();  
+    // Stop auto-scrolling
+    if (autoScrollRef.current.animationId !== null) {
+      cancelAnimationFrame(autoScrollRef.current.animationId);
+      autoScrollRef.current.animationId = null;
+      autoScrollRef.current.active = false;
+    }
     
     // Handle the drop if over a valid column
     if (draggedLeadRef.current && effectiveTargetColumn) {
@@ -546,36 +592,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
   
-  // Drag preview style
-  const getDragPreviewStyle = () => {
-    if (!dragPosition || !dragOrigin) {
-      console.log(`[DRAG DEBUG] ❌ getDragPreviewStyle chiamato ma dragPosition o dragOrigin è null`);
-      return { display: 'none' };
-    }
-    
-    const left = dragPosition.x - dragOrigin.x;
-    const top = dragPosition.y - dragOrigin.y;
-    
-    console.log(`[DRAG DEBUG] 🎨 Creando stile per preview - Position: (${left}, ${top})`);
-    console.log(`[DRAG DEBUG] 📊 Dati usati: dragPosition=(${dragPosition.x}, ${dragPosition.y}), dragOrigin=(${dragOrigin.x}, ${dragOrigin.y})`);
-    
-    const style = {
-      display: 'block',
-      position: 'fixed' as 'fixed',
-      left: `${left}px`,
-      top: `${top}px`,
-      opacity: 0.8,
-      zIndex: 1000,
-      pointerEvents: 'none' as 'none',
-      transform: 'rotate(4deg)',
-      width: '250px',
-    };
-    
-    console.log(`[DRAG DEBUG] 🖌️ Stile finale preview:`, style);
-    
-    return style;
-  };
-
   return (
     <>
       <div 
@@ -671,37 +687,37 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           lead={editingLead}
           onClose={() => setEditingLead(null)}
           onSave={handleSaveLeadValue}
-        />
-      )}
-    </>
-  );
-}
-
-// Helper function to get border color
-function getBorderColor(status: string): string {
-  switch (status) {
-    case "new": return "#71717a"; // zinc-500
-    case "contacted": return "#3498db"; // info
-    case "qualified": return "#FF6B00"; // primary
-    case "opportunity": return "#e67e22"; // warning
-    case "proposal": return "#FF8C38"; // primary-hover
-    case "customer": return "#27ae60"; // success
-    case "lost": return "#e74c3c"; // danger
-    default: return "#71717a"; // zinc-500
+          />
+        )}
+      </>
+    );
   }
-}
-
-// Helper function to format date
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('it-IT', {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
-
-// Helper function to format money
-function formatMoney(value: number): string {
-  return value.toLocaleString('it-IT');
-}
+  
+  // Helper function to get border color
+  function getBorderColor(status: string): string {
+    switch (status) {
+      case "new": return "#71717a"; // zinc-500
+      case "contacted": return "#3498db"; // info
+      case "qualified": return "#FF6B00"; // primary
+      case "opportunity": return "#e67e22"; // warning
+      case "proposal": return "#FF8C38"; // primary-hover
+      case "customer": return "#27ae60"; // success
+      case "lost": return "#e74c3c"; // danger
+      default: return "#71717a"; // zinc-500
+    }
+  }
+  
+  // Helper function to format date
+  function formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('it-IT', {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+  }
+  
+  // Helper function to format money
+  function formatMoney(value: number): string {
+    return value.toLocaleString('it-IT');
+  }
