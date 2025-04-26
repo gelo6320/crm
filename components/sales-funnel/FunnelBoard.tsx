@@ -7,6 +7,22 @@ import { updateLeadMetadata } from "@/lib/api/funnel";
 import FacebookEventModal from "./FacebookEventModal";
 import ValueModal from "./ValueModal";
 
+// Importazioni dnd-kit
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor,
+  Modifier,
+  defaultDropAnimationSideEffects,
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
+} from "@dnd-kit/core";
+import { restrictToWindowEdges } from "@dnd-kit/modifiers";
+
 interface CustomFunnelBoardProps {
   funnelData: FunnelData;
   setFunnelData: React.Dispatch<React.SetStateAction<FunnelData>>;
@@ -34,389 +50,87 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   } | null>(null);
   
   // Stato per tracciare i lead in fase di trascinamento
-  const [draggedLead, setDraggedLead] = useState<FunnelItem | null>(null);
-  const [targetColumn, setTargetColumn] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeLead, setActiveLead] = useState<FunnelItem | null>(null);
+  const [activeStatus, setActiveStatus] = useState<string | null>(null);
   
-  // Refs
+  // Ref per il contenitore principale (per l'autoscroll)
   const boardRef = useRef<HTMLDivElement>(null);
   
-  // Ref per tenere traccia dell'elemento trascinato
-  const dragElementRef = useRef<{
-    element: HTMLElement | null;
-    offsetX: number;
-    offsetY: number;
-    startX: number;
-    startY: number;
-    lead: FunnelItem | null;
-    startStatus: string | null;
-  }>({
-    element: null,
-    offsetX: 0,
-    offsetY: 0,
-    startX: 0,
-    startY: 0,
-    lead: null,
-    startStatus: null
-  });
+  // Configurazione sensori dnd-kit
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // Inizia il drag dopo 5px di movimento
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      // Per accessibilità: permette drag con tastiera
+      coordinateGetter: () => {
+        return { x: 0, y: 0 }; // Semplificato
+      },
+    })
+  );
   
-  // Ref per l'autoscroll
-  const autoScrollRef = useRef<{
-    active: boolean;
-    direction: number;  // -1 = sinistra, 1 = destra, 0 = nessuno
-    speed: number;
-    animationId: number | null;
-  }>({
-    active: false,
-    direction: 0,
-    speed: 0,
-    animationId: null
-  });
-
-  // Aggiungi gli event listener quando il componente viene montato
-  useEffect(() => {
-    // Prepara i card per il drag and drop
-    setupCards();
-    
-    // Pulizia quando il componente viene smontato
-    return () => {
-      stopAutoScroll();
-    };
-  }, [funnelData]);
+  // Configurazione modificatori
+  const modifiers: Modifier[] = [
+    restrictToWindowEdges 
+  ];
   
-  // Avvia l'autoscroll
-  const startAutoScroll = (direction: number, speed: number) => {
-    // Aggiorna lo stato dell'autoscroll
-    autoScrollRef.current = {
-      ...autoScrollRef.current,
-      active: true,
-      direction,
-      speed
-    };
+  // Gestore inizio drag
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const draggedId = active.id as string;
     
-    // Se l'animazione non è già in corso, iniziala
-    if (!autoScrollRef.current.animationId) {
-      autoScrollRef.current.animationId = requestAnimationFrame(performAutoScroll);
-    }
-  };
-  
-  // Ferma l'autoscroll
-  const stopAutoScroll = () => {
-    if (autoScrollRef.current.animationId) {
-      cancelAnimationFrame(autoScrollRef.current.animationId);
-    }
-    
-    autoScrollRef.current = {
-      active: false,
-      direction: 0,
-      speed: 0,
-      animationId: null
-    };
-  };
-  
-  // Esegue l'autoscroll
-  const performAutoScroll = () => {
-    if (!autoScrollRef.current.active || !boardRef.current) {
-      autoScrollRef.current.animationId = null;
-      return;
-    }
-    
-    // Esegui lo scroll
-    const { direction, speed } = autoScrollRef.current;
-    if (direction !== 0) {
-      boardRef.current.scrollLeft += direction * speed;
-    }
-    
-    // Continua l'animazione
-    autoScrollRef.current.animationId = requestAnimationFrame(performAutoScroll);
-  };
-  
-  // Configura i card per il drag and drop
-  const setupCards = () => {
-    setTimeout(() => {
-      const cards = document.querySelectorAll('.funnel-card');
-      
-      cards.forEach(card => {
-        const element = card as HTMLElement;
-        
-        // Aggiungi gli eventi per il drag and drop
-        element.onmousedown = handleMouseDown;
-        element.ontouchstart = handleTouchStart;
-        
-        // Assicurati che il card sia draggable
-        element.draggable = false; // Disabilita il comportamento draggable nativo del browser
-        element.style.touchAction = 'none'; // Previene lo scrolling su touch device
-        element.style.userSelect = 'none'; // Previene la selezione del testo
-      });
-    }, 200); // Piccolo ritardo per assicurarsi che il DOM sia pronto
-  };
-  
-  // Handle per l'inizio del drag con mouse
-  const handleMouseDown = (e: MouseEvent) => {
-    if (e.button !== 0) return; // Solo click sinistro
-    
-    const target = e.currentTarget as HTMLElement;
-    const leadId = target.getAttribute('data-id');
-    if (!leadId) return;
-    
-    // Trova il lead corrispondente
-    let leadItem: FunnelItem | undefined;
-    let leadStatus: string | null = null;
+    // Trova il lead e lo stato corrente
+    let currentLead: FunnelItem | null = null;
+    let currentStatus: string | null = null;
     
     // Cerca il lead in tutte le colonne
-    for (const column of COLUMNS) {
-      const columnId = column.id as keyof FunnelData;
-      const found = funnelData[columnId].find(item => item._id === leadId);
+    for (const colId in funnelData) {
+      const found = funnelData[colId as keyof FunnelData].find(item => item._id === draggedId);
       if (found) {
-        leadItem = found;
-        leadStatus = column.id;
+        currentLead = found;
+        currentStatus = colId;
         break;
       }
     }
     
-    if (!leadItem) return;
-    
-    // Previeni il comportamento di default
-    e.preventDefault();
-    
-    // Inizia il drag
-    startDrag(target, e.clientX, e.clientY, leadItem, leadStatus);
-    
-    // Aggiungi listener globali per il movimento e il rilascio
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-  
-  // Handle per l'inizio del drag con touch
-  const handleTouchStart = (e: TouchEvent) => {
-    const target = e.currentTarget as HTMLElement;
-    const leadId = target.getAttribute('data-id');
-    if (!leadId) return;
-    
-    // Trova il lead corrispondente
-    let leadItem: FunnelItem | undefined;
-    let leadStatus: string | null = null;
-    
-    // Cerca il lead in tutte le colonne
-    for (const column of COLUMNS) {
-      const columnId = column.id as keyof FunnelData;
-      const found = funnelData[columnId].find(item => item._id === leadId);
-      if (found) {
-        leadItem = found;
-        leadStatus = column.id;
-        break;
-      }
-    }
-    
-    if (!leadItem) return;
-    
-    // Previeni il comportamento di default
-    e.preventDefault();
-    
-    // Usa il primo touch point
-    const touch = e.touches[0];
-    
-    // Inizia il drag
-    startDrag(target, touch.clientX, touch.clientY, leadItem, leadStatus);
-    
-    // Aggiungi listener globali per il movimento e il rilascio
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
-  };
-  
-  // Inizia il processo di drag
-  const startDrag = (element: HTMLElement, clientX: number, clientY: number, lead: FunnelItem, status: string | null) => {
-    // Calcola l'offset del mouse rispetto all'elemento
-    const rect = element.getBoundingClientRect();
-    const offsetX = clientX - rect.left;
-    const offsetY = clientY - rect.top;
-    
-    // Memorizza i dati iniziali
-    dragElementRef.current = {
-      element,
-      offsetX,
-      offsetY,
-      startX: clientX,
-      startY: clientY,
-      lead,
-      startStatus: status
-    };
-    
-    // Clona l'elemento per il drag
-    const clone = element.cloneNode(true) as HTMLElement;
-    clone.id = 'drag-clone';
-    clone.style.position = 'fixed';
-    clone.style.zIndex = '1000';
-    clone.style.transform = 'scale(1.05)';
-    clone.style.boxShadow = '0 10px 20px rgba(0,0,0,0.2)';
-    clone.style.opacity = '0.8';
-    clone.style.pointerEvents = 'none';
-    clone.style.width = `${rect.width}px`;
-    
-    // Aggiungi il clone al body
-    document.body.appendChild(clone);
-    
-    // Aggiorna lo stato
-    setDraggedLead(lead);
-    
-    // Posiziona il clone
-    moveAt(clientX, clientY, clone);
-  };
-  
-  // Muove l'elemento alla posizione del cursore
-  const moveAt = (clientX: number, clientY: number, element?: HTMLElement) => {
-    const el = element || document.getElementById('drag-clone');
-    if (!el) return;
-    
-    const { offsetX, offsetY } = dragElementRef.current;
-    
-    // Calcola la nuova posizione
-    const left = clientX - offsetX;
-    const top = clientY - offsetY;
-    
-    // Applica la nuova posizione
-    el.style.left = `${left}px`;
-    el.style.top = `${top}px`;
-  };
-  
-  // Gestisce il movimento del mouse durante il drag
-  const handleMouseMove = (e: MouseEvent) => {
-    // Muovi l'elemento
-    moveAt(e.clientX, e.clientY);
-    
-    // Gestisci l'autoscroll
-    handleAutoScroll(e.clientX, e.clientY);
-    
-    // Rileva la colonna sotto il cursore
-    updateTargetColumn(e.clientX, e.clientY);
-  };
-  
-  // Gestisce il movimento del touch durante il drag
-  const handleTouchMove = (e: TouchEvent) => {
-    // Previeni lo scrolling del browser
-    e.preventDefault();
-    
-    // Usa il primo touch point
-    const touch = e.touches[0];
-    
-    // Muovi l'elemento
-    moveAt(touch.clientX, touch.clientY);
-    
-    // Gestisci l'autoscroll
-    handleAutoScroll(touch.clientX, touch.clientY);
-    
-    // Rileva la colonna sotto il cursore
-    updateTargetColumn(touch.clientX, touch.clientY);
-  };
-  
-  // Gestisce l'autoscroll
-  const handleAutoScroll = (clientX: number, clientY: number) => {
-    if (!boardRef.current) return;
-    
-    const boardRect = boardRef.current.getBoundingClientRect();
-    const edgeSize = 80; // px
-    
-    // Controlla se siamo vicino al bordo sinistro
-    if (clientX < boardRect.left + edgeSize) {
-      // Calcola la velocità (più vicino al bordo = più veloce)
-      const distance = clientX - boardRect.left;
-      const ratio = Math.max(0, Math.min(1, distance / edgeSize));
-      const speed = Math.max(5, Math.floor(20 * (1 - ratio)));
-      
-      // Avvia l'autoscroll verso sinistra
-      startAutoScroll(-1, speed);
-    }
-    // Controlla se siamo vicino al bordo destro
-    else if (clientX > boardRect.right - edgeSize) {
-      // Calcola la velocità (più vicino al bordo = più veloce)
-      const distance = boardRect.right - clientX;
-      const ratio = Math.max(0, Math.min(1, distance / edgeSize));
-      const speed = Math.max(5, Math.floor(20 * (1 - ratio)));
-      
-      // Avvia l'autoscroll verso destra
-      startAutoScroll(1, speed);
-    }
-    // Siamo lontani dai bordi, ferma l'autoscroll
-    else {
-      stopAutoScroll();
+    if (currentLead) {
+      setActiveLead(currentLead);
+      setActiveId(draggedId);
+      setActiveStatus(currentStatus);
     }
   };
   
-  // Aggiorna la colonna target in base alla posizione
-  const updateTargetColumn = (clientX: number, clientY: number) => {
-    // Ottieni tutte le colonne
-    const columns = document.querySelectorAll('.funnel-column');
-    let newTarget: string | null = null;
-    
-    columns.forEach(column => {
-      const rect = column.getBoundingClientRect();
-      if (
-        clientX >= rect.left && 
-        clientX <= rect.right && 
-        clientY >= rect.top && 
-        clientY <= rect.bottom
-      ) {
-        newTarget = (column as HTMLElement).id;
-      }
-    });
-    
-    // Aggiorna la colonna target se cambiata
-    if (newTarget !== targetColumn) {
-      setTargetColumn(newTarget);
-    }
+  // Gestore durante il drag
+  const handleDragOver = (_event: DragOverEvent) => {
+    // L'overlay e l'autoscroll sono gestiti automaticamente da dnd-kit
   };
   
-  // Gestisce il rilascio del mouse
-  const handleMouseUp = () => {
-    finishDrag();
+  // Gestore fine drag
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
     
-    // Rimuovi i listener globali
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  };
-  
-  // Gestisce il rilascio del touch
-  const handleTouchEnd = () => {
-    finishDrag();
+    setActiveId(null);
     
-    // Rimuovi i listener globali
-    document.removeEventListener('touchmove', handleTouchMove);
-    document.removeEventListener('touchend', handleTouchEnd);
-  };
-  
-  // Termina il processo di drag
-  const finishDrag = () => {
-    const { lead, startStatus } = dragElementRef.current;
+    // Se non c'è un over o non abbiamo informazioni sul lead attivo, terminiamo
+    if (!over || !activeLead || !activeStatus) return;
     
-    // Ferma l'autoscroll
-    stopAutoScroll();
+    const targetStatus = over.id as string;
     
-    // Rimuovi il clone
-    const clone = document.getElementById('drag-clone');
-    if (clone) {
-      clone.remove();
+    // Verifichiamo che lo stato di destinazione esista ed è diverso dall'origine
+    if (
+      COLUMNS.some(col => col.id === targetStatus) &&
+      targetStatus !== activeStatus
+    ) {
+      // Esegui il movimento del lead
+      handleMoveLead(activeLead, targetStatus);
     }
     
-    if (!lead) return;
-    
-    // Completa il drag solo se abbiamo una colonna target valida
-    if (targetColumn && startStatus !== targetColumn) {
-      handleMoveLead(lead, targetColumn);
-    }
-    
-    // Reset dello stato
-    setDraggedLead(null);
-    setTargetColumn(null);
-    
-    // Reset del riferimento
-    dragElementRef.current = {
-      element: null,
-      offsetX: 0,
-      offsetY: 0,
-      startX: 0,
-      startY: 0,
-      lead: null,
-      startStatus: null
-    };
+    // Reset 
+    setActiveLead(null);
+    setActiveStatus(null);
   };
 
   // Handle lead movement between columns
@@ -527,8 +241,65 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
 
+  // Componente Card Draggable
+  const LeadCard = ({ lead, isDragging }: { lead: FunnelItem; isDragging: boolean }) => {
+    return (
+      <div
+        className={`funnel-card ${isDragging ? 'opacity-50' : ''}`}
+        style={{
+          borderLeftColor: getBorderColor(lead.status),
+        }}
+      >
+        <div className="flex justify-between items-center mb-1">
+          <div className="font-medium text-sm truncate pr-1">
+            {lead.name}
+          </div>
+          <button
+            className="p-1 rounded-full hover:bg-zinc-700 transition-colors edit-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditLead(lead);
+            }}
+          >
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+            </svg>
+          </button>
+        </div>
+        <div className="text-xs text-zinc-400">
+          <div>{formatDate(lead.createdAt)}</div>
+          {lead.value ? <div className="text-primary font-medium my-1">€{formatMoney(lead.value)}</div> : ''}
+          {lead.service ? <div className="italic">{lead.service}</div> : ''}
+        </div>
+      </div>
+    );
+  };
+
+  // Componente Draggable
+  const DraggableCard = ({ lead }: { lead: FunnelItem }) => {
+    return (
+      <div 
+        id={lead._id} 
+        data-id={lead._id} 
+        className="drag-handle"
+      >
+        <LeadCard lead={lead} isDragging={activeId === lead._id} />
+      </div>
+    );
+  };
+
   return (
-    <>
+    <DndContext
+      sensors={sensors}
+      autoScroll={{ 
+        threshold: { x: 0.1, y: 0.1 },  // Inizia l'autoscroll quando sei al 10% dal bordo
+        speed: { x: 1000, y: 1000 },    // Velocità di auto-scroll
+      }}
+      modifiers={modifiers}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
       <div 
         ref={boardRef}
         className="funnel-board-container w-full overflow-x-auto"
@@ -540,7 +311,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
               key={column.id}
               id={column.id}
               className={`funnel-column ${isMoving ? 'column-fade-transition' : ''} ${
-                targetColumn === column.id ? 'drop-target-active' : ''
+                activeId && !activeStatus ? 'drop-target-active' : ''
               }`}
             >
               <div className={`funnel-header ${column.color}`}>
@@ -553,37 +324,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
               <div className="funnel-body">
                 {funnelData[column.id as keyof FunnelData].length > 0 ? (
                   funnelData[column.id as keyof FunnelData].map((lead) => (
-                    <div 
+                    <DraggableCard 
                       key={lead._id}
-                      className="funnel-card"
-                      data-id={lead._id}
-                      style={{
-                        borderLeftColor: getBorderColor(lead.status),
-                        opacity: draggedLead?._id === lead._id ? 0.5 : 1
-                      }}
-                    >
-                      <div className="flex justify-between items-center mb-1">
-                        <div className="font-medium text-sm truncate pr-1">
-                          {lead.name}
-                        </div>
-                        <button 
-                          className="p-1 rounded-full hover:bg-zinc-700 transition-colors edit-btn"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Importante per evitare conflitti con Draggable
-                            handleEditLead(lead);
-                          }}
-                        >
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="text-xs text-zinc-400">
-                        <div>{formatDate(lead.createdAt)}</div>
-                        {lead.value ? <div className="text-primary font-medium my-1">€{formatMoney(lead.value)}</div> : ''}
-                        {lead.service ? <div className="italic">{lead.service}</div> : ''}
-                      </div>
-                    </div>
+                      lead={lead}
+                    />
                   ))
                 ) : (
                   <div className="text-center text-zinc-500 text-xs italic py-4">
@@ -595,6 +339,26 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           ))}
         </div>
       </div>
+
+      <DragOverlay 
+        dropAnimation={{
+          duration: 300,
+          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)', // Animazione rimbalzante
+          sideEffects: defaultDropAnimationSideEffects({
+            styles: {
+              active: {
+                opacity: '0.5',
+              },
+            },
+          }),
+        }}
+      >
+        {activeId && activeLead ? (
+          <div className="drag-overlay">
+            <LeadCard lead={activeLead} isDragging={false} />
+          </div>
+        ) : null}
+      </DragOverlay>
       
       {/* CSS per il funnel board */}
       <style jsx global>{`
@@ -602,28 +366,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           overflow-x: auto;
           overflow-y: hidden;
           position: relative;
-        }
-        
-        .funnel-board-container::before,
-        .funnel-board-container::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          width: 80px;
-          pointer-events: none;
-          z-index: 10;
-          opacity: 0.1;
-        }
-        
-        .funnel-board-container::before {
-          left: 0;
-          background: linear-gradient(to right, rgba(255, 107, 0, 0.7), transparent);
-        }
-        
-        .funnel-board-container::after {
-          right: 0;
-          background: linear-gradient(to left, rgba(255, 107, 0, 0.7), transparent);
         }
         
         .funnel-board {
@@ -671,6 +413,12 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           cursor: grabbing;
         }
         
+        .drag-overlay .funnel-card {
+          transform: scale(1.05);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+          cursor: grabbing;
+        }
+        
         .drop-target-active {
           background-color: rgba(255, 255, 255, 0.05);
         }
@@ -701,7 +449,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           onSave={handleSaveLeadValue}
         />
       )}
-    </>
+    </DndContext>
   );
 }
 
