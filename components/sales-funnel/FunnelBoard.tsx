@@ -187,7 +187,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         const draggable = Draggable.create(card, {
           type: "x,y",
           bounds: boardRef.current,
-          autoScroll: 1,
+          autoScroll: 3,
           edgeResistance: 0.65,
           cursor: "grab",
           activeCursor: "grabbing",
