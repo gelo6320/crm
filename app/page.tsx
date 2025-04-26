@@ -1,10 +1,12 @@
+// app/page.tsx (modified notification section only)
 "use client";
 
 import { useState, useEffect } from "react";
 import { Bell, Users, CheckCircle, ArrowRight, Filter, RefreshCw, 
   Calendar, Bookmark, FileText, BarChart, ArrowUp, ArrowDown, PieChart, 
-  ChevronRight, Eye, Clock, Facebook } from "lucide-react";
+  ChevronRight, Clock, Facebook } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { fetchDashboardStats, fetchRecentEvents, fetchNewContacts, markContactAsViewed } from "@/lib/api/dashboard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
@@ -29,105 +31,19 @@ interface Event {
   error?: string;
 }
 
-// Extended Stats type
-interface SourceStats {
-  total: number;
-  converted: number;
-  conversionRate: number;
-  trend: number;
-  thisWeek: number;
-  lastWeek: number;
-}
-
-interface Stats {
-  forms: SourceStats;
-  bookings: SourceStats;
-  facebook: SourceStats;
-  events: {
-    total: number;
-    success: number;
-    successRate: number;
-  };
-  totalConversionRate: number;
-  totalTrend: number;
-  totalThisWeek: number;
-  totalLastWeek: number;
-}
-
-export default function Dashboard() {
-  const [stats, setStats] = useState<Stats>({
-    forms: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
-    bookings: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
-    facebook: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
-    events: { total: 0, success: 0, successRate: 0 },
-    totalConversionRate: 0,
-    totalTrend: 0,
-    totalThisWeek: 0,
-    totalLastWeek: 0
-  });
-  
-  const [recentEvents, setRecentEvents] = useState<Event[]>([]);
-  const [notifications, setNotifications] = useState<Contact[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [viewedCount, setViewedCount] = useState(0);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-  
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      
-      const [statsData, eventsData, newContactsData] = await Promise.all([
-        fetchDashboardStats(),
-        fetchRecentEvents(),
-        fetchNewContacts() // API function to get unviewed contacts
-      ]);
-      
-      setStats(statsData);
-      setRecentEvents(eventsData);
-      setNotifications(newContactsData);
-      setViewedCount(newContactsData.filter((contact: Contact) => !contact.viewed).length);
-    } catch (error) {
-      console.error("Error loading dashboard data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const markAsViewed = async (contactId: string) => {
-    try {
-      // Call API to mark contact as viewed
-      await markContactAsViewed(contactId);
-      
-      // Update local state
-      setNotifications(prevNotifications => 
-        prevNotifications.map(contact =>
-          contact._id === contactId ? { ...contact, viewed: true } : contact
-        )
-      );
-      setViewedCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error("Error marking contact as viewed:", error);
-    }
-  };
-
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
-
-  // Format date
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('it-IT', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric' 
-    });
-  };
-  
-  // Get time ago
+// Modified notifications panel component
+function NotificationsPanel({ 
+  notifications, 
+  viewedCount, 
+  onViewContact, 
+  onViewAll 
+}: { 
+  notifications: Contact[];
+  viewedCount: number;
+  onViewContact: (contact: Contact) => void;
+  onViewAll: () => void;
+}) {
+  // Format time ago
   const getTimeAgo = (dateString: string): string => {
     const date = new Date(dateString);
     const now = new Date();
@@ -145,11 +61,198 @@ export default function Dashboard() {
   // Source icon mapping
   const getSourceIcon = (type: string) => {
     switch (type) {
-      case 'form': return <FileText size={16} className="text-primary" />;
-      case 'booking': return <Bookmark size={16} className="text-success" />;
-      case 'facebook': return <Facebook size={16} className="text-blue-500" />;
-      default: return <FileText size={16} className="text-primary" />;
+      case 'form': return <FileText size={16} className="text-emerald-400" />;
+      case 'booking': return <Bookmark size={16} className="text-emerald-400" />;
+      case 'facebook': return <Facebook size={16} className="text-emerald-400" />;
+      default: return <FileText size={16} className="text-emerald-400" />;
     }
+  };
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="p-4 border-b border-zinc-700 bg-gradient-to-r from-emerald-900/40 to-emerald-700/20 flex justify-between items-center">
+        <h2 className="text-base font-medium flex items-center">
+          <Bell size={16} className="mr-2 text-emerald-400" />
+          Notifiche
+          {viewedCount > 0 && (
+            <span className="ml-2 bg-emerald-500 text-white text-xs rounded-full px-2 py-0.5">
+              {viewedCount} nuovi
+            </span>
+          )}
+        </h2>
+      </div>
+      
+      <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-emerald-800 scrollbar-track-zinc-900">
+        {notifications.length > 0 ? (
+          <div className="divide-y divide-zinc-800">
+            {notifications.map((contact) => (
+              <div 
+                key={contact._id} 
+                className={`p-3 hover:bg-zinc-800/30 transition-colors cursor-pointer
+                  ${!contact.viewed ? 
+                    "bg-emerald-900/10 border-l-2 border-emerald-500" : 
+                    "hover:border-l-2 hover:border-emerald-500/50"}
+                `}
+                onClick={() => onViewContact(contact)}
+              >
+                <div className="flex items-start space-x-2">
+                  <div className="bg-emerald-900/60 rounded-full p-1.5 mt-0.5">
+                    {getSourceIcon(contact.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">{contact.name}</div>
+                    <div className="text-sm text-zinc-400 truncate">{contact.email}</div>
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="text-xs text-zinc-500 flex items-center">
+                        <Clock size={12} className="mr-1" />
+                        {getTimeAgo(contact.createdAt)}
+                      </div>
+                      <div className="text-xs px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-400">
+                        {contact.type === 'form' ? 'Form' : 
+                         contact.type === 'booking' ? 'Prenotazione' : 'Facebook'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 text-center text-zinc-500">
+            <Bell size={24} className="mx-auto mb-2 text-emerald-700" />
+            <p>Nessuna notifica</p>
+          </div>
+        )}
+      </div>
+      
+      <div className="p-3 border-t border-zinc-700 bg-emerald-900/10">
+        <button 
+          onClick={onViewAll}
+          className="btn btn-outline w-full inline-flex items-center justify-center border-emerald-600 text-emerald-400 hover:bg-emerald-900/40 hover:text-emerald-300"
+        >
+          <CheckCircle size={14} className="mr-1.5" />
+          Segna tutte come viste
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  const [stats, setStats] = useState({
+    forms: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
+    bookings: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
+    facebook: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
+    events: { total: 0, success: 0, successRate: 0 },
+    totalConversionRate: 0,
+    totalTrend: 0,
+    totalThisWeek: 0,
+    totalLastWeek: 0
+  });
+  
+  const [recentEvents, setRecentEvents] = useState<Event[]>([]);
+  const [notifications, setNotifications] = useState<Contact[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [viewedCount, setViewedCount] = useState(0);
+  const router = useRouter();
+
+  useEffect(() => {
+    loadData();
+  }, []);
+  
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      
+      const [statsData, eventsData, newContactsData] = await Promise.all([
+        fetchDashboardStats(),
+        fetchRecentEvents(),
+        fetchNewContacts()
+      ]);
+      
+      setStats(statsData);
+      setRecentEvents(eventsData);
+      setNotifications(newContactsData);
+      setViewedCount(newContactsData.filter((contact: Contact) => !contact.viewed).length);
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Marks a single contact as viewed and navigates to the corresponding page
+  const handleViewContact = async (contact: Contact) => {
+    try {
+      // Mark as viewed in the backend
+      await markContactAsViewed(contact._id);
+      
+      // Update local state
+      setNotifications(prevNotifications => 
+        prevNotifications.map(item =>
+          item._id === contact._id ? { ...item, viewed: true } : item
+        )
+      );
+      
+      // Update the unviewed count
+      if (!contact.viewed) {
+        setViewedCount(prev => Math.max(0, prev - 1));
+      }
+      
+      // Navigate to the appropriate page based on contact type
+      switch (contact.type) {
+        case 'form':
+          router.push(`/forms?id=${contact._id}`);
+          break;
+        case 'booking':
+          router.push(`/bookings?id=${contact._id}`);
+          break;
+        case 'facebook':
+          router.push(`/facebook-leads?id=${contact._id}`);
+          break;
+        default:
+          router.push('/contacts');
+      }
+    } catch (error) {
+      console.error("Error marking contact as viewed:", error);
+    }
+  };
+  
+  // Marks all contacts as viewed
+  const handleViewAllContacts = async () => {
+    try {
+      // Get only unviewed contacts
+      const unviewedContacts = notifications.filter(contact => !contact.viewed);
+      
+      // Mark each contact as viewed
+      await Promise.all(
+        unviewedContacts.map(contact => markContactAsViewed(contact._id))
+      );
+      
+      // Update local state
+      setNotifications(prevNotifications => 
+        prevNotifications.map(contact => ({ ...contact, viewed: true }))
+      );
+      
+      // Reset unviewed count
+      setViewedCount(0);
+    } catch (error) {
+      console.error("Error marking all contacts as viewed:", error);
+    }
+  };
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  // Format date
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('it-IT', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    });
   };
 
   return (
@@ -163,10 +266,10 @@ export default function Dashboard() {
         
         <div className="flex items-center space-x-3">
           <div className="relative">
-            <button className="btn btn-outline inline-flex items-center justify-center p-2">
+            <button className="btn btn-outline inline-flex items-center justify-center p-2 relative">
               <Bell size={18} />
               {viewedCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {viewedCount}
                 </span>
               )}
@@ -213,65 +316,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left column - Notifications panel */}
         <div className="lg:col-span-1">
-          <div className="card overflow-hidden">
-            <div className="p-4 border-b border-zinc-700 flex justify-between items-center">
-              <h2 className="text-base font-medium flex items-center">
-                <Bell size={16} className="mr-2 text-primary" />
-                Notifiche
-                {viewedCount > 0 && (
-                  <span className="ml-2 bg-primary text-white text-xs rounded-full px-2 py-0.5">
-                    {viewedCount} nuovi
-                  </span>
-                )}
-              </h2>
-            </div>
-            
-            <div className="max-h-[400px] overflow-y-auto">
-              {notifications.length > 0 ? (
-                <div className="divide-y divide-zinc-800">
-                  {notifications.map((contact) => (
-                    <div key={contact._id} className={`p-3 hover:bg-zinc-800/30 transition-colors
-                      ${!contact.viewed ? "bg-zinc-800/50 border-l-2 border-primary" : ""}`}>
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-start space-x-2">
-                          <div className="bg-zinc-800 rounded-full p-1.5 mt-0.5">
-                            {getSourceIcon(contact.type)}
-                          </div>
-                          <div>
-                            <div className="font-medium text-sm">{contact.name}</div>
-                            <div className="text-sm text-zinc-400">{contact.email}</div>
-                            <div className="flex items-center text-xs text-zinc-500 mt-1">
-                              <Clock size={12} className="mr-1" />
-                              {getTimeAgo(contact.createdAt)}
-                            </div>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => markAsViewed(contact._id)}
-                          className="p-1 hover:bg-zinc-700 rounded text-zinc-400 hover:text-white"
-                          title="Segna come visto"
-                        >
-                          {contact.viewed ? <CheckCircle size={16} className="text-success" /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-8 text-center text-zinc-500">
-                  <Bell size={24} className="mx-auto mb-2 text-zinc-600" />
-                  <p>Nessuna notifica</p>
-                </div>
-              )}
-            </div>
-            
-            <div className="p-3 border-t border-zinc-700 bg-zinc-900/50">
-              <Link href="/contacts" className="btn btn-outline btn-sm w-full inline-flex items-center justify-center">
-                <Users size={14} className="mr-1.5" />
-                Visualizza tutti i contatti
-              </Link>
-            </div>
-          </div>
+          <NotificationsPanel 
+            notifications={notifications} 
+            viewedCount={viewedCount}
+            onViewContact={handleViewContact}
+            onViewAll={handleViewAllContacts}
+          />
         </div>
         
         {/* Right column - Metrics */}
