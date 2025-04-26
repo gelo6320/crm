@@ -25,7 +25,7 @@ export default function RootLayout({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Verifica se la pagina corrente è la pagina di login
+  // Check if current page is login page
   const isLoginPage = pathname === "/login";
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export default function RootLayout({
     }
   }, [pathname, isMobile]);
 
-  // Verifica autenticazione all'avvio se non siamo nella pagina di login
+  // Check authentication on startup if not on login page
   useEffect(() => {
     if (!isLoginPage) {
       const checkAuth = async () => {
@@ -56,9 +56,9 @@ export default function RootLayout({
             withCredentials: true
           });
           
-          // Controlla se la risposta è HTML (pagina di login) invece di JSON
+          // Check if response is HTML (login page) instead of JSON
           if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
-            console.log("Ricevuta pagina HTML, reindirizzamento a login");
+            console.log("Received HTML page, redirecting to login");
             setIsAuthenticated(false);
             router.push(`/login?redirectTo=${encodeURIComponent(pathname || '/')}`);
             return;
@@ -67,9 +67,12 @@ export default function RootLayout({
           setIsAuthenticated(response.data.authenticated);
           if (!response.data.authenticated) {
             router.push(`/login?redirectTo=${encodeURIComponent(pathname || '/')}`);
+          } else if (pathname === '/') {
+            // If authenticated and at root path, redirect to dashboard
+            router.push('/dashboard');
           }
         } catch (error) {
-          console.error("Errore verifica autenticazione:", error);
+          console.error("Authentication check error:", error);
           setIsAuthenticated(false);
           router.push('/login');
         } finally {
@@ -83,7 +86,7 @@ export default function RootLayout({
     }
   }, [isLoginPage, pathname, router]);
 
-  // Mostra un loader durante la verifica dell'autenticazione
+  // Show loader during authentication check
   if (isLoading && !isLoginPage) {
     return (
       <html lang="it" className="dark">
@@ -99,12 +102,12 @@ export default function RootLayout({
       <body className={`${inter.className} bg-black text-white min-h-screen overflow-x-hidden`}>
         <AuthProvider>
           {isLoginPage ? (
-            // Layout semplificato per la pagina di login
+            // Simple layout for login page
             <div className="min-h-screen">
               {children}
             </div>
           ) : (
-            // Layout standard con sidebar e header per le altre pagine
+            // Standard layout with sidebar and header for other pages
             <div className="flex h-screen overflow-hidden">
               <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} isMobile={isMobile} />
               <div className="flex-1 flex flex-col overflow-hidden">
