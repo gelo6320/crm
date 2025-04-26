@@ -58,34 +58,96 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     lead: null,
     startStatus: null
   });
+  
+  // Ref per l'autoscroll
+  const autoScrollRef = useRef<{
+    active: boolean;
+    direction: number;  // -1 = sinistra, 1 = destra, 0 = nessuno
+    speed: number;
+    animationId: number | null;
+  }>({
+    active: false,
+    direction: 0,
+    speed: 0,
+    animationId: null
+  });
 
   // Aggiungi gli event listener quando il componente viene montato
   useEffect(() => {
     // Prepara i card per il drag and drop
     setupCards();
     
-    // Re-prepara i card quando cambiano i dati
+    // Pulizia quando il componente viene smontato
     return () => {
-      // Cleanup se necessario
+      stopAutoScroll();
     };
   }, [funnelData]);
   
+  // Avvia l'autoscroll
+  const startAutoScroll = (direction: number, speed: number) => {
+    // Aggiorna lo stato dell'autoscroll
+    autoScrollRef.current = {
+      ...autoScrollRef.current,
+      active: true,
+      direction,
+      speed
+    };
+    
+    // Se l'animazione non è già in corso, iniziala
+    if (!autoScrollRef.current.animationId) {
+      autoScrollRef.current.animationId = requestAnimationFrame(performAutoScroll);
+    }
+  };
+  
+  // Ferma l'autoscroll
+  const stopAutoScroll = () => {
+    if (autoScrollRef.current.animationId) {
+      cancelAnimationFrame(autoScrollRef.current.animationId);
+    }
+    
+    autoScrollRef.current = {
+      active: false,
+      direction: 0,
+      speed: 0,
+      animationId: null
+    };
+  };
+  
+  // Esegue l'autoscroll
+  const performAutoScroll = () => {
+    if (!autoScrollRef.current.active || !boardRef.current) {
+      autoScrollRef.current.animationId = null;
+      return;
+    }
+    
+    // Esegui lo scroll
+    const { direction, speed } = autoScrollRef.current;
+    if (direction !== 0) {
+      boardRef.current.scrollLeft += direction * speed;
+    }
+    
+    // Continua l'animazione
+    autoScrollRef.current.animationId = requestAnimationFrame(performAutoScroll);
+  };
+  
   // Configura i card per il drag and drop
   const setupCards = () => {
-    const cards = document.querySelectorAll('.funnel-card');
-    
-    cards.forEach(card => {
-      const element = card as HTMLElement;
+    setTimeout(() => {
+      const cards = document.querySelectorAll('.funnel-card');
       
-      // Aggiungi gli eventi per il drag and drop
-      element.onmousedown = handleMouseDown;
-      element.ontouchstart = handleTouchStart;
-      
-      // Assicurati che il card sia draggable
-      element.draggable = false; // Disabilita il comportamento draggable nativo del browser
-      element.style.touchAction = 'none'; // Previene lo scrolling su touch device
-      element.style.userSelect = 'none'; // Previene la selezione del testo
-    });
+      cards.forEach(card => {
+        const element = card as HTMLElement;
+        
+        // Aggiungi gli eventi per il drag and drop
+        element.onmousedown = handleMouseDown;
+        element.ontouchstart = handleTouchStart;
+        
+        // Assicurati che il card sia draggable
+        element.draggable = false; // Disabilita il comportamento draggable nativo del browser
+        element.style.touchAction = 'none'; // Previene lo scrolling su touch device
+        element.style.userSelect = 'none'; // Previene la selezione del testo
+      });
+    }, 200); // Piccolo ritardo per assicurarsi che il DOM sia pronto
   };
   
   // Handle per l'inizio del drag con mouse
@@ -157,7 +219,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     startDrag(target, touch.clientX, touch.clientY, leadItem, leadStatus);
     
     // Aggiungi listener globali per il movimento e il rilascio
-    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd);
   };
   
@@ -179,25 +241,32 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       startStatus: status
     };
     
-    // Applica stile durante il trascinamento
-    element.style.position = 'absolute';
-    element.style.zIndex = '1000';
-    element.style.transform = 'scale(1.05)';
-    element.style.boxShadow = '0 10px 20px rgba(0,0,0,0.2)';
-    element.style.opacity = '0.8';
+    // Clona l'elemento per il drag
+    const clone = element.cloneNode(true) as HTMLElement;
+    clone.id = 'drag-clone';
+    clone.style.position = 'fixed';
+    clone.style.zIndex = '1000';
+    clone.style.transform = 'scale(1.05)';
+    clone.style.boxShadow = '0 10px 20px rgba(0,0,0,0.2)';
+    clone.style.opacity = '0.8';
+    clone.style.pointerEvents = 'none';
+    clone.style.width = `${rect.width}px`;
+    
+    // Aggiungi il clone al body
+    document.body.appendChild(clone);
     
     // Aggiorna lo stato
     setDraggedLead(lead);
     
-    // Posiziona l'elemento
-    moveAt(clientX, clientY);
+    // Posiziona il clone
+    moveAt(clientX, clientY, clone);
   };
   
   // Muove l'elemento alla posizione del cursore
-  const moveAt = (clientX: number, clientY: number) => {
-    if (!dragElementRef.current.element) return;
+  const moveAt = (clientX: number, clientY: number, element?: HTMLElement) => {
+    const el = element || document.getElementById('drag-clone');
+    if (!el) return;
     
-    const element = dragElementRef.current.element;
     const { offsetX, offsetY } = dragElementRef.current;
     
     // Calcola la nuova posizione
@@ -205,16 +274,17 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     const top = clientY - offsetY;
     
     // Applica la nuova posizione
-    element.style.left = `${left}px`;
-    element.style.top = `${top}px`;
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
   };
   
   // Gestisce il movimento del mouse durante il drag
   const handleMouseMove = (e: MouseEvent) => {
-    if (!dragElementRef.current.element) return;
-    
     // Muovi l'elemento
     moveAt(e.clientX, e.clientY);
+    
+    // Gestisci l'autoscroll
+    handleAutoScroll(e.clientX, e.clientY);
     
     // Rileva la colonna sotto il cursore
     updateTargetColumn(e.clientX, e.clientY);
@@ -222,9 +292,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   
   // Gestisce il movimento del touch durante il drag
   const handleTouchMove = (e: TouchEvent) => {
-    if (!dragElementRef.current.element) return;
-    
-    // Previeni lo scrolling
+    // Previeni lo scrolling del browser
     e.preventDefault();
     
     // Usa il primo touch point
@@ -233,8 +301,44 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     // Muovi l'elemento
     moveAt(touch.clientX, touch.clientY);
     
+    // Gestisci l'autoscroll
+    handleAutoScroll(touch.clientX, touch.clientY);
+    
     // Rileva la colonna sotto il cursore
     updateTargetColumn(touch.clientX, touch.clientY);
+  };
+  
+  // Gestisce l'autoscroll
+  const handleAutoScroll = (clientX: number, clientY: number) => {
+    if (!boardRef.current) return;
+    
+    const boardRect = boardRef.current.getBoundingClientRect();
+    const edgeSize = 80; // px
+    
+    // Controlla se siamo vicino al bordo sinistro
+    if (clientX < boardRect.left + edgeSize) {
+      // Calcola la velocità (più vicino al bordo = più veloce)
+      const distance = clientX - boardRect.left;
+      const ratio = Math.max(0, Math.min(1, distance / edgeSize));
+      const speed = Math.max(5, Math.floor(20 * (1 - ratio)));
+      
+      // Avvia l'autoscroll verso sinistra
+      startAutoScroll(-1, speed);
+    }
+    // Controlla se siamo vicino al bordo destro
+    else if (clientX > boardRect.right - edgeSize) {
+      // Calcola la velocità (più vicino al bordo = più veloce)
+      const distance = boardRect.right - clientX;
+      const ratio = Math.max(0, Math.min(1, distance / edgeSize));
+      const speed = Math.max(5, Math.floor(20 * (1 - ratio)));
+      
+      // Avvia l'autoscroll verso destra
+      startAutoScroll(1, speed);
+    }
+    // Siamo lontani dai bordi, ferma l'autoscroll
+    else {
+      stopAutoScroll();
+    }
   };
   
   // Aggiorna la colonna target in base alla posizione
@@ -281,18 +385,18 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   
   // Termina il processo di drag
   const finishDrag = () => {
-    const { element, lead, startStatus } = dragElementRef.current;
+    const { lead, startStatus } = dragElementRef.current;
     
-    if (!element || !lead) return;
+    // Ferma l'autoscroll
+    stopAutoScroll();
     
-    // Ripristina lo stile dell'elemento
-    element.style.position = '';
-    element.style.zIndex = '';
-    element.style.transform = '';
-    element.style.boxShadow = '';
-    element.style.opacity = '';
-    element.style.left = '';
-    element.style.top = '';
+    // Rimuovi il clone
+    const clone = document.getElementById('drag-clone');
+    if (clone) {
+      clone.remove();
+    }
+    
+    if (!lead) return;
     
     // Completa il drag solo se abbiamo una colonna target valida
     if (targetColumn && startStatus !== targetColumn) {
@@ -498,6 +602,28 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           overflow-x: auto;
           overflow-y: hidden;
           position: relative;
+        }
+        
+        .funnel-board-container::before,
+        .funnel-board-container::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 80px;
+          pointer-events: none;
+          z-index: 10;
+          opacity: 0.1;
+        }
+        
+        .funnel-board-container::before {
+          left: 0;
+          background: linear-gradient(to right, rgba(255, 107, 0, 0.7), transparent);
+        }
+        
+        .funnel-board-container::after {
+          right: 0;
+          background: linear-gradient(to left, rgba(255, 107, 0, 0.7), transparent);
         }
         
         .funnel-board {
