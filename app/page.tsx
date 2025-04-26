@@ -30,41 +30,40 @@ interface Event {
 }
 
 // Extended Stats type
+interface SourceStats {
+  total: number;
+  converted: number;
+  conversionRate: number;
+  trend: number;
+  thisWeek: number;
+  lastWeek: number;
+}
+
 interface Stats {
-  forms: {
-    total: number;
-    converted: number;
-    conversionRate: number;
-    trend: number;
-  };
-  bookings: {
-    total: number;
-    converted: number;
-    conversionRate: number;
-    trend: number;
-  };
-  facebook: {
-    total: number;
-    converted: number;
-    conversionRate: number;
-    trend: number;
-  };
+  forms: SourceStats;
+  bookings: SourceStats;
+  facebook: SourceStats;
   events: {
     total: number;
     success: number;
     successRate: number;
-    conversionRate: number;
   };
   totalConversionRate: number;
+  totalTrend: number;
+  totalThisWeek: number;
+  totalLastWeek: number;
 }
 
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats>({
-    forms: { total: 0, converted: 0, conversionRate: 0, trend: 0 },
-    bookings: { total: 0, converted: 0, conversionRate: 0, trend: 0 },
-    facebook: { total: 0, converted: 0, conversionRate: 0, trend: 0 },
-    events: { total: 0, success: 0, successRate: 0, conversionRate: 0 },
-    totalConversionRate: 0
+    forms: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
+    bookings: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
+    facebook: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
+    events: { total: 0, success: 0, successRate: 0 },
+    totalConversionRate: 0,
+    totalTrend: 0,
+    totalThisWeek: 0,
+    totalLastWeek: 0
   });
   
   const [recentEvents, setRecentEvents] = useState<Event[]>([]);
@@ -80,11 +79,10 @@ export default function Dashboard() {
     try {
       setIsLoading(true);
       
-      // This should be updated in your API to include Facebook leads and trending data
       const [statsData, eventsData, newContactsData] = await Promise.all([
         fetchDashboardStats(),
         fetchRecentEvents(),
-        fetchNewContacts() // New API function to get unviewed contacts
+        fetchNewContacts() // API function to get unviewed contacts
       ]);
       
       setStats(statsData);
@@ -182,6 +180,32 @@ export default function Dashboard() {
           >
             <RefreshCw size={16} />
           </button>
+        </div>
+      </div>
+      
+      {/* Total contacts trend card */}
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-base font-medium">Andamento Contatti</h2>
+          
+          <div className={`${stats.totalTrend > 0 ? 'text-success' : 'text-danger'} flex items-center text-sm font-medium`}>
+            {stats.totalTrend > 0 ? <ArrowUp size={18} className="mr-1" /> : <ArrowDown size={18} className="mr-1" />}
+            {Math.abs(stats.totalTrend)}% rispetto alla settimana precedente
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="bg-zinc-800/50 rounded-lg p-4">
+            <div className="text-sm text-zinc-400 mb-1">Questa settimana</div>
+            <div className="text-2xl font-bold">{stats.totalThisWeek}</div>
+            <div className="text-xs text-zinc-500 mt-1">nuovi contatti</div>
+          </div>
+          
+          <div className="bg-zinc-800/50 rounded-lg p-4">
+            <div className="text-sm text-zinc-400 mb-1">Settimana precedente</div>
+            <div className="text-2xl font-bold">{stats.totalLastWeek}</div>
+            <div className="text-xs text-zinc-500 mt-1">nuovi contatti</div>
+          </div>
         </div>
       </div>
       
@@ -293,7 +317,8 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <div className="text-sm text-zinc-400">Form</div>
-                    <div className="text-xl font-semibold">{stats.forms.conversionRate}%</div>
+                    <div className="text-xl font-semibold">{stats.forms.thisWeek}</div>
+                    <div className="text-xs text-zinc-500">questa settimana</div>
                   </div>
                 </div>
                 <div className={`${stats.forms.trend > 0 ? 'text-success' : 'text-danger'} flex items-center`}>
@@ -301,7 +326,7 @@ export default function Dashboard() {
                   <span className="text-xs ml-0.5">{Math.abs(stats.forms.trend)}%</span>
                 </div>
               </div>
-              <div className="text-xs text-zinc-500 mt-1">{stats.forms.converted} clienti / {stats.forms.total} totali</div>
+              <div className="text-xs text-zinc-500 mt-1">Conversione: {stats.forms.conversionRate}%</div>
             </div>
             
             <div className="card p-4">
@@ -312,7 +337,8 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <div className="text-sm text-zinc-400">Prenotazioni</div>
-                    <div className="text-xl font-semibold">{stats.bookings.conversionRate}%</div>
+                    <div className="text-xl font-semibold">{stats.bookings.thisWeek}</div>
+                    <div className="text-xs text-zinc-500">questa settimana</div>
                   </div>
                 </div>
                 <div className={`${stats.bookings.trend > 0 ? 'text-success' : 'text-danger'} flex items-center`}>
@@ -320,7 +346,7 @@ export default function Dashboard() {
                   <span className="text-xs ml-0.5">{Math.abs(stats.bookings.trend)}%</span>
                 </div>
               </div>
-              <div className="text-xs text-zinc-500 mt-1">{stats.bookings.converted} clienti / {stats.bookings.total} totali</div>
+              <div className="text-xs text-zinc-500 mt-1">Conversione: {stats.bookings.conversionRate}%</div>
             </div>
             
             <div className="card p-4">
@@ -331,7 +357,8 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <div className="text-sm text-zinc-400">Facebook</div>
-                    <div className="text-xl font-semibold">{stats.facebook.conversionRate}%</div>
+                    <div className="text-xl font-semibold">{stats.facebook.thisWeek}</div>
+                    <div className="text-xs text-zinc-500">questa settimana</div>
                   </div>
                 </div>
                 <div className={`${stats.facebook.trend > 0 ? 'text-success' : 'text-danger'} flex items-center`}>
@@ -339,7 +366,7 @@ export default function Dashboard() {
                   <span className="text-xs ml-0.5">{Math.abs(stats.facebook.trend)}%</span>
                 </div>
               </div>
-              <div className="text-xs text-zinc-500 mt-1">{stats.facebook.converted} clienti / {stats.facebook.total} totali</div>
+              <div className="text-xs text-zinc-500 mt-1">Conversione: {stats.facebook.conversionRate}%</div>
             </div>
           </div>
           

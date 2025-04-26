@@ -77,6 +77,17 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
     // Common links for all users (excluding contacts)
     const commonLinks: SidebarLink[] = [
       { name: "Dashboard", href: "/", icon: BarChart3 }, // Now first in the list
+      { 
+        name: "Contatti", 
+        href: "/contacts", 
+        icon: Users,
+        children: [
+          { name: "Tutti i contatti", href: "/contacts", icon: Users },
+          { name: "Form di contatto", href: "/forms", icon: FileText },
+          { name: "Lead Facebook", href: "/facebook-leads", icon: Facebook },
+          { name: "Prenotazioni", href: "/bookings", icon: Bookmark },
+        ]
+      },
       { name: "Calendario", href: "/calendar", icon: Calendar },
       { name: "Eventi Facebook", href: "/events", icon: Share2 },
       { name: "Sales Funnel", href: "/sales-funnel", icon: Users },
