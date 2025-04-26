@@ -6,8 +6,6 @@ import { FunnelData, FunnelItem } from "@/types";
 import { updateLeadMetadata } from "@/lib/api/funnel";
 import FacebookEventModal from "./FacebookEventModal";
 import ValueModal from "./ValueModal";
-import FunnelCard from "./FunnelCard";
-import Script from "next/script";
 
 // Definiamo il tipo per GSAP e Draggable
 declare global {
@@ -49,8 +47,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   
   // Refs
   const boardRef = useRef<HTMLDivElement>(null);
-  const gsapLoaded = useRef(false);
-  const draggableInstances = useRef<Map<string, any>>(new Map());
+  const initialized = useRef(false);
+  const draggableInstancesRef = useRef<any[]>([]);
   
   // Ref per tenere traccia dell'attuale lead trascinato
   const currentDragInfo = useRef<{
@@ -63,159 +61,240 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     startStatus: null
   });
 
-  // Effetto per caricare GSAP e configurare i Draggable dopo che il componente è montato
+  // Funzione per caricare GSAP e Draggable
   useEffect(() => {
-    // Verifica se GSAP è già caricato globalmente
-    if (window.gsap && window.Draggable) {
-      gsapLoaded.current = true;
-      initializeDraggables();
-    }
-    
-    return () => {
-      // Pulizia dei draggables quando il componente viene smontato
-      if (gsapLoaded.current) {
-        draggableInstances.current.forEach(instance => {
-          if (instance && instance.kill) {
-            instance.kill();
-          }
-        });
-        draggableInstances.current.clear();
+    // Carica GSAP in modo dinamico
+    const loadGSAP = async () => {
+      try {
+        // Verifica se gsap è già disponibile globalmente
+        if (!window.gsap) {
+          // Carica GSAP
+          const gsapScript = document.createElement('script');
+          gsapScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';
+          gsapScript.async = true;
+          gsapScript.onload = loadDraggable;
+          document.body.appendChild(gsapScript);
+        } else {
+          loadDraggable();
+        }
+      } catch (error) {
+        console.error("Errore nel caricare GSAP:", error);
       }
     };
+
+    // Carica il plugin Draggable dopo GSAP
+    const loadDraggable = () => {
+      try {
+        if (!window.Draggable) {
+          const draggableScript = document.createElement('script');
+          draggableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js';
+          draggableScript.async = true;
+          draggableScript.onload = () => {
+            console.log("GSAP e Draggable caricati correttamente");
+            // Inizializza draggable solo dopo che entrambi sono caricati
+            setTimeout(initializeDraggables, 100); // Piccolo timeout per assicurarsi che tutto sia pronto
+          };
+          document.body.appendChild(draggableScript);
+        } else {
+          console.log("Draggable già disponibile");
+          setTimeout(initializeDraggables, 100);
+        }
+      } catch (error) {
+        console.error("Errore nel caricare Draggable:", error);
+      }
+    };
+
+    loadGSAP();
+
+    // Cleanup quando il componente viene smontato
+    return () => {
+      destroyDraggables();
+    };
+  }, []);
+
+  // Re-inizializza i draggable quando cambiano i dati
+  useEffect(() => {
+    if (initialized.current && window.Draggable) {
+      console.log("Data changed, re-initializing draggables");
+      // Piccolo timeout per assicurarsi che il DOM sia aggiornato
+      setTimeout(initializeDraggables, 100);
+    }
   }, [funnelData]);
 
-  // Funzione per inizializzare i Draggable per ogni lead
+  // Distrugge tutte le istanze Draggable
+  const destroyDraggables = () => {
+    if (draggableInstancesRef.current.length) {
+      console.log("Destroying draggables...");
+      draggableInstancesRef.current.forEach(instance => {
+        if (instance && typeof instance.kill === 'function') {
+          instance.kill();
+        }
+      });
+      draggableInstancesRef.current = [];
+    }
+  };
+
+  // Inizializza i Draggable per ogni card
   const initializeDraggables = () => {
     if (!window.Draggable || !window.gsap) {
-      console.error("GSAP e/o Draggable non sono disponibili");
+      console.error("GSAP o Draggable non sono disponibili");
       return;
     }
-    
-    // Pulizia dei draggable esistenti
-    draggableInstances.current.forEach(instance => {
-      if (instance && instance.kill) {
-        instance.kill();
-      }
-    });
-    draggableInstances.current.clear();
-    
-    // Crea nuovi draggable per ogni lead
-    const cards = document.querySelectorAll('.funnel-card:not(.drag-preview)');
-    
-    cards.forEach(card => {
-      const id = card.getAttribute('data-id');
-      if (!id) return;
-      
-      // Trova il lead corrispondente
-      let leadItem: FunnelItem | undefined;
-      
-      // Cerca il lead in tutte le colonne
-      for (const column of COLUMNS) {
-        const columnId = column.id as keyof FunnelData;
-        const found = funnelData[columnId].find(item => item._id === id);
-        if (found) {
-          leadItem = found;
-          break;
-        }
-      }
-      
-      if (!leadItem) return;
-      
-      // Crea il Draggable
-      const draggable = window.Draggable.create(card, {
-        type: "x,y",
-        autoScroll: 1, // Abilita l'autoscroll con velocità normale
-        edgeResistance: 0.65,
-        zIndexBoost: true,
-        dragClickables: false,
-        onDragStart: function(this: any) {
-          // Salva l'informazione sul lead trascinato
-          currentDragInfo.current = {
-            lead: leadItem,
-            element: this.target,
-            startStatus: leadItem?.status || null
-          };
-          
-          setDraggedLead(leadItem);
-          
-          // Aggiungi classe per lo stile durante il drag
-          this.target.classList.add('dragging');
-          
-          console.log(`[DRAG DEBUG] 🟢 Iniziando drag per lead: ${leadItem.name} (${leadItem._id})`);
-        },
-        onDrag: function(this: any) {
-          // Determina la colonna target
-          const columns = document.querySelectorAll('.funnel-column');
-          const cardRect = this.target.getBoundingClientRect();
-          const cardCenterX = cardRect.left + cardRect.width / 2;
-          const cardCenterY = cardRect.top + cardRect.height / 2;
-          
-          let hoveredColumn: Element | null = null;
-          
-          columns.forEach(column => {
-            const rect = column.getBoundingClientRect();
-            if (
-              cardCenterX >= rect.left && 
-              cardCenterX <= rect.right && 
-              cardCenterY >= rect.top && 
-              cardCenterY <= rect.bottom
-            ) {
-              hoveredColumn = column;
-            }
-          });
-          
-          const newTargetColumn = hoveredColumn ? (hoveredColumn as HTMLElement).id : null;
-          
-          if (newTargetColumn !== targetColumn) {
-            console.log(`[DRAG DEBUG] 🎯 Cambiato target column: ${targetColumn} -> ${newTargetColumn}`);
-            setTargetColumn(newTargetColumn);
+
+    // Pulisci le istanze esistenti prima di crearne di nuove
+    destroyDraggables();
+
+    const gsap = window.gsap;
+    const Draggable = window.Draggable;
+
+    console.log("Initializing draggables...");
+
+    // Seleziona tutte le card
+    const cards = document.querySelectorAll('.funnel-card');
+    console.log(`Found ${cards.length} cards to make draggable`);
+
+    if (cards.length === 0) {
+      setTimeout(initializeDraggables, 500); // Riprova se non ci sono ancora card
+      return;
+    }
+
+    // Crea un'istanza draggable per ogni card
+    cards.forEach((card, index) => {
+      try {
+        // Identifica il lead associato a questa card
+        const leadId = card.getAttribute('data-id');
+        let currentLead: FunnelItem | null = null;
+        let currentStatus: string | null = null;
+
+        // Cerca il lead in tutte le colonne
+        for (const colId in funnelData) {
+          const found = funnelData[colId as keyof FunnelData].find(item => item._id === leadId);
+          if (found) {
+            currentLead = found;
+            currentStatus = colId;
+            break;
           }
-        },
-        onDragEnd: function(this: any) {
-          // Ripristina lo stile
-          this.target.classList.remove('dragging');
-          
-          if (currentDragInfo.current.lead && targetColumn) {
-            const startStatus = currentDragInfo.current.startStatus;
+        }
+
+        if (!currentLead) {
+          console.warn(`Lead non trovato per card con ID: ${leadId}`);
+          return;
+        }
+
+        console.log(`Creating draggable for lead: ${currentLead.name}`);
+
+        // Crea il draggable
+        const draggable = Draggable.create(card, {
+          type: "x,y",
+          bounds: boardRef.current,
+          autoScroll: 1,
+          edgeResistance: 0.65,
+          cursor: "grab",
+          activeCursor: "grabbing",
+          onPress: function(this: any) {
+            // Stile quando premuto
+            gsap.to(this.target, {
+              duration: 0.2,
+              scale: 1.05,
+              boxShadow: "0px 10px 20px rgba(0,0,0,0.2)",
+              zIndex: 1000
+            });
             
-            // Solo se la colonna è cambiata, facciamo il move
-            if (startStatus !== targetColumn) {
-              console.log(`[DRAG DEBUG] ✅ Drop completato - Spostamento lead da ${startStatus} a ${targetColumn}`);
-              handleMoveLead(currentDragInfo.current.lead, targetColumn);
-            } else {
-              console.log(`[DRAG DEBUG] ℹ️ Drop nella stessa colonna (${targetColumn}) - Nessun'azione`);
+            // Salva le info sul lead corrente
+            const leadData = currentLead as FunnelItem;
+            currentDragInfo.current = {
+              lead: leadData,
+              element: this.target,
+              startStatus: leadData.status
+            };
+            
+            console.log(`Drag started for ${leadData.name}`);
+            setDraggedLead(leadData);
+          },
+          onDrag: function(this: any) {
+            if (!currentLead) return;
+            
+            // Trova la colonna sotto il cursore
+            const dragRect = this.target.getBoundingClientRect();
+            const centerX = dragRect.left + dragRect.width / 2;
+            const centerY = dragRect.top + dragRect.height / 2;
+            
+            // Ottieni tutte le colonne
+            const columns = document.querySelectorAll('.funnel-column');
+            let newTarget: string | null = null;
+            
+            columns.forEach(column => {
+              const rect = column.getBoundingClientRect();
+              if (
+                centerX >= rect.left && 
+                centerX <= rect.right && 
+                centerY >= rect.top && 
+                centerY <= rect.bottom
+              ) {
+                newTarget = (column as HTMLElement).id;
+              }
+            });
+            
+            // Aggiorna la colonna target se cambiata
+            if (newTarget !== targetColumn) {
+              console.log(`Target column changed to: ${newTarget}`);
+              setTargetColumn(newTarget);
             }
+          },
+          onRelease: function(this: any) {
+            // Ripristina lo stile
+            gsap.to(this.target, {
+              duration: 0.3,
+              scale: 1,
+              boxShadow: "0px 0px 0px rgba(0,0,0,0)",
+              clearProps: "zIndex"
+            });
+            
+            // Completa il drag solo se abbiamo una colonna target valida
+            if (targetColumn && currentDragInfo.current.lead) {
+              const lead = currentDragInfo.current.lead;
+              const fromStatus = currentDragInfo.current.startStatus;
+              
+              if (fromStatus !== targetColumn) {
+                console.log(`Moving lead from ${fromStatus} to ${targetColumn}`);
+                handleMoveLead(lead, targetColumn);
+              }
+            }
+            
+            // Riporta l'elemento alla posizione originale
+            gsap.to(this.target, {
+              duration: 0.3,
+              x: 0,
+              y: 0,
+              onComplete: () => {
+                // Reset stati
+                setDraggedLead(null);
+                setTargetColumn(null);
+                
+                // Reset drag info
+                currentDragInfo.current = {
+                  lead: null,
+                  element: null,
+                  startStatus: null
+                };
+              }
+            });
           }
-          
-          // Reset dello stato
-          setDraggedLead(null);
-          setTargetColumn(null);
-          
-          // Riporta l'elemento alla posizione originale con animazione
-          window.gsap.to(this.target, {
-            duration: 0.3,
-            x: 0,
-            y: 0,
-            ease: "power2.out"
-          });
-          
-          // Reset del riferimento al drag corrente
-          currentDragInfo.current = {
-            lead: null,
-            element: null,
-            startStatus: null
-          };
-        }
-      })[0]; // Prendiamo il primo elemento dell'array restituito
-      
-      // Salva l'istanza di Draggable
-      draggableInstances.current.set(id, draggable);
+        })[0]; // Prendi la prima istanza dell'array
+
+        draggableInstancesRef.current.push(draggable);
+      } catch (error) {
+        console.error(`Error creating draggable for card ${index}:`, error);
+      }
     });
+
+    initialized.current = true;
+    console.log(`Successfully initialized ${draggableInstancesRef.current.length} draggables`);
   };
 
   // Handle lead movement between columns
   const handleMoveLead = (lead: FunnelItem, targetStatus: string) => {
-    if (lead.status === targetStatus) return;
+    if (!lead || lead.status === targetStatus) return;
 
     // Store the previous status
     const prevStatus = lead.status;
@@ -323,24 +402,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
   return (
     <>
-      {/* Scripts per GSAP */}
-      <Script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" 
-        strategy="beforeInteractive"
-        onLoad={() => {
-          console.log("GSAP loaded");
-        }}
-      />
-      <Script 
-        src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js" 
-        strategy="beforeInteractive"
-        onLoad={() => {
-          console.log("Draggable loaded");
-          gsapLoaded.current = true;
-          initializeDraggables();
-        }}
-      />
-      
       <div 
         ref={boardRef}
         className="funnel-board-container w-full overflow-x-auto"
@@ -367,16 +428,23 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
                   funnelData[column.id as keyof FunnelData].map((lead) => (
                     <div 
                       key={lead._id}
-                      className={`funnel-card ${draggedLead?._id === lead._id ? 'opacity-50' : ''}`}
+                      className="funnel-card"
                       data-id={lead._id}
+                      style={{
+                        borderLeftColor: getBorderColor(lead.status),
+                        opacity: draggedLead?._id === lead._id ? 0.5 : 1
+                      }}
                     >
                       <div className="flex justify-between items-center mb-1">
                         <div className="font-medium text-sm truncate pr-1">
                           {lead.name}
                         </div>
                         <button 
-                          className="p-1 rounded-full hover:bg-zinc-700 transition-colors"
-                          onClick={() => handleEditLead(lead)}
+                          className="p-1 rounded-full hover:bg-zinc-700 transition-colors edit-btn"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Importante per evitare conflitti con Draggable
+                            handleEditLead(lead);
+                          }}
                         >
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
@@ -401,34 +469,50 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         </div>
       </div>
       
-      {/* CSS extra per il drag and drop */}
+      {/* CSS per il funnel board */}
       <style jsx global>{`
+        .funnel-column {
+          min-width: 300px;
+          border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .funnel-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 16px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .funnel-body {
+          padding: 10px;
+          min-height: 100px;
+        }
+        
         .funnel-card {
           position: relative;
           padding: 10px;
-          margin: 8px;
-          background: #2a2a2a;
+          margin-bottom: 10px;
+          background-color: #2a2a2a;
           border-radius: 6px;
           border-left: 3px solid;
+          cursor: grab;
           user-select: none;
-          touch-action: none; /* Importante per Draggable */
+          touch-action: none;
         }
         
-        .funnel-card.dragging {
-          z-index: 1000;
-          opacity: 0.8;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-          transform: rotate(3deg) scale(1.02);
+        .funnel-card:active {
+          cursor: grabbing;
         }
         
         .drop-target-active {
           background-color: rgba(255, 255, 255, 0.05);
-          transition: background-color 0.2s ease;
         }
         
-        /* Animazione durante il trascinamento */
-        .column-fade-transition {
-          transition: opacity 0.3s ease;
+        /* Assicurati che il pulsante di modifica non interferisca con il drag */
+        .edit-btn {
+          cursor: pointer;
+          z-index: 10;
         }
       `}</style>
 
