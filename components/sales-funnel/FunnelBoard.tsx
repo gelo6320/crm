@@ -1,7 +1,7 @@
 // components/sales-funnel/CustomFunnelBoard.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { FunnelData, FunnelItem } from "@/types";
 import { updateLeadMetadata } from "@/lib/api/funnel";
 import FacebookEventModal from "./FacebookEventModal";
@@ -291,10 +291,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   return (
     <DndContext
       sensors={sensors}
-      autoScroll={{ 
-        threshold: { x: 0.1, y: 0.1 },  // Inizia l'autoscroll quando sei al 10% dal bordo
-        speed: { x: 1000, y: 1000 },    // Velocità di auto-scroll
-      }}
+      autoScroll={true} // Abilita l'autoscroll con le impostazioni predefinite
       modifiers={modifiers}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
