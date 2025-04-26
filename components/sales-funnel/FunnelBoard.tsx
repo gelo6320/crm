@@ -12,7 +12,6 @@ declare global {
   interface Window {
     gsap: any;
     Draggable: any;
-    ScrollToPlugin: any;
   }
 }
 
@@ -84,39 +83,18 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           gsapScript.async = true;
           gsapScript.onload = () => {
             console.log("GSAP caricato");
-            loadScrollToPlugin();
+            loadDraggable();
           };
           document.body.appendChild(gsapScript);
         } else {
-          loadScrollToPlugin();
+          loadDraggable();
         }
       } catch (error) {
         console.error("Errore nel caricare GSAP:", error);
       }
     };
-    
-    // Carica il plugin ScrollTo (necessario per l'autoscroll)
-    const loadScrollToPlugin = () => {
-      try {
-        if (!window.ScrollToPlugin) {
-          console.log("Caricando ScrollToPlugin...");
-          const scrollToScript = document.createElement('script');
-          scrollToScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollToPlugin.min.js';
-          scrollToScript.async = true;
-          scrollToScript.onload = () => {
-            console.log("ScrollToPlugin caricato");
-            loadDraggable();
-          };
-          document.body.appendChild(scrollToScript);
-        } else {
-          loadDraggable();
-        }
-      } catch (error) {
-        console.error("Errore nel caricare ScrollToPlugin:", error);
-      }
-    };
 
-    // Carica Draggable dopo GSAP e ScrollToPlugin
+    // Carica Draggable dopo GSAP
     const loadDraggable = () => {
       try {
         if (!window.Draggable) {
@@ -125,10 +103,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           draggableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js';
           draggableScript.async = true;
           draggableScript.onload = () => {
-            console.log("Draggable caricato, registrando ScrollToPlugin...");
-            // Registra il plugin ScrollTo
-            window.gsap.registerPlugin(window.ScrollToPlugin);
-            console.log("✅ Tutti i plugin caricati e registrati correttamente");
+            console.log("Draggable caricato");
+            console.log("✅ Tutti i plugin caricati correttamente");
             
             // Inizializzazione dopo un breve timeout per assicurarsi che tutto sia pronto
             setTimeout(initializeDraggables, 200);
@@ -136,12 +112,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           document.body.appendChild(draggableScript);
         } else {
           console.log("Draggable già disponibile");
-          
-          // Assicurati che ScrollToPlugin sia registrato
-          if (window.ScrollToPlugin && window.gsap) {
-            window.gsap.registerPlugin(window.ScrollToPlugin);
-          }
-          
           setTimeout(initializeDraggables, 200);
         }
       } catch (error) {
@@ -179,6 +149,65 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
 
+  // Funzione per gestire l'autoscroll manualmente
+  const handleAutoScroll = (x: number) => {
+    if (!boardRef.current) return;
+    
+    const board = boardRef.current;
+    const boardRect = board.getBoundingClientRect();
+    const edgeSize = 60; // px dal bordo
+    
+    // Calcola la distanza dai bordi
+    const distanceFromLeft = x - boardRect.left;
+    const distanceFromRight = boardRect.right - x;
+    
+    let scrollAmount = 0;
+    let scrollDirection = "";
+    
+    // Determina se siamo vicino al bordo sinistro
+    if (distanceFromLeft < edgeSize) {
+      // Calcoliamo la velocità in base alla distanza
+      scrollAmount = Math.max(5, 20 * (1 - (distanceFromLeft / edgeSize)));
+      board.scrollLeft -= scrollAmount;
+      scrollDirection = "SINISTRA";
+      
+      // Aggiorna lo stato solo se cambia
+      if (!scrollStatusRef.current.inLeftZone) {
+        console.log(`⬅️ Entrato nella zona di autoscroll SINISTRA - Velocità: ${scrollAmount.toFixed(1)}px/frame`);
+        setLogMessage(`Autoscroll: SINISTRA (${scrollAmount.toFixed(1)}px/frame)`);
+        scrollStatusRef.current.inLeftZone = true;
+        scrollStatusRef.current.inRightZone = false;
+        scrollStatusRef.current.scrollSpeed = scrollAmount;
+      }
+    }
+    // Determina se siamo vicino al bordo destro
+    else if (distanceFromRight < edgeSize) {
+      // Calcoliamo la velocità in base alla distanza
+      scrollAmount = Math.max(5, 20 * (1 - (distanceFromRight / edgeSize)));
+      board.scrollLeft += scrollAmount;
+      scrollDirection = "DESTRA";
+      
+      // Aggiorna lo stato solo se cambia
+      if (!scrollStatusRef.current.inRightZone) {
+        console.log(`➡️ Entrato nella zona di autoscroll DESTRA - Velocità: ${scrollAmount.toFixed(1)}px/frame`);
+        setLogMessage(`Autoscroll: DESTRA (${scrollAmount.toFixed(1)}px/frame)`);
+        scrollStatusRef.current.inLeftZone = false;
+        scrollStatusRef.current.inRightZone = true;
+        scrollStatusRef.current.scrollSpeed = scrollAmount;
+      }
+    }
+    // Non siamo vicino a nessun bordo
+    else if (scrollStatusRef.current.inLeftZone || scrollStatusRef.current.inRightZone) {
+      console.log(`⏹️ Uscito dalla zona di autoscroll`);
+      setLogMessage(`Autoscroll: disattivato`);
+      scrollStatusRef.current.inLeftZone = false;
+      scrollStatusRef.current.inRightZone = false;
+      scrollStatusRef.current.scrollSpeed = 0;
+    }
+    
+    return { scrolling: scrollAmount > 0, direction: scrollDirection, amount: scrollAmount };
+  };
+
   // Inizializza i Draggable per ogni card
   const initializeDraggables = () => {
     if (!window.Draggable || !window.gsap) {
@@ -191,11 +220,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
     const gsap = window.gsap;
     const Draggable = window.Draggable;
-    
-    // Assicurati che ScrollToPlugin sia registrato
-    if (window.ScrollToPlugin && !gsap.plugins.scrollTo) {
-      gsap.registerPlugin(window.ScrollToPlugin);
-    }
 
     console.log("Initializing draggables...");
 
@@ -209,30 +233,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       return;
     }
     
-    // Configura l'elemento di scorrimento per l'autoscroll
-    const scrollerElement = boardRef.current;
-    if (!scrollerElement) {
-      console.error("Scroller element not found!");
-      return;
-    }
-    
-    console.log(`Configurando autoscroll per l'elemento:`, scrollerElement);
-    
-        // Configura il container di scrolling
-        Draggable.scrollProxy(scrollerElement, {
-          scrollTop: function(value: any): any {
-            // Ignoriamo scrollTop, vogliamo solo scrollLeft
-            return arguments.length ? this : scrollerElement.scrollTop;
-          },
-          scrollLeft: function(value: any): any {
-            if (arguments.length) {
-              // Imposta scrollLeft
-              scrollerElement.scrollLeft = value;
-            }
-            // Restituisce scrollLeft corrente
-            return scrollerElement.scrollLeft;
-          }
-        });
+    console.log(`Configurando autoscroll per l'elemento:`, boardRef.current);
 
     // Crea un'istanza draggable per ogni card
     cards.forEach((card, index) => {
@@ -259,17 +260,14 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
         console.log(`Creating draggable for lead: ${currentLead.name}`);
 
-        // Crea il draggable con autoscroll nativo di GSAP
+        // Crea il draggable con implementazione manuale dell'autoscroll
         const draggable = Draggable.create(card, {
           type: "x,y",
-          // Non specificare bounds per permettere all'autoscroll di funzionare correttamente
-          autoScroll: 2, // Velocità costante (2 = velocità doppia rispetto al normale)
+          // Disabilitiamo l'autoscroll nativo per usare il nostro
+          autoScroll: false,
           dragClickables: false,
           cursor: "grab",
           activeCursor: "grabbing",
-          // Definisci il container di scrolling
-          scrollProxy: scrollerElement,
-          // Dimensione della zona di attivazione (40px dal bordo)
           edgeResistance: 0.65,
           onDragStart: function(this: any, e: Event) {
             // Log iniziale
@@ -302,6 +300,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
             const centerX = dragRect.left + dragRect.width / 2;
             const centerY = dragRect.top + dragRect.height / 2;
             
+            // Gestione autoscroll manuale
+            handleAutoScroll(centerX);
+            
             // Ottieni tutte le colonne
             const columns = document.querySelectorAll('.funnel-column');
             let newTarget: string | null = null;
@@ -322,34 +323,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
             if (newTarget !== targetColumn) {
               console.log(`🎯 Target column changed to: ${newTarget}`);
               setTargetColumn(newTarget);
-            }
-            
-            // Controlla se siamo in una zona di autoscroll
-            const boardRect = boardRef.current.getBoundingClientRect();
-            const edgeSize = 40; // Dimensione della zona di attivazione
-            
-            const inLeftZone = centerX < boardRect.left + edgeSize;
-            const inRightZone = centerX > boardRect.right - edgeSize;
-            
-            // Aggiorna lo stato e i log solo se c'è un cambiamento
-            if (inLeftZone !== scrollStatusRef.current.inLeftZone || 
-                inRightZone !== scrollStatusRef.current.inRightZone) {
-                
-                // Log delle zone di autoscroll
-                if (inLeftZone) {
-                    console.log(`⬅️ Entrato nella zona di autoscroll SINISTRA`);
-                    setLogMessage(`Autoscroll: verso SINISTRA`);
-                } else if (inRightZone) {
-                    console.log(`➡️ Entrato nella zona di autoscroll DESTRA`);
-                    setLogMessage(`Autoscroll: verso DESTRA`);
-                } else if (scrollStatusRef.current.inLeftZone || scrollStatusRef.current.inRightZone) {
-                    console.log(`⏹️ Uscito dalla zona di autoscroll`);
-                    setLogMessage(`Autoscroll: disattivato`);
-                }
-                
-                // Aggiorna lo stato
-                scrollStatusRef.current.inLeftZone = inLeftZone;
-                scrollStatusRef.current.inRightZone = inRightZone;
             }
           },
           onDragEnd: function(this: any) {
@@ -603,6 +576,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         .funnel-board-container {
           overflow-x: auto;
           overflow-y: hidden;
+          position: relative;
           /* Aggiunge indicatori visivi per le zone di autoscroll */
         }
         
@@ -612,7 +586,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           position: absolute;
           top: 0;
           bottom: 0;
-          width: 40px;
+          width: 60px;
           pointer-events: none;
           z-index: 10;
           opacity: 0;
@@ -621,17 +595,17 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         
         .funnel-board-container::before {
           left: 0;
-          background: linear-gradient(to right, rgba(255, 0, 0, 0.1), transparent);
+          background: linear-gradient(to right, rgba(255, 100, 0, 0.2), transparent);
         }
         
         .funnel-board-container::after {
           right: 0;
-          background: linear-gradient(to left, rgba(255, 0, 0, 0.1), transparent);
+          background: linear-gradient(to left, rgba(255, 100, 0, 0.2), transparent);
         }
         
         .funnel-board-container:hover::before,
         .funnel-board-container:hover::after {
-          opacity: 0.5;
+          opacity: 0.3;
         }
         
         .funnel-board {
