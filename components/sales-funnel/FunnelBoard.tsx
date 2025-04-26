@@ -12,6 +12,7 @@ declare global {
   interface Window {
     gsap: any;
     Draggable: any;
+    ScrollToPlugin: any;
   }
 }
 
@@ -45,22 +46,19 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const [draggedLead, setDraggedLead] = useState<FunnelItem | null>(null);
   const [targetColumn, setTargetColumn] = useState<string | null>(null);
   
+  // Log per l'autoscroll
+  const [logMessage, setLogMessage] = useState<string>("");
+  
   // Refs
   const boardRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const draggableInstancesRef = useRef<any[]>([]);
   
-  // Ref per autoscroll personalizzato
-  const autoScrollRef = useRef<{
-    active: boolean;
-    direction: number; // -1 = sinistra, 1 = destra, 0 = nessuno
-    animationId: number | null;
-    speed: number;
-  }>({
-    active: false,
-    direction: 0,
-    animationId: null,
-    speed: 0
+  // Debug: auto-scroll status
+  const scrollStatusRef = useRef({
+    inLeftZone: false,
+    inRightZone: false,
+    scrollSpeed: 0
   });
   
   // Ref per tenere traccia dell'attuale lead trascinato
@@ -74,55 +72,89 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     startStatus: null
   });
 
-  // Funzione per caricare GSAP
+  // Funzione per caricare GSAP e i plugin
   useEffect(() => {
-    // Carica GSAP in modo dinamico
     const loadGSAP = async () => {
       try {
+        // Carica GSAP
         if (!window.gsap) {
+          console.log("Caricando GSAP...");
           const gsapScript = document.createElement('script');
           gsapScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';
           gsapScript.async = true;
-          gsapScript.onload = loadDraggable;
+          gsapScript.onload = () => {
+            console.log("GSAP caricato");
+            loadScrollToPlugin();
+          };
           document.body.appendChild(gsapScript);
         } else {
-          loadDraggable();
+          loadScrollToPlugin();
         }
       } catch (error) {
         console.error("Errore nel caricare GSAP:", error);
       }
     };
+    
+    // Carica il plugin ScrollTo (necessario per l'autoscroll)
+    const loadScrollToPlugin = () => {
+      try {
+        if (!window.ScrollToPlugin) {
+          console.log("Caricando ScrollToPlugin...");
+          const scrollToScript = document.createElement('script');
+          scrollToScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollToPlugin.min.js';
+          scrollToScript.async = true;
+          scrollToScript.onload = () => {
+            console.log("ScrollToPlugin caricato");
+            loadDraggable();
+          };
+          document.body.appendChild(scrollToScript);
+        } else {
+          loadDraggable();
+        }
+      } catch (error) {
+        console.error("Errore nel caricare ScrollToPlugin:", error);
+      }
+    };
 
+    // Carica Draggable dopo GSAP e ScrollToPlugin
     const loadDraggable = () => {
       try {
         if (!window.Draggable) {
+          console.log("Caricando Draggable...");
           const draggableScript = document.createElement('script');
           draggableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js';
           draggableScript.async = true;
           draggableScript.onload = () => {
-            console.log("GSAP e Draggable caricati correttamente");
-            setTimeout(initializeDraggables, 100);
+            console.log("Draggable caricato, registrando ScrollToPlugin...");
+            // Registra il plugin ScrollTo
+            window.gsap.registerPlugin(window.ScrollToPlugin);
+            console.log("✅ Tutti i plugin caricati e registrati correttamente");
+            
+            // Inizializzazione dopo un breve timeout per assicurarsi che tutto sia pronto
+            setTimeout(initializeDraggables, 200);
           };
           document.body.appendChild(draggableScript);
         } else {
           console.log("Draggable già disponibile");
-          setTimeout(initializeDraggables, 100);
+          
+          // Assicurati che ScrollToPlugin sia registrato
+          if (window.ScrollToPlugin && window.gsap) {
+            window.gsap.registerPlugin(window.ScrollToPlugin);
+          }
+          
+          setTimeout(initializeDraggables, 200);
         }
       } catch (error) {
         console.error("Errore nel caricare Draggable:", error);
       }
     };
 
+    // Inizia il caricamento
     loadGSAP();
 
+    // Cleanup
     return () => {
       destroyDraggables();
-      // Interrompi l'autoscroll se attivo
-      if (autoScrollRef.current.animationId) {
-        cancelAnimationFrame(autoScrollRef.current.animationId);
-        autoScrollRef.current.animationId = null;
-        autoScrollRef.current.active = false;
-      }
     };
   }, []);
 
@@ -130,55 +162,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   useEffect(() => {
     if (initialized.current && window.Draggable) {
       console.log("Data changed, re-initializing draggables");
-      setTimeout(initializeDraggables, 100);
+      setTimeout(initializeDraggables, 200);
     }
   }, [funnelData]);
-
-  // Funzione di autoscroll personalizzata
-  const performAutoScroll = () => {
-    if (!autoScrollRef.current.active || !boardRef.current) {
-      return;
-    }
-
-    const board = boardRef.current;
-    if (autoScrollRef.current.direction !== 0) {
-      // Calcoliamo la velocità in base alla direzione
-      const scrollAmount = autoScrollRef.current.direction * autoScrollRef.current.speed;
-      board.scrollLeft += scrollAmount;
-    }
-
-    // Continuiamo l'animazione finché è attiva
-    autoScrollRef.current.animationId = requestAnimationFrame(performAutoScroll);
-  };
-
-  // Avvia l'autoscroll
-  const startAutoScroll = (direction: number, speed: number) => {
-    autoScrollRef.current.direction = direction;
-    autoScrollRef.current.speed = speed;
-
-    // Avvia solo se non è già attivo
-    if (!autoScrollRef.current.active) {
-      autoScrollRef.current.active = true;
-      autoScrollRef.current.animationId = requestAnimationFrame(performAutoScroll);
-      console.log(`Autoscroll started: direction=${direction}, speed=${speed}`);
-    }
-  };
-
-  // Ferma l'autoscroll
-  const stopAutoScroll = () => {
-    if (autoScrollRef.current.active) {
-      autoScrollRef.current.active = false;
-      autoScrollRef.current.direction = 0;
-      autoScrollRef.current.speed = 0;
-      
-      if (autoScrollRef.current.animationId) {
-        cancelAnimationFrame(autoScrollRef.current.animationId);
-        autoScrollRef.current.animationId = null;
-      }
-      
-      console.log("Autoscroll stopped");
-    }
-  };
 
   // Distrugge tutte le istanze Draggable
   const destroyDraggables = () => {
@@ -205,6 +191,11 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
     const gsap = window.gsap;
     const Draggable = window.Draggable;
+    
+    // Assicurati che ScrollToPlugin sia registrato
+    if (window.ScrollToPlugin && !gsap.plugins.scrollTo) {
+      gsap.registerPlugin(window.ScrollToPlugin);
+    }
 
     console.log("Initializing draggables...");
 
@@ -213,9 +204,35 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     console.log(`Found ${cards.length} cards to make draggable`);
 
     if (cards.length === 0) {
+      console.log("No cards found, retrying in 500ms");
       setTimeout(initializeDraggables, 500);
       return;
     }
+    
+    // Configura l'elemento di scorrimento per l'autoscroll
+    const scrollerElement = boardRef.current;
+    if (!scrollerElement) {
+      console.error("Scroller element not found!");
+      return;
+    }
+    
+    console.log(`Configurando autoscroll per l'elemento:`, scrollerElement);
+    
+        // Configura il container di scrolling
+        Draggable.scrollProxy(scrollerElement, {
+          scrollTop: function(value: any): any {
+            // Ignoriamo scrollTop, vogliamo solo scrollLeft
+            return arguments.length ? this : scrollerElement.scrollTop;
+          },
+          scrollLeft: function(value: any): any {
+            if (arguments.length) {
+              // Imposta scrollLeft
+              scrollerElement.scrollLeft = value;
+            }
+            // Restituisce scrollLeft corrente
+            return scrollerElement.scrollLeft;
+          }
+        });
 
     // Crea un'istanza draggable per ogni card
     cards.forEach((card, index) => {
@@ -242,15 +259,23 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
         console.log(`Creating draggable for lead: ${currentLead.name}`);
 
-        // Crea il draggable senza autoScroll nativo di GSAP
+        // Crea il draggable con autoscroll nativo di GSAP
         const draggable = Draggable.create(card, {
           type: "x,y",
-          bounds: boardRef.current,
-          autoScroll: false, // Disabilitiamo l'autoscroll nativo
-          edgeResistance: 0.65,
+          // Non specificare bounds per permettere all'autoscroll di funzionare correttamente
+          autoScroll: 2, // Velocità costante (2 = velocità doppia rispetto al normale)
+          dragClickables: false,
           cursor: "grab",
           activeCursor: "grabbing",
-          onPress: function(this: any) {
+          // Definisci il container di scrolling
+          scrollProxy: scrollerElement,
+          // Dimensione della zona di attivazione (40px dal bordo)
+          edgeResistance: 0.65,
+          onDragStart: function(this: any, e: Event) {
+            // Log iniziale
+            console.log(`🟢 Iniziato drag per ${currentLead?.name}`);
+            setLogMessage(`Drag iniziato: ${currentLead?.name}`);
+            
             // Stile quando premuto
             gsap.to(this.target, {
               duration: 0.2,
@@ -267,41 +292,15 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
               startStatus: leadData.status
             };
             
-            console.log(`Drag started for ${leadData.name}`);
             setDraggedLead(leadData);
           },
-          onDrag: function(this: any) {
+          onDrag: function(this: any, e: Event) {
             if (!currentLead || !boardRef.current) return;
             
             // Trova la colonna sotto il cursore
             const dragRect = this.target.getBoundingClientRect();
             const centerX = dragRect.left + dragRect.width / 2;
             const centerY = dragRect.top + dragRect.height / 2;
-            
-            // Gestione dell'autoscroll orizzontale personalizzato
-            const boardRect = boardRef.current.getBoundingClientRect();
-            const edgeSize = 60; // Dimensione dell'area di trigger dello scroll
-            
-            // Se siamo vicini al bordo sinistro, fai scorrere verso sinistra
-            if (centerX < boardRect.left + edgeSize) {
-              // Calcola la velocità in base alla distanza dal bordo
-              const distance = centerX - boardRect.left;
-              const speedFactor = Math.max(0.1, 1 - (distance / edgeSize));
-              const speed = Math.max(3, Math.floor(15 * speedFactor));
-              startAutoScroll(-1, speed); // Direzione sinistra
-            } 
-            // Se siamo vicini al bordo destro, fai scorrere verso destra
-            else if (centerX > boardRect.right - edgeSize) {
-              // Calcola la velocità in base alla distanza dal bordo
-              const distance = boardRect.right - centerX;
-              const speedFactor = Math.max(0.1, 1 - (distance / edgeSize));
-              const speed = Math.max(3, Math.floor(15 * speedFactor));
-              startAutoScroll(1, speed); // Direzione destra
-            } 
-            // Altrimenti, ferma l'autoscroll
-            else {
-              stopAutoScroll();
-            }
             
             // Ottieni tutte le colonne
             const columns = document.querySelectorAll('.funnel-column');
@@ -321,13 +320,48 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
             
             // Aggiorna la colonna target se cambiata
             if (newTarget !== targetColumn) {
-              console.log(`Target column changed to: ${newTarget}`);
+              console.log(`🎯 Target column changed to: ${newTarget}`);
               setTargetColumn(newTarget);
             }
+            
+            // Controlla se siamo in una zona di autoscroll
+            const boardRect = boardRef.current.getBoundingClientRect();
+            const edgeSize = 40; // Dimensione della zona di attivazione
+            
+            const inLeftZone = centerX < boardRect.left + edgeSize;
+            const inRightZone = centerX > boardRect.right - edgeSize;
+            
+            // Aggiorna lo stato e i log solo se c'è un cambiamento
+            if (inLeftZone !== scrollStatusRef.current.inLeftZone || 
+                inRightZone !== scrollStatusRef.current.inRightZone) {
+                
+                // Log delle zone di autoscroll
+                if (inLeftZone) {
+                    console.log(`⬅️ Entrato nella zona di autoscroll SINISTRA`);
+                    setLogMessage(`Autoscroll: verso SINISTRA`);
+                } else if (inRightZone) {
+                    console.log(`➡️ Entrato nella zona di autoscroll DESTRA`);
+                    setLogMessage(`Autoscroll: verso DESTRA`);
+                } else if (scrollStatusRef.current.inLeftZone || scrollStatusRef.current.inRightZone) {
+                    console.log(`⏹️ Uscito dalla zona di autoscroll`);
+                    setLogMessage(`Autoscroll: disattivato`);
+                }
+                
+                // Aggiorna lo stato
+                scrollStatusRef.current.inLeftZone = inLeftZone;
+                scrollStatusRef.current.inRightZone = inRightZone;
+            }
           },
-          onRelease: function(this: any) {
-            // Ferma l'autoscroll
-            stopAutoScroll();
+          onDragEnd: function(this: any) {
+            console.log(`🛑 Fine drag per ${currentLead?.name}`);
+            setLogMessage(`Drag terminato: ${currentLead?.name}`);
+            
+            // Reset dello stato dell'autoscroll
+            scrollStatusRef.current = {
+              inLeftZone: false,
+              inRightZone: false,
+              scrollSpeed: 0
+            };
             
             // Ripristina lo stile
             gsap.to(this.target, {
@@ -343,7 +377,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
               const fromStatus = currentDragInfo.current.startStatus;
               
               if (fromStatus !== targetColumn) {
-                console.log(`Moving lead from ${fromStatus} to ${targetColumn}`);
+                console.log(`🔄 Moving lead from ${fromStatus} to ${targetColumn}`);
                 handleMoveLead(lead, targetColumn);
               }
             }
@@ -376,7 +410,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     });
 
     initialized.current = true;
-    console.log(`Successfully initialized ${draggableInstancesRef.current.length} draggables`);
+    console.log(`✅ Successfully initialized ${draggableInstancesRef.current.length} draggables`);
   };
 
   // Handle lead movement between columns
@@ -489,10 +523,18 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
   return (
     <>
+      {/* Debug status */}
+      {logMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-black/80 text-white p-2 rounded-md">
+          {logMessage}
+        </div>
+      )}
+    
       <div 
         ref={boardRef}
         className="funnel-board-container w-full overflow-x-auto"
         id="funnel-board-container"
+        data-autoscroll-container="true"
       >
         <div className="funnel-board min-w-max flex">
           {COLUMNS.map((column) => (
@@ -561,7 +603,35 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         .funnel-board-container {
           overflow-x: auto;
           overflow-y: hidden;
-          scroll-behavior: smooth;
+          /* Aggiunge indicatori visivi per le zone di autoscroll */
+        }
+        
+        .funnel-board-container::before,
+        .funnel-board-container::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 40px;
+          pointer-events: none;
+          z-index: 10;
+          opacity: 0;
+          transition: opacity 0.2s;
+        }
+        
+        .funnel-board-container::before {
+          left: 0;
+          background: linear-gradient(to right, rgba(255, 0, 0, 0.1), transparent);
+        }
+        
+        .funnel-board-container::after {
+          right: 0;
+          background: linear-gradient(to left, rgba(255, 0, 0, 0.1), transparent);
+        }
+        
+        .funnel-board-container:hover::before,
+        .funnel-board-container:hover::after {
+          opacity: 0.5;
         }
         
         .funnel-board {
