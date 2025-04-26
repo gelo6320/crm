@@ -25,9 +25,6 @@ const COLUMNS = [
   { id: "lost", title: "Persi", color: "bg-danger" },
 ];
 
-// Custom scroll zone sizes (percentage of viewport width)
-const SCROLL_ZONE_SIZE = 25; // 25% on each side
-
 export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMove }: CustomFunnelBoardProps) {
   const [editingLead, setEditingLead] = useState<FunnelItem | null>(null);
   const [isMoving, setIsMoving] = useState(false);
@@ -326,10 +323,19 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     // Handle auto-scrolling
     handleAutoScroll(touch.clientX);
   };
+
+  const SCROLL_ZONE_SIZE = 25; // 25% su ciascun lato
+  const SCROLL_SPEED = 15;
   
   // Handle auto-scrolling when dragging near the edges
   const handleAutoScroll = (clientX: number) => {
     if (!boardRef.current) return;
+    
+    // Ferma qualsiasi scroll precedente
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
     
     const board = boardRef.current;
     const boardRect = board.getBoundingClientRect();
@@ -338,36 +344,41 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     const leftScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
     const rightScrollZoneWidth = window.innerWidth * (SCROLL_ZONE_SIZE / 100);
     
-    // Limiti sinistro e destro per le zone di scroll
+    // Limiti delle zone di scroll
     const leftScrollZone = boardRect.left + leftScrollZoneWidth;
     const rightScrollZone = boardRect.right - rightScrollZoneWidth;
     
-    // Determina la direzione dello scroll
-    let newScrollDirection: 'left' | 'right' | null = null;
-    
+    // Determina se dobbiamo fare scroll e in quale direzione
     if (clientX < leftScrollZone) {
-      newScrollDirection = 'left';
+      // Scroll verso sinistra a velocità costante
+      scrollIntervalRef.current = setInterval(() => {
+        board.scrollLeft -= SCROLL_SPEED;
+      }, 16); // Circa 60fps
     } else if (clientX > rightScrollZone) {
-      newScrollDirection = 'right';
-    }
-    
-    // Se la direzione è cambiata
-    if (newScrollDirection !== isScrollingRef.current.direction) {
-      // Ferma l'animazione corrente
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-      
-      // Aggiorna la direzione corrente
-      isScrollingRef.current.direction = newScrollDirection;
-      
-      // Se abbiamo una nuova direzione, avvia l'animazione
-      if (newScrollDirection) {
-        animationFrameRef.current = requestAnimationFrame(scrollAnimation);
-      }
+      // Scroll verso destra a velocità costante
+      scrollIntervalRef.current = setInterval(() => {
+        board.scrollLeft += SCROLL_SPEED;
+      }, 16); // Circa 60fps
     }
   };
+  
+  // Non dimenticare di pulire l'intervallo quando il drag termina
+  const cleanupAutoScroll = () => {
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
+  };
+
+  // Da aggiungere a useEffect per la pulizia al dismount del componente
+  useEffect(() => {
+    return () => {
+      cleanupAutoScroll();
+    };
+  }, []);
+  
+  // Nel handleDragEnd e endDrag, aggiungi:
+  cleanupAutoScroll();
   
   // End dragging
   const handleDragEnd = (e: MouseEvent): void => {
