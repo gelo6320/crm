@@ -47,38 +47,13 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const draggedLeadRef = useRef<FunnelItem | null>(null);
   const dragOriginRef = useRef<{ status: string, x: number, y: number } | null>(null);
   const dragPositionRef = useRef<{ x: number, y: number } | null>(null);
-  const isScrollingRef = useRef<{ direction: 'left' | 'right' | null }>({ direction: null });
-  const animationFrameRef = useRef<number | null>(null); // Per requestAnimationFrame
-  const scrollSpeedRef = useRef<number>(50); // Velocità di scroll costante
   
   // Clean up interval on unmount
   useEffect(() => {
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
+      cleanupAutoScroll();
     };
   }, []);
-
-  // Funzione di scroll che utilizza requestAnimationFrame
-  const scrollAnimation = () => {
-    if (!boardRef.current) return;
-    
-    const board = boardRef.current;
-    const direction = isScrollingRef.current.direction;
-    
-    if (direction === 'left') {
-      board.scrollLeft -= scrollSpeedRef.current;
-    } else if (direction === 'right') {
-      board.scrollLeft += scrollSpeedRef.current;
-    }
-    
-    // Continua l'animazione solo se stiamo ancora scrollando
-    if (direction) {
-      animationFrameRef.current = requestAnimationFrame(scrollAnimation);
-    }
-  };
 
   const updateDragPreviewPosition = (clientX: number, clientY: number): void => {
     if (!dragItemRef.current || !dragOrigin) return;
@@ -423,14 +398,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     const effectiveTargetColumn = finalTargetColumn || targetColumn;
     console.log(`[DRAG DEBUG] 🧹 Esecuzione pulizia drag comune`);
     
-    // Cancella l'animation frame
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-    
-    // Reimposta la direzione di scroll
-    isScrollingRef.current.direction = null;
+    // Ferma lo scroll automatico
+    cleanupAutoScroll();  
     
     // Handle the drop if over a valid column
     if (draggedLeadRef.current && effectiveTargetColumn) {
