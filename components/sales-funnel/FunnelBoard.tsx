@@ -50,6 +50,19 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const initialized = useRef(false);
   const draggableInstancesRef = useRef<any[]>([]);
   
+  // Ref per autoscroll personalizzato
+  const autoScrollRef = useRef<{
+    active: boolean;
+    direction: number; // -1 = sinistra, 1 = destra, 0 = nessuno
+    animationId: number | null;
+    speed: number;
+  }>({
+    active: false,
+    direction: 0,
+    animationId: null,
+    speed: 0
+  });
+  
   // Ref per tenere traccia dell'attuale lead trascinato
   const currentDragInfo = useRef<{
     lead: FunnelItem | null;
@@ -61,14 +74,12 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     startStatus: null
   });
 
-  // Funzione per caricare GSAP e Draggable
+  // Funzione per caricare GSAP
   useEffect(() => {
     // Carica GSAP in modo dinamico
     const loadGSAP = async () => {
       try {
-        // Verifica se gsap è già disponibile globalmente
         if (!window.gsap) {
-          // Carica GSAP
           const gsapScript = document.createElement('script');
           gsapScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';
           gsapScript.async = true;
@@ -82,7 +93,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       }
     };
 
-    // Carica il plugin Draggable dopo GSAP
     const loadDraggable = () => {
       try {
         if (!window.Draggable) {
@@ -91,8 +101,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           draggableScript.async = true;
           draggableScript.onload = () => {
             console.log("GSAP e Draggable caricati correttamente");
-            // Inizializza draggable solo dopo che entrambi sono caricati
-            setTimeout(initializeDraggables, 100); // Piccolo timeout per assicurarsi che tutto sia pronto
+            setTimeout(initializeDraggables, 100);
           };
           document.body.appendChild(draggableScript);
         } else {
@@ -106,9 +115,14 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
     loadGSAP();
 
-    // Cleanup quando il componente viene smontato
     return () => {
       destroyDraggables();
+      // Interrompi l'autoscroll se attivo
+      if (autoScrollRef.current.animationId) {
+        cancelAnimationFrame(autoScrollRef.current.animationId);
+        autoScrollRef.current.animationId = null;
+        autoScrollRef.current.active = false;
+      }
     };
   }, []);
 
@@ -116,10 +130,55 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   useEffect(() => {
     if (initialized.current && window.Draggable) {
       console.log("Data changed, re-initializing draggables");
-      // Piccolo timeout per assicurarsi che il DOM sia aggiornato
       setTimeout(initializeDraggables, 100);
     }
   }, [funnelData]);
+
+  // Funzione di autoscroll personalizzata
+  const performAutoScroll = () => {
+    if (!autoScrollRef.current.active || !boardRef.current) {
+      return;
+    }
+
+    const board = boardRef.current;
+    if (autoScrollRef.current.direction !== 0) {
+      // Calcoliamo la velocità in base alla direzione
+      const scrollAmount = autoScrollRef.current.direction * autoScrollRef.current.speed;
+      board.scrollLeft += scrollAmount;
+    }
+
+    // Continuiamo l'animazione finché è attiva
+    autoScrollRef.current.animationId = requestAnimationFrame(performAutoScroll);
+  };
+
+  // Avvia l'autoscroll
+  const startAutoScroll = (direction: number, speed: number) => {
+    autoScrollRef.current.direction = direction;
+    autoScrollRef.current.speed = speed;
+
+    // Avvia solo se non è già attivo
+    if (!autoScrollRef.current.active) {
+      autoScrollRef.current.active = true;
+      autoScrollRef.current.animationId = requestAnimationFrame(performAutoScroll);
+      console.log(`Autoscroll started: direction=${direction}, speed=${speed}`);
+    }
+  };
+
+  // Ferma l'autoscroll
+  const stopAutoScroll = () => {
+    if (autoScrollRef.current.active) {
+      autoScrollRef.current.active = false;
+      autoScrollRef.current.direction = 0;
+      autoScrollRef.current.speed = 0;
+      
+      if (autoScrollRef.current.animationId) {
+        cancelAnimationFrame(autoScrollRef.current.animationId);
+        autoScrollRef.current.animationId = null;
+      }
+      
+      console.log("Autoscroll stopped");
+    }
+  };
 
   // Distrugge tutte le istanze Draggable
   const destroyDraggables = () => {
@@ -154,7 +213,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     console.log(`Found ${cards.length} cards to make draggable`);
 
     if (cards.length === 0) {
-      setTimeout(initializeDraggables, 500); // Riprova se non ci sono ancora card
+      setTimeout(initializeDraggables, 500);
       return;
     }
 
@@ -183,11 +242,11 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
         console.log(`Creating draggable for lead: ${currentLead.name}`);
 
-        // Crea il draggable
+        // Crea il draggable senza autoScroll nativo di GSAP
         const draggable = Draggable.create(card, {
           type: "x,y",
           bounds: boardRef.current,
-          autoScroll: 3,
+          autoScroll: false, // Disabilitiamo l'autoscroll nativo
           edgeResistance: 0.65,
           cursor: "grab",
           activeCursor: "grabbing",
@@ -212,12 +271,37 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
             setDraggedLead(leadData);
           },
           onDrag: function(this: any) {
-            if (!currentLead) return;
+            if (!currentLead || !boardRef.current) return;
             
             // Trova la colonna sotto il cursore
             const dragRect = this.target.getBoundingClientRect();
             const centerX = dragRect.left + dragRect.width / 2;
             const centerY = dragRect.top + dragRect.height / 2;
+            
+            // Gestione dell'autoscroll orizzontale personalizzato
+            const boardRect = boardRef.current.getBoundingClientRect();
+            const edgeSize = 60; // Dimensione dell'area di trigger dello scroll
+            
+            // Se siamo vicini al bordo sinistro, fai scorrere verso sinistra
+            if (centerX < boardRect.left + edgeSize) {
+              // Calcola la velocità in base alla distanza dal bordo
+              const distance = centerX - boardRect.left;
+              const speedFactor = Math.max(0.1, 1 - (distance / edgeSize));
+              const speed = Math.max(3, Math.floor(15 * speedFactor));
+              startAutoScroll(-1, speed); // Direzione sinistra
+            } 
+            // Se siamo vicini al bordo destro, fai scorrere verso destra
+            else if (centerX > boardRect.right - edgeSize) {
+              // Calcola la velocità in base alla distanza dal bordo
+              const distance = boardRect.right - centerX;
+              const speedFactor = Math.max(0.1, 1 - (distance / edgeSize));
+              const speed = Math.max(3, Math.floor(15 * speedFactor));
+              startAutoScroll(1, speed); // Direzione destra
+            } 
+            // Altrimenti, ferma l'autoscroll
+            else {
+              stopAutoScroll();
+            }
             
             // Ottieni tutte le colonne
             const columns = document.querySelectorAll('.funnel-column');
@@ -242,6 +326,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
             }
           },
           onRelease: function(this: any) {
+            // Ferma l'autoscroll
+            stopAutoScroll();
+            
             // Ripristina lo stile
             gsap.to(this.target, {
               duration: 0.3,
@@ -471,9 +558,25 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       
       {/* CSS per il funnel board */}
       <style jsx global>{`
+        .funnel-board-container {
+          overflow-x: auto;
+          overflow-y: hidden;
+          scroll-behavior: smooth;
+        }
+        
+        .funnel-board {
+          display: flex;
+          min-width: max-content;
+          height: calc(100vh - 200px);
+        }
+        
         .funnel-column {
           min-width: 300px;
+          width: 300px;
           border-right: 1px solid rgba(255, 255, 255, 0.1);
+          height: 100%;
+          display: flex;
+          flex-direction: column;
         }
         
         .funnel-header {
@@ -486,7 +589,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         
         .funnel-body {
           padding: 10px;
-          min-height: 100px;
+          flex: 1;
+          overflow-y: auto;
         }
         
         .funnel-card {
