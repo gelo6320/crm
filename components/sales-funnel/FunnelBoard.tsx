@@ -344,20 +344,13 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       scrollIntervalRef.current = null;
     }
   };
-
-  // Da aggiungere a useEffect per la pulizia al dismount del componente
-  useEffect(() => {
-    return () => {
-      cleanupAutoScroll();
-    };
-  }, []);
-  
-  // Nel handleDragEnd e endDrag, aggiungi:
-  cleanupAutoScroll();
   
   // End dragging
   const handleDragEnd = (e: MouseEvent): void => {
     console.log(`[DRAG DEBUG] 🛑 Fine drag (mouse) - Coordinate: (${e.clientX}, ${e.clientY})`);
+    
+    // Cleanup autoscroll
+    cleanupAutoScroll();
     
     // Controllo finale della colonna al rilascio
     const finalTargetColumn = detectTargetColumn(e.clientX, e.clientY);
@@ -378,10 +371,12 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     
     endDrag(finalTargetColumn || targetColumn);
   };
-  
-  // Handle touch end for mobile
+
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>): void => {
     console.log(`[DRAG DEBUG] 🛑 Fine drag (touch)`);
+    
+    // Cleanup autoscroll
+    cleanupAutoScroll();
     
     // Registra la posizione finale del drag preview prima della pulizia
     if (dragItemRef.current) {
