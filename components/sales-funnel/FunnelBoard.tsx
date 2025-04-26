@@ -7,14 +7,6 @@ import { updateLeadMetadata } from "@/lib/api/funnel";
 import FacebookEventModal from "./FacebookEventModal";
 import ValueModal from "./ValueModal";
 
-// Definiamo il tipo per GSAP e Draggable
-declare global {
-  interface Window {
-    gsap: any;
-    Draggable: any;
-  }
-}
-
 interface CustomFunnelBoardProps {
   funnelData: FunnelData;
   setFunnelData: React.Dispatch<React.SetStateAction<FunnelData>>;
@@ -45,345 +37,282 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const [draggedLead, setDraggedLead] = useState<FunnelItem | null>(null);
   const [targetColumn, setTargetColumn] = useState<string | null>(null);
   
-  // Log per l'autoscroll
-  const [logMessage, setLogMessage] = useState<string>("");
-  
   // Refs
   const boardRef = useRef<HTMLDivElement>(null);
-  const initialized = useRef(false);
-  const draggableInstancesRef = useRef<any[]>([]);
   
-  // Debug: auto-scroll status
-  const scrollStatusRef = useRef({
-    inLeftZone: false,
-    inRightZone: false,
-    scrollSpeed: 0
-  });
-  
-  // Ref per tenere traccia dell'attuale lead trascinato
-  const currentDragInfo = useRef<{
-    lead: FunnelItem | null;
+  // Ref per tenere traccia dell'elemento trascinato
+  const dragElementRef = useRef<{
     element: HTMLElement | null;
+    offsetX: number;
+    offsetY: number;
+    startX: number;
+    startY: number;
+    lead: FunnelItem | null;
     startStatus: string | null;
   }>({
-    lead: null,
     element: null,
+    offsetX: 0,
+    offsetY: 0,
+    startX: 0,
+    startY: 0,
+    lead: null,
     startStatus: null
   });
 
-  // Funzione per caricare GSAP e i plugin
+  // Aggiungi gli event listener quando il componente viene montato
   useEffect(() => {
-    const loadGSAP = async () => {
-      try {
-        // Carica GSAP
-        if (!window.gsap) {
-          console.log("Caricando GSAP...");
-          const gsapScript = document.createElement('script');
-          gsapScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';
-          gsapScript.async = true;
-          gsapScript.onload = () => {
-            console.log("GSAP caricato");
-            loadDraggable();
-          };
-          document.body.appendChild(gsapScript);
-        } else {
-          loadDraggable();
-        }
-      } catch (error) {
-        console.error("Errore nel caricare GSAP:", error);
-      }
-    };
-
-    // Carica Draggable dopo GSAP
-    const loadDraggable = () => {
-      try {
-        if (!window.Draggable) {
-          console.log("Caricando Draggable...");
-          const draggableScript = document.createElement('script');
-          draggableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js';
-          draggableScript.async = true;
-          draggableScript.onload = () => {
-            console.log("Draggable caricato");
-            console.log("✅ Tutti i plugin caricati correttamente");
-            
-            // Inizializzazione dopo un breve timeout per assicurarsi che tutto sia pronto
-            setTimeout(initializeDraggables, 200);
-          };
-          document.body.appendChild(draggableScript);
-        } else {
-          console.log("Draggable già disponibile");
-          setTimeout(initializeDraggables, 200);
-        }
-      } catch (error) {
-        console.error("Errore nel caricare Draggable:", error);
-      }
-    };
-
-    // Inizia il caricamento
-    loadGSAP();
-
-    // Cleanup
+    // Prepara i card per il drag and drop
+    setupCards();
+    
+    // Re-prepara i card quando cambiano i dati
     return () => {
-      destroyDraggables();
+      // Cleanup se necessario
     };
-  }, []);
-
-  // Re-inizializza i draggable quando cambiano i dati
-  useEffect(() => {
-    if (initialized.current && window.Draggable) {
-      console.log("Data changed, re-initializing draggables");
-      setTimeout(initializeDraggables, 200);
-    }
   }, [funnelData]);
-
-  // Distrugge tutte le istanze Draggable
-  const destroyDraggables = () => {
-    if (draggableInstancesRef.current.length) {
-      console.log("Destroying draggables...");
-      draggableInstancesRef.current.forEach(instance => {
-        if (instance && typeof instance.kill === 'function') {
-          instance.kill();
-        }
-      });
-      draggableInstancesRef.current = [];
-    }
-  };
-
-  // Funzione per gestire l'autoscroll manualmente
-  const handleAutoScroll = (x: number) => {
-    if (!boardRef.current) return;
-    
-    const board = boardRef.current;
-    const boardRect = board.getBoundingClientRect();
-    const edgeSize = 60; // px dal bordo
-    
-    // Calcola la distanza dai bordi
-    const distanceFromLeft = x - boardRect.left;
-    const distanceFromRight = boardRect.right - x;
-    
-    let scrollAmount = 0;
-    let scrollDirection = "";
-    
-    // Determina se siamo vicino al bordo sinistro
-    if (distanceFromLeft < edgeSize) {
-      // Calcoliamo la velocità in base alla distanza
-      scrollAmount = Math.max(5, 20 * (1 - (distanceFromLeft / edgeSize)));
-      board.scrollLeft -= scrollAmount;
-      scrollDirection = "SINISTRA";
-      
-      // Aggiorna lo stato solo se cambia
-      if (!scrollStatusRef.current.inLeftZone) {
-        console.log(`⬅️ Entrato nella zona di autoscroll SINISTRA - Velocità: ${scrollAmount.toFixed(1)}px/frame`);
-        setLogMessage(`Autoscroll: SINISTRA (${scrollAmount.toFixed(1)}px/frame)`);
-        scrollStatusRef.current.inLeftZone = true;
-        scrollStatusRef.current.inRightZone = false;
-        scrollStatusRef.current.scrollSpeed = scrollAmount;
-      }
-    }
-    // Determina se siamo vicino al bordo destro
-    else if (distanceFromRight < edgeSize) {
-      // Calcoliamo la velocità in base alla distanza
-      scrollAmount = Math.max(5, 20 * (1 - (distanceFromRight / edgeSize)));
-      board.scrollLeft += scrollAmount;
-      scrollDirection = "DESTRA";
-      
-      // Aggiorna lo stato solo se cambia
-      if (!scrollStatusRef.current.inRightZone) {
-        console.log(`➡️ Entrato nella zona di autoscroll DESTRA - Velocità: ${scrollAmount.toFixed(1)}px/frame`);
-        setLogMessage(`Autoscroll: DESTRA (${scrollAmount.toFixed(1)}px/frame)`);
-        scrollStatusRef.current.inLeftZone = false;
-        scrollStatusRef.current.inRightZone = true;
-        scrollStatusRef.current.scrollSpeed = scrollAmount;
-      }
-    }
-    // Non siamo vicino a nessun bordo
-    else if (scrollStatusRef.current.inLeftZone || scrollStatusRef.current.inRightZone) {
-      console.log(`⏹️ Uscito dalla zona di autoscroll`);
-      setLogMessage(`Autoscroll: disattivato`);
-      scrollStatusRef.current.inLeftZone = false;
-      scrollStatusRef.current.inRightZone = false;
-      scrollStatusRef.current.scrollSpeed = 0;
-    }
-    
-    return { scrolling: scrollAmount > 0, direction: scrollDirection, amount: scrollAmount };
-  };
-
-  // Inizializza i Draggable per ogni card
-  const initializeDraggables = () => {
-    if (!window.Draggable || !window.gsap) {
-      console.error("GSAP o Draggable non sono disponibili");
-      return;
-    }
-
-    // Pulisci le istanze esistenti prima di crearne di nuove
-    destroyDraggables();
-
-    const gsap = window.gsap;
-    const Draggable = window.Draggable;
-
-    console.log("Initializing draggables...");
-
-    // Seleziona tutte le card
+  
+  // Configura i card per il drag and drop
+  const setupCards = () => {
     const cards = document.querySelectorAll('.funnel-card');
-    console.log(`Found ${cards.length} cards to make draggable`);
-
-    if (cards.length === 0) {
-      console.log("No cards found, retrying in 500ms");
-      setTimeout(initializeDraggables, 500);
-      return;
+    
+    cards.forEach(card => {
+      const element = card as HTMLElement;
+      
+      // Aggiungi gli eventi per il drag and drop
+      element.onmousedown = handleMouseDown;
+      element.ontouchstart = handleTouchStart;
+      
+      // Assicurati che il card sia draggable
+      element.draggable = false; // Disabilita il comportamento draggable nativo del browser
+      element.style.touchAction = 'none'; // Previene lo scrolling su touch device
+      element.style.userSelect = 'none'; // Previene la selezione del testo
+    });
+  };
+  
+  // Handle per l'inizio del drag con mouse
+  const handleMouseDown = (e: MouseEvent) => {
+    if (e.button !== 0) return; // Solo click sinistro
+    
+    const target = e.currentTarget as HTMLElement;
+    const leadId = target.getAttribute('data-id');
+    if (!leadId) return;
+    
+    // Trova il lead corrispondente
+    let leadItem: FunnelItem | undefined;
+    let leadStatus: string | null = null;
+    
+    // Cerca il lead in tutte le colonne
+    for (const column of COLUMNS) {
+      const columnId = column.id as keyof FunnelData;
+      const found = funnelData[columnId].find(item => item._id === leadId);
+      if (found) {
+        leadItem = found;
+        leadStatus = column.id;
+        break;
+      }
     }
     
-    console.log(`Configurando autoscroll per l'elemento:`, boardRef.current);
-
-    // Crea un'istanza draggable per ogni card
-    cards.forEach((card, index) => {
-      try {
-        // Identifica il lead associato a questa card
-        const leadId = card.getAttribute('data-id');
-        let currentLead: FunnelItem | null = null;
-        let currentStatus: string | null = null;
-
-        // Cerca il lead in tutte le colonne
-        for (const colId in funnelData) {
-          const found = funnelData[colId as keyof FunnelData].find(item => item._id === leadId);
-          if (found) {
-            currentLead = found;
-            currentStatus = colId;
-            break;
-          }
-        }
-
-        if (!currentLead) {
-          console.warn(`Lead non trovato per card con ID: ${leadId}`);
-          return;
-        }
-
-        console.log(`Creating draggable for lead: ${currentLead.name}`);
-
-        // Crea il draggable con implementazione manuale dell'autoscroll
-        const draggable = Draggable.create(card, {
-          type: "x,y",
-          // Disabilitiamo l'autoscroll nativo per usare il nostro
-          autoScroll: false,
-          dragClickables: false,
-          cursor: "grab",
-          activeCursor: "grabbing",
-          edgeResistance: 0.65,
-          onDragStart: function(this: any, e: Event) {
-            // Log iniziale
-            console.log(`🟢 Iniziato drag per ${currentLead?.name}`);
-            setLogMessage(`Drag iniziato: ${currentLead?.name}`);
-            
-            // Stile quando premuto
-            gsap.to(this.target, {
-              duration: 0.2,
-              scale: 1.05,
-              boxShadow: "0px 10px 20px rgba(0,0,0,0.2)",
-              zIndex: 1000
-            });
-            
-            // Salva le info sul lead corrente
-            const leadData = currentLead as FunnelItem;
-            currentDragInfo.current = {
-              lead: leadData,
-              element: this.target,
-              startStatus: leadData.status
-            };
-            
-            setDraggedLead(leadData);
-          },
-          onDrag: function(this: any, e: Event) {
-            if (!currentLead || !boardRef.current) return;
-            
-            // Trova la colonna sotto il cursore
-            const dragRect = this.target.getBoundingClientRect();
-            const centerX = dragRect.left + dragRect.width / 2;
-            const centerY = dragRect.top + dragRect.height / 2;
-            
-            // Gestione autoscroll manuale
-            handleAutoScroll(centerX);
-            
-            // Ottieni tutte le colonne
-            const columns = document.querySelectorAll('.funnel-column');
-            let newTarget: string | null = null;
-            
-            columns.forEach(column => {
-              const rect = column.getBoundingClientRect();
-              if (
-                centerX >= rect.left && 
-                centerX <= rect.right && 
-                centerY >= rect.top && 
-                centerY <= rect.bottom
-              ) {
-                newTarget = (column as HTMLElement).id;
-              }
-            });
-            
-            // Aggiorna la colonna target se cambiata
-            if (newTarget !== targetColumn) {
-              console.log(`🎯 Target column changed to: ${newTarget}`);
-              setTargetColumn(newTarget);
-            }
-          },
-          onDragEnd: function(this: any) {
-            console.log(`🛑 Fine drag per ${currentLead?.name}`);
-            setLogMessage(`Drag terminato: ${currentLead?.name}`);
-            
-            // Reset dello stato dell'autoscroll
-            scrollStatusRef.current = {
-              inLeftZone: false,
-              inRightZone: false,
-              scrollSpeed: 0
-            };
-            
-            // Ripristina lo stile
-            gsap.to(this.target, {
-              duration: 0.3,
-              scale: 1,
-              boxShadow: "0px 0px 0px rgba(0,0,0,0)",
-              clearProps: "zIndex"
-            });
-            
-            // Completa il drag solo se abbiamo una colonna target valida
-            if (targetColumn && currentDragInfo.current.lead) {
-              const lead = currentDragInfo.current.lead;
-              const fromStatus = currentDragInfo.current.startStatus;
-              
-              if (fromStatus !== targetColumn) {
-                console.log(`🔄 Moving lead from ${fromStatus} to ${targetColumn}`);
-                handleMoveLead(lead, targetColumn);
-              }
-            }
-            
-            // Riporta l'elemento alla posizione originale
-            gsap.to(this.target, {
-              duration: 0.3,
-              x: 0,
-              y: 0,
-              onComplete: () => {
-                // Reset stati
-                setDraggedLead(null);
-                setTargetColumn(null);
-                
-                // Reset drag info
-                currentDragInfo.current = {
-                  lead: null,
-                  element: null,
-                  startStatus: null
-                };
-              }
-            });
-          }
-        })[0]; // Prendi la prima istanza dell'array
-
-        draggableInstancesRef.current.push(draggable);
-      } catch (error) {
-        console.error(`Error creating draggable for card ${index}:`, error);
+    if (!leadItem) return;
+    
+    // Previeni il comportamento di default
+    e.preventDefault();
+    
+    // Inizia il drag
+    startDrag(target, e.clientX, e.clientY, leadItem, leadStatus);
+    
+    // Aggiungi listener globali per il movimento e il rilascio
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+  
+  // Handle per l'inizio del drag con touch
+  const handleTouchStart = (e: TouchEvent) => {
+    const target = e.currentTarget as HTMLElement;
+    const leadId = target.getAttribute('data-id');
+    if (!leadId) return;
+    
+    // Trova il lead corrispondente
+    let leadItem: FunnelItem | undefined;
+    let leadStatus: string | null = null;
+    
+    // Cerca il lead in tutte le colonne
+    for (const column of COLUMNS) {
+      const columnId = column.id as keyof FunnelData;
+      const found = funnelData[columnId].find(item => item._id === leadId);
+      if (found) {
+        leadItem = found;
+        leadStatus = column.id;
+        break;
+      }
+    }
+    
+    if (!leadItem) return;
+    
+    // Previeni il comportamento di default
+    e.preventDefault();
+    
+    // Usa il primo touch point
+    const touch = e.touches[0];
+    
+    // Inizia il drag
+    startDrag(target, touch.clientX, touch.clientY, leadItem, leadStatus);
+    
+    // Aggiungi listener globali per il movimento e il rilascio
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
+  };
+  
+  // Inizia il processo di drag
+  const startDrag = (element: HTMLElement, clientX: number, clientY: number, lead: FunnelItem, status: string | null) => {
+    // Calcola l'offset del mouse rispetto all'elemento
+    const rect = element.getBoundingClientRect();
+    const offsetX = clientX - rect.left;
+    const offsetY = clientY - rect.top;
+    
+    // Memorizza i dati iniziali
+    dragElementRef.current = {
+      element,
+      offsetX,
+      offsetY,
+      startX: clientX,
+      startY: clientY,
+      lead,
+      startStatus: status
+    };
+    
+    // Applica stile durante il trascinamento
+    element.style.position = 'absolute';
+    element.style.zIndex = '1000';
+    element.style.transform = 'scale(1.05)';
+    element.style.boxShadow = '0 10px 20px rgba(0,0,0,0.2)';
+    element.style.opacity = '0.8';
+    
+    // Aggiorna lo stato
+    setDraggedLead(lead);
+    
+    // Posiziona l'elemento
+    moveAt(clientX, clientY);
+  };
+  
+  // Muove l'elemento alla posizione del cursore
+  const moveAt = (clientX: number, clientY: number) => {
+    if (!dragElementRef.current.element) return;
+    
+    const element = dragElementRef.current.element;
+    const { offsetX, offsetY } = dragElementRef.current;
+    
+    // Calcola la nuova posizione
+    const left = clientX - offsetX;
+    const top = clientY - offsetY;
+    
+    // Applica la nuova posizione
+    element.style.left = `${left}px`;
+    element.style.top = `${top}px`;
+  };
+  
+  // Gestisce il movimento del mouse durante il drag
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!dragElementRef.current.element) return;
+    
+    // Muovi l'elemento
+    moveAt(e.clientX, e.clientY);
+    
+    // Rileva la colonna sotto il cursore
+    updateTargetColumn(e.clientX, e.clientY);
+  };
+  
+  // Gestisce il movimento del touch durante il drag
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!dragElementRef.current.element) return;
+    
+    // Previeni lo scrolling
+    e.preventDefault();
+    
+    // Usa il primo touch point
+    const touch = e.touches[0];
+    
+    // Muovi l'elemento
+    moveAt(touch.clientX, touch.clientY);
+    
+    // Rileva la colonna sotto il cursore
+    updateTargetColumn(touch.clientX, touch.clientY);
+  };
+  
+  // Aggiorna la colonna target in base alla posizione
+  const updateTargetColumn = (clientX: number, clientY: number) => {
+    // Ottieni tutte le colonne
+    const columns = document.querySelectorAll('.funnel-column');
+    let newTarget: string | null = null;
+    
+    columns.forEach(column => {
+      const rect = column.getBoundingClientRect();
+      if (
+        clientX >= rect.left && 
+        clientX <= rect.right && 
+        clientY >= rect.top && 
+        clientY <= rect.bottom
+      ) {
+        newTarget = (column as HTMLElement).id;
       }
     });
-
-    initialized.current = true;
-    console.log(`✅ Successfully initialized ${draggableInstancesRef.current.length} draggables`);
+    
+    // Aggiorna la colonna target se cambiata
+    if (newTarget !== targetColumn) {
+      setTargetColumn(newTarget);
+    }
+  };
+  
+  // Gestisce il rilascio del mouse
+  const handleMouseUp = () => {
+    finishDrag();
+    
+    // Rimuovi i listener globali
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  };
+  
+  // Gestisce il rilascio del touch
+  const handleTouchEnd = () => {
+    finishDrag();
+    
+    // Rimuovi i listener globali
+    document.removeEventListener('touchmove', handleTouchMove);
+    document.removeEventListener('touchend', handleTouchEnd);
+  };
+  
+  // Termina il processo di drag
+  const finishDrag = () => {
+    const { element, lead, startStatus } = dragElementRef.current;
+    
+    if (!element || !lead) return;
+    
+    // Ripristina lo stile dell'elemento
+    element.style.position = '';
+    element.style.zIndex = '';
+    element.style.transform = '';
+    element.style.boxShadow = '';
+    element.style.opacity = '';
+    element.style.left = '';
+    element.style.top = '';
+    
+    // Completa il drag solo se abbiamo una colonna target valida
+    if (targetColumn && startStatus !== targetColumn) {
+      handleMoveLead(lead, targetColumn);
+    }
+    
+    // Reset dello stato
+    setDraggedLead(null);
+    setTargetColumn(null);
+    
+    // Reset del riferimento
+    dragElementRef.current = {
+      element: null,
+      offsetX: 0,
+      offsetY: 0,
+      startX: 0,
+      startY: 0,
+      lead: null,
+      startStatus: null
+    };
   };
 
   // Handle lead movement between columns
@@ -496,18 +425,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
   return (
     <>
-      {/* Debug status */}
-      {logMessage && (
-        <div className="fixed top-4 right-4 z-50 bg-black/80 text-white p-2 rounded-md">
-          {logMessage}
-        </div>
-      )}
-    
       <div 
         ref={boardRef}
         className="funnel-board-container w-full overflow-x-auto"
         id="funnel-board-container"
-        data-autoscroll-container="true"
       >
         <div className="funnel-board min-w-max flex">
           {COLUMNS.map((column) => (
@@ -577,35 +498,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           overflow-x: auto;
           overflow-y: hidden;
           position: relative;
-          /* Aggiunge indicatori visivi per le zone di autoscroll */
-        }
-        
-        .funnel-board-container::before,
-        .funnel-board-container::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          width: 60px;
-          pointer-events: none;
-          z-index: 10;
-          opacity: 0;
-          transition: opacity 0.2s;
-        }
-        
-        .funnel-board-container::before {
-          left: 0;
-          background: linear-gradient(to right, rgba(255, 100, 0, 0.2), transparent);
-        }
-        
-        .funnel-board-container::after {
-          right: 0;
-          background: linear-gradient(to left, rgba(255, 100, 0, 0.2), transparent);
-        }
-        
-        .funnel-board-container:hover::before,
-        .funnel-board-container:hover::after {
-          opacity: 0.3;
         }
         
         .funnel-board {
