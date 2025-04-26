@@ -69,7 +69,7 @@ export default function RootLayout({
             router.push(`/login?redirectTo=${encodeURIComponent(pathname || '/')}`);
           } else if (pathname === '/') {
             // If authenticated and at root path, redirect to dashboard
-            router.push('/dashboard');
+            router.push('/');
           }
         } catch (error) {
           console.error("Authentication check error:", error);

@@ -230,7 +230,7 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
           {/* Sidebar header */}
           <div className="h-[57px] flex items-center justify-between px-4 border-b border-zinc-800">
             <Link 
-              href="/dashboard" 
+              href="/" 
               className="flex items-center space-x-2 text-white hover:text-primary transition"
               onClick={closeSidebar}
             >
