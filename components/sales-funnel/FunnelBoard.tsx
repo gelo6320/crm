@@ -283,7 +283,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         const containerScrollWidth = boardRef.current.scrollWidth;
         
         // Definisci le zone di autoscroll (20% di ciascun lato)
-        const scrollZoneSize = Math.min(150, containerWidth * 0.3);
+        const scrollZoneSize = Math.min(150, containerWidth * 0.4);
         
         // Calcola le posizioni delle zone di scroll
         const leftEdge = containerRect.left;
@@ -293,7 +293,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         
         // Funzione per calcolare la velocità di scroll
         const calculateScrollSpeed = (distance: number, maxDistance: number) => {
-          return Math.max(10, Math.round(30 * (1 - distance / maxDistance)));
+          return Math.max(20, Math.round(50 * (1 - distance / maxDistance)));
         };
         
         // Se il mouse è nella zona sinistra e possiamo scrollare a sinistra
