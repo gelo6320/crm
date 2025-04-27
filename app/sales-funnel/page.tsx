@@ -1,7 +1,7 @@
 // app/sales-funnel/page.tsx
 "use client";
 
-import React, { useState, useEffect, ReactElement } from "react";
+import { useState, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 import CustomFunnelBoard from "@/components/sales-funnel/FunnelBoard";
 import FunnelStats from "@/components/sales-funnel/FunnelStats";
@@ -9,8 +9,10 @@ import { FunnelData, FunnelStats as FunnelStatsType } from "@/types";
 import { fetchFunnelData } from "@/lib/api/funnel";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import DeviceDetectionInitializer from "@/app/_device";
+import "../funnel-styles.css";
+import "../react-dnd-styles.css";
 
-export default function SalesFunnelPage(): ReactElement {
+export default function SalesFunnelPage() {
   const [funnelData, setFunnelData] = useState<FunnelData>({
     new: [],
     contacted: [],
@@ -36,6 +38,7 @@ export default function SalesFunnelPage(): ReactElement {
     loadFunnelData();
   }, []);
   
+  // app/sales-funnel/page.tsx (continuazione)
   const loadFunnelData = async () => {
     try {
       setIsLoading(true);
@@ -55,6 +58,7 @@ export default function SalesFunnelPage(): ReactElement {
   
   return (
     <>
+      {/* Device detection per migliorare l'esperienza mobile */}
       <DeviceDetectionInitializer />
       
       <div className="space-y-4 animate-fade-in">
@@ -69,10 +73,10 @@ export default function SalesFunnelPage(): ReactElement {
           </button>
         </div>
         
-        {/* Dashboard Stats */}
-        <FunnelStats stats={funnelStats} />
-        
         <div className="flex flex-col gap-4">
+          <div className="w-full shrink-0">
+            <FunnelStats stats={funnelStats} />
+          </div>
           <div className="flex-1 overflow-hidden">
             <CustomFunnelBoard 
               funnelData={funnelData} 
