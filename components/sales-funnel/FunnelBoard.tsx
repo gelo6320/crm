@@ -273,8 +273,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       
       // Calcolo della velocità di scroll in base alla distanza dal bordo
       const calculateScrollSpeed = (distance: number, maxDistance: number) => {
-        const baseSpeed = 5;
-        const maxSpeed = 20;
+        const baseSpeed = 2;
+        const maxSpeed = 10;
         const ratio = 1 - Math.min(1, Math.max(0, distance / maxDistance));
         return Math.round(baseSpeed + ((maxSpeed - baseSpeed) * ratio));
       };
