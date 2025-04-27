@@ -14,15 +14,6 @@ import { TouchBackend } from "react-dnd-touch-backend";
 import { isTouchDevice } from "@/lib/utils/device";
 import CustomDragLayer from "./CustomDragLayer";
 
-// Tipi per react-dnd
-type DragItem = {
-  lead: FunnelItem;
-};
-
-type DropResult = {
-  status: string;
-};
-
 // Columns configuration
 const COLUMNS = [
   { id: "new", title: "Nuovi", color: "bg-zinc-700" },
@@ -34,20 +25,11 @@ const COLUMNS = [
   { id: "lost", title: "Persi", color: "bg-danger" },
 ];
 
-// Rilevazione backend condizionale con opzioni migliorate
-const getDndBackend = () => {
-  if (isTouchDevice()) {
-    return {
-      backend: TouchBackend,
-      options: {
-        enableMouseEvents: true, // Supporto per eventi mouse su touch device
-        delayTouchStart: 200, // Ritardo aumentato per evitare conflitti con lo scroll
-        enableTouchEvents: true, // Assicurati che gli eventi touch siano abilitati
-        touchSlop: 20, // Soglia di movimento prima che inizi il drag
-      }
-    };
-  }
-  return { backend: HTML5Backend, options: {} };
+// Rilevazione backup condizionale
+const DndBackend = isTouchDevice() ? TouchBackend : HTML5Backend;
+const touchBackendOptions = {
+  enableMouseEvents: true, // Consente di usare mouse su dispositivi touch
+  delayTouchStart: 100, // Piccolo ritardo per evitare conflitti con lo scrolling
 };
 
 interface CustomFunnelBoardProps {
@@ -68,9 +50,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   
   // Ref per il contenitore principale
   const boardRef = useRef<HTMLDivElement>(null);
-  
-  // Otteniamo il backend e le opzioni
-  const { backend, options } = getDndBackend();
   
   // Hook per configurare l'autoscroll
   useEffect(() => {
@@ -202,24 +181,35 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
 
-  // Componente Lead Card
-  const LeadCard = useCallback(({ lead }: { lead: FunnelItem }) => {
-    // Utilizziamo la tipizzazione corretta per useDrag e un ref separato
+  // Componente draggable
+  const LeadCard = ({ lead }: { lead: FunnelItem }) => {
+    // Utilizzo di ref standard
     const cardRef = useRef<HTMLDivElement>(null);
-    const [{ isDragging }, dragRef] = useDrag<DragItem, DropResult, { isDragging: boolean }>({
-      type: 'LEAD',
-      item: { lead },
-      collect: (monitor) => ({
-        isDragging: !!monitor.isDragging(),
-      }),
-    });
     
-    // Colleghiamo il ref al connettore di drag
+    // useDrag con collezione
+    const [{ isDragging }, connectDrag] = useDrag(
+      () => ({
+        type: 'LEAD',
+        item: { lead },
+        collect: (monitor) => ({
+          isDragging: !!monitor.isDragging(),
+        }),
+        end: (item, monitor) => {
+          // Gestisce il caso in cui il drag termina senza un drop
+          if (!monitor.didDrop()) {
+            console.log('Drag terminated without drop');
+          }
+        }
+      }),
+      [lead]
+    );
+    
+    // Colleghiamo il ref con il connettore tramite useEffect
     useEffect(() => {
       if (cardRef.current) {
-        dragRef(cardRef.current);
+        connectDrag(cardRef.current);
       }
-    }, [dragRef]);
+    }, [connectDrag]);
 
     return (
       <div
@@ -254,70 +244,113 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         </div>
       </div>
     );
-  }, []);
+  };
 
   // Componente per la colonna
-  const FunnelColumn = useCallback(({ id, title, color, leads }: { id: string; title: string; color: string; leads: FunnelItem[] }) => {
-    // Utilizziamo un ref separato e useDrop
-    const columnBodyRef = useRef<HTMLDivElement>(null);
-    const [{ isOver }, dropRef] = useDrop<DragItem, DropResult, { isOver: boolean }>({
-      accept: 'LEAD',
-      drop: (item) => {
-        handleMoveLead(item.lead, id);
-        return { status: id };
-      },
-      collect: (monitor) => ({
-        isOver: !!monitor.isOver(),
-      }),
-      hover: (item, monitor) => {
-        if (!boardRef.current) return;
-        
-        // Ottieni la posizione del mouse
-        const clientOffset = monitor.getClientOffset();
-        if (!clientOffset) return;
-        
-        // Ottieni le dimensioni del contenitore
-        const containerRect = boardRef.current.getBoundingClientRect();
-        const containerScrollLeft = boardRef.current.scrollLeft;
-        const containerWidth = boardRef.current.clientWidth;
-        const containerScrollWidth = boardRef.current.scrollWidth;
-        
-        // Definisci le zone di autoscroll (20% di ciascun lato)
-        const scrollZoneSize = Math.min(250, containerWidth * 1);
-        
-        // Calcola le posizioni delle zone di scroll
-        const leftEdge = containerRect.left;
-        const rightEdge = containerRect.right;
-        const leftScrollZone = leftEdge + scrollZoneSize;
-        const rightScrollZone = rightEdge - scrollZoneSize;
-        
-        // Funzione per calcolare la velocità di scroll
-        const calculateScrollSpeed = (distance: number, maxDistance: number) => {
-          return Math.max(50, Math.round(100 * (0.5 - distance / maxDistance)));
-        };
-        
-        // Se il mouse è nella zona sinistra e possiamo scrollare a sinistra
-        if (clientOffset.x < leftScrollZone && containerScrollLeft > 0) {
-          const distance = clientOffset.x - leftEdge;
-          const speed = calculateScrollSpeed(distance, scrollZoneSize);
-          boardRef.current.scrollBy({ left: -speed, behavior: 'auto' });
-        }
-        // Se il mouse è nella zona destra e possiamo scrollare a destra
-        else if (clientOffset.x > rightScrollZone && 
-                containerScrollLeft < containerScrollWidth - containerWidth) {
-          const distance = rightEdge - clientOffset.x;
-          const speed = calculateScrollSpeed(distance, scrollZoneSize);
-          boardRef.current.scrollBy({ left: speed, behavior: 'auto' });
-        }
-      }
-    });
+  const FunnelColumn = ({ id, title, color, leads }: { id: string; title: string; color: string; leads: FunnelItem[] }) => {
+    // Utilizziamo lo state per tracciare se siamo in hover
+    const [isOverState, setIsOver] = useState(false);
     
-    // Colleghiamo il ref al connettore di drop
-    useEffect(() => {
-      if (columnBodyRef.current) {
-        dropRef(columnBodyRef.current);
+    // Utilizzo di ref standard per il corpo della colonna
+    const bodyRef = useRef<HTMLDivElement>(null);
+    
+    // Funzione per autoscroll che viene richiamata durante l'hover
+    const handleAutoScroll = useCallback((clientX: number) => {
+      if (!boardRef.current) return;
+      
+      // Ottenimento delle dimensioni del contenitore
+      const containerRect = boardRef.current.getBoundingClientRect();
+      const containerScrollLeft = boardRef.current.scrollLeft;
+      const containerWidth = boardRef.current.clientWidth;
+      const containerScrollWidth = boardRef.current.scrollWidth;
+      
+      // Definizione delle zone di autoscroll (20% di ciascun lato)
+      const scrollZoneSize = Math.min(150, containerWidth * 0.2);
+      
+      // Calcolo delle posizioni delle zone di scroll relative al container
+      const leftScrollZone = containerRect.left + scrollZoneSize;
+      const rightScrollZone = containerRect.right - scrollZoneSize;
+      
+      // Calcolo della velocità di scroll in base alla distanza dal bordo
+      const calculateScrollSpeed = (distance: number, maxDistance: number) => {
+        const baseSpeed = 5;
+        const maxSpeed = 20;
+        const ratio = 1 - Math.min(1, Math.max(0, distance / maxDistance));
+        return Math.round(baseSpeed + ((maxSpeed - baseSpeed) * ratio));
+      };
+      
+      // Scroll a sinistra se siamo nella zona sinistra
+      if (clientX < leftScrollZone) {
+        const distance = clientX - containerRect.left;
+        const scrollSpeed = calculateScrollSpeed(distance, scrollZoneSize);
+        
+        // Controllo se possiamo scrollare ulteriormente a sinistra
+        if (containerScrollLeft > 0) {
+          boardRef.current.scrollBy({ left: -scrollSpeed, behavior: 'auto' });
+          return true; // Abbiamo fatto scroll
+        }
       }
-    }, [dropRef]);
+      // Scroll a destra se siamo nella zona destra
+      else if (clientX > rightScrollZone) {
+        const distance = containerRect.right - clientX;
+        const scrollSpeed = calculateScrollSpeed(distance, scrollZoneSize);
+        
+        // Controllo se possiamo scrollare ulteriormente a destra
+        if (containerScrollLeft < containerScrollWidth - containerWidth) {
+          boardRef.current.scrollBy({ left: scrollSpeed, behavior: 'auto' });
+          return true; // Abbiamo fatto scroll
+        }
+      }
+      
+      return false; // Non abbiamo fatto scroll
+    }, []);
+    
+    // useDrop con collezione
+    const [{ isOver }, connectDrop] = useDrop(
+      () => ({
+        accept: 'LEAD',
+        drop: (item: { lead: FunnelItem }) => {
+          handleMoveLead(item.lead, id);
+          return { status: id };
+        },
+        collect: (monitor) => ({
+          isOver: !!monitor.isOver(),
+        }),
+        hover: (item, monitor) => {
+          if (!boardRef.current) return;
+          
+          // Aggiorniamo lo stato isOver
+          if (!isOverState && monitor.isOver()) {
+            setIsOver(true);
+          } else if (isOverState && !monitor.isOver()) {
+            setIsOver(false);
+          }
+          
+          // Ottenimento della posizione del mouse
+          const clientOffset = monitor.getClientOffset();
+          if (!clientOffset) return;
+          
+          // Gestiamo l'autoscroll
+          if (handleAutoScroll(clientOffset.x)) {
+            // Se abbiamo fatto scroll, richiediamo un altro frame per continuare
+            requestAnimationFrame(() => {
+              const newOffset = monitor.getClientOffset();
+              if (newOffset) {
+                handleAutoScroll(newOffset.x);
+              }
+            });
+          }
+        },
+      }),
+      [id, isOverState, handleAutoScroll]
+    );
+    
+    // Colleghiamo il ref con il connettore tramite useEffect
+    useEffect(() => {
+      if (bodyRef.current) {
+        connectDrop(bodyRef.current);
+      }
+    }, [connectDrop]);
 
     return (
       <div 
@@ -331,7 +364,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         </div>
         
         <div
-          ref={columnBodyRef}
+          ref={bodyRef}
           className={`funnel-body ${isOver ? 'drop-target-active' : ''}`}
         >
           {leads.length > 0 ? (
@@ -346,10 +379,13 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         </div>
       </div>
     );
-  }, [isMoving, LeadCard, handleMoveLead]);
+  };
 
   return (
-    <DndProvider backend={backend} options={options}>
+    <DndProvider
+      backend={DndBackend}
+      options={isTouchDevice() ? touchBackendOptions : undefined}
+    >
       {/* Aggiungiamo il nostro custom drag layer per una migliore esperienza visiva */}
       <CustomDragLayer />
       
