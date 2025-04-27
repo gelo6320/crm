@@ -75,7 +75,7 @@ export default function EventsTable({ events, isLoading, onViewDetails }: Events
                   className="btn btn-outline p-1.5 text-xs"
                 >
                   <Search size={14} className="mr-1" /> 
-                  <span className="hidden sm:inline">Dettagli</span>
+                  <span className="btn-sm inline-flex items-center justify-center hidden sm:inline">Dettagli</span>
                 </button>
               </td>
             </tr>

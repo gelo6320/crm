@@ -387,7 +387,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </h1>
         
         <div className="flex items-center space-x-2">
-          <Link href={`/projects/${id}/edit`} className="btn btn-outline">
+          <Link href={`/projects/${id}/edit`} className="btn btn-outline btn-sm inline-flex items-center justify-center">
             <Edit size={16} className="mr-1" />
             <span>Modifica</span>
           </Link>
