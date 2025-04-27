@@ -32,10 +32,20 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
   const getItemStyles = () => {
     const { x, y } = currentOffset;
     
-    const transform = `translate(${x}px, ${y}px)`;
+    // Aggiungi un po' di spostamento per rendere più chiaro che l'elemento è sotto al cursore
+    const adjustedY = y - 10; // Sposta un po' più in alto rispetto al cursore
+    
+    const transform = `translate(${x}px, ${adjustedY}px)`;
     return {
       transform,
       WebkitTransform: transform,
+      width: '250px', // Larghezza fissa che corrisponde alla card originale
+      pointerEvents: 'none' as const, // Tipizzazione corretta per React
+      zIndex: 1000,
+      position: 'fixed' as const, 
+      top: 0,
+      left: 0,
+      margin: 0, // Rimuovi eventuali margini
     };
   };
 
@@ -68,6 +78,7 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
             borderRadius: '8px',
             padding: '14px',
             animation: 'dragPulse 1.5s infinite ease-in-out',
+            transform: 'rotate(2deg)', // Aggiunge una leggera rotazione per enfatizzare il movimento
           }}
         >
           <div className="flex justify-between items-center mb-1">
@@ -102,18 +113,14 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
   return (
     <div 
       className="funnel-drag-preview"
-      style={{
-        ...getItemStyles(),
-        pointerEvents: 'none',
-        zIndex: 1000,
-      }}
+      style={getItemStyles()}
     >
       {renderItem()}
       <style jsx global>{`
         @keyframes dragPulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.03); }
-          100% { transform: scale(1); }
+          0% { transform: scale(1) rotate(2deg); }
+          50% { transform: scale(1.05) rotate(2deg); }
+          100% { transform: scale(1) rotate(2deg); }
         }
         .funnel-card-preview {
           transform-origin: center center;
