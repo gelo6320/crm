@@ -1,7 +1,7 @@
 // components/sales-funnel/CustomFunnelBoard.tsx
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FunnelData, FunnelItem } from "@/types";
 import { updateLeadMetadata } from "@/lib/api/funnel";
 import FacebookEventModal from "./FacebookEventModal";
@@ -20,6 +20,9 @@ import {
   DragStartEvent,
   DragEndEvent,
   DragOverEvent,
+  useDraggable,
+  useDroppable,
+  DragMoveEvent
 } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 
@@ -54,8 +57,11 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const [activeLead, setActiveLead] = useState<FunnelItem | null>(null);
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
   
-  // Ref per il contenitore principale (per l'autoscroll)
+  // Ref per il contenitore principale
   const boardRef = useRef<HTMLDivElement>(null);
+  
+  // Ref per il timer di autoscroll
+  const scrollTimerRef = useRef<number | null>(null);
   
   // Configurazione sensori dnd-kit
   const sensors = useSensors(
@@ -65,9 +71,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       },
     }),
     useSensor(KeyboardSensor, {
-      // Per accessibilità: permette drag con tastiera
       coordinateGetter: () => {
-        return { x: 0, y: 0 }; // Semplificato
+        return { x: 0, y: 0 };
       },
     })
   );
@@ -76,6 +81,78 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const modifiers: Modifier[] = [
     restrictToWindowEdges 
   ];
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimerRef.current !== null) {
+        window.clearInterval(scrollTimerRef.current);
+      }
+    };
+  }, []);
+  
+  // Gestione manuale dell'autoscroll orizzontale
+  const handleAutoScroll = (clientX: number) => {
+    if (!boardRef.current) return;
+    
+    // Pulisci il timer precedente se esiste
+    if (scrollTimerRef.current !== null) {
+      window.clearInterval(scrollTimerRef.current);
+      scrollTimerRef.current = null;
+    }
+    
+    // Ottieni le dimensioni del viewport del browser
+    const viewportWidth = window.innerWidth;
+    
+    // Definisci le zone di autoscroll (15% su ciascun lato)
+    const scrollZoneSize = Math.max(100, viewportWidth * 0.15);
+    const leftScrollZone = scrollZoneSize;
+    const rightScrollZone = viewportWidth - scrollZoneSize;
+    
+    // Calcola la velocità in base alla distanza dal bordo
+    const calculateScrollSpeed = (distance: number, maxDistance: number): number => {
+      const baseSpeed = 10; // Velocità base
+      const maxSpeed = 30;  // Velocità massima
+      const ratio = Math.min(1, Math.max(0, 1 - (distance / maxDistance)));
+      return Math.round(baseSpeed + ((maxSpeed - baseSpeed) * ratio));
+    };
+    
+    let scrollSpeed = 0;
+    let scrollDirection = 0;
+    
+    // Se siamo nella zona di autoscroll sinistra
+    if (clientX < leftScrollZone) {
+      const distance = clientX;
+      scrollSpeed = calculateScrollSpeed(distance, scrollZoneSize);
+      scrollDirection = -1; // Sinistra
+      console.log(`[AUTOSCROLL] Scrolling LEFT at speed ${scrollSpeed}px (distance: ${distance}px)`);
+    } 
+    // Se siamo nella zona di autoscroll destra
+    else if (clientX > rightScrollZone) {
+      const distance = viewportWidth - clientX;
+      scrollSpeed = calculateScrollSpeed(distance, scrollZoneSize);
+      scrollDirection = 1; // Destra
+      console.log(`[AUTOSCROLL] Scrolling RIGHT at speed ${scrollSpeed}px (distance: ${distance}px)`);
+    }
+    
+    // Se abbiamo una direzione e una velocità, inizia lo scrolling
+    if (scrollDirection !== 0 && scrollSpeed > 0) {
+      scrollTimerRef.current = window.setInterval(() => {
+        boardRef.current?.scrollBy({
+          left: scrollSpeed * scrollDirection,
+          behavior: 'auto'
+        });
+      }, 16); // Circa 60fps
+    }
+  };
+  
+  // Ferma l'autoscroll
+  const stopAutoScroll = () => {
+    if (scrollTimerRef.current !== null) {
+      window.clearInterval(scrollTimerRef.current);
+      scrollTimerRef.current = null;
+    }
+  };
   
   // Gestore inizio drag
   const handleDragStart = (event: DragStartEvent) => {
@@ -105,12 +182,23 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   
   // Gestore durante il drag
   const handleDragOver = (_event: DragOverEvent) => {
-    // L'overlay e l'autoscroll sono gestiti automaticamente da dnd-kit
+    // Handled by handleDragMove
+  };
+  
+  // Gestore per il movimento durante il drag
+  const handleDragMove = (event: DragMoveEvent) => {
+    const { clientX } = event.activatorEvent as MouseEvent | TouchEvent & { clientX: number };
+    
+    // Attiva l'autoscroll orizzontale basato sulla posizione del mouse/touch
+    handleAutoScroll(clientX);
   };
   
   // Gestore fine drag
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    
+    // Ferma l'autoscroll
+    stopAutoScroll();
     
     setActiveId(null);
     
@@ -241,7 +329,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
 
-  // Componente Card Draggable
+  // Componente Card base (non draggable)
   const LeadCard = ({ lead, isDragging }: { lead: FunnelItem; isDragging: boolean }) => {
     return (
       <div
@@ -275,15 +363,44 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     );
   };
 
-  // Componente Draggable
+  // Componente Draggable usando useDraggable hook
   const DraggableCard = ({ lead }: { lead: FunnelItem }) => {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+      id: lead._id,
+    });
+    
+    const style = transform ? {
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    } : undefined;
+    
     return (
       <div 
-        id={lead._id} 
-        data-id={lead._id} 
-        className="drag-handle"
+        ref={setNodeRef} 
+        style={style}
+        className="touch-none"
+        {...listeners} 
+        {...attributes}
       >
-        <LeadCard lead={lead} isDragging={activeId === lead._id} />
+        <LeadCard 
+          lead={lead} 
+          isDragging={isDragging || activeId === lead._id}
+        />
+      </div>
+    );
+  };
+  
+  // Componente Droppable per le colonne
+  const DroppableColumn = ({ id, children, className }: { id: string; children: React.ReactNode; className?: string }) => {
+    const { isOver, setNodeRef } = useDroppable({
+      id: id,
+    });
+    
+    return (
+      <div 
+        ref={setNodeRef} 
+        className={`${className} ${isOver ? 'drop-target-active' : ''}`}
+      >
+        {children}
       </div>
     );
   };
@@ -291,9 +408,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   return (
     <DndContext
       sensors={sensors}
-      autoScroll={true} // Abilita l'autoscroll con le impostazioni predefinite
+      autoScroll={false} // Disabilitiamo l'autoscroll nativo di dnd-kit
       modifiers={modifiers}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove} // Aggiungiamo l'handler per il movimento
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
@@ -304,12 +422,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       >
         <div className="funnel-board min-w-max flex">
           {COLUMNS.map((column) => (
-            <div
+            <DroppableColumn
               key={column.id}
               id={column.id}
-              className={`funnel-column ${isMoving ? 'column-fade-transition' : ''} ${
-                activeId && !activeStatus ? 'drop-target-active' : ''
-              }`}
+              className={`funnel-column ${isMoving ? 'column-fade-transition' : ''}`}
             >
               <div className={`funnel-header ${column.color}`}>
                 <h3 className="text-sm font-medium">{column.title}</h3>
@@ -332,7 +448,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
                   </div>
                 )}
               </div>
-            </div>
+            </DroppableColumn>
           ))}
         </div>
       </div>
@@ -340,7 +456,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       <DragOverlay 
         dropAnimation={{
           duration: 300,
-          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)', // Animazione rimbalzante
+          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
           sideEffects: defaultDropAnimationSideEffects({
             styles: {
               active: {
@@ -363,6 +479,37 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           overflow-x: auto;
           overflow-y: hidden;
           position: relative;
+          scroll-behavior: smooth;
+          will-change: scroll-position;
+        }
+        
+        .funnel-board-container::before,
+        .funnel-board-container::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 15%;
+          max-width: 100px;
+          pointer-events: none;
+          z-index: 10;
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+        
+        .funnel-board-container::before {
+          left: 0;
+          background: linear-gradient(to right, rgba(255, 107, 0, 0.15), transparent);
+        }
+        
+        .funnel-board-container::after {
+          right: 0;
+          background: linear-gradient(to left, rgba(255, 107, 0, 0.15), transparent);
+        }
+        
+        .funnel-board-container:hover::before,
+        .funnel-board-container:hover::after {
+          opacity: 1;
         }
         
         .funnel-board {
@@ -414,6 +561,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           transform: scale(1.05);
           box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
           cursor: grabbing;
+          width: 300px;
         }
         
         .drop-target-active {
