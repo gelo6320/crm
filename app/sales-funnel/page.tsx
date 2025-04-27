@@ -8,6 +8,7 @@ import FunnelStats from "@/components/sales-funnel/FunnelStats";
 import { FunnelData, FunnelStats as FunnelStatsType } from "@/types";
 import { fetchFunnelData } from "@/lib/api/funnel";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import Script from "next/script";
 import "../funnel-styles.css";
 
 export default function SalesFunnelPage() {
@@ -55,7 +56,7 @@ export default function SalesFunnelPage() {
   
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-medium">Sales Funnel</h1>
         <button 
           onClick={loadFunnelData}
@@ -66,19 +67,29 @@ export default function SalesFunnelPage() {
         </button>
       </div>
       
-      <div className="flex flex-col gap-4">
-        <div className="flex-1 overflow-hidden">
-          <CustomFunnelBoard 
-            funnelData={funnelData} 
-            setFunnelData={setFunnelData} 
-            onLeadMove={loadFunnelData}
-          />
-        </div>
-        
-        <div className="w-full shrink-0">
-          <FunnelStats stats={funnelStats} />
-        </div>
+      {/* Stats Section - Now at the top */}
+      <div className="w-full mb-6">
+        <FunnelStats stats={funnelStats} />
       </div>
+      
+      {/* Funnel Board - Takes full width */}
+      <div className="flex-1 overflow-hidden">
+        <CustomFunnelBoard 
+          funnelData={funnelData} 
+          setFunnelData={setFunnelData} 
+          onLeadMove={loadFunnelData}
+        />
+      </div>
+      
+      {/* GSAP and Draggable Scripts */}
+      <Script 
+        src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/gsap.min.js" 
+        strategy="beforeInteractive"
+      />
+      <Script 
+        src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/Draggable.min.js" 
+        strategy="beforeInteractive"
+      />
     </div>
   );
 }
