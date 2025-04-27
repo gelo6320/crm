@@ -20,6 +20,8 @@ import {
   DragStartEvent,
   DragEndEvent,
   DragOverEvent,
+  useDraggable,
+  useDroppable
 } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 
@@ -54,7 +56,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const [activeLead, setActiveLead] = useState<FunnelItem | null>(null);
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
   
-  // Ref per il contenitore principale (per l'autoscroll)
+  // Ref per il contenitore principale
   const boardRef = useRef<HTMLDivElement>(null);
   
   // Configurazione sensori dnd-kit
@@ -65,9 +67,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       },
     }),
     useSensor(KeyboardSensor, {
-      // Per accessibilità: permette drag con tastiera
       coordinateGetter: () => {
-        return { x: 0, y: 0 }; // Semplificato
+        return { x: 0, y: 0 };
       },
     })
   );
@@ -241,7 +242,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
 
-  // Componente Card Draggable
+  // Componente Card base (non draggable)
   const LeadCard = ({ lead, isDragging }: { lead: FunnelItem; isDragging: boolean }) => {
     return (
       <div
@@ -275,15 +276,44 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     );
   };
 
-  // Componente Draggable
+  // Componente Draggable usando useDraggable hook
   const DraggableCard = ({ lead }: { lead: FunnelItem }) => {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+      id: lead._id,
+    });
+    
+    const style = transform ? {
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    } : undefined;
+    
     return (
       <div 
-        id={lead._id} 
-        data-id={lead._id} 
-        className="drag-handle"
+        ref={setNodeRef} 
+        style={style}
+        className="touch-none"
+        {...listeners} 
+        {...attributes}
       >
-        <LeadCard lead={lead} isDragging={activeId === lead._id} />
+        <LeadCard 
+          lead={lead} 
+          isDragging={isDragging || activeId === lead._id}
+        />
+      </div>
+    );
+  };
+  
+  // Componente Droppable per le colonne
+  const DroppableColumn = ({ id, children, className }: { id: string; children: React.ReactNode; className?: string }) => {
+    const { isOver, setNodeRef } = useDroppable({
+      id: id,
+    });
+    
+    return (
+      <div 
+        ref={setNodeRef} 
+        className={`${className} ${isOver ? 'drop-target-active' : ''}`}
+      >
+        {children}
       </div>
     );
   };
@@ -291,7 +321,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   return (
     <DndContext
       sensors={sensors}
-      autoScroll={true} // Abilita l'autoscroll con le impostazioni predefinite
+      autoScroll={true}
       modifiers={modifiers}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
@@ -304,12 +334,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       >
         <div className="funnel-board min-w-max flex">
           {COLUMNS.map((column) => (
-            <div
+            <DroppableColumn
               key={column.id}
               id={column.id}
-              className={`funnel-column ${isMoving ? 'column-fade-transition' : ''} ${
-                activeId && !activeStatus ? 'drop-target-active' : ''
-              }`}
+              className={`funnel-column ${isMoving ? 'column-fade-transition' : ''}`}
             >
               <div className={`funnel-header ${column.color}`}>
                 <h3 className="text-sm font-medium">{column.title}</h3>
@@ -332,7 +360,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
                   </div>
                 )}
               </div>
-            </div>
+            </DroppableColumn>
           ))}
         </div>
       </div>
@@ -340,7 +368,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       <DragOverlay 
         dropAnimation={{
           duration: 300,
-          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)', // Animazione rimbalzante
+          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
           sideEffects: defaultDropAnimationSideEffects({
             styles: {
               active: {
@@ -414,6 +442,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           transform: scale(1.05);
           box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
           cursor: grabbing;
+          width: 300px;
         }
         
         .drop-target-active {
