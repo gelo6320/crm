@@ -142,7 +142,7 @@ export default function SalesFunnelPage(): ReactElement {
         </div>
         
         {/* Funnel Board */}
-        <div className="bg-zinc-900/30 rounded-xl shadow-lg p-4 mb-6 animate-fade-in">
+        <div className="flex-1 overflow-hidden">
           <CustomFunnelBoard 
             funnelData={funnelData} 
             setFunnelData={setFunnelData} 

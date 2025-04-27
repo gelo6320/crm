@@ -10,6 +10,7 @@ interface CustomDragLayerProps {
   snapToGrid?: boolean;
 }
 
+// Componente per visualizzare un'anteprima personalizzata durante il trascinamento
 export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerProps) {
   const {
     itemType,
@@ -25,10 +26,12 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     isDragging: monitor.isDragging(),
   }));
 
+  // Se non stiamo trascinando o non abbiamo offset validi, non mostriamo nulla
   if (!isDragging || !currentOffset || !initialOffset) {
     return null;
   }
 
+  // Funzione per calcolare lo stile dell'anteprima
   const getItemStyles = () => {
     const { x, y } = currentOffset;
     
@@ -39,6 +42,7 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     };
   };
 
+  // Funzione per determinare il colore del bordo in base allo stato
   const getBorderColor = (status: string): string => {
     switch (status) {
       case "new": return "#71717a"; // zinc-500
@@ -52,22 +56,23 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     }
   };
 
+  // Renderizziamo l'anteprima in base al tipo di elemento trascinato
   const renderItem = () => {
+    // Se il tipo è 'LEAD', renderizziamo un'anteprima di card
     if (itemType === 'LEAD' && item.lead) {
       const lead = item.lead as FunnelItem;
       
       return (
         <div
-          className="funnel-card-preview"
+          className="funnel-card"
           style={{
-            width: '250px',
+            width: '250px', // Larghezza fissa per una buona visualizzazione
             borderLeftColor: getBorderColor(lead.status),
             borderLeftWidth: '3px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
-            background: '#222222',
-            borderRadius: '8px',
-            padding: '14px',
-            animation: 'dragPulse 1.5s infinite ease-in-out',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+            background: '#18181b',
+            borderRadius: '6px',
+            padding: '12px',
           }}
         >
           <div className="flex justify-between items-center mb-1">
@@ -82,43 +87,28 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
                 €{formatMoney(lead.value)}
               </div>
             ) : null}
-            {lead.service ? (
-              <div className="italic">
-                {lead.service}
-              </div>
-            ) : null}
+            {lead.service ? <div className="italic">{lead.service}</div> : null}
           </div>
         </div>
       );
     }
     
+    // Se non riconosciamo il tipo, restituiamo null
     return null;
   };
 
+  // Se non sappiamo come renderizzare questo tipo, non mostriamo nulla
   if (!renderItem()) {
     return null;
   }
 
+  // Renderizziamo l'anteprima personalizzata
   return (
-    <div 
+    <div
       className="funnel-drag-preview"
-      style={{
-        ...getItemStyles(),
-        pointerEvents: 'none',
-        zIndex: 1000,
-      }}
+      style={getItemStyles()}
     >
       {renderItem()}
-      <style jsx global>{`
-        @keyframes dragPulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.03); }
-          100% { transform: scale(1); }
-        }
-        .funnel-card-preview {
-          transform-origin: center center;
-        }
-      `}</style>
     </div>
   );
 }
