@@ -17,19 +17,19 @@ import CustomDragLayer from "./CustomDragLayer";
 // Columns configuration
 const COLUMNS = [
   { id: "new", title: "Nuovi", color: "bg-zinc-700" },
-  { id: "contacted", title: "Contattati", color: "bg-info" },
+  { id: "contacted", title: "Contattati", color: "bg-blue-600" },
   { id: "qualified", title: "Qualificati", color: "bg-primary" },
-  { id: "opportunity", title: "Opportunità", color: "bg-warning" },
+  { id: "opportunity", title: "Opportunità", color: "bg-amber-600" },
   { id: "proposal", title: "Proposta", color: "bg-primary-hover" },
-  { id: "customer", title: "Clienti", color: "bg-success" },
-  { id: "lost", title: "Persi", color: "bg-danger" },
+  { id: "customer", title: "Clienti", color: "bg-green-600" },
+  { id: "lost", title: "Persi", color: "bg-red-600" },
 ];
 
-// Rilevazione backup condizionale
+// Rilevazione backend condizionale
 const DndBackend = isTouchDevice() ? TouchBackend : HTML5Backend;
 const touchBackendOptions = {
-  enableMouseEvents: true, // Consente di usare mouse su dispositivi touch
-  delayTouchStart: 100, // Piccolo ritardo per evitare conflitti con lo scrolling
+  enableMouseEvents: true,
+  delayTouchStart: 100,
 };
 
 interface CustomFunnelBoardProps {
@@ -38,10 +38,13 @@ interface CustomFunnelBoardProps {
   onLeadMove: () => Promise<void>;
 }
 
-// Componente Principale
-export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMove }: CustomFunnelBoardProps) {
+export default function CustomFunnelBoard({ 
+  funnelData, 
+  setFunnelData, 
+  onLeadMove 
+}: CustomFunnelBoardProps) {
   const [editingLead, setEditingLead] = useState<FunnelItem | null>(null);
-  const [isMoving, setIsMoving] = useState(false);
+  const [isMoving, setIsMoving] = useState<boolean>(false);
   const [movingLead, setMovingLead] = useState<{
     lead: FunnelItem;
     prevStatus: string;
@@ -53,12 +56,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   
   // Hook per configurare l'autoscroll
   useEffect(() => {
-    // Otteniamo l'elemento container
     const container = boardRef.current;
     if (!container) return;
     
     const handleScroll = () => {
-      // Registriamo lo scroll per debug
       if (container.scrollLeft === 0) {
         console.log("Container scrolled to start");
       } else if (container.scrollLeft + container.clientWidth >= container.scrollWidth) {
@@ -211,22 +212,88 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       }
     }, [connectDrag]);
 
+    const getBorderColor = (status: string): string => {
+      switch (status) {
+        case "new": return "#71717a"; // zinc-500
+        case "contacted": return "#3498db"; // info
+        case "qualified": return "#FF6B00"; // primary
+        case "opportunity": return "#e67e22"; // warning
+        case "proposal": return "#FF8C38"; // primary-hover
+        case "customer": return "#27ae60"; // success
+        case "lost": return "#e74c3c"; // danger
+        default: return "#71717a"; // zinc-500
+      }
+    };
+    
+    // Badge in base allo stato
+    const getStatusBadge = (status: string) => {
+      let bgColor = "bg-zinc-600";
+      let text = "Nuovo";
+      
+      switch (status) {
+        case "new": 
+          bgColor = "bg-zinc-600"; 
+          text = "Nuovo";
+          break;
+        case "contacted": 
+          bgColor = "bg-blue-600"; 
+          text = "Contattato";
+          break;
+        case "qualified": 
+          bgColor = "bg-primary"; 
+          text = "Qualificato";
+          break;
+        case "opportunity": 
+          bgColor = "bg-amber-600"; 
+          text = "Opportunità";
+          break;
+        case "proposal": 
+          bgColor = "bg-primary-hover"; 
+          text = "Proposta";
+          break;
+        case "customer": 
+          bgColor = "bg-green-600"; 
+          text = "Cliente";
+          break;
+        case "lost": 
+          bgColor = "bg-red-600"; 
+          text = "Perso";
+          break;
+      }
+      
+      return { bgColor, text };
+    };
+
+    const { bgColor, text } = getStatusBadge(lead.status);
+    const formatDate = (dateString: string): string => {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('it-IT', {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(date);
+    };
+
+    const formatMoney = (value: number): string => {
+      return value.toLocaleString('it-IT');
+    };
+
     return (
       <div
         ref={cardRef}
-        className={`funnel-card ${isDragging ? 'opacity-50' : ''}`}
+        className={`funnel-card ${isDragging ? "opacity-50" : ""}`}
         style={{
           borderLeftColor: getBorderColor(lead.status),
           opacity: isDragging ? 0.5 : 1,
           cursor: 'grab',
         }}
       >
-        <div className="flex justify-between items-center mb-1">
+        <div className="flex justify-between items-center mb-2">
           <div className="font-medium text-sm truncate pr-1">
             {lead.name}
           </div>
           <button
-            className="p-1 rounded-full hover:bg-zinc-700 transition-colors edit-btn"
+            className="p-1.5 rounded-full hover:bg-black/20 transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               handleEditLead(lead);
@@ -238,9 +305,33 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           </button>
         </div>
         <div className="text-xs text-zinc-400">
-          <div>{formatDate(lead.createdAt)}</div>
-          {lead.value ? <div className="text-primary font-medium my-1">€{formatMoney(lead.value)}</div> : ''}
-          {lead.service ? <div className="italic">{lead.service}</div> : ''}
+          <div className="flex items-center mb-1.5">
+            <svg className="w-3 h-3 mr-1 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            {formatDate(lead.createdAt)}
+          </div>
+          
+          {lead.value ? (
+            <div className="text-primary font-medium my-1.5 flex items-center">
+              <span className="text-primary">€{formatMoney(lead.value)}</span>
+            </div>
+          ) : null}
+          
+          {lead.service ? (
+            <div className="flex items-center">
+              <svg className="w-3 h-3 mr-1 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              <span className="text-zinc-300 text-xs">{lead.service}</span>
+            </div>
+          ) : null}
+          
+          <div className="mt-2 flex items-center justify-between">
+            <div className={`${bgColor} text-[10px] px-1.5 py-0.5 rounded-sm font-medium`}>
+              {text}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -248,10 +339,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
   // Componente per la colonna
   const FunnelColumn = ({ id, title, color, leads }: { id: string; title: string; color: string; leads: FunnelItem[] }) => {
-    // Utilizziamo lo state per tracciare se siamo in hover
     const [isOverState, setIsOver] = useState(false);
-    
-    // Utilizzo di ref standard per il corpo della colonna
     const bodyRef = useRef<HTMLDivElement>(null);
     
     // Funzione per autoscroll che viene richiamata durante l'hover
@@ -358,14 +446,14 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       >
         <div className={`funnel-header ${color}`}>
           <h3 className="text-sm font-medium">{title}</h3>
-          <div className="w-5 h-5 rounded-full bg-black/25 flex items-center justify-center text-xs font-medium">
+          <div className="w-6 h-6 rounded-full bg-black/25 flex items-center justify-center text-xs font-medium">
             {leads.length}
           </div>
         </div>
         
         <div
           ref={bodyRef}
-          className={`funnel-body ${isOver ? 'drop-target-active' : ''}`}
+          className={`funnel-body ${isOver ? 'drag-over' : ''}`}
         >
           {leads.length > 0 ? (
             leads.map((lead) => (
@@ -428,33 +516,4 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       )}
     </DndProvider>
   );
-}
-
-// Helper function to get border color
-function getBorderColor(status: string): string {
-  switch (status) {
-    case "new": return "#71717a"; // zinc-500
-    case "contacted": return "#3498db"; // info
-    case "qualified": return "#FF6B00"; // primary
-    case "opportunity": return "#e67e22"; // warning
-    case "proposal": return "#FF8C38"; // primary-hover
-    case "customer": return "#27ae60"; // success
-    case "lost": return "#e74c3c"; // danger
-    default: return "#71717a"; // zinc-500
-  }
-}
-
-// Helper function to format date
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('it-IT', {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
-
-// Helper function to format money
-function formatMoney(value: number): string {
-  return value.toLocaleString('it-IT');
 }

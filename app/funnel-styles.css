@@ -141,3 +141,188 @@
       max-width: 220px;
     }
   }
+
+  /* updated-funnel-styles.css */
+.funnel-board-container {
+  overflow-x: auto;
+  padding-bottom: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #ff6b00 #1f1f1f;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.funnel-board-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.funnel-board-container::-webkit-scrollbar-track {
+  background: #1f1f1f;
+  border-radius: 4px;
+}
+
+.funnel-board-container::-webkit-scrollbar-thumb {
+  background-color: #ff6b00;
+  border-radius: 4px;
+  opacity: 0.8;
+}
+
+.funnel-board-container::-webkit-scrollbar-thumb:hover {
+  opacity: 1;
+}
+
+.funnel-board {
+  display: flex;
+  min-width: max-content;
+  gap: 12px;
+  padding: 12px;
+}
+
+.funnel-column {
+  min-width: 250px;
+  max-width: 250px;
+  background-color: #1a1a1a;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  height: 550px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.funnel-column:hover {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+.funnel-header {
+  padding: 14px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+
+.funnel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.funnel-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.funnel-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.funnel-body::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 107, 0, 0.5);
+  border-radius: 4px;
+}
+
+.funnel-card {
+  padding: 14px;
+  background-color: #222222;
+  border-left-width: 3px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.funnel-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+.funnel-card:active {
+  cursor: grabbing;
+  transform: scale(0.98);
+}
+
+.drag-over {
+  background-color: #2a2a2a !important;
+  box-shadow: inset 0 0 0 2px rgba(255, 107, 0, 0.4) !important;
+  transition: all 0.2s ease;
+}
+
+.column-fade-transition {
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+/* Animazioni */
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.funnel-card.dragging {
+  transform: rotate(2deg) scale(1.02);
+  box-shadow: 0 14px 20px rgba(0, 0, 0, 0.2);
+  opacity: 0.8;
+  z-index: 10;
+}
+
+.funnel-drag-preview {
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* Media queries per vista mobile */
+@media (max-width: 768px) {
+  .funnel-column {
+    min-width: 220px;
+    max-width: 220px;
+  }
+  
+  .funnel-card {
+    padding: 10px;
+  }
+}
+
+/* Touch handling */
+.funnel-card.touched {
+  transform: scale(0.98);
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.5);
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+
+.funnel-card.touch-ready-to-drag {
+  animation: readyToDrag 1s ease-in-out infinite;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.7);
+}
+
+@keyframes readyToDrag {
+  0% { transform: scale(0.98); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(0.98); }
+}
