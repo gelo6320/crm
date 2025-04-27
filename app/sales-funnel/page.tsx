@@ -55,25 +55,28 @@ export default function SalesFunnelPage() {
   }
   
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-medium">Sales Funnel</h1>
-        <button 
-          onClick={loadFunnelData}
-          className="btn btn-outline p-1.5"
-          disabled={isLoading}
-        >
-          <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-        </button>
+    <div className="sales-funnel-container">
+      {/* Header fisso */}
+      <div className="fixed-header">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-lg font-medium">Sales Funnel</h1>
+          <button 
+            onClick={loadFunnelData}
+            className="btn btn-outline p-1.5"
+            disabled={isLoading}
+          >
+            <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+          </button>
+        </div>
+        
+        {/* Stats Section - Now fixed at the top */}
+        <div className="w-full mb-6">
+          <FunnelStats stats={funnelStats} />
+        </div>
       </div>
       
-      {/* Stats Section - Now at the top */}
-      <div className="w-full mb-6">
-        <FunnelStats stats={funnelStats} />
-      </div>
-      
-      {/* Funnel Board - Takes full width */}
-      <div className="flex-1 overflow-hidden">
+      {/* Funnel Board - Content scrollable */}
+      <div className="scrollable-content">
         <CustomFunnelBoard 
           funnelData={funnelData} 
           setFunnelData={setFunnelData} 
@@ -90,6 +93,36 @@ export default function SalesFunnelPage() {
         src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/Draggable.min.js" 
         strategy="beforeInteractive"
       />
+      
+      {/* CSS inline per il layout fisso */}
+      <style jsx global>{`
+        html, body {
+          overflow: hidden;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+        }
+        
+        .sales-funnel-container {
+          display: flex;
+          flex-direction: column;
+          height: 100vh;
+          overflow: hidden;
+        }
+        
+        .fixed-header {
+          padding: 1rem;
+          background-color: rgb(24, 24, 27);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          z-index: 50;
+        }
+        
+        .scrollable-content {
+          flex: 1;
+          overflow-y: auto;
+          padding: 1rem;
+        }
+      `}</style>
     </div>
   );
 }
