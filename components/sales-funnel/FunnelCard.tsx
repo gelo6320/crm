@@ -1,6 +1,6 @@
 // components/sales-funnel/FunnelCard.tsx
 import { useRef, useEffect, useState } from "react";
-import { Pencil, Clock, Tag } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { FunnelItem } from "@/types";
 import { formatDate } from "@/lib/utils/date";
 import { formatMoney } from "@/lib/utils/format";
@@ -22,33 +22,45 @@ export default function FunnelCard({
   onTouchEnd, 
   isDragging 
 }: FunnelCardProps) {
+  // Crea un ref React
   const cardRef = useRef<HTMLDivElement>(null);
+  
+  // Sposta gli stati all'interno del componente
   const [isTouched, setIsTouched] = useState(false);
   const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
 
+  // Effetto per il touch feedback
   useEffect(() => {
     const cardElement = cardRef.current;
     if (!cardElement) return;
     
     const handleTouchStart = (e: TouchEvent) => {
+      console.log(`[Touch Debug] Touch start su card ${lead._id} (${lead.name})`, e.touches[0].clientX, e.touches[0].clientY);
+      
+      // Imposta lo stato di touch attivo
       setIsTouched(true);
       
+      // Crea un timer per indicare all'utente quando può iniziare a trascinare
       const timer = setTimeout(() => {
+        // Aggiungi una classe per l'animazione "pronto per il trascinamento"
         if (cardElement) {
           cardElement.classList.add('touch-ready-to-drag');
         }
-      }, 120);
+      }, 120); // Breve ritardo per attivare l'animazione
       
       setTouchTimer(timer);
     };
     
     const handleTouchEnd = () => {
+      // Resetta lo stato di touch
       setIsTouched(false);
       
+      // Rimuovi la classe per l'animazione
       if (cardElement) {
         cardElement.classList.remove('touch-ready-to-drag');
       }
       
+      // Cancella il timer se esiste
       if (touchTimer) {
         clearTimeout(touchTimer);
         setTouchTimer(null);
@@ -56,74 +68,38 @@ export default function FunnelCard({
     };
     
     const handleTouchMove = () => {
+      // Se l'utente inizia a trascinare, la classe verrà rimossa automaticamente
       if (cardElement) {
         cardElement.classList.remove('touch-ready-to-drag');
       }
       
+      // Cancella il timer se esiste
       if (touchTimer) {
         clearTimeout(touchTimer);
         setTouchTimer(null);
       }
     };
     
+    // Aggiungi event listener
     cardElement.addEventListener('touchstart', handleTouchStart);
     cardElement.addEventListener('touchend', handleTouchEnd);
     cardElement.addEventListener('touchcancel', handleTouchEnd);
     cardElement.addEventListener('touchmove', handleTouchMove);
     
     return () => {
+      // Rimuovi event listener alla pulizia
       cardElement.removeEventListener('touchstart', handleTouchStart);
       cardElement.removeEventListener('touchend', handleTouchEnd);
       cardElement.removeEventListener('touchcancel', handleTouchEnd);
       cardElement.removeEventListener('touchmove', handleTouchMove);
       
+      // Cancella il timer se esiste
       if (touchTimer) {
         clearTimeout(touchTimer);
       }
     };
-  }, [touchTimer]);
+  }, [lead._id, lead.name, touchTimer]);
 
-  // Funzione per determinare il colore del badge
-  const getStatusBadge = (status: string) => {
-    let bgColor = "bg-zinc-600";
-    let text = "Nuovo";
-    
-    switch (status) {
-      case "new": 
-        bgColor = "bg-zinc-600"; 
-        text = "Nuovo";
-        break;
-      case "contacted": 
-        bgColor = "bg-blue-600"; 
-        text = "Contattato";
-        break;
-      case "qualified": 
-        bgColor = "bg-primary"; 
-        text = "Qualificato";
-        break;
-      case "opportunity": 
-        bgColor = "bg-amber-600"; 
-        text = "Opportunità";
-        break;
-      case "proposal": 
-        bgColor = "bg-primary-hover"; 
-        text = "Proposta";
-        break;
-      case "customer": 
-        bgColor = "bg-green-600"; 
-        text = "Cliente";
-        break;
-      case "lost": 
-        bgColor = "bg-red-600"; 
-        text = "Perso";
-        break;
-    }
-    
-    return { bgColor, text };
-  };
-
-  const { bgColor, text } = getStatusBadge(lead.status);
-  
   return (
     <div
       ref={cardRef}
@@ -136,7 +112,7 @@ export default function FunnelCard({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center mb-1">
         <div className="font-medium text-sm truncate pr-1">
           {lead.name}
         </div>
@@ -145,37 +121,21 @@ export default function FunnelCard({
             e.stopPropagation();
             onEdit(lead);
           }}
-          className="p-1.5 rounded-full hover:bg-black/20 transition-colors"
-          aria-label="Edit lead"
+          className="p-1 rounded-full hover:bg-zinc-700 transition-colors"
         >
-          <Pencil size={12} className="text-zinc-400 hover:text-primary" />
+          <Pencil size={12} />
         </button>
       </div>
-      
       <div className="text-xs text-zinc-400">
-        <div className="flex items-center mb-1.5">
-          <Clock size={12} className="mr-1 text-zinc-500" />
-          {formatDate(lead.createdAt)}
-        </div>
-        
-        {lead.value ? (
-          <div className="text-primary font-medium my-1.5 flex items-center">
-            <span className="text-primary">€{formatMoney(lead.value)}</span>
+        <div>{formatDate(lead.createdAt)}</div>
+        {lead.value && (
+          <div className="text-primary font-medium my-1">
+            €{formatMoney(lead.value)}
           </div>
-        ) : null}
-        
-        {lead.service ? (
-          <div className="flex items-center">
-            <Tag size={12} className="mr-1 text-zinc-500" />
-            <span className="text-zinc-300 text-xs">{lead.service}</span>
-          </div>
-        ) : null}
-        
-        <div className="mt-2 flex items-center justify-between">
-          <div className={`${bgColor} text-[10px] font-medium px-1.5 py-0.5 rounded-sm`}>
-            {text}
-          </div>
-        </div>
+        )}
+        {lead.service && (
+          <div className="italic">{lead.service}</div>
+        )}
       </div>
     </div>
   );
