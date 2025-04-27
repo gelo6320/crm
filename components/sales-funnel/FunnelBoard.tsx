@@ -283,7 +283,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         const containerScrollWidth = boardRef.current.scrollWidth;
         
         // Definisci le zone di autoscroll (20% di ciascun lato)
-        const scrollZoneSize = Math.min(250, containerWidth * 0.4);
+        const scrollZoneSize = Math.min(250, containerWidth * 1);
         
         // Calcola le posizioni delle zone di scroll
         const leftEdge = containerRect.left;
