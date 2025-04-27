@@ -282,14 +282,17 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         const containerWidth = boardRef.current.clientWidth;
         const containerScrollWidth = boardRef.current.scrollWidth;
         
-        // Definisci le zone di autoscroll (20% di ciascun lato)
-        const scrollZoneSize = Math.min(150, containerWidth * 0.2);
+        // Aumentiamo le zone di autoscroll (30% di ciascun lato invece del 20% precedente)
+        // Questo estende le aree anche oltre i bordi del divider
+        const scrollZoneSize = Math.min(200, containerWidth * 0.3);
         
         // Calcola le posizioni delle zone di scroll
-        const leftEdge = containerRect.left;
-        const rightEdge = containerRect.right;
-        const leftScrollZone = leftEdge + scrollZoneSize;
-        const rightScrollZone = rightEdge - scrollZoneSize;
+        // Qui eliminiamo il vincolo dei bordi del contenitore per estendere le zone di scroll
+        const viewportCenterX = window.innerWidth / 2;
+        const leftEdge = Math.max(0, containerRect.left - 50); // Estendiamo 50px oltre il bordo sinistro
+        const rightEdge = Math.min(window.innerWidth, containerRect.right + 50); // Estendiamo 50px oltre il bordo destro
+        const leftScrollZone = viewportCenterX - (containerWidth * 0.3);
+        const rightScrollZone = viewportCenterX + (containerWidth * 0.3);
         
         // Funzione per calcolare la velocità di scroll
         const calculateScrollSpeed = (distance: number, maxDistance: number) => {
