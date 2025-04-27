@@ -72,10 +72,10 @@ export default function EventsTable({ events, isLoading, onViewDetails }: Events
               <td className="px-4 py-2.5">
                 <button
                   onClick={() => onViewDetails(event)}
-                  className="btn btn-outline p-1.5 text-xs"
+                  className="btn btn-outline inline-flex items-center justify-center p-1.5 text-xs"
                 >
                   <Search size={14} className="mr-1" /> 
-                  <span className="btn-sm inline-flex items-center justify-center hidden sm:inline">Dettagli</span>
+                  <span className="btn-sm hidden sm:inline">Dettagli</span>
                 </button>
               </td>
             </tr>
