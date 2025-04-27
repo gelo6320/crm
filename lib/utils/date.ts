@@ -6,6 +6,14 @@
  * @param options - Opzioni di formattazione (default: giorno, mese, anno)
  * @returns La data formattata
  */
+
+export function formatTime(date: Date): string {
+  return new Intl.DateTimeFormat('it-IT', {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 export function formatDate(
   dateString: string | Date,
   options: Intl.DateTimeFormatOptions = {

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Trash2, Edit2, X } from "lucide-react";
 import { CalendarEvent } from "@/types";
-import { formatDate } from "@/lib/utils/date";
+import { formatTime } from "@/lib/utils/date";
 import { getEventColor } from "@/lib/utils/calendar";
 
 interface CalendarSidebarProps {
@@ -69,7 +69,7 @@ export default function CalendarSidebar({
               style={{ borderLeftColor: getEventColor(event.status) }}
             >
               <div className="text-xs text-zinc-400 mb-1">
-                {formatDate(new Date(event.start))} - {formatDate(new Date(event.end))}
+                {formatTime(new Date(event.start))} - {formatTime(new Date(event.end))}
               </div>
               
               <div className="font-medium mb-0.5 pr-16">{event.title}</div>
