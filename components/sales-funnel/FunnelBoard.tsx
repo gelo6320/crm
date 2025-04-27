@@ -1,11 +1,27 @@
-// Correzione per i ref nel componente FunnelBoard
-// Modifica la dichiarazione dei ref come segue:
+// components/sales-funnel/CustomFunnelBoard.tsx
+"use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef } from "react";
 import { FunnelData, FunnelItem } from "@/types";
 import { updateLeadMetadata } from "@/lib/api/funnel";
 import FacebookEventModal from "./FacebookEventModal";
 import ValueModal from "./ValueModal";
+
+// Importazioni dnd-kit
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor,
+  Modifier,
+  defaultDropAnimationSideEffects,
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
+} from "@dnd-kit/core";
+import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 
 interface CustomFunnelBoardProps {
   funnelData: FunnelData;
@@ -33,133 +49,88 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     newStatus: string;
   } | null>(null);
   
+  // Stato per tracciare i lead in fase di trascinamento
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeLead, setActiveLead] = useState<FunnelItem | null>(null);
+  const [activeStatus, setActiveStatus] = useState<string | null>(null);
+  
+  // Ref per il contenitore principale (per l'autoscroll)
   const boardRef = useRef<HTMLDivElement>(null);
-  const cardsRef = useRef<{[id: string]: HTMLDivElement | null}>({});
-  const columnsRef = useRef<{[id: string]: HTMLDivElement | null}>({});
-  const draggableInstancesRef = useRef<any[]>([]);
   
-  // Callback per gestire il ref delle colonne
-  const setColumnRef = useCallback((el: HTMLDivElement | null, columnId: string) => {
-    columnsRef.current[columnId] = el;
-  }, []);
+  // Configurazione sensori dnd-kit
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // Inizia il drag dopo 5px di movimento
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      // Per accessibilità: permette drag con tastiera
+      coordinateGetter: () => {
+        return { x: 0, y: 0 }; // Semplificato
+      },
+    })
+  );
   
-  // Callback per gestire il ref delle card
-  const setCardRef = useCallback((el: HTMLDivElement | null, leadId: string) => {
-    cardsRef.current[leadId] = el;
-  }, []);
+  // Configurazione modificatori
+  const modifiers: Modifier[] = [
+    restrictToWindowEdges 
+  ];
   
-  // Initialize GSAP Draggable
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.Draggable) {
-      initializeDraggables();
+  // Gestore inizio drag
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const draggedId = active.id as string;
+    
+    // Trova il lead e lo stato corrente
+    let currentLead: FunnelItem | null = null;
+    let currentStatus: string | null = null;
+    
+    // Cerca il lead in tutte le colonne
+    for (const colId in funnelData) {
+      const found = funnelData[colId as keyof FunnelData].find(item => item._id === draggedId);
+      if (found) {
+        currentLead = found;
+        currentStatus = colId;
+        break;
+      }
     }
-
-    return () => {
-      // Cleanup draggable instances
-      if (draggableInstancesRef.current.length > 0) {
-        draggableInstancesRef.current.forEach(instance => {
-          if (instance && instance.kill) {
-            instance.kill();
-          }
-        });
-        draggableInstancesRef.current = [];
-      }
-    };
-  }, [funnelData]);
-
-  // Initialize Draggable instances for each card
-  const initializeDraggables = () => {
-    if (!window.Draggable) return;
     
-    // Clear previous instances
-    draggableInstancesRef.current.forEach(instance => {
-      if (instance && instance.kill) {
-        instance.kill();
-      }
-    });
-    draggableInstancesRef.current = [];
-    
-    // Create new instances for each card
-    COLUMNS.forEach(column => {
-      const leadItems = funnelData[column.id as keyof FunnelData];
-      
-      leadItems.forEach(lead => {
-        const cardElement = cardsRef.current[lead._id];
-        if (!cardElement) return;
-        
-        const draggable = window.Draggable.create(cardElement, {
-          type: "x,y",
-          bounds: boardRef.current,
-          edgeResistance: 0.65,
-          throwProps: true,
-          onDragStart: function() {
-            cardElement.classList.add("dragging");
-          },
-          onDrag: function() {
-            // Check for column overlap and auto-scroll
-            handleDragOver(cardElement, lead, this);
-          },
-          onDragEnd: function() {
-            cardElement.classList.remove("dragging");
-            // Get the final column
-            const targetColumn = getOverlappingColumn(cardElement);
-            if (targetColumn && targetColumn !== column.id) {
-              handleMoveLead(lead, targetColumn);
-            } else {
-              // Reset position if no valid target
-              window.gsap.to(cardElement, {
-                duration: 0.3,
-                x: 0,
-                y: 0,
-                ease: "power2.out"
-              });
-            }
-          }
-        });
-        
-        draggableInstancesRef.current.push(draggable[0]);
-      });
-    });
-  };
-  
-  // Handle autoscroll and position checking during drag
-  const handleDragOver = (element: HTMLDivElement, lead: FunnelItem, draggable: any) => {
-    if (!boardRef.current) return;
-    
-    const boardRect = boardRef.current.getBoundingClientRect();
-    const elementRect = element.getBoundingClientRect();
-    
-    // Auto-scroll logic
-    const scrollSpeed = 15;
-    const scrollZone = 100; // px from edge
-    
-    if (elementRect.right > boardRect.right - scrollZone) {
-      boardRef.current.scrollLeft += scrollSpeed;
-    } else if (elementRect.left < boardRect.left + scrollZone) {
-      boardRef.current.scrollLeft -= scrollSpeed;
+    if (currentLead) {
+      setActiveLead(currentLead);
+      setActiveId(draggedId);
+      setActiveStatus(currentStatus);
     }
   };
   
-  // Get the column that a card is overlapping with
-  const getOverlappingColumn = (element: HTMLDivElement): string | null => {
-    const elementRect = element.getBoundingClientRect();
-    const centerX = elementRect.left + elementRect.width / 2;
+  // Gestore durante il drag
+  const handleDragOver = (_event: DragOverEvent) => {
+    // L'overlay e l'autoscroll sono gestiti automaticamente da dnd-kit
+  };
+  
+  // Gestore fine drag
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
     
-    for (const column of COLUMNS) {
-      const columnElement = columnsRef.current[column.id];
-      if (!columnElement) continue;
-      
-      const columnRect = columnElement.getBoundingClientRect();
-      
-      if (
-        centerX >= columnRect.left &&
-        centerX <= columnRect.right
-      ) {
-        return column.id;
-      }
+    setActiveId(null);
+    
+    // Se non c'è un over o non abbiamo informazioni sul lead attivo, terminiamo
+    if (!over || !activeLead || !activeStatus) return;
+    
+    const targetStatus = over.id as string;
+    
+    // Verifichiamo che lo stato di destinazione esista ed è diverso dall'origine
+    if (
+      COLUMNS.some(col => col.id === targetStatus) &&
+      targetStatus !== activeStatus
+    ) {
+      // Esegui il movimento del lead
+      handleMoveLead(activeLead, targetStatus);
     }
     
-    return null;
+    // Reset 
+    setActiveLead(null);
+    setActiveStatus(null);
   };
 
   // Handle lead movement between columns
@@ -270,18 +241,75 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
 
+  // Componente Card Draggable
+  const LeadCard = ({ lead, isDragging }: { lead: FunnelItem; isDragging: boolean }) => {
+    return (
+      <div
+        className={`funnel-card ${isDragging ? 'opacity-50' : ''}`}
+        style={{
+          borderLeftColor: getBorderColor(lead.status),
+        }}
+      >
+        <div className="flex justify-between items-center mb-1">
+          <div className="font-medium text-sm truncate pr-1">
+            {lead.name}
+          </div>
+          <button
+            className="p-1 rounded-full hover:bg-zinc-700 transition-colors edit-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditLead(lead);
+            }}
+          >
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+            </svg>
+          </button>
+        </div>
+        <div className="text-xs text-zinc-400">
+          <div>{formatDate(lead.createdAt)}</div>
+          {lead.value ? <div className="text-primary font-medium my-1">€{formatMoney(lead.value)}</div> : ''}
+          {lead.service ? <div className="italic">{lead.service}</div> : ''}
+        </div>
+      </div>
+    );
+  };
+
+  // Componente Draggable
+  const DraggableCard = ({ lead }: { lead: FunnelItem }) => {
+    return (
+      <div 
+        id={lead._id} 
+        data-id={lead._id} 
+        className="drag-handle"
+      >
+        <LeadCard lead={lead} isDragging={activeId === lead._id} />
+      </div>
+    );
+  };
+
   return (
-    <>
+    <DndContext
+      sensors={sensors}
+      autoScroll={true} // Abilita l'autoscroll con le impostazioni predefinite
+      modifiers={modifiers}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
       <div 
         ref={boardRef}
-        className="funnel-board-container"
+        className="funnel-board-container w-full overflow-x-auto"
+        id="funnel-board-container"
       >
-        <div className="funnel-board">
+        <div className="funnel-board min-w-max flex">
           {COLUMNS.map((column) => (
             <div
               key={column.id}
-              ref={(el) => setColumnRef(el, column.id)}
-              className={`funnel-column ${isMoving ? 'column-fade-transition' : ''}`}
+              id={column.id}
+              className={`funnel-column ${isMoving ? 'column-fade-transition' : ''} ${
+                activeId && !activeStatus ? 'drop-target-active' : ''
+              }`}
             >
               <div className={`funnel-header ${column.color}`}>
                 <h3 className="text-sm font-medium">{column.title}</h3>
@@ -291,73 +319,63 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
               </div>
               
               <div className="funnel-body">
-                <div className="funnel-cards-horizontal">
-                  {funnelData[column.id as keyof FunnelData].length > 0 ? (
-                    funnelData[column.id as keyof FunnelData].map((lead) => (
-                      <div 
-                        key={lead._id}
-                        ref={(el) => setCardRef(el, lead._id)}
-                        className="funnel-card"
-                        style={{ borderLeftColor: getBorderColor(lead.status) }}
-                      >
-                        <div className="flex justify-between items-center mb-1">
-                          <div className="font-medium text-sm truncate pr-1">
-                            {lead.name}
-                          </div>
-                          <button
-                            className="p-1 rounded-full hover:bg-zinc-700 transition-colors edit-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditLead(lead);
-                            }}
-                          >
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-                            </svg>
-                          </button>
-                        </div>
-                        <div className="text-xs text-zinc-400">
-                          <div>{formatDate(lead.createdAt)}</div>
-                          {lead.value ? <div className="text-primary font-medium my-1">€{formatMoney(lead.value)}</div> : ''}
-                          {lead.service ? <div className="italic">{lead.service}</div> : ''}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-zinc-500 text-xs italic py-4">
-                      Nessun lead
-                    </div>
-                  )}
-                </div>
+                {funnelData[column.id as keyof FunnelData].length > 0 ? (
+                  funnelData[column.id as keyof FunnelData].map((lead) => (
+                    <DraggableCard 
+                      key={lead._id}
+                      lead={lead}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center text-zinc-500 text-xs italic py-4">
+                    Nessun lead
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      <DragOverlay 
+        dropAnimation={{
+          duration: 300,
+          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)', // Animazione rimbalzante
+          sideEffects: defaultDropAnimationSideEffects({
+            styles: {
+              active: {
+                opacity: '0.5',
+              },
+            },
+          }),
+        }}
+      >
+        {activeId && activeLead ? (
+          <div className="drag-overlay">
+            <LeadCard lead={activeLead} isDragging={false} />
+          </div>
+        ) : null}
+      </DragOverlay>
       
-      {/* Add custom CSS for horizontal layout */}
+      {/* CSS per il funnel board */}
       <style jsx global>{`
         .funnel-board-container {
           overflow-x: auto;
+          overflow-y: hidden;
           position: relative;
-          padding-bottom: 1rem;
-          height: calc(100vh - 280px);
         }
         
         .funnel-board {
           display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-          min-height: 100%;
+          min-width: max-content;
+          height: calc(100vh - 200px);
         }
         
         .funnel-column {
-          width: 100%;
-          min-width: 100%;
-          border-radius: 8px;
-          overflow: hidden;
-          background-color: #27272a;
-          height: auto;
+          min-width: 300px;
+          width: 300px;
+          border-right: 1px solid rgba(255, 255, 255, 0.1);
+          height: 100%;
           display: flex;
           flex-direction: column;
         }
@@ -366,50 +384,43 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 0.75rem 1rem;
+          padding: 10px 16px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .funnel-body {
-          padding: 1rem;
-          overflow-x: auto;
-        }
-        
-        .funnel-cards-horizontal {
-          display: flex;
-          flex-direction: row;
-          gap: 1rem;
-          padding-bottom: 0.5rem;
-          min-width: max-content;
+          padding: 10px;
+          flex: 1;
+          overflow-y: auto;
         }
         
         .funnel-card {
           position: relative;
-          width: 250px;
-          min-width: 250px;
-          max-width: 250px;
-          padding: 1rem;
-          background-color: #18181b;
+          padding: 10px;
+          margin-bottom: 10px;
+          background-color: #2a2a2a;
           border-radius: 6px;
           border-left: 3px solid;
           cursor: grab;
-          touch-action: none;
           user-select: none;
-          transition: transform 0.2s, box-shadow 0.2s;
+          touch-action: none;
         }
         
-        .funnel-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        .funnel-card:active {
+          cursor: grabbing;
         }
         
-        .funnel-card.dragging {
-          opacity: 0.6;
-          z-index: 10;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
-          transform: scale(1.03);
+        .drag-overlay .funnel-card {
+          transform: scale(1.05);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+          cursor: grabbing;
         }
         
+        .drop-target-active {
+          background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Assicurati che il pulsante di modifica non interferisca con il drag */
         .edit-btn {
           cursor: pointer;
           z-index: 10;
@@ -435,7 +446,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           onSave={handleSaveLeadValue}
         />
       )}
-    </>
+    </DndContext>
   );
 }
 
@@ -466,12 +477,4 @@ function formatDate(dateString: string): string {
 // Helper function to format money
 function formatMoney(value: number): string {
   return value.toLocaleString('it-IT');
-}
-
-// Declare global Draggable for TypeScript
-declare global {
-  interface Window {
-    Draggable: any;
-    gsap: any;
-  }
 }
