@@ -1,7 +1,7 @@
 // components/calendar/ListView.tsx
 import { useMemo } from "react";
 import { CalendarEvent } from "@/types";
-import { formatDate, formatTime } from "@/lib/utils/date";
+import { formatDate, formatDate } from "@/lib/utils/date";
 import { getEventColor } from "@/lib/utils/calendar";
 
 interface ListViewProps {
@@ -74,7 +74,7 @@ export default function ListView({ selectedDate, events, onSelectEvent }: ListVi
                   onClick={() => onSelectEvent(event)}
                 >
                   <div className="w-20 text-xs text-zinc-400">
-                    {formatTime(new Date(event.start))}
+                    {formatDate(new Date(event.start))}
                   </div>
                   
                   <div className="flex-1 min-w-0">
