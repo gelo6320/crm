@@ -1,61 +1,82 @@
 // components/sales-funnel/FunnelStats.tsx
 "use client";
 
+import React, { ReactElement } from "react";
+import { TrendingUp, Users, DollarSign, Award } from "lucide-react";
 import { FunnelStats as FunnelStatsType } from "@/types";
-import { formatMoney } from "@/lib/utils/format";
 
 interface FunnelStatsProps {
   stats: FunnelStatsType;
 }
 
-export default function FunnelStats({ stats }: FunnelStatsProps) {
-  return (
-    <div className="bg-zinc-800 rounded-lg overflow-hidden">
-      <div className="px-4 py-2 bg-black/30">
-        <h3 className="text-sm font-medium">Statistiche</h3>
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: ReactElement;
+  trend?: number;
+  color?: string;
+}
+
+// Componente StatsCard migliorato con TypeScript corretto
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, trend, color = "bg-zinc-800" }) => (
+  <div className={`${color} rounded-lg p-3 transition-all duration-300 hover:shadow-lg hover:translate-y-[-2px]`}>
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-xs font-medium text-zinc-400 mb-1">{title}</p>
+        <p className="text-xl font-bold">{value}</p>
+        {trend !== undefined && (
+          <div className="flex items-center mt-1 text-xs">
+            <span className={trend > 0 ? "text-green-500" : "text-red-500"}>
+              {trend > 0 ? "+" : ""}{trend}%
+            </span>
+          </div>
+        )}
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3">
-        {/* Conversion rate */}
-        <div className="bg-zinc-900/60 rounded p-3 flex justify-between items-center">
-          <div className="text-xs uppercase text-primary font-medium">
-            Tasso conversione
-          </div>
-          <div className="text-base font-bold">
-            {stats.conversionRate}%
-          </div>
-        </div>
+      <div className="bg-black/20 p-2 rounded-lg">
+        {icon}
+      </div>
+    </div>
+  </div>
+);
+
+export default function FunnelStats({ stats }: FunnelStatsProps) {
+  // Formato della valuta
+  const formatMoney = (value: number): string => {
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 0
+    }).format(value);
+  };
+
+  return (
+    <div className="bg-zinc-900/50 rounded-xl p-4 shadow-md mb-6 animate-slide-up">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <StatCard 
+          title="Tasso Conversione" 
+          value={`${stats.conversionRate}%`}
+          icon={<TrendingUp size={24} className="text-primary" />}
+          trend={2.5}
+        />
         
-        {/* Value */}
-        <div className="bg-zinc-900/60 rounded p-3 flex flex-col">
-          <div className="text-xs uppercase text-primary font-medium mb-1">
-            Valore
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-xs">
-            <div>
-              <span className="text-zinc-400">Potenziale:</span>
-              <div className="font-medium">€{formatMoney(stats.potentialValue)}</div>
-            </div>
-            <div>
-              <span className="text-zinc-400">Realizzato:</span>
-              <div className="font-medium">€{formatMoney(stats.realizedValue)}</div>
-            </div>
-            <div>
-              <span className="text-zinc-400">Perso:</span>
-              <div className="font-medium">€{formatMoney(stats.lostValue)}</div>
-            </div>
-          </div>
-        </div>
+        <StatCard 
+          title="Lead Totali" 
+          value={stats.totalLeads}
+          icon={<Users size={24} className="text-blue-400" />}
+        />
         
-        {/* Services */}
-        <div className="bg-zinc-900/60 rounded p-3 flex justify-between items-center">
-          <div className="text-xs uppercase text-primary font-medium">
-            Lead totali
-          </div>
-          <div className="text-base font-bold">
-            {stats.totalLeads}
-          </div>
-        </div>
+        <StatCard 
+          title="Valore Potenziale" 
+          value={formatMoney(stats.potentialValue)}
+          icon={<DollarSign size={24} className="text-amber-400" />}
+        />
+        
+        <StatCard 
+          title="Valore Realizzato" 
+          value={formatMoney(stats.realizedValue)}
+          icon={<Award size={24} className="text-green-500" />}
+          trend={5.8}
+        />
       </div>
     </div>
   );
