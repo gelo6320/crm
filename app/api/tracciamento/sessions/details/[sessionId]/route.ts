@@ -9,11 +9,12 @@ import type { NextRequest } from 'next/server';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
     // Ottieni l'ID sessione dai parametri dell'URL
-    const sessionId = params.sessionId;
+    const paramsData = await params;
+    const sessionId = paramsData.sessionId;
     
     // In un'implementazione reale, qui ci sarebbe la logica per recuperare i dati dal database
     // Per ora restituiamo dati mockati
@@ -212,7 +213,7 @@ export async function GET(
     
     return NextResponse.json(details);
   } catch (error) {
-    console.error(`Errore nel recupero dei dettagli della sessione ${params.sessionId}:`, error);
+    console.error(`Errore nel recupero dei dettagli della sessione:`, error);
     return NextResponse.json(
       { error: 'Errore nel recupero dei dettagli della sessione' },
       { status: 500 }
