@@ -12,11 +12,12 @@ import type { NextRequest } from 'next/server';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { landingPageId: string } }
+  { params }: { params: Promise<{ landingPageId: string }> }
 ) {
   try {
     // Ottieni il landing page ID dai parametri dell'URL
-    const landingPageId = params.landingPageId;
+    const paramsData = await params;
+    const landingPageId = paramsData.landingPageId;
     
     // Estrai i parametri dalla query string
     const searchParams = request.nextUrl.searchParams;
@@ -105,7 +106,7 @@ export async function GET(
     
     return NextResponse.json(filtered);
   } catch (error) {
-    console.error(`Errore nel recupero degli utenti per la landing page ${params.landingPageId}:`, error);
+    console.error(`Errore nel recupero degli utenti per la landing page:`, error);
     return NextResponse.json(
       { error: 'Errore nel recupero degli utenti' },
       { status: 500 }
