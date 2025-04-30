@@ -11,11 +11,12 @@ import type { NextRequest } from 'next/server';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     // Ottieni l'ID utente dai parametri dell'URL
-    const userId = params.userId;
+    const paramsData = await params;
+    const userId = paramsData.userId;
     
     // Estrai i parametri dalla query string
     const searchParams = request.nextUrl.searchParams;
@@ -107,7 +108,7 @@ export async function GET(
     
     return NextResponse.json(filteredSessions);
   } catch (error) {
-    console.error(`Errore nel recupero delle sessioni per l'utente ${params.userId}:`, error);
+    console.error(`Errore nel recupero delle sessioni:`, error);
     return NextResponse.json(
       { error: 'Errore nel recupero delle sessioni' },
       { status: 500 }
