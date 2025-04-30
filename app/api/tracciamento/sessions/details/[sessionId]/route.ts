@@ -1,9 +1,9 @@
-// app/api/tracciamento/session/[sessionId]/route.ts
+// app/api/tracciamento/sessions/details/[sessionId]/route.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * GET /api/tracciamento/session/[sessionId]
+ * GET /api/tracciamento/sessions/details/[sessionId]
  * 
  * Restituisce i dettagli di una specifica sessione di tracciamento
  */

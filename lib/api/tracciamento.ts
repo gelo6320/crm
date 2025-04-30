@@ -106,7 +106,8 @@ export async function fetchSessions(
  */
 export async function fetchSessionDetails(sessionId: string): Promise<SessionDetail[]> {
   try {
-    const url = `/api/tracciamento/session/${sessionId}`;
+    // Utilizziamo il nuovo percorso per evitare conflitti di slug
+    const url = `/api/tracciamento/sessions/details/${sessionId}`;
     const response = await api.get<SessionDetail[]>(url);
     return response;
   } catch (error) {
