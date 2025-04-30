@@ -29,13 +29,12 @@ export interface LandingPage {
   export interface UserSession {
     id: string;
     userId: string; // riferimento all'utente
-    landingPageId: string; // pagina di ingresso
     startTime: string; // data inizio sessione (ISO)
     endTime?: string; // data fine sessione (ISO)
     duration: number; // durata in minuti
     pagesViewed: number; // numero pagine viste
     interactionsCount: number; // numero interazioni
-    entryUrl: string; // URL di ingresso
+    entryPage: string; // URL di ingresso
     exitUrl?: string; // URL di uscita
     isConverted: boolean; // se la sessione ha portato a conversione
   }

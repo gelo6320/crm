@@ -1,7 +1,7 @@
 // lib/api/tracciamento.ts
 import { LandingPage, TrackedUser, UserSession, SessionDetail } from "@/types/tracciamento";
-import { API_BASE_URL } from "./api-utils";
-import { api } from "./apiClient";
+import { trackingApi } from "./trackingClient";
+import CONFIG from "@/config/tracking-config";
 
 /**
  * Recupera l'elenco delle landing page con dati di tracciamento
@@ -14,22 +14,21 @@ export async function fetchLandingPages(
 ): Promise<LandingPage[]> {
   try {
     // Costruisci i parametri di query
-    const params = new URLSearchParams();
+    const params: Record<string, string> = {};
     
     if (timeRange && timeRange !== 'all') {
-      params.append('timeRange', timeRange);
+      params.timeRange = timeRange;
     }
     
     if (search) {
-      params.append('search', search);
+      params.search = search;
     }
     
-    // Chiama l'API
-    const queryString = params.toString();
-    const url = `/api/tracciamento/landing-pages${queryString ? `?${queryString}` : ''}`;
-    
-    const response = await api.get<LandingPage[]>(url);
-    return response;
+    // Chiama l'API usando il client specifico per il tracciamento
+    return await trackingApi.get<LandingPage[]>(
+      CONFIG.api.endpoints.landingPages,
+      { params }
+    );
   } catch (error) {
     console.error("Errore nel recupero delle landing page:", error);
     throw error;
@@ -49,22 +48,20 @@ export async function fetchUsers(
 ): Promise<TrackedUser[]> {
   try {
     // Costruisci i parametri di query
-    const params = new URLSearchParams();
+    const params: Record<string, string> = {};
     
     if (timeRange && timeRange !== 'all') {
-      params.append('timeRange', timeRange);
+      params.timeRange = timeRange;
     }
     
     if (search) {
-      params.append('search', search);
+      params.search = search;
     }
     
     // Chiama l'API
-    const queryString = params.toString();
-    const url = `/api/tracciamento/users/${landingPageId}${queryString ? `?${queryString}` : ''}`;
+    const url = `${CONFIG.api.endpoints.users}/${encodeURIComponent(landingPageId)}`;
     
-    const response = await api.get<TrackedUser[]>(url);
-    return response;
+    return await trackingApi.get<TrackedUser[]>(url, { params });
   } catch (error) {
     console.error("Errore nel recupero degli utenti:", error);
     throw error;
@@ -82,18 +79,16 @@ export async function fetchSessions(
 ): Promise<UserSession[]> {
   try {
     // Costruisci i parametri di query
-    const params = new URLSearchParams();
+    const params: Record<string, string> = {};
     
     if (timeRange && timeRange !== 'all') {
-      params.append('timeRange', timeRange);
+      params.timeRange = timeRange;
     }
     
     // Chiama l'API
-    const queryString = params.toString();
-    const url = `/api/tracciamento/sessions/${userId}${queryString ? `?${queryString}` : ''}`;
+    const url = `${CONFIG.api.endpoints.sessions}/${encodeURIComponent(userId)}`;
     
-    const response = await api.get<UserSession[]>(url);
-    return response;
+    return await trackingApi.get<UserSession[]>(url, { params });
   } catch (error) {
     console.error("Errore nel recupero delle sessioni:", error);
     throw error;
@@ -106,10 +101,8 @@ export async function fetchSessions(
  */
 export async function fetchSessionDetails(sessionId: string): Promise<SessionDetail[]> {
   try {
-    // Utilizziamo il nuovo percorso per evitare conflitti di slug
-    const url = `/api/tracciamento/sessions/details/${sessionId}`;
-    const response = await api.get<SessionDetail[]>(url);
-    return response;
+    const url = `${CONFIG.api.endpoints.sessionDetails}/${encodeURIComponent(sessionId)}`;
+    return await trackingApi.get<SessionDetail[]>(url);
   } catch (error) {
     console.error("Errore nel recupero dei dettagli della sessione:", error);
     throw error;
@@ -123,18 +116,14 @@ export async function fetchSessionDetails(sessionId: string): Promise<SessionDet
 export async function fetchTrackingStats(timeRange: string = '7d'): Promise<any> {
   try {
     // Costruisci i parametri di query
-    const params = new URLSearchParams();
+    const params: Record<string, string> = {};
     
     if (timeRange && timeRange !== 'all') {
-      params.append('timeRange', timeRange);
+      params.timeRange = timeRange;
     }
     
     // Chiama l'API
-    const queryString = params.toString();
-    const url = `/api/tracciamento/stats${queryString ? `?${queryString}` : ''}`;
-    
-    const response = await api.get(url);
-    return response;
+    return await trackingApi.get(CONFIG.api.endpoints.stats, { params });
   } catch (error) {
     console.error("Errore nel recupero delle statistiche:", error);
     throw error;
@@ -152,19 +141,16 @@ export async function fetchHeatmapData(
 ): Promise<any> {
   try {
     // Costruisci i parametri di query
-    const params = new URLSearchParams();
-    params.append('url', url);
+    const params: Record<string, string> = {
+      url
+    };
     
     if (timeRange && timeRange !== 'all') {
-      params.append('timeRange', timeRange);
+      params.timeRange = timeRange;
     }
     
     // Chiama l'API
-    const queryString = params.toString();
-    const apiUrl = `/api/tracciamento/heatmap${queryString ? `?${queryString}` : ''}`;
-    
-    const response = await api.get(apiUrl);
-    return response;
+    return await trackingApi.get(CONFIG.api.endpoints.heatmap, { params });
   } catch (error) {
     console.error("Errore nel recupero dei dati heatmap:", error);
     throw error;
