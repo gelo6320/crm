@@ -86,3 +86,26 @@ export function formatPercentage(value: number, decimals = 1): string {
   
   return value.toFixed(decimals) + '%';
 }
+
+/**
+ * Formatta il tempo in minuti in una rappresentazione ore/minuti
+ * @param minutes - I minuti da formattare
+ * @returns La stringa formattata (es. "1:30" per 90 minuti)
+ */
+export function formatTime(minutes: number): string {
+  if (minutes < 1) {
+    // Per durate inferiori a 1 minuto
+    return `<1`;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = Math.round(minutes % 60);
+  
+  if (hours === 0) {
+    // Solo minuti
+    return `${remainingMinutes}`;
+  } else {
+    // Ore e minuti
+    return `${hours}:${remainingMinutes.toString().padStart(2, '0')}`;
+  }
+}

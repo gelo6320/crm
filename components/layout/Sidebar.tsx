@@ -1,10 +1,11 @@
-// components/layout/Sidebar.tsx
-"use client";
+// Aggiornamento di components/layout/Sidebar.tsx
+// Aggiungi l'icona di tracciamento e la voce nel menu
 
 import { 
   BarChart3, Calendar, FileText, Bookmark, 
   Facebook, Share2, Users, Settings, LogOut,
-  X, Globe, Shield, ChevronDown, ChevronRight, HardHat
+  X, Globe, Shield, ChevronDown, ChevronRight, HardHat,
+  LineChart // Aggiungi questa icona per il tracciamento
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -74,27 +75,29 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
       setExpandedMenus(expandedState);
     }, [pathname]);
   
-       // Contacts menu with submenu
-       const contactsLinks: SidebarLink[] = [
-        { 
-          name: "Contatti", 
-          href: "/contacts", 
-          icon: Users,
-          children: [
-            { name: "Tutti i contatti", href: "/contacts", icon: Users },
-            { name: "Form di contatto", href: "/forms", icon: FileText },
-            { name: "Lead Facebook", href: "/facebook-leads", icon: Facebook },
-            { name: "Prenotazioni", href: "/bookings", icon: Bookmark },
-          ]
-        }
-      ];
+    // Contacts menu with submenu
+    const contactsLinks: SidebarLink[] = [
+      { 
+        name: "Contatti", 
+        href: "/contacts", 
+        icon: Users,
+        children: [
+          { name: "Tutti i contatti", href: "/contacts", icon: Users },
+          { name: "Form di contatto", href: "/forms", icon: FileText },
+          { name: "Lead Facebook", href: "/facebook-leads", icon: Facebook },
+          { name: "Prenotazioni", href: "/bookings", icon: Bookmark },
+        ]
+      }
+    ];
 
     // Common links for all users (excluding contacts)
     const commonLinks: SidebarLink[] = [
-      { name: "Dashboard", href: "/", icon: BarChart3 }, // Now first in the list
+      { name: "Dashboard", href: "/", icon: BarChart3 }, // First in the list
       { name: "Calendario", href: "/calendar", icon: Calendar },
       { name: "Eventi Facebook", href: "/events", icon: Share2 },
       { name: "Sales Funnel", href: "/sales-funnel", icon: Users },
+      // Aggiungi qui la nuova voce di menu
+      { name: "Tracciamento", href: "/tracciamento", icon: LineChart },
       { name: "I tuoi siti", href: "/my-sites", icon: Globe },
       { name: "Progetti", href: "/projects", icon: ConstructionIcon },
     ];

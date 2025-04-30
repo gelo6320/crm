@@ -1,0 +1,221 @@
+// app/api/tracciamento/session/[sessionId]/route.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+/**
+ * GET /api/tracciamento/session/[sessionId]
+ * 
+ * Restituisce i dettagli di una specifica sessione di tracciamento
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { sessionId: string } }
+) {
+  try {
+    // Ottieni l'ID sessione dai parametri dell'URL
+    const sessionId = params.sessionId;
+    
+    // In un'implementazione reale, qui ci sarebbe la logica per recuperare i dati dal database
+    // Per ora restituiamo dati mockati
+    
+    // Simula un piccolo ritardo per mostrare il caricamento
+    await new Promise(resolve => setTimeout(resolve, 600));
+    
+    // Genera dettagli sessione di esempio
+    const now = Date.now();
+    let baseTime;
+    
+    // Usa un id specifico per determinare quando è iniziata la sessione
+    if (sessionId === 'session1') {
+      baseTime = now - 2 * 60 * 60 * 1000; // 2 ore fa
+    } else if (sessionId === 'session2') {
+      baseTime = now - 1 * 24 * 60 * 60 * 1000; // 1 giorno fa
+    } else if (sessionId === 'session3') {
+      baseTime = now - 3 * 24 * 60 * 60 * 1000; // 3 giorni fa
+    } else if (sessionId === 'session4') {
+      baseTime = now - 7 * 24 * 60 * 60 * 1000; // 7 giorni fa
+    } else {
+      baseTime = now - 1 * 60 * 60 * 1000; // 1 ora fa (default)
+    }
+    
+    const details = [
+      // Visualizzazione iniziale della landing page
+      {
+        id: `${sessionId}_detail_1`,
+        sessionId: sessionId,
+        type: 'page_view',
+        timestamp: new Date(baseTime).toISOString(),
+        data: {
+          url: 'https://costruzionedigitale.com/',
+          title: 'Home - Costruzione Digitale',
+          referrer: 'https://google.com/search'
+        }
+      },
+      
+      // Scroll nella pagina
+      {
+        id: `${sessionId}_detail_2`,
+        sessionId: sessionId,
+        type: 'scroll',
+        timestamp: new Date(baseTime + 45 * 1000).toISOString(), // +45 secondi
+        data: {
+          direction: 'down',
+          depth: 35 // percentuale
+        }
+      },
+      
+      // Click su un link di servizi
+      {
+        id: `${sessionId}_detail_3`,
+        sessionId: sessionId,
+        type: 'click',
+        timestamp: new Date(baseTime + 2 * 60 * 1000).toISOString(), // +2 minuti
+        data: {
+          element: 'a',
+          text: 'Servizi',
+          selector: '.nav-link[href="/servizi"]'
+        }
+      },
+      
+      // Visualizzazione pagina servizi
+      {
+        id: `${sessionId}_detail_4`,
+        sessionId: sessionId,
+        type: 'page_view',
+        timestamp: new Date(baseTime + 2 * 60 * 1000 + 2 * 1000).toISOString(), // +2 min e 2 sec
+        data: {
+          url: 'https://costruzionedigitale.com/servizi',
+          title: 'I Nostri Servizi - Costruzione Digitale',
+          referrer: 'https://costruzionedigitale.com/'
+        }
+      },
+      
+      // Altro scroll
+      {
+        id: `${sessionId}_detail_5`,
+        sessionId: sessionId,
+        type: 'scroll',
+        timestamp: new Date(baseTime + 3 * 60 * 1000).toISOString(), // +3 minuti
+        data: {
+          direction: 'down',
+          depth: 70
+        }
+      },
+      
+      // Click su un servizio specifico
+      {
+        id: `${sessionId}_detail_6`,
+        sessionId: sessionId,
+        type: 'click',
+        timestamp: new Date(baseTime + 4 * 60 * 1000).toISOString(), // +4 minuti
+        data: {
+          element: 'a',
+          text: 'Ristrutturazioni',
+          selector: '.service-card[data-service="ristrutturazioni"] .btn'
+        }
+      },
+      
+      // Visualizzazione pagina ristrutturazioni
+      {
+        id: `${sessionId}_detail_7`,
+        sessionId: sessionId,
+        type: 'page_view',
+        timestamp: new Date(baseTime + 4 * 60 * 1000 + 2 * 1000).toISOString(), // +4 min e 2 sec
+        data: {
+          url: 'https://costruzionedigitale.com/servizi/ristrutturazioni',
+          title: 'Servizi di Ristrutturazione - Costruzione Digitale',
+          referrer: 'https://costruzionedigitale.com/servizi'
+        }
+      },
+      
+      // Scroll nella pagina di ristrutturazioni
+      {
+        id: `${sessionId}_detail_8`,
+        sessionId: sessionId,
+        type: 'scroll',
+        timestamp: new Date(baseTime + 5 * 60 * 1000).toISOString(), // +5 minuti
+        data: {
+          direction: 'down',
+          depth: 65
+        }
+      },
+      
+      // Click sul link di contatto
+      {
+        id: `${sessionId}_detail_9`,
+        sessionId: sessionId,
+        type: 'click',
+        timestamp: new Date(baseTime + 8 * 60 * 1000).toISOString(), // +8 minuti
+        data: {
+          element: 'a',
+          text: 'Contattaci',
+          selector: '.cta-button[href="/contatti"]'
+        }
+      },
+      
+      // Visualizzazione pagina contatti
+      {
+        id: `${sessionId}_detail_10`,
+        sessionId: sessionId,
+        type: 'page_view',
+        timestamp: new Date(baseTime + 8 * 60 * 1000 + 2 * 1000).toISOString(), // +8 min e 2 sec
+        data: {
+          url: 'https://costruzionedigitale.com/contatti',
+          title: 'Contattaci - Costruzione Digitale',
+          referrer: 'https://costruzionedigitale.com/servizi/ristrutturazioni'
+        }
+      },
+      
+      // Interazione con il form
+      {
+        id: `${sessionId}_detail_11`,
+        sessionId: sessionId,
+        type: 'click',
+        timestamp: new Date(baseTime + 10 * 60 * 1000).toISOString(), // +10 minuti
+        data: {
+          element: 'input',
+          text: '',
+          selector: 'form#contactForm input[name="name"]'
+        }
+      },
+      
+      // Invio del form
+      {
+        id: `${sessionId}_detail_12`,
+        sessionId: sessionId,
+        type: 'form_submit',
+        timestamp: new Date(baseTime + 12 * 60 * 1000).toISOString(), // +12 minuti
+        data: {
+          formId: 'contactForm',
+          page: '/contatti'
+        }
+      },
+      
+      // Evento di conversione
+      {
+        id: `${sessionId}_detail_13`,
+        sessionId: sessionId,
+        type: 'event',
+        timestamp: new Date(baseTime + 12 * 60 * 1000 + 1 * 1000).toISOString(), // +12 min e 1 sec
+        data: {
+          name: 'lead_generated',
+          category: 'conversion',
+          value: 'form_submission'
+        }
+      }
+    ];
+    
+    // Se è session3, diamo un set di dati più breve per variety
+    if (sessionId === 'session3') {
+      return NextResponse.json(details.slice(0, 5));
+    }
+    
+    return NextResponse.json(details);
+  } catch (error) {
+    console.error(`Errore nel recupero dei dettagli della sessione ${params.sessionId}:`, error);
+    return NextResponse.json(
+      { error: 'Errore nel recupero dei dettagli della sessione' },
+      { status: 500 }
+    );
+  }
+}
