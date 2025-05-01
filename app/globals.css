@@ -1051,3 +1051,37 @@ header.sticky {
     max-width: 280px;
   }
 }
+
+/* Stile globale per ReactFlow */
+.react-flow {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.react-flow__container {
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.react-flow__viewport {
+  transform-origin: 0 0;
+  z-index: 2;
+  position: absolute;
+}
+
+/* Stile per il wrapper del flow */
+.flow-wrapper {
+  width: 100%;
+  height: 600px;
+  position: relative;
+  border: 1px solid #333;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #1a1a1a;
+}

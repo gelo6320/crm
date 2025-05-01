@@ -316,39 +316,46 @@ export default function SessionFlow({
           </button>
         </div>
       ) : (
-        <div className="flex-1 h-[600px]" ref={flowWrapper}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeClick={onNodeClick}
-            nodeTypes={nodeTypes}
-            fitView
-            attributionPosition="bottom-right"
-            onInit={(instance) => {
-              reactFlowInstance.current = instance;
-              console.log("ReactFlow inizializzato");
-              setTimeout(() => instance.fitView({ padding: 0.2 }), 100);
-            }}
-            proOptions={{ hideAttribution: true }}
-          >
-            <Background color="#64748b" gap={16} size={1} />
-            <Controls showInteractive={false} />
-            <MiniMap 
-              nodeColor={(node) => {
-                switch (node.type) {
-                  case 'pageNode':
-                    return '#FF6B00';
-                  case 'eventNode':
-                    return '#e74c3c';
-                  default:
-                    return '#3498db';
-                }
+          <div className="flow-wrapper" ref={flowWrapper}>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeClick={onNodeClick}
+              nodeTypes={nodeTypes}
+              fitView
+              attributionPosition="bottom-right"
+              onInit={(instance) => {
+                reactFlowInstance.current = instance;
+                console.log("ReactFlow inizializzato");
+                // Importante: usa setTimeout per dare tempo al componente di renderizzare
+                setTimeout(() => {
+                  console.log("Esecuzione fitView");
+                  if (instance && typeof instance.fitView === 'function') {
+                    instance.fitView({ padding: 0.2 });
+                  }
+                }, 300);
               }}
-              maskColor="rgba(0, 0, 0, 0.5)"
-            />
+              style={{ width: '100%', height: '100%' }}
+              proOptions={{ hideAttribution: true }}
+            >
+              <Background color="#64748b" gap={16} size={1} />
+              <Controls showInteractive={false} />
+              <MiniMap 
+                nodeColor={(node) => {
+                  switch (node.type) {
+                    case 'pageNode':
+                      return '#FF6B00';
+                    case 'eventNode':
+                      return '#e74c3c';
+                    default:
+                      return '#3498db';
+                  }
+                }}
+                maskColor="rgba(0, 0, 0, 0.5)"
+              />
             
             <Panel position="top-right" className="space-x-2">
               <button 
