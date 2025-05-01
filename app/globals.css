@@ -1167,3 +1167,133 @@ header.sticky {
 .event-type-button:not(.active):hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
+
+/* Modifica colori di sfondo e spaziature */
+.calendar-page-container {
+  /* Sostituisco il nero con il grigio scuro del tuo sito */
+  background-color: #18181b; /* zinc-900 */
+  color: #ffffff;
+}
+
+/* Intestazione data con stile più moderno */
+.calendar-date-header {
+  font-size: 1.25rem;
+  font-weight: 500;
+  padding: 1rem 0.75rem 0.75rem;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Giorno selezionato con migliori spaziature */
+.date-navigation {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background-color: #27272a; /* zinc-800 */
+  border-radius: 0.5rem;
+  margin: 0.75rem;
+}
+
+/* Miglioramento della navigazione */
+.date-nav-button {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: #a1a1aa; /* zinc-400 */
+}
+
+.date-nav-button:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+/* Spaziatura delle date */
+.date-divider {
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  background-color: #27272a; /* zinc-800 */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Stile degli eventi */
+.calendar-event-item {
+  padding: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: flex-start;
+}
+
+.event-time {
+  width: 3.5rem;
+  min-width: 3.5rem;
+  color: #a1a1aa; /* zinc-400 */
+  text-align: right;
+  padding-right: 0.75rem;
+}
+
+.event-content {
+  flex: 1;
+  padding-left: 0.75rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.event-title {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.event-details {
+  font-size: 0.8125rem;
+  color: #a1a1aa; /* zinc-400 */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* Status indicator per gli eventi */
+.status-indicator {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+.status-pending {
+  background-color: #a1a1aa; /* grigio */
+}
+
+.status-confirmed {
+  background-color: #FF6B00; /* arancione - primary */
+}
+
+/* Miglioramento bottoni di azione */
+.view-toggle-group {
+  display: flex;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  margin-right: 0.5rem;
+}
+
+.view-toggle-button {
+  padding: 0.5rem;
+  background-color: #27272a; /* zinc-800 */
+}
+
+.view-toggle-button.active {
+  background-color: #FF6B00; /* primary */
+}
+
+.add-event-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background-color: #FF6B00; /* primary */
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
