@@ -146,9 +146,6 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
           </div>
         </div>
       </div>
-      
-      {/* Aggiunta dell'ombra glow arancione sopra la sidebar */}
-      <div className="absolute left-0 bottom-0 w-64 h-0.5 bg-primary/30 shadow-[0_0_8px_3px_rgba(255,107,0,0.3)] md:block hidden"></div>
     </header>
   );
 }

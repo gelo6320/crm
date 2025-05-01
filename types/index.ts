@@ -43,12 +43,21 @@ export interface Stat {
   export interface CalendarEvent {
     id: string;
     title: string;
-    start: Date;
-    end: Date;
-    status: string;
-    clientId?: string;
-    description?: string;
-    location?: string; // Aggiungi questa proprietà
+    start: Date | string; // Data di inizio
+    end: Date | string;   // Data di fine
+    status: "pending" | "confirmed" | "completed" | "cancelled";
+    eventType?: "appointment" | "reminder"; // Nuovo tipo per distinguere appuntamenti da promemoria
+    location?: string;  // Luogo dell'appuntamento
+    clientId?: string;  // ID cliente associato (opzionale)
+    description?: string; // Descrizione o note
+    color?: string;     // Colore personalizzato (opzionale)
+  }
+  
+  export interface CalendarUser {
+    id: string;
+    name: string;
+    email: string;
+    role?: string;
   }
   
   export interface FunnelItem extends Lead {

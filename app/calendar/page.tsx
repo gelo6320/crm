@@ -2,7 +2,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Menu } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Menu, 
+  X, List, GridIcon, Bookmark, Bell, FileText, Check } from "lucide-react";
 import { fetchAppointments } from "@/lib/api/calendar";
 import { CalendarEvent } from "@/types";
 import CalendarView from "@/components/calendar/CalendarView";
@@ -25,6 +26,12 @@ export default function CalendarPage() {
     const checkMobile = () => {
       const isMobileDevice = window.innerWidth < 768;
       setIsMobile(isMobileDevice);
+      
+      // Imposta automaticamente la vista a "list" su mobile
+      if (isMobileDevice && view === "month") {
+        setView("list");
+      }
+      
       // Close sidebar automatically on mobile when changing to mobile view
       if (isMobileDevice && showSidebar) {
         setShowSidebar(false);
@@ -81,9 +88,19 @@ export default function CalendarPage() {
     const newDate = new Date(selectedDate);
     
     if (direction === "prev") {
-      newDate.setMonth(newDate.getMonth() - 1);
+      if (view === "month") {
+        newDate.setMonth(newDate.getMonth() - 1);
+      } else {
+        // In list view, navigate by day
+        newDate.setDate(newDate.getDate() - 1);
+      }
     } else if (direction === "next") {
-      newDate.setMonth(newDate.getMonth() + 1);
+      if (view === "month") {
+        newDate.setMonth(newDate.getMonth() + 1);
+      } else {
+        // In list view, navigate by day
+        newDate.setDate(newDate.getDate() + 1);
+      }
     } else if (direction === "today") {
       return setSelectedDate(new Date());
     }
@@ -180,7 +197,20 @@ export default function CalendarPage() {
   };
   
   const formatMonthTitle = (date: Date) => {
-    return date.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+    const options: Intl.DateTimeFormatOptions = { 
+      month: 'long', 
+      year: 'numeric'
+    };
+    return date.toLocaleDateString('it-IT', options);
+  };
+  
+  const formatDayTitle = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long'
+    };
+    return date.toLocaleDateString('it-IT', options);
   };
   
   const toggleSidebar = () => {
@@ -195,15 +225,41 @@ export default function CalendarPage() {
     <div className="h-[calc(100vh-60px)] sm:h-[calc(100vh-100px)] flex flex-col animate-fade-in w-full calendar-page-container no-scroll"
     style={{ WebkitTouchCallout: "none" }}
     >
-      <div className="flex items-center justify-between mb-2 px-1 sm:px-0">
-        <h1 className="text-lg font-medium flex items-center">
-          <CalendarIcon className="mr-2 hidden md:inline" size={20} />
-          Calendario
+      <div className="flex flex-col space-y-2 mb-2 sm:space-y-0 sm:mb-2 sm:flex-row sm:justify-between sm:items-center">
+        <h1 className="text-base sm:text-lg font-medium flex items-center">
+          <CalendarIcon className="mr-1.5 sm:mr-2" size={isMobile ? 16 : 20} />
+          {isMobile && view === "list" ? formatDayTitle(selectedDate) : "Calendario"}
         </h1>
         
-        <div className="flex">
+        <div className="flex items-center justify-between sm:justify-end">
+          {/* Navigazione mobile per la vista lista */}
+          {isMobile && view === "list" && (
+            <div className="flex items-center bg-zinc-800 rounded-lg mr-auto">
+              <button
+                onClick={() => navigateCalendar("prev")}
+                className="p-1.5 text-zinc-400 hover:text-white"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              
+              <button
+                onClick={() => navigateCalendar("today")}
+                className="px-2 py-1 text-xs font-medium"
+              >
+                Oggi
+              </button>
+              
+              <button
+                onClick={() => navigateCalendar("next")}
+                className="p-1.5 text-zinc-400 hover:text-white"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+          
           {/* Desktop navigation controls */}
-          <div className="bg-zinc-800 rounded-lg hidden md:flex mr-4">
+          <div className="hidden sm:flex bg-zinc-800 rounded-lg mr-4">
             <button
               onClick={() => navigateCalendar("prev")}
               className="p-2 text-zinc-400 hover:text-white"
@@ -226,11 +282,13 @@ export default function CalendarPage() {
             </button>
           </div>
           
-          <div className="mr-4 hidden md:block text-lg font-medium">
-            {formatMonthTitle(selectedDate)}
+          {/* Desktop month/year title */}
+          <div className="hidden sm:block mr-4 text-lg font-medium">
+            {view === "month" ? formatMonthTitle(selectedDate) : formatDayTitle(selectedDate)}
           </div>
           
-          <div className="bg-zinc-800 rounded-lg hidden md:flex mr-4">
+          {/* Desktop view toggle */}
+          <div className="hidden sm:flex bg-zinc-800 rounded-lg mr-4">
             <button
               onClick={() => setView("month")}
               className={`px-3 py-2 text-sm font-medium ${
@@ -250,45 +308,53 @@ export default function CalendarPage() {
             </button>
           </div>
           
-          {/* Mobile view toggle */}
-          <div className="mr-2 bg-zinc-800 rounded-lg flex md:hidden">
-            <button
-              onClick={toggleSidebar}
-              className={`p-2 ${selectedEvents.length > 0 ? 'text-primary' : 'text-zinc-400'}`}
-            >
-              <Menu size={18} />
-            </button>
-          </div>
+          {/* Mobile sidebar toggle */}
+          {isMobile && selectedEvents.length > 0 && (
+            <div className="bg-zinc-800 rounded-lg flex sm:hidden">
+              <button
+                onClick={toggleSidebar}
+                className={`p-1.5 ${selectedEvents.length > 0 ? 'text-primary' : 'text-zinc-400'}`}
+              >
+                <Menu size={16} />
+                {selectedEvents.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                    {selectedEvents.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
           
+          {/* Month/List toggle on mobile (solo se non in vista lista) */}
+          {isMobile && (
+            <div className="bg-zinc-800 rounded-lg flex sm:hidden mx-2">
+              <button
+                onClick={() => setView("month")}
+                className={`p-1.5 ${view === "month" ? 'text-primary' : 'text-zinc-400'}`}
+                aria-label="Vista mensile"
+              >
+                <GridIcon size={16} />
+              </button>
+              
+              <button
+                onClick={() => setView("list")}
+                className={`p-1.5 ${view === "list" ? 'text-primary' : 'text-zinc-400'}`}
+                aria-label="Vista lista"
+              >
+                <List size={16} />
+              </button>
+            </div>
+          )}
+          
+          {/* Button nuovo appuntamento */}
           <button
             onClick={() => handleNewAppointment()}
-            className="btn btn-primary inline-flex items-center justify-center"
+            className="btn btn-primary inline-flex items-center justify-center py-1 px-2 sm:py-1.5 sm:px-3 text-xs sm:text-sm"
           >
-            <Plus size={18} className="mr-1" />
+            <Plus size={isMobile ? 14 : 18} className="sm:mr-1" />
             <span className="hidden sm:inline">Nuovo</span>
           </button>
         </div>
-      </div>
-      
-      {/* Mobile view selector */}
-      <div className="flex md:hidden bg-zinc-800 rounded-lg mb-2 overflow-hidden">
-        <button
-          onClick={() => setView("month")}
-          className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
-            view === "month" ? "bg-primary text-white" : ""
-          }`}
-        >
-          Mese
-        </button>
-        
-        <button
-          onClick={() => setView("list")}
-          className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
-            view === "list" ? "bg-primary text-white" : ""
-          }`}
-        >
-          Lista
-        </button>
       </div>
       
       <div className="flex flex-col md:flex-row gap-0 md:gap-4 flex-1 overflow-hidden relative w-full mobile-calendar-container">
@@ -330,6 +396,7 @@ export default function CalendarPage() {
           onClose={() => setCurrentAppointment(null)}
           onSave={handleSaveAppointment}
           onDelete={handleDeleteAppointment}
+          isMobile={isMobile}
         />
       )}
     </div>
