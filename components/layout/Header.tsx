@@ -5,6 +5,7 @@ import { Bell, Menu, Search, User } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 interface HeaderProps {
   setSidebarOpen: (open: boolean) => void;
@@ -46,6 +47,8 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
         return "Eventi Facebook";
       case "/sales-funnel":
         return "Sales Funnel";
+      case "/tracciamento":
+        return "Tracciamento";
       case "/settings":
         return "Impostazioni";
       default:
@@ -54,9 +57,10 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   };
   
   return (
-    <header className="bg-black border-b border-zinc-800 sticky top-0 z-10">
+    <header className="bg-black border-b border-zinc-800 sticky top-0 z-50 w-full shadow-lg">
       <div className="flex items-center justify-between px-4 py-2.5">
-        <div className="flex items-center space-x-4">
+        {/* Left section with logo and title */}
+        <div className="flex items-center space-x-4 z-10">
           <button 
             onClick={() => setSidebarOpen(true)}
             className="md:hidden text-zinc-400 hover:text-white"
@@ -64,8 +68,9 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
             <Menu size={20} />
           </button>
           
-          <div className="flex items-center space-x-2">
-            <div className="hidden md:block">
+          <div className="flex items-center space-x-3">
+            {/* Logo che ora è sempre visibile */}
+            <Link href="/" className="flex items-center space-x-2 text-white hover:text-primary transition">
               <Image 
                 src="/logosito.webp" 
                 width={30} 
@@ -73,13 +78,22 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
                 alt="Logo" 
                 className="h-6 w-9"
               />
-            </div>
+              <div className="font-semibold text-sm hidden md:block">
+                <span>Costruzione </span>
+                <span className="text-primary">Digitale</span>
+              </div>
+            </Link>
+            
+            {/* Separatore verticale */}
+            <div className="h-6 w-px bg-zinc-700 hidden md:block"></div>
+            
             <span className="font-semibold text-sm md:text-base">
               {getHeaderTitle()}
             </span>
           </div>
         </div>
         
+        {/* Center section with search */}
         <div className="relative flex-1 max-w-md mx-3">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
@@ -95,6 +109,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
           </div>
         </div>
         
+        {/* Right section with notifications and user menu */}
         <div className="flex items-center space-x-3">
           <button className="text-zinc-400 hover:text-white">
             <Bell size={18} />
@@ -131,6 +146,9 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
           </div>
         </div>
       </div>
+      
+      {/* Aggiunta dell'ombra glow arancione sopra la sidebar */}
+      <div className="absolute left-0 bottom-0 w-64 h-0.5 bg-primary/30 shadow-[0_0_8px_3px_rgba(255,107,0,0.3)] md:block hidden"></div>
     </header>
   );
 }

@@ -1,15 +1,12 @@
-// Aggiornamento di components/layout/Sidebar.tsx
-// Aggiungi l'icona di tracciamento e la voce nel menu
-
+// components/layout/Sidebar.tsx
 import { 
   BarChart3, Calendar, FileText, Bookmark, 
   Facebook, Share2, Users, Settings, LogOut,
   X, Globe, Shield, ChevronDown, ChevronRight, HardHat,
-  LineChart // Aggiungi questa icona per il tracciamento
+  LineChart
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import useAuthz from "@/lib/auth/useAuthz";
@@ -30,14 +27,14 @@ interface SidebarLink {
   name: string;
   href: string;
   icon: React.ElementType;
-  adminOnly?: boolean; // Optional property for admin-only links
-  children?: SidebarLink[]; // Optional submenu
+  adminOnly?: boolean;
+  children?: SidebarLink[];
 }
 
 export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
     const pathname = usePathname();
     const { logout } = useAuth();
-    const { isAdmin } = useAuthz(); // Use authorization hook
+    const { isAdmin } = useAuthz();
     const router = useRouter();
     const [expandedMenus, setExpandedMenus] = useState<{ [key: string]: boolean }>({});
 
@@ -92,11 +89,10 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
 
     // Common links for all users (excluding contacts)
     const commonLinks: SidebarLink[] = [
-      { name: "Dashboard", href: "/", icon: BarChart3 }, // First in the list
+      { name: "Dashboard", href: "/", icon: BarChart3 },
       { name: "Calendario", href: "/calendar", icon: Calendar },
       { name: "Eventi Facebook", href: "/events", icon: Share2 },
       { name: "Sales Funnel", href: "/sales-funnel", icon: Users },
-      // Aggiungi qui la nuova voce di menu
       { name: "Tracciamento", href: "/tracciamento", icon: LineChart },
       { name: "I tuoi siti", href: "/my-sites", icon: Globe },
       { name: "Progetti", href: "/projects", icon: ConstructionIcon },
@@ -105,7 +101,6 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
     // Admin-only links
     const adminLinks: SidebarLink[] = [
       { name: "Sales Funnel Admin", href: "/sales-funnel-admin", icon: Shield, adminOnly: true },
-      // Add other admin links here
     ];
   
     // Settings available to all but kept separate
@@ -113,7 +108,7 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
   
     // Filter admin links if needed
     const links: SidebarLink[] = [
-      ...commonLinks, // Dashboard now comes first
+      ...commonLinks,
       ...contactsLinks,
       ...(isAdmin() ? adminLinks : []),
       settingsLink
@@ -221,46 +216,16 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
           />
         )}
         
-        {/* Sidebar */}
+        {/* Sidebar - Notare che abbiamo rimosso l'header della sidebar */}
         <div 
           className={`
-            fixed top-0 left-0 z-50 h-full w-64 bg-black border-r border-zinc-800 
+            fixed top-0 left-0 z-40 h-full w-64 bg-black border-r border-zinc-800 
             transform transition-transform duration-300 ease-in-out 
             ${isMobile ? (open ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'}
-            md:relative md:z-0 md:translate-x-0
+            md:relative md:z-0 md:translate-x-0 pt-[57px] mt-px
           `}
         >
-          {/* Sidebar header */}
-          <div className="h-[57px] flex items-center justify-between px-4 border-b border-zinc-800">
-            <Link 
-              href="/" 
-              className="flex items-center space-x-2 text-white hover:text-primary transition"
-              onClick={closeSidebar}
-            >
-              <Image 
-                src="/logosito.webp" 
-                width={30} 
-                height={20} 
-                alt="Logo" 
-                className="h-6 w-8"
-              />
-              <div className="font-semibold text-sm">
-                <span>Costruzione </span>
-                <span className="text-primary">Digitale</span>
-              </div>
-            </Link>
-            
-            {isMobile && (
-              <button 
-                onClick={() => setOpen(false)} 
-                className="text-zinc-400 hover:text-white"
-              >
-                <X size={18} />
-              </button>
-            )}
-          </div>
-          
-          {/* Sidebar links */}
+          {/* Sidebar links - Inizia direttamente con i link */}
           <div className="py-3 overflow-y-auto h-[calc(100vh-57px)]">
             <nav className="px-2 space-y-1">
               {links.map(renderLink)}

@@ -107,12 +107,18 @@ export default function RootLayout({
               {children}
             </div>
           ) : (
-            // Standard layout with sidebar and header for other pages
-            <div className="flex h-screen overflow-hidden">
-              <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} isMobile={isMobile} />
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <Header setSidebarOpen={setSidebarOpen} />
-                <main className="flex-1 bg-zinc-900 pt-2 overflow-y-auto">
+            // Layout modificato con header sopra la sidebar
+            <div className="flex flex-col h-screen overflow-hidden">
+              {/* Header ora è fuori dalla sidebar e si estende su tutta la larghezza */}
+              <Header setSidebarOpen={setSidebarOpen} />
+              
+              {/* Contenitore principale sotto l'header */}
+              <div className="flex flex-1 overflow-hidden pt-[1px]">
+                {/* Sidebar */}
+                <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} isMobile={isMobile} />
+                
+                {/* Contenuto principale */}
+                <main className="flex-1 bg-zinc-900 overflow-y-auto">
                   <div className="px-3 py-2 md:p-6 max-w-full">
                     {children}
                   </div>
