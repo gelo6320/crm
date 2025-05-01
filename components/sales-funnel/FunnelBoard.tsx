@@ -3,9 +3,10 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { FunnelData, FunnelItem } from "@/types";
-import { updateLeadMetadata } from "@/lib/api/funnel";
+import { updateLeadMetadata, updateLeadStage } from "@/lib/api/funnel";
 import FacebookEventModal from "./FacebookEventModal";
 import ValueModal from "./ValueModal";
+import { toast } from "@/components/ui/toaster";
 
 // Importazioni react-dnd
 import { DndProvider, useDrag, useDrop } from "react-dnd";
@@ -112,23 +113,51 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         newStatus: targetStatus,
       });
     } else {
-      // Per gli altri stati, aggiorna direttamente senza mostrare il modale
+      // Per gli altri stati, aggiorna direttamente tramite API
+      updateLeadDirectly(updatedLead, prevStatus, targetStatus);
+    }
+  };
+
+  // Funzione per aggiornare direttamente il lead senza mostrare modale
+  const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: string) => {
+    try {
+      // Utilizza la stessa chiamata API ma senza inviare l'evento a Facebook
+      await updateLeadStage(
+        lead._id,
+        lead.type,
+        fromStage,
+        toStage,
+        undefined // Non invio eventi a Facebook per stati non "customer"
+      );
+      
+      // Aggiorna i dati del funnel tramite la callback
+      await onLeadMove();
+      
+      // Nascondi indicatori di caricamento
       setIsMoving(false);
-      onLeadMove(); // Aggiorna i dati
+    } catch (error) {
+      console.error("Error during lead move:", error);
+      
+      // Ripristina lo stato precedente in caso di errore
+      handleUndoMove();
+      toast("error", "Errore spostamento", "Si è verificato un errore durante lo spostamento del lead");
     }
   };
 
   // Handle confirming the lead move after showing the modal
   const handleConfirmMove = async () => {
     try {
-      // Here we would actually call the API to update the lead status
-      // This is handled in the onLeadMove callback
+      if (!movingLead) return;
+      
+      // Nascondi il modale
+      setMovingLead(null);
+      
+      // Aggiorna i dati del funnel tramite la callback
       await onLeadMove();
     } catch (error) {
       console.error("Error moving lead:", error);
     } finally {
       setIsMoving(false);
-      setMovingLead(null);
     }
   };
 
@@ -185,6 +214,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       setEditingLead(null);
     } catch (error) {
       console.error("Error updating lead value:", error);
+      toast("error", "Errore aggiornamento", "Si è verificato un errore durante l'aggiornamento dei dati");
     }
   };
 
