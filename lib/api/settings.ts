@@ -5,12 +5,19 @@ import axios from "axios";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
 /**
- * Interfaccia per le impostazioni
+ * Interfaccia per le impostazioni utente
  */
 export interface UserSettings {
-  facebookAccessToken?: string;
-  facebookPixelId?: string;
-  facebookTestEventCode?: string;
+  mongoDbUri?: string;
+  apiKeys?: {
+    facebookAccessToken?: string;
+    googleApiKey?: string;
+    facebookPixelId?: string;
+    facebookTestEventCode?: string;
+  };
+  webhooks?: {
+    callbackUrl?: string;
+  };
   isDevelopment?: boolean;
   [key: string]: any;
 }
