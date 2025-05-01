@@ -2,13 +2,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { RefreshCw, PieChart, BarChart } from "lucide-react";
-import ModernFunnelBoard from "@/components/sales-funnel/ModernFunnelBoard";
-import ModernFunnelStats from "@/components/sales-funnel/ModernFunnelStats";
+import { RefreshCw } from "lucide-react";
+import CustomFunnelBoard from "@/components/sales-funnel/FunnelBoard";
+import FunnelStats from "@/components/sales-funnel/FunnelStats";
 import { FunnelData, FunnelStats as FunnelStatsType } from "@/types";
 import { fetchFunnelData } from "@/lib/api/funnel";
-import "@/app/modern-funnel-styles.css";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import DeviceDetectionInitializer from "@/app/_device";
+import "../funnel-styles.css";
+import "../react-dnd-styles.css";
 
 export default function SalesFunnelPage() {
   const [funnelData, setFunnelData] = useState<FunnelData>({
@@ -31,12 +33,12 @@ export default function SalesFunnelPage() {
   });
   
   const [isLoading, setIsLoading] = useState(true);
-  const [activeView, setActiveView] = useState<'board' | 'stats'>('board');
   
   useEffect(() => {
     loadFunnelData();
   }, []);
   
+  // app/sales-funnel/page.tsx (continuazione)
   const loadFunnelData = async () => {
     try {
       setIsLoading(true);
@@ -51,94 +53,39 @@ export default function SalesFunnelPage() {
   };
   
   if (isLoading) {
-    return (
-      <div className="loading-container">
-        <motion.div
-          animate={{
-            rotate: 360,
-            transition: { duration: 1.5, repeat: Infinity, ease: "linear" }
-          }}
-        >
-          <RefreshCw size={32} className="text-orange-500" />
-        </motion.div>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-sm text-zinc-400 mt-4"
-        >
-          Caricamento dati...
-        </motion.p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
   
   return (
-    <div className="sales-funnel-page">
-      <div className="page-header">
-        <motion.h1 
-          className="page-title"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          Sales Funnel
-        </motion.h1>
-        
-        <div className="actions-container">
-          <div className="view-toggle">
-            <button 
-              className={`toggle-btn ${activeView === 'board' ? 'active' : ''}`}
-              onClick={() => setActiveView('board')}
-            >
-              <BarChart size={16} />
-              <span>Board</span>
-            </button>
-            <button 
-              className={`toggle-btn ${activeView === 'stats' ? 'active' : ''}`}
-              onClick={() => setActiveView('stats')}
-            >
-              <PieChart size={16} />
-              <span>Statistiche</span>
-            </button>
-          </div>
-          
-          <motion.button 
+    <>
+      {/* Device detection per migliorare l'esperienza mobile */}
+      <DeviceDetectionInitializer />
+      
+      <div className="space-y-4 animate-fade-in">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-medium">Sales Funnel</h1>
+          <button 
             onClick={loadFunnelData}
-            className="refresh-btn"
+            className="btn btn-outline p-1.5"
             disabled={isLoading}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
           >
             <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-          </motion.button>
+          </button>
+        </div>
+        
+        <div className="flex flex-col gap-4">
+          <div className="w-full shrink-0">
+            <FunnelStats stats={funnelStats} />
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <CustomFunnelBoard 
+              funnelData={funnelData} 
+              setFunnelData={setFunnelData} 
+              onLeadMove={loadFunnelData}
+            />
+          </div>
         </div>
       </div>
-      
-      <div className="funnel-content">
-        <motion.div 
-          className="stats-wrapper"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <ModernFunnelStats stats={funnelStats} />
-        </motion.div>
-        
-        <motion.div 
-          className="board-wrapper"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          style={{ display: activeView === 'board' ? 'block' : 'none' }}
-        >
-          <ModernFunnelBoard 
-            funnelData={funnelData} 
-            setFunnelData={setFunnelData} 
-            onLeadMove={loadFunnelData}
-          />
-        </motion.div>
-      </div>
-    </div>
+    </>
   );
 }
