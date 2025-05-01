@@ -3,10 +3,11 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { FunnelData, FunnelItem } from "@/types";
-import { updateLeadMetadata, updateLeadStage } from "@/lib/api/funnel";
+import { updateLeadMetadata } from "@/lib/api/funnel";
 import FacebookEventModal from "./FacebookEventModal";
 import ValueModal from "./ValueModal";
 import { toast } from "@/components/ui/toaster";
+import axios from "axios";
 
 // Importazioni react-dnd
 import { DndProvider, useDrag, useDrop } from "react-dnd";
@@ -14,6 +15,9 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
 import { isTouchDevice } from "@/lib/utils/device";
 import CustomDragLayer from "./CustomDragLayer";
+
+// API Base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
 // Columns configuration
 const COLUMNS = [
@@ -121,42 +125,79 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   // Funzione per aggiornare direttamente il lead senza mostrare modale
   const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: string) => {
     try {
-      // Utilizza la stessa chiamata API ma senza inviare l'evento a Facebook
-      await updateLeadStage(
-        lead._id,
-        lead.type,
-        fromStage,
-        toStage,
-        undefined // Non invio eventi a Facebook per stati non "customer"
+      // Chiama direttamente l'API del funnel per lo spostamento normale
+      const response = await axios.post(
+        `${API_BASE_URL}/api/sales-funnel/move`,
+        {
+          leadId: lead._id,
+          leadType: lead.type,
+          fromStage: fromStage,
+          toStage: toStage
+        },
+        { withCredentials: true }
       );
       
-      // Aggiorna i dati del funnel tramite la callback
-      await onLeadMove();
-      
-      // Nascondi indicatori di caricamento
-      setIsMoving(false);
+      // Se la chiamata API ha successo, aggiorna i dati del funnel
+      if (response.data.success) {
+        // Aggiorna i dati del funnel tramite la callback
+        await onLeadMove();
+        
+        toast("success", "Lead spostato", `Lead spostato con successo in ${toStage}`);
+      } else {
+        throw new Error(response.data.message || "Errore durante lo spostamento del lead");
+      }
     } catch (error) {
       console.error("Error during lead move:", error);
       
       // Ripristina lo stato precedente in caso di errore
-      handleUndoMove();
+      handleUndoMoveWithLead(lead, toStage, fromStage);
       toast("error", "Errore spostamento", "Si è verificato un errore durante lo spostamento del lead");
+    } finally {
+      setIsMoving(false);
     }
   };
 
   // Handle confirming the lead move after showing the modal
   const handleConfirmMove = async () => {
+    if (!movingLead) return;
+    
     try {
-      if (!movingLead) return;
+      // Chiama direttamente l'API per aggiornare lo stato a "customer"
+      // L'evento di acquisto verrà gestito dalle opzioni nel modale
+      const response = await axios.post(
+        `${API_BASE_URL}/api/sales-funnel/move`,
+        {
+          leadId: movingLead.lead._id,
+          leadType: movingLead.lead.type,
+          fromStage: movingLead.prevStatus,
+          toStage: movingLead.newStatus
+        },
+        { withCredentials: true }
+      );
       
-      // Nascondi il modale
-      setMovingLead(null);
-      
-      // Aggiorna i dati del funnel tramite la callback
-      await onLeadMove();
+      if (response.data.success) {
+        // Aggiorna i dati del funnel tramite la callback
+        await onLeadMove();
+        
+        toast("success", "Lead convertito", "Lead convertito in cliente con successo");
+      } else {
+        throw new Error(response.data.message || "Errore durante la conversione del lead");
+      }
     } catch (error) {
-      console.error("Error moving lead:", error);
+      console.error("Error during lead conversion:", error);
+      
+      // Ripristina lo stato precedente in caso di errore
+      if (movingLead) {
+        handleUndoMoveWithLead(
+          movingLead.lead, 
+          movingLead.newStatus, 
+          movingLead.prevStatus
+        );
+      }
+      
+      toast("error", "Errore conversione", "Si è verificato un errore durante la conversione del lead");
     } finally {
+      setMovingLead(null);
       setIsMoving(false);
     }
   };
@@ -164,26 +205,35 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   // Handle undoing the lead move if canceled
   const handleUndoMove = () => {
     if (!movingLead) return;
-
-    // Revert the UI change
+    
+    handleUndoMoveWithLead(
+      movingLead.lead, 
+      movingLead.newStatus, 
+      movingLead.prevStatus
+    );
+    
+    setMovingLead(null);
+    setIsMoving(false);
+  };
+  
+  // Funzione di supporto per il ripristino dello stato
+  const handleUndoMoveWithLead = (lead: FunnelItem, currentStatus: string, targetStatus: string) => {
     const updatedFunnelData = { ...funnelData };
 
-    // Remove lead from the target column
-    updatedFunnelData[movingLead.newStatus as keyof FunnelData] = updatedFunnelData[
-      movingLead.newStatus as keyof FunnelData
-    ].filter((item) => item._id !== movingLead.lead._id);
+    // Remove lead from the current column
+    updatedFunnelData[currentStatus as keyof FunnelData] = updatedFunnelData[
+      currentStatus as keyof FunnelData
+    ].filter((item) => item._id !== lead._id);
 
-    // Restore lead to the source column with original status
-    const revertedLead = { ...movingLead.lead, status: movingLead.prevStatus };
-    updatedFunnelData[movingLead.prevStatus as keyof FunnelData] = [
-      ...updatedFunnelData[movingLead.prevStatus as keyof FunnelData],
+    // Restore lead to the target column with original status
+    const revertedLead = { ...lead, status: targetStatus };
+    updatedFunnelData[targetStatus as keyof FunnelData] = [
+      ...updatedFunnelData[targetStatus as keyof FunnelData],
       revertedLead,
     ];
 
     // Update state
     setFunnelData(updatedFunnelData);
-    setIsMoving(false);
-    setMovingLead(null);
   };
 
   // Handle editing a lead's value and service
@@ -212,6 +262,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
       setFunnelData(updatedFunnelData);
       setEditingLead(null);
+      
+      toast("success", "Lead aggiornato", "Valore e servizio aggiornati con successo");
     } catch (error) {
       console.error("Error updating lead value:", error);
       toast("error", "Errore aggiornamento", "Si è verificato un errore durante l'aggiornamento dei dati");
