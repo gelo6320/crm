@@ -112,14 +112,28 @@ export default function TracciamentoPage() {
     try {
       setIsLoadingSessions(true);
       setSessions([]);
+      console.log(`Caricamento sessioni per utente: ${userId}`);
+      
       const data = await fetchSessions(userId, timeRange);
+      console.log(`Sessioni ricevute: ${data.length}`);
       setSessions(data);
+      
+      // Se non ci sono sessioni trovate, visualizza un messaggio nella console
+      if (data.length === 0) {
+        console.log(`Nessuna sessione trovata per l'utente ${userId}.`);
+      }
       
       // Resetta la sessione selezionata
       setSelectedSession(null);
-    } catch (error) {
-      console.error("Errore durante il caricamento delle sessioni:", error);
-      toast("error", "Errore", "Impossibile caricare le sessioni");
+    } catch (error: unknown) {
+      console.error("Errore dettagliato durante il caricamento delle sessioni:", error);
+      console.error("URL richiesta:", `/api/tracciamento/sessions/${userId}?timeRange=${timeRange}`);
+      
+      // 2. Correzione per il tipo 'unknown' di error
+      // Aggiunta di un controllo di tipo per accedere a error.message in modo sicuro
+      const errorMessage = error instanceof Error ? error.message : 'Errore di rete';
+      toast("error", "Errore", `Impossibile caricare le sessioni: ${errorMessage}`);
+      setSessions([]);
     } finally {
       setIsLoadingSessions(false);
     }

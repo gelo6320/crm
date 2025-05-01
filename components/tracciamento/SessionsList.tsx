@@ -126,11 +126,25 @@ export default function SessionsList({
         </div>
       </div>
       
-      {sessions.length === 0 ? (
-        <div className="p-8 text-center text-zinc-500">
-          <p>Nessuna sessione disponibile per questo utente.</p>
-        </div>
-      ) : (
+      {isLoading ? (
+         <div className="p-8 text-center text-zinc-500">
+           <div className="animate-spin h-8 w-8 border-t-2 border-primary mx-auto mb-4"></div>
+           <p>Caricamento sessioni in corso...</p>
+         </div>
+       ) : sessions.length === 0 ? (
+         <div className="p-8 text-center text-zinc-500">
+           <p>Nessuna sessione disponibile per questo utente.</p>
+           <p className="mt-2 text-sm">
+             Identificativo utente: <span className="font-mono bg-zinc-800 px-2 py-0.5 rounded">{user.id}</span>
+           </p>
+           <button 
+             onClick={onBack} 
+             className="mt-4 btn btn-outline text-xs px-4 py-2"
+           >
+             Torna alla lista utenti
+           </button>
+         </div>
+       ) : (
         <div className="overflow-y-auto max-h-[600px]">
           {sortedSessions.map(session => (
             <div 

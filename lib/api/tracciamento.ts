@@ -101,10 +101,14 @@ export async function fetchSessions(
  */
 export async function fetchSessionDetails(sessionId: string): Promise<SessionDetail[]> {
   try {
+    console.log(`Recupero dettagli sessione per ID: ${sessionId}`);
     const url = `${CONFIG.api.endpoints.sessionDetails}/${encodeURIComponent(sessionId)}`;
-    return await trackingApi.get<SessionDetail[]>(url);
+    const result = await trackingApi.get<SessionDetail[]>(url);
+    console.log(`Dettagli sessione ricevuti: ${result.length} elementi`);
+    return result;
   } catch (error) {
     console.error("Errore nel recupero dei dettagli della sessione:", error);
+    console.error("URL richiesta:", `${CONFIG.api.endpoints.sessionDetails}/${encodeURIComponent(sessionId)}`);
     throw error;
   }
 }
