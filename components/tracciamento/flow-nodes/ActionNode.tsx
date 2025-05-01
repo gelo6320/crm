@@ -28,9 +28,13 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
   };
 
   const getActionTypeLabel = () => {
+    if (data.detail.type === 'click') {
+      if (data.detail.data?.formId) return 'Click Form';
+      if (data.detail.data?.isNavigation) return 'Click Navigazione';
+      return 'Click';
+    }
+    
     switch (data.detail.type) {
-      case 'click':
-        return 'Click';
       case 'scroll':
         return 'Scroll';
       case 'form_submit':
@@ -39,6 +43,9 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
         return data.detail.type;
     }
   };
+  
+  // Ottieni l'etichetta principale (seconda riga del label)
+  const mainLabel = data.label.split('\n')[1] || data.label;
 
   return (
     <div className="p-3 rounded-md min-w-[200px] bg-info/20 border border-info text-white">
@@ -51,27 +58,29 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
       
       <div className="flex items-center mb-1">
         {getActionIcon()}
-        <span className="text-xs font-medium">{getActionTypeLabel()}</span>
+        <span className="text-xs font-medium text-white">{getActionTypeLabel()}</span>
       </div>
       
-      <div className="font-medium text-sm truncate" title={data.label}>
-        {data.label}
+      <div className="font-medium text-sm truncate text-white" title={mainLabel}>
+        {mainLabel}
       </div>
       
-      {data.detail.type === 'click' && data.detail.data.selector && (
-        <div className="text-xs text-zinc-400 mt-1 truncate" title={data.detail.data.selector}>
-          {data.detail.data.selector}
+      {data.detail.type === 'click' && data.detail.data?.selector && (
+        <div className="text-xs text-white mt-1 truncate" title={data.detail.data.selector}>
+          {data.detail.data.selector.length > 25 
+            ? data.detail.data.selector.substring(0, 25) + '...' 
+            : data.detail.data.selector}
         </div>
       )}
       
-      {data.detail.type === 'scroll' && data.detail.data.depth && (
-        <div className="text-xs text-zinc-400 mt-1">
+      {data.detail.type === 'scroll' && data.detail.data?.depth && (
+        <div className="text-xs text-white mt-1">
           Profondità: {data.detail.data.depth}%
         </div>
       )}
       
-      {data.detail.type === 'form_submit' && data.detail.data.formId && (
-        <div className="text-xs text-zinc-400 mt-1">
+      {data.detail.type === 'form_submit' && data.detail.data?.formId && (
+        <div className="text-xs text-white mt-1">
           Form ID: {data.detail.data.formId}
         </div>
       )}

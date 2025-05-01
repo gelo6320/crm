@@ -27,15 +27,15 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
       
       <div className="flex items-center mb-1">
         <Eye size={14} className="mr-2 text-primary" />
-        <span className="text-xs font-medium">Visualizzazione Pagina</span>
+        <span className="text-xs font-medium text-white">Visualizzazione Pagina</span>
       </div>
       
-      <div className="font-medium text-sm truncate" title={data.label}>
-        {data.label}
+      <div className="font-medium text-sm truncate text-white" title={data.label}>
+        {data.label.split('\n')[1] || data.label}
       </div>
       
-      <div className="text-xs text-zinc-400 mt-1 truncate" title={data.detail.data.url}>
-        {data.detail.data.url}
+      <div className="text-xs text-white mt-1 truncate" title={data.detail.data?.url}>
+        {data.detail.data?.url || 'N/D'}
       </div>
       
       <Handle

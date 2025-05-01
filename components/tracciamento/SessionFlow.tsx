@@ -91,16 +91,20 @@ export default function SessionFlow({
     });
     
     sessionDetails.forEach((detail, index) => {
-      // Determina il tipo di nodo in base al tipo di evento
+
       let nodeType = 'actionNode';
       let nodeBackground = '#3498db'; // Default blu
+      let nodeBorder = '1px solid #1e6091';
+      let nodeTextColor = 'white';
       
       if (detail.type === 'page_view') {
         nodeType = 'pageNode';
         nodeBackground = '#FF6B00'; // Primario
+        nodeBorder = '1px solid #d05600';
       } else if (detail.type === 'event') {
         nodeType = 'eventNode';
         nodeBackground = '#e74c3c'; // Rosso per eventi di conversione
+        nodeBorder = '1px solid #c0392b';
       }
       
       // Crea il nodo
@@ -113,9 +117,13 @@ export default function SessionFlow({
         },
         position: { x: 250 * (index % 2), y: 120 * index },
         style: {
-          border: '1px solid #333',
+          border: nodeBorder,
           borderRadius: '5px',
-          backgroundColor: nodeBackground
+          backgroundColor: nodeBackground,
+          color: nodeTextColor,
+          fontWeight: 500,
+          padding: '8px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
         },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
@@ -125,6 +133,13 @@ export default function SessionFlow({
       
       // Crea i bordi tra i nodi
       if (index > 0) {
+
+        const timeBetween = getTimeDifference(
+          new Date(sessionDetails[index - 1].timestamp),
+          new Date(detail.timestamp)
+        );
+        
+        // Assicurati che l'etichetta mostri correttamente secondi vs minuti
         const edge: Edge = {
           id: `edge-${sessionDetails[index - 1].id}-${detail.id}`,
           source: sessionDetails[index - 1].id,
@@ -141,15 +156,9 @@ export default function SessionFlow({
             stroke: '#64748b', // Slate-500
           },
           data: {
-            timeDiff: getTimeDifference(
-              new Date(sessionDetails[index - 1].timestamp),
-              new Date(detail.timestamp)
-            ),
+            timeDiff: timeBetween
           },
-          label: getTimeDifference(
-            new Date(sessionDetails[index - 1].timestamp),
-            new Date(detail.timestamp)
-          ),
+          label: timeBetween,
           labelStyle: { fill: '#94a3b8', fontWeight: 500 },
           labelBgStyle: { fill: '#1e293b', fillOpacity: 0.7 },
         };
@@ -184,19 +193,57 @@ export default function SessionFlow({
         case 'page_view':
           // Aggiungi un controllo per assicurarti che l'URL sia definito
           if (detail.data?.url) {
-            return detail.data.title || new URL(detail.data.url).pathname;
+            const pageTitle = detail.data.title || new URL(detail.data.url).pathname;
+            return `Visualizzazione Pagina\n${pageTitle}`;
           }
-          return detail.data?.title || 'Pagina sconosciuta';
+          return `Visualizzazione Pagina\n${detail.data?.title || 'Pagina sconosciuta'}`;
+        
         case 'click':
-          return `Click su ${detail.data?.element || 'elemento'}`;
+          // Migliora l'etichetta del click con più dettagli sull'elemento
+          if (detail.data?.formId) {
+            return `Click su Campo Form\n${detail.data.element || 'campo'}`;
+          } else if (detail.data?.selector && detail.data.selector.includes('form')) {
+            return `Click su Form\n${detail.data.element || 'elemento'}`;
+          } else if (detail.data?.isNavigation) {
+            return `Click Navigazione\n${detail.data.element || 'link'}`;
+          } else if (detail.data?.text) {
+            return `Click su Elemento\n${detail.data.text}`;
+          }
+          return `Click su Elemento\n${detail.data?.element || 'elemento'}`;
+        
         case 'scroll':
-          return `Scroll ${detail.data?.direction || 'pagina'}`;
+          const direction = detail.data?.direction === 'up' ? 'verso l\'alto' : 'verso il basso';
+          return `Scroll Pagina ${direction}\nProfondità: ${detail.data?.depth || '?'}%`;
+        
         case 'form_submit':
-          return `Form inviato: ${detail.data?.formId || 'modulo'}`;
+          if (detail.data?.formId) {
+            return `Invio Form\n${detail.data.formId}`;
+          }
+          return `Invio Form\n${detail.data?.page || 'pagina'}`;
+        
         case 'event':
-          return `Evento: ${detail.data?.name || 'conversione'}`;
+          // Migliora le informazioni sugli eventi di conversione
+          if (detail.data?.name?.includes('exit_intent')) {
+            return `Exit Intent\nUtente in uscita`;
+          } else if (detail.data?.name?.includes('conversion')) {
+            const conversionType = detail.data.type || '';
+            if (conversionType) {
+              return `Conversione\n${conversionType}`;
+            }
+            return `Conversione\n${detail.data.name}`;
+          } else if (detail.data?.name) {
+            if (detail.data.category) {
+              return `Evento: ${detail.data.name}\n${detail.data.category}`;
+            }
+            return `Evento\n${detail.data.name}`;
+          }
+          return `Evento\n${detail.data?.type || 'conversione'}`;
+        
         default:
-          return detail.type || defaultLabel;
+          if (detail.data?.name) {
+            return `${detail.type}\n${detail.data.name}`;
+          }
+          return detail.type;
       }
     } catch (error) {
       console.error("Errore durante la generazione dell'etichetta del nodo:", error);
@@ -211,13 +258,21 @@ export default function SessionFlow({
       const diffSecs = Math.floor(diffMs / 1000);
       
       if (diffSecs < 60) {
-        return `${diffSecs}s`;
+        return `${diffSecs}s`;  // Formato secondi
       }
       
       const diffMins = Math.floor(diffSecs / 60);
       const remainingSecs = diffSecs % 60;
       
-      return `${diffMins}m ${remainingSecs}s`;
+      if (diffMins < 60) {
+        return `${diffMins}m ${remainingSecs}s`;  // Formato minuti e secondi
+      }
+      
+      // Aggiungiamo il caso per ore se necessario
+      const diffHours = Math.floor(diffMins / 60);
+      const remainingMins = diffMins % 60;
+      
+      return `${diffHours}h ${remainingMins}m`;  // Formato ore e minuti
     } catch (error) {
       console.error("Errore nel calcolo della differenza di tempo:", error);
       return "?";
