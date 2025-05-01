@@ -28,27 +28,11 @@ export default function FacebookEventModal({
   
   // Mappa lo stato a un evento Facebook appropriato
   useEffect(() => {
-    switch (lead.status) {
-      case "contacted":
-        setEventName("Contact");
-        break;
-      case "qualified":
-        setEventName("QualifiedLead");
-        break;
-      case "opportunity":
-        setEventName("Opportunity");
-        break;
-      case "proposal":
-        setEventName("ProposalSent");
-        break;
-      case "customer":
-        setEventName("Purchase");
-        break;
-      case "lost":
-        setEventName("Lost");
-        break;
-      default:
-        setEventName("LeadStatusChange");
+    // Per gli eventi di acquisto, usa sempre "Purchase"
+    if (lead.status === "customer") {
+      setEventName("Purchase");
+    } else {
+      setEventName("LeadStatusChange");
     }
   }, [lead.status]);
   
@@ -124,7 +108,18 @@ export default function FacebookEventModal({
             <Info size={18} className="mr-2 shrink-0 mt-0.5" />
             <div className="text-sm">
               Il lead <strong>{lead.name}</strong> è stato spostato da <strong>{previousStatus}</strong> a <strong>{lead.status}</strong>. 
-              Vuoi inviare questo cambiamento alla Conversion API di Facebook?
+              {lead.status === "customer" ? (
+                <>
+                  <br /><br />
+                  <strong>Cliente acquisito!</strong> 
+                  Vuoi inviare l'evento di acquisto alla Conversion API di Facebook?
+                </>
+              ) : (
+                <>
+                  <br /><br />
+                  Vuoi inviare questo cambiamento alla Conversion API di Facebook?
+                </>
+              )}
             </div>
           </div>
           
@@ -140,7 +135,13 @@ export default function FacebookEventModal({
                 onChange={(e) => setEventName(e.target.value)}
                 className="input w-full"
                 required
+                readOnly={lead.status === "customer"}
               />
+              {lead.status === "customer" && (
+                <p className="mt-1 text-xs text-zinc-400">
+                  L'evento di acquisto è preimpostato su "Purchase"
+                </p>
+              )}
             </div>
             
             <div className="flex items-center space-x-2 mb-2">

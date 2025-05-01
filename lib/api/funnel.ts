@@ -53,6 +53,7 @@ export async function fetchFunnelData(): Promise<{
     
     // Raggruppa i lead per stato
     allItems.forEach(item => {
+      // lib/api/funnel.ts (continuazione)
       if (funnelData[item.status as keyof FunnelData]) {
         funnelData[item.status as keyof FunnelData].push(item);
       } else if (item.status === 'pending' || item.status === 'confirmed' || item.status === 'completed') {

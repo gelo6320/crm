@@ -103,12 +103,19 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     // Update state
     setFunnelData(updatedFunnelData);
 
-    // Store the moving lead data for the modal
-    setMovingLead({
-      lead: updatedLead,
-      prevStatus,
-      newStatus: targetStatus,
-    });
+    // Mostra modale di conferma solo per spostamenti a "customer" (acquisto)
+    if (targetStatus === "customer") {
+      // Store the moving lead data for the modal
+      setMovingLead({
+        lead: updatedLead,
+        prevStatus,
+        newStatus: targetStatus,
+      });
+    } else {
+      // Per gli altri stati, aggiorna direttamente senza mostrare il modale
+      setIsMoving(false);
+      onLeadMove(); // Aggiorna i dati
+    }
   };
 
   // Handle confirming the lead move after showing the modal
@@ -407,7 +414,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         </div>
       </div>
 
-      {/* Facebook Event Modal for Lead Movement */}
+      {/* Facebook Event Modal for Lead Movement - Solo per stato "customer" */}
       {movingLead && (
         <FacebookEventModal
           lead={movingLead.lead}
