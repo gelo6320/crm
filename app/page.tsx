@@ -357,69 +357,6 @@ export default function Dashboard() {
             </div>
           </div>
           
-          {/* Source stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="card p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center">
-                  <div className="bg-primary/20 text-primary p-2 rounded-lg mr-3">
-                    <FileText size={18} />
-                  </div>
-                  <div>
-                    <div className="text-sm text-zinc-400">Form</div>
-                    <div className="text-xl font-semibold">{stats.forms.thisWeek}</div>
-                    <div className="text-xs text-zinc-500">questa settimana</div>
-                  </div>
-                </div>
-                <div className={`${stats.forms.trend > 0 ? 'text-success' : 'text-danger'} flex items-center`}>
-                  {stats.forms.trend > 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-                  <span className="text-xs ml-0.5">{Math.abs(stats.forms.trend)}%</span>
-                </div>
-              </div>
-              <div className="text-xs text-zinc-500 mt-1">Conversione: {stats.forms.conversionRate}%</div>
-            </div>
-            
-            <div className="card p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center">
-                  <div className="bg-success/20 text-success p-2 rounded-lg mr-3">
-                    <Bookmark size={18} />
-                  </div>
-                  <div>
-                    <div className="text-sm text-zinc-400">Prenotazioni</div>
-                    <div className="text-xl font-semibold">{stats.bookings.thisWeek}</div>
-                    <div className="text-xs text-zinc-500">questa settimana</div>
-                  </div>
-                </div>
-                <div className={`${stats.bookings.trend > 0 ? 'text-success' : 'text-danger'} flex items-center`}>
-                  {stats.bookings.trend > 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-                  <span className="text-xs ml-0.5">{Math.abs(stats.bookings.trend)}%</span>
-                </div>
-              </div>
-              <div className="text-xs text-zinc-500 mt-1">Conversione: {stats.bookings.conversionRate}%</div>
-            </div>
-            
-            <div className="card p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center">
-                  <div className="bg-blue-500/20 text-blue-500 p-2 rounded-lg mr-3">
-                    <Facebook size={18} />
-                  </div>
-                  <div>
-                    <div className="text-sm text-zinc-400">Facebook</div>
-                    <div className="text-xl font-semibold">{stats.facebook.thisWeek}</div>
-                    <div className="text-xs text-zinc-500">questa settimana</div>
-                  </div>
-                </div>
-                <div className={`${stats.facebook.trend > 0 ? 'text-success' : 'text-danger'} flex items-center`}>
-                  {stats.facebook.trend > 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-                  <span className="text-xs ml-0.5">{Math.abs(stats.facebook.trend)}%</span>
-                </div>
-              </div>
-              <div className="text-xs text-zinc-500 mt-1">Conversione: {stats.facebook.conversionRate}%</div>
-            </div>
-          </div>
-          
           {/* Quick links */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link href="/forms" className="card p-4 hover:border-primary transition-colors group">
