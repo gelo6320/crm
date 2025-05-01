@@ -1,5 +1,8 @@
-// components/tracciamento/SessionFlow.tsx
-import { useCallback, useRef, useState, useEffect } from 'react';
+// Modifica da fare nel file SessionFlow.tsx
+// Nelle funzioni di rendering, assicuriamoci che il flow venga renderizzato 
+// anche con pochi dati
+
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -46,20 +49,46 @@ export default function SessionFlow({
   onBack,
   isLoading
 }: SessionFlowProps) {
+  console.log("SessionFlow: Rendering con", sessionDetails?.length || 0, "dettagli");
+  
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [noData, setNoData] = useState(false);
   const flowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useRef<any>(null);
   
   // Preprocessa i dati della sessione per creare nodi e bordi
   useEffect(() => {
-    if (!sessionDetails.length || isLoading) return;
+    if (isLoading) {
+      setNoData(false);
+      return;
+    }
+    
+    console.log("SessionFlow: Elaborazione dettagli sessione", { 
+      count: sessionDetails?.length || 0, 
+      details: sessionDetails 
+    });
+    
+    // Verifica se ci sono dati sufficienti
+    if (!sessionDetails || sessionDetails.length < 2) {
+      console.warn("Dati insufficienti per visualizzare il flow:", sessionDetails?.length || 0);
+      setNoData(true);
+      return;
+    } else {
+      setNoData(false);
+    }
     
     // Crea i nodi
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
+    
+    // Log per debug
+    console.log("Elaborazione di", sessionDetails.length, "dettagli sessione");
+    sessionDetails.forEach((detail, index) => {
+      console.log(`Dettaglio ${index}:`, detail);
+    });
     
     sessionDetails.forEach((detail, index) => {
       // Determina il tipo di nodo in base al tipo di evento
@@ -129,6 +158,7 @@ export default function SessionFlow({
       }
     });
     
+    console.log("Flow generato:", { nodes: newNodes.length, edges: newEdges.length });
     setNodes(newNodes);
     setEdges(newEdges);
     
@@ -142,39 +172,56 @@ export default function SessionFlow({
   
   // Ottieni un'etichetta per il nodo in base al tipo di dettaglio
   const getNodeLabel = (detail: SessionDetail) => {
-    switch (detail.type) {
-      case 'page_view':
-        // Aggiungi un controllo per assicurarti che l'URL sia definito
-        if (detail.data.url) {
-          return detail.data.title || new URL(detail.data.url).pathname;
-        }
-        return detail.data.title || 'Pagina sconosciuta';
-      case 'click':
-        return `Click su ${detail.data.element || 'elemento'}`;
-      case 'scroll':
-        return `Scroll ${detail.data.direction || 'pagina'}`;
-      case 'form_submit':
-        return `Form inviato: ${detail.data.formId || 'modulo'}`;
-      case 'event':
-        return `Evento: ${detail.data.name || 'conversione'}`;
-      default:
-        return detail.type;
+    const defaultLabel = "Evento non specificato";
+    
+    if (!detail || !detail.type) {
+      console.warn("Dettaglio mancante o tipo non specificato", detail);
+      return defaultLabel;
+    }
+    
+    try {
+      switch (detail.type) {
+        case 'page_view':
+          // Aggiungi un controllo per assicurarti che l'URL sia definito
+          if (detail.data?.url) {
+            return detail.data.title || new URL(detail.data.url).pathname;
+          }
+          return detail.data?.title || 'Pagina sconosciuta';
+        case 'click':
+          return `Click su ${detail.data?.element || 'elemento'}`;
+        case 'scroll':
+          return `Scroll ${detail.data?.direction || 'pagina'}`;
+        case 'form_submit':
+          return `Form inviato: ${detail.data?.formId || 'modulo'}`;
+        case 'event':
+          return `Evento: ${detail.data?.name || 'conversione'}`;
+        default:
+          return detail.type || defaultLabel;
+      }
+    } catch (error) {
+      console.error("Errore durante la generazione dell'etichetta del nodo:", error);
+      return defaultLabel;
     }
   };
   
   // Formatta la differenza di tempo tra due date
   const getTimeDifference = (date1: Date, date2: Date) => {
-    const diffMs = Math.abs(date2.getTime() - date1.getTime());
-    const diffSecs = Math.floor(diffMs / 1000);
-    
-    if (diffSecs < 60) {
-      return `${diffSecs}s`;
+    try {
+      const diffMs = Math.abs(date2.getTime() - date1.getTime());
+      const diffSecs = Math.floor(diffMs / 1000);
+      
+      if (diffSecs < 60) {
+        return `${diffSecs}s`;
+      }
+      
+      const diffMins = Math.floor(diffSecs / 60);
+      const remainingSecs = diffSecs % 60;
+      
+      return `${diffMins}m ${remainingSecs}s`;
+    } catch (error) {
+      console.error("Errore nel calcolo della differenza di tempo:", error);
+      return "?";
     }
-    
-    const diffMins = Math.floor(diffSecs / 60);
-    const remainingSecs = diffSecs % 60;
-    
-    return `${diffMins}m ${remainingSecs}s`;
   };
   
   // Gestisci la connessione di bordi (se l'utente ne crea manualmente)
@@ -256,9 +303,17 @@ export default function SessionFlow({
         </div>
       </div>
       
-      {sessionDetails.length === 0 ? (
+      {sessionDetails.length === 0 || noData ? (
         <div className="p-8 text-center text-zinc-500">
-          <p>Nessun dettaglio disponibile per questa sessione.</p>
+          <p className="mb-2">Nessun dettaglio disponibile per questa sessione.</p>
+          <p className="text-sm">Non sono state registrate interazioni o visualizzazioni di pagina sufficienti.</p>
+          <button
+            onClick={onBack}
+            className="mt-4 btn btn-outline flex items-center mx-auto space-x-1 py-1 px-3 text-xs"
+          >
+            <ArrowLeft size={14} />
+            <span>Torna alle sessioni</span>
+          </button>
         </div>
       ) : (
         <div className="flex-1 h-[600px]" ref={flowWrapper}>
@@ -274,6 +329,8 @@ export default function SessionFlow({
             attributionPosition="bottom-right"
             onInit={(instance) => {
               reactFlowInstance.current = instance;
+              console.log("ReactFlow inizializzato");
+              setTimeout(() => instance.fitView({ padding: 0.2 }), 100);
             }}
             proOptions={{ hideAttribution: true }}
           >
@@ -359,15 +416,15 @@ export default function SessionFlow({
               <>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Titolo pagina</div>
-                  <div className="text-sm">{selectedNode.data.detail.data.title || 'Senza titolo'}</div>
+                  <div className="text-sm">{selectedNode.data.detail.data?.title || 'Senza titolo'}</div>
                 </div>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">URL</div>
-                  <div className="text-sm truncate" title={selectedNode.data.detail.data.url}>
-                    {selectedNode.data.detail.data.url}
+                  <div className="text-sm truncate" title={selectedNode.data.detail.data?.url}>
+                    {selectedNode.data.detail.data?.url || 'N/D'}
                   </div>
                 </div>
-                {selectedNode.data.detail.data.referrer && (
+                {selectedNode.data.detail.data?.referrer && (
                   <div className="md:col-span-2">
                     <div className="text-xs text-zinc-400 mb-1">Referrer</div>
                     <div className="text-sm flex items-center">
@@ -384,16 +441,16 @@ export default function SessionFlow({
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Elemento cliccato</div>
                   <div className="text-sm">
-                    {selectedNode.data.detail.data.element || 'Elemento non identificato'}
+                    {selectedNode.data.detail.data?.element || 'Elemento non identificato'}
                   </div>
                 </div>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Testo elemento</div>
                   <div className="text-sm">
-                    {selectedNode.data.detail.data.text || 'Nessun testo'}
+                    {selectedNode.data.detail.data?.text || 'Nessun testo'}
                   </div>
                 </div>
-                {selectedNode.data.detail.data.selector && (
+                {selectedNode.data.detail.data?.selector && (
                   <div className="md:col-span-2">
                     <div className="text-xs text-zinc-400 mb-1">Selettore CSS</div>
                     <div className="text-sm bg-zinc-900 p-1 rounded font-mono text-xs overflow-x-auto">
@@ -408,11 +465,11 @@ export default function SessionFlow({
               <>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Direzione</div>
-                  <div className="text-sm">{selectedNode.data.detail.data.direction || 'Non specificata'}</div>
+                  <div className="text-sm">{selectedNode.data.detail.data?.direction || 'Non specificata'}</div>
                 </div>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Profondità</div>
-                  <div className="text-sm">{selectedNode.data.detail.data.depth || '0'}%</div>
+                  <div className="text-sm">{selectedNode.data.detail.data?.depth || '0'}%</div>
                 </div>
               </>
             )}
@@ -421,12 +478,12 @@ export default function SessionFlow({
               <>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Form ID</div>
-                  <div className="text-sm">{selectedNode.data.detail.data.formId || 'Non specificato'}</div>
+                  <div className="text-sm">{selectedNode.data.detail.data?.formId || 'Non specificato'}</div>
                 </div>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Pagina</div>
                   <div className="text-sm truncate">
-                    {selectedNode.data.detail.data.page || window.location.pathname}
+                    {selectedNode.data.detail.data?.page || window.location.pathname}
                   </div>
                 </div>
               </>
@@ -436,15 +493,15 @@ export default function SessionFlow({
               <>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Nome evento</div>
-                  <div className="text-sm">{selectedNode.data.detail.data.name || 'Evento senza nome'}</div>
+                  <div className="text-sm">{selectedNode.data.detail.data?.name || 'Evento senza nome'}</div>
                 </div>
-                {selectedNode.data.detail.data.value && (
+                {selectedNode.data.detail.data?.value && (
                   <div>
                     <div className="text-xs text-zinc-400 mb-1">Valore</div>
                     <div className="text-sm">{selectedNode.data.detail.data.value}</div>
                   </div>
                 )}
-                {selectedNode.data.detail.data.category && (
+                {selectedNode.data.detail.data?.category && (
                   <div>
                     <div className="text-xs text-zinc-400 mb-1">Categoria</div>
                     <div className="text-sm">{selectedNode.data.detail.data.category}</div>
