@@ -21,38 +21,39 @@ export interface UserSettings {
 }
 
 /**
- * Recupera le impostazioni utente
+ * Recupera le impostazioni utente dal server
  */
 export async function fetchUserSettings(): Promise<UserSettings> {
   try {
-    // Utilizziamo il nuovo endpoint GET
+    // Usa l'endpoint GET /api/user/config
     const response = await axios.get(
       `${API_BASE_URL}/api/user/config`,
       { withCredentials: true }
     );
     
-    if (!response.data.success) {
+    if (response.data.success) {
+      // Ottieni le configurazioni dal server
+      const serverConfig = response.data.config || {};
+      
+      // Trasforma i dati dal formato backend al formato frontend
+      return {
+        mongoDbUri: serverConfig.mongodb_uri || "",
+        apiKeys: {
+          facebookAccessToken: serverConfig.access_token || "",
+          googleApiKey: "", // Non disponibile dal backend
+          facebookPixelId: serverConfig.meta_pixel_id || ""
+        },
+        webhooks: {
+          callbackUrl: ""  // Non disponibile dal backend
+        },
+        isDevelopment: false // Non disponibile dal backend
+      };
+    } else {
       throw new Error(response.data.message || "Errore nel recupero delle configurazioni");
     }
-    
-    // Trasforma i dati dal formato backend al formato frontend
-    const backendConfig = response.data.config || {};
-    
-    return {
-      mongoDbUri: backendConfig.mongodb_uri || "",
-      apiKeys: {
-        facebookAccessToken: backendConfig.access_token || "",
-        googleApiKey: "", // Non disponibile dal backend, lasciamo vuoto
-        facebookPixelId: backendConfig.meta_pixel_id || ""
-      },
-      webhooks: {
-        callbackUrl: "" // Non disponibile dal backend, lasciamo vuoto
-      },
-      isDevelopment: false // Non disponibile dal backend, impostiamo su false
-    };
   } catch (error) {
     console.error("Errore durante il recupero delle impostazioni:", error);
-    // Restituiamo un oggetto ben formattato con tutti i campi inizializzati
+    // Restituisci un oggetto ben formattato con tutti i campi inizializzati
     return {
       mongoDbUri: "",
       apiKeys: {
@@ -78,12 +79,10 @@ export async function saveUserSettings(settings: UserSettings): Promise<{
 }> {
   try {
     // Trasforma i dati dal formato frontend al formato backend
-    // Adattato in base al formato atteso da server.js
     const backendSettings = {
       mongodb_uri: settings.mongoDbUri,
-      access_token: settings.apiKeys?.facebookAccessToken,
-      meta_pixel_id: settings.apiKeys?.facebookPixelId
-      // Non inviamo gli altri campi perché nel server.js l'endpoint API accetta solo questi
+      access_token: settings.apiKeys.facebookAccessToken,
+      meta_pixel_id: settings.apiKeys.facebookPixelId
     };
     
     const response = await axios.post(
