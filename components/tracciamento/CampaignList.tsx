@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Campaign, AdSet, Ad } from '@/lib/api/marketing';
-import { ChevronDown, ChevronRight, DollarSign, BarChart2, Users, Activity } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, DollarSign, BarChart2, Users, Activity } from 'lucide-react';
 
 interface CampaignListProps {
   campaigns: Campaign[];
@@ -42,227 +42,45 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
   const getStatusClass = (status: string) => {
     switch (status.toUpperCase()) {
       case 'ACTIVE':
-        return 'bg-emerald-500/20 text-emerald-400';
+        return 'text-emerald-400';
       case 'PAUSED':
-        return 'bg-amber-500/20 text-amber-400';
+        return 'text-amber-400';
       case 'DISABLED':
       case 'ARCHIVED':
-        return 'bg-zinc-500/20 text-zinc-400';
+        return 'text-zinc-400';
       default:
-        return 'bg-zinc-500/20 text-zinc-400';
+        return 'text-zinc-400';
     }
   };
-  
+
   // Animazioni per framer-motion
-  const listVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05
+  const tableRowVariants = {
+    hidden: { opacity: 0, y: 10 },
+    show: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        type: "spring",
+        stiffness: 300,
+        damping: 24
       }
     }
   };
   
-  const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    show: { opacity: 1, y: 0 }
-  };
-  
-  const contentVariants = {
-    hidden: { opacity: 0, height: 0 },
+  const expandedContentVariants = {
+    hidden: { opacity: 0, height: 0, overflow: 'hidden' },
     show: { 
       opacity: 1, 
       height: 'auto',
-      transition: { duration: 0.3 }
+      transition: { duration: 0.2 }
     }
   };
-  
-  // Rendering dei dati metrici per ciascun livello
-  const renderMetrics = (item: Campaign | AdSet | Ad) => (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mt-3">
-      <div className="rounded bg-zinc-700/50 p-2">
-        <div className="flex items-center text-xs text-zinc-400 mb-1">
-          <Users size={12} className="mr-1" />
-          <span>Lead</span>
-        </div>
-        <div className="text-sm font-medium flex items-center justify-between">
-          <span>{item.leads}</span>
-          <span className="text-xs text-zinc-400">{formatCurrency(item.costPerLead)}/lead</span>
-        </div>
-      </div>
-      
-      <div className="rounded bg-zinc-700/50 p-2">
-        <div className="flex items-center text-xs text-zinc-400 mb-1">
-          <Activity size={12} className="mr-1" />
-          <span>Conversioni</span>
-        </div>
-        <div className="text-sm font-medium flex items-center justify-between">
-          <span>{item.conversions}</span>
-          <span className="text-xs text-zinc-400">{formatCurrency(item.costPerConversion)}/conv</span>
-        </div>
-      </div>
-      
-      <div className="rounded bg-zinc-700/50 p-2">
-        <div className="flex items-center text-xs text-zinc-400 mb-1">
-          <DollarSign size={12} className="mr-1" />
-          <span>Spesa</span>
-        </div>
-        <div className="text-sm font-medium">
-          {formatCurrency(item.spend)}
-        </div>
-      </div>
-      
-      <div className="rounded bg-zinc-700/50 p-2">
-        <div className="flex items-center text-xs text-zinc-400 mb-1">
-          <BarChart2 size={12} className="mr-1" />
-          <span>ROAS</span>
-        </div>
-        <div className="text-sm font-medium">
-          {item.roas.toFixed(2)}x
-        </div>
-      </div>
-    </div>
-  );
-  
-  // Renderizza una singola Ad
-  const renderAd = (ad: Ad) => (
-    <motion.div 
-      variants={itemVariants}
-      className="bg-zinc-800 rounded-md p-3 mb-2 border border-zinc-700"
-      key={ad.id}
-    >
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <h5 className="text-sm font-medium truncate">{ad.name}</h5>
-          <div className="mt-1 flex items-center">
-            <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusClass(ad.status)}`}>
-              {ad.status}
-            </span>
-            <span className="text-xs text-zinc-400 ml-2">
-              Budget: {formatCurrency(ad.dailyBudget)}/giorno
-            </span>
-          </div>
-        </div>
-      </div>
-      {renderMetrics(ad)}
-    </motion.div>
-  );
-  
-  // Renderizza un singolo AdSet con i suoi Ad
-  const renderAdSet = (adSet: AdSet, isExpanded: boolean) => (
-    <motion.div 
-      variants={itemVariants}
-      className="bg-zinc-800/80 rounded-md p-4 mb-3"
-      key={adSet.id}
-    >
-      <div 
-        className="flex justify-between items-start cursor-pointer"
-        onClick={() => toggleAdSet(adSet.id)}
-      >
-        <div className="flex-1">
-          <div className="flex items-center">
-            <motion.span
-              animate={{ rotate: isExpanded ? 90 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronRight size={16} className="mr-1 text-primary" />
-            </motion.span>
-            <h4 className="text-sm font-medium">{adSet.name}</h4>
-          </div>
-          <div className="mt-1 flex items-center">
-            <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusClass(adSet.status)}`}>
-              {adSet.status}
-            </span>
-            <span className="text-xs text-zinc-400 ml-2">
-              Budget: {formatCurrency(adSet.dailyBudget)}/giorno
-            </span>
-          </div>
-        </div>
-        
-        <div className="text-xs text-zinc-400">
-          {adSet.ads.length} Annunci
-        </div>
-      </div>
-      
-      {renderMetrics(adSet)}
-      
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div 
-            variants={contentVariants}
-            initial="hidden"
-            animate="show"
-            exit="hidden"
-            className="mt-4 pl-4 border-l border-zinc-700"
-          >
-            <motion.div variants={listVariants} initial="hidden" animate="show">
-              {adSet.ads.map(ad => renderAd(ad))}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-  
-  // Renderizza una singola Campagna con i suoi AdSet
-  const renderCampaign = (campaign: Campaign) => {
-    const isExpanded = !!expandedCampaigns[campaign.id];
-    
-    return (
-      <motion.div 
-        variants={itemVariants}
-        className="bg-zinc-900 rounded-lg p-4 mb-4 border border-zinc-800"
-        key={campaign.id}
-      >
-        <div 
-          className="flex justify-between items-start cursor-pointer"
-          onClick={() => toggleCampaign(campaign.id)}
-        >
-          <div className="flex-1">
-            <div className="flex items-center">
-              <motion.span
-                animate={{ rotate: isExpanded ? 90 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronRight size={20} className="mr-2 text-primary" />
-              </motion.span>
-              <h3 className="text-base font-medium">{campaign.name}</h3>
-            </div>
-            <div className="mt-1 flex items-center">
-              <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusClass(campaign.status)}`}>
-                {campaign.status}
-              </span>
-              <span className="text-xs text-zinc-400 ml-2">
-                Budget: {formatCurrency(campaign.dailyBudget)}/giorno
-              </span>
-            </div>
-          </div>
-          
-          <div className="text-xs text-zinc-400">
-            {campaign.adSets.length} AdSet
-          </div>
-        </div>
-        
-        {renderMetrics(campaign)}
-        
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div 
-              variants={contentVariants}
-              initial="hidden"
-              animate="show"
-              exit="hidden"
-              className="mt-4 pl-4 border-l border-zinc-700"
-            >
-              <motion.div variants={listVariants} initial="hidden" animate="show">
-                {campaign.adSets.map(adSet => renderAdSet(adSet, !!expandedAdSets[adSet.id]))}
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    );
+
+  // Ottieni class CSS per valori positivi/negativi
+  const getValueColorClass = (value: number) => {
+    if (value > 0) return 'text-emerald-400';
+    if (value < 0) return 'text-red-400';
+    return 'text-zinc-400';
   };
   
   if (isLoading) {
@@ -271,9 +89,10 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-medium">Campagne Facebook</h3>
         </div>
-        <div className="space-y-4">
+        <div className="overflow-x-auto">
+          <div className="h-12 bg-zinc-700/50 rounded animate-pulse mb-4"></div>
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-zinc-700/50 rounded-lg p-4 animate-pulse h-24"></div>
+            <div key={i} className="h-16 bg-zinc-700/30 rounded animate-pulse mb-2"></div>
           ))}
         </div>
       </div>
@@ -291,15 +110,213 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
         <h3 className="text-lg font-medium">Campagne Facebook</h3>
         <span className="text-sm text-zinc-400">{campaigns.length} campagne attive</span>
       </div>
-      
-      <motion.div 
-        variants={listVariants}
-        initial="hidden"
-        animate="show"
-        className="space-y-4"
-      >
-        {campaigns.map(campaign => renderCampaign(campaign))}
-      </motion.div>
+
+      <div className="overflow-x-auto">
+        {/* Header row */}
+        <div className="min-w-full">
+          <div className="bg-zinc-900 rounded text-xs text-zinc-400 font-medium grid grid-cols-8 gap-2 mb-2 p-3">
+            <div className="col-span-2">CAMPAGNA</div>
+            <div className="text-right">SPESA</div>
+            <div className="text-right">LEAD</div>
+            <div className="text-right">COSTO/LEAD</div>
+            <div className="text-right">CONVERSIONI</div>
+            <div className="text-right">COSTO/CONV</div>
+            <div className="text-right">ROAS</div>
+          </div>
+          
+          {/* Campaigns rows */}
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={{
+              show: {
+                transition: {
+                  staggerChildren: 0.05
+                }
+              }
+            }}
+          >
+            {campaigns.map(campaign => {
+              const isExpanded = !!expandedCampaigns[campaign.id];
+              
+              return (
+                <React.Fragment key={campaign.id}>
+                  <motion.div
+                    variants={tableRowVariants}
+                    className={`grid grid-cols-8 gap-2 p-3 rounded items-center cursor-pointer hover:bg-zinc-700/30 transition-colors ${isExpanded ? 'bg-zinc-700/20' : 'bg-zinc-900/30'}`}
+                    onClick={() => toggleCampaign(campaign.id)}
+                  >
+                    <div className="col-span-2 flex items-center">
+                      <motion.span
+                        animate={{ rotate: isExpanded ? 90 : 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="mr-2 text-primary flex-shrink-0"
+                      >
+                        <ChevronRight size={18} />
+                      </motion.span>
+                      <div className="flex flex-col">
+                        <span className="font-medium truncate">{campaign.name}</span>
+                        <span className={`text-xs ${getStatusClass(campaign.status)}`}>
+                          {campaign.status} · Budget: {formatCurrency(campaign.dailyBudget)}/giorno
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right font-medium">
+                      {formatCurrency(campaign.spend)}
+                    </div>
+                    <div className="text-right font-medium">
+                      {campaign.leads.toLocaleString()}
+                    </div>
+                    <div className="text-right font-medium">
+                      {formatCurrency(campaign.costPerLead)}
+                    </div>
+                    <div className="text-right font-medium">
+                      {campaign.conversions.toLocaleString()}
+                    </div>
+                    <div className="text-right font-medium">
+                      {formatCurrency(campaign.costPerConversion)}
+                    </div>
+                    <div className={`text-right font-medium ${getValueColorClass(campaign.roas)}`}>
+                      {campaign.roas.toFixed(2)}x
+                    </div>
+                  </motion.div>
+                  
+                  {/* AdSets expandable content */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial="hidden"
+                        animate="show"
+                        exit="hidden"
+                        variants={expandedContentVariants}
+                      >
+                        <div className="pl-8 pr-4 py-3 space-y-2">
+                          {/* AdSet header */}
+                          <div className="bg-zinc-800/80 rounded text-xs text-zinc-400 font-medium grid grid-cols-8 gap-2 mb-2 p-2">
+                            <div className="col-span-2">AD SET</div>
+                            <div className="text-right">SPESA</div>
+                            <div className="text-right">LEAD</div>
+                            <div className="text-right">COSTO/LEAD</div>
+                            <div className="text-right">CONVERSIONI</div>
+                            <div className="text-right">COSTO/CONV</div>
+                            <div className="text-right">ROAS</div>
+                          </div>
+                          
+                          {/* AdSet rows */}
+                          {campaign.adSets.map(adSet => {
+                            const isAdSetExpanded = !!expandedAdSets[adSet.id];
+                            
+                            return (
+                              <React.Fragment key={adSet.id}>
+                                <div
+                                  className={`grid grid-cols-8 gap-2 p-2 rounded items-center cursor-pointer hover:bg-zinc-700/30 transition-colors ${isAdSetExpanded ? 'bg-zinc-700/20' : 'bg-zinc-800/50'}`}
+                                  onClick={() => toggleAdSet(adSet.id)}
+                                >
+                                  <div className="col-span-2 flex items-center">
+                                    <motion.span
+                                      animate={{ rotate: isAdSetExpanded ? 90 : 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="mr-2 text-primary flex-shrink-0"
+                                    >
+                                      <ChevronRight size={16} />
+                                    </motion.span>
+                                    <div className="flex flex-col">
+                                      <span className="truncate text-sm">{adSet.name}</span>
+                                      <span className={`text-xs ${getStatusClass(adSet.status)}`}>
+                                        {adSet.status}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="text-right text-sm">
+                                    {formatCurrency(adSet.spend)}
+                                  </div>
+                                  <div className="text-right text-sm">
+                                    {adSet.leads.toLocaleString()}
+                                  </div>
+                                  <div className="text-right text-sm">
+                                    {formatCurrency(adSet.costPerLead)}
+                                  </div>
+                                  <div className="text-right text-sm">
+                                    {adSet.conversions.toLocaleString()}
+                                  </div>
+                                  <div className="text-right text-sm">
+                                    {formatCurrency(adSet.costPerConversion)}
+                                  </div>
+                                  <div className={`text-right text-sm ${getValueColorClass(adSet.roas)}`}>
+                                    {adSet.roas.toFixed(2)}x
+                                  </div>
+                                </div>
+                                
+                                {/* Ads expandable content */}
+                                <AnimatePresence>
+                                  {isAdSetExpanded && (
+                                    <motion.div
+                                      initial="hidden"
+                                      animate="show"
+                                      exit="hidden"
+                                      variants={expandedContentVariants}
+                                    >
+                                      <div className="pl-6 pr-2 py-2 space-y-1">
+                                        {/* Ad header */}
+                                        <div className="bg-zinc-700/30 rounded text-xs text-zinc-500 font-medium grid grid-cols-8 gap-2 mb-1 p-2">
+                                          <div className="col-span-2">ANNUNCIO</div>
+                                          <div className="text-right">SPESA</div>
+                                          <div className="text-right">LEAD</div>
+                                          <div className="text-right">COSTO/LEAD</div>
+                                          <div className="text-right">CONVERSIONI</div>
+                                          <div className="text-right">COSTO/CONV</div>
+                                          <div className="text-right">ROAS</div>
+                                        </div>
+                                        
+                                        {/* Ad rows */}
+                                        {adSet.ads.map(ad => (
+                                          <div
+                                            key={ad.id}
+                                            className="grid grid-cols-8 gap-2 p-2 rounded items-center bg-zinc-700/10 hover:bg-zinc-700/20 transition-colors"
+                                          >
+                                            <div className="col-span-2 flex flex-col">
+                                              <span className="truncate text-xs">{ad.name}</span>
+                                              <span className={`text-xs ${getStatusClass(ad.status)}`}>
+                                                {ad.status}
+                                              </span>
+                                            </div>
+                                            <div className="text-right text-xs">
+                                              {formatCurrency(ad.spend)}
+                                            </div>
+                                            <div className="text-right text-xs">
+                                              {ad.leads.toLocaleString()}
+                                            </div>
+                                            <div className="text-right text-xs">
+                                              {formatCurrency(ad.costPerLead)}
+                                            </div>
+                                            <div className="text-right text-xs">
+                                              {ad.conversions.toLocaleString()}
+                                            </div>
+                                            <div className="text-right text-xs">
+                                              {formatCurrency(ad.costPerConversion)}
+                                            </div>
+                                            <div className={`text-right text-xs ${getValueColorClass(ad.roas)}`}>
+                                              {ad.roas.toFixed(2)}x
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </React.Fragment>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </React.Fragment>
+              );
+            })}
+          </motion.div>
+        </div>
+      </div>
     </motion.div>
   );
 }
