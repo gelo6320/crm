@@ -1,5 +1,5 @@
 // components/tracciamento/MarketingChart.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -38,14 +38,33 @@ interface MarketingChartProps {
 }
 
 export default function MarketingChart({ data, isLoading, timeRange }: MarketingChartProps) {
-  const [activeMetric, setActiveMetric] = useState<'all' | 'leads' | 'conversions' | 'roas'>('all');
+  const [activeMetric, setActiveMetric] = useState<'performance' | 'all' | 'leads' | 'conversions' | 'roas'>('performance');
   const [chartOptions, setChartOptions] = useState<ChartOptions<'line'>>({});
   const [processedData, setProcessedData] = useState<{
     dates: string[];
     leads: number[];
     conversions: number[];
     roas: number[];
-  }>({ dates: [], leads: [], conversions: [], roas: [] });
+    performance: number[];
+  }>({ dates: [], leads: [], conversions: [], roas: [], performance: [] });
+  
+  // Calcola l'indicatore di performance
+  const calculatePerformance = useMemo(() => {
+    return (leads: number[], conversions: number[], roas: number[]) => {
+      // Normalizza i valori per creare un indicatore di performance
+      return leads.map((lead, index) => {
+        const leadScore = Math.min(lead / 50, 1); // Normalizza con un massimo di 50 lead
+        const convScore = Math.min(conversions[index] / 10, 1); // Normalizza con un massimo di 10 conversioni
+        const roasScore = Math.min(roas[index] / 10, 1); // Normalizza con un massimo di 10x ROAS
+        
+        // Calcola il punteggio pesato (lead 30%, conversioni 30%, ROAS 40%)
+        const weightedScore = (leadScore * 0.3) + (convScore * 0.3) + (roasScore * 0.4);
+        
+        // Scala il punteggio in un range significativo (0-100)
+        return Math.round(weightedScore * 100);
+      });
+    };
+  }, []);
   
   // Elabora i dati in base al timeRange
   useEffect(() => {
@@ -107,13 +126,17 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       processedRoas = weeklyData.roas;
     }
     
+    // Calcola l'indicatore di performance
+    const performanceData = calculatePerformance(processedLeads, processedConversions, processedRoas);
+    
     setProcessedData({
       dates: processedDates,
       leads: processedLeads,
       conversions: processedConversions,
-      roas: processedRoas
+      roas: processedRoas,
+      performance: performanceData
     });
-  }, [data, timeRange]);
+  }, [data, timeRange, calculatePerformance]);
   
   // Calcola i valori massimi per la scala y
   useEffect(() => {
@@ -123,11 +146,13 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
     const maxLeads = Math.max(...processedData.leads);
     const maxConversions = Math.max(...processedData.conversions);
     const maxRoas = Math.max(...processedData.roas);
+    const maxPerformance = Math.max(...processedData.performance);
     
-    // Aggiungi un 40% in più per lo spazio (aumentato dal 20%)
+    // Aggiungi un 40% in più per lo spazio
     const yMaxLeads = Math.ceil(maxLeads * 1.4);
     const yMaxConversions = Math.ceil(maxConversions * 1.4);
     const yMaxRoas = Math.ceil(maxRoas * 1.4);
+    const yMaxPerformance = Math.ceil(maxPerformance * 1.4);
     
     // Configura le opzioni in base al timeRange
     let xAxisConfig = {};
@@ -163,16 +188,17 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       },
       elements: {
         point: {
-          radius: 3, // Punti leggermente più grandi
+          radius: activeMetric === 'performance' ? 4 : 3, // Punti più grandi per performance
           hoverRadius: 6,
         },
         line: {
-          borderWidth: 2
+          borderWidth: activeMetric === 'performance' ? 3 : 2, // Linea più spessa per performance
+          tension: 0.3,  // Curva più morbida
         }
       },
       layout: {
         padding: {
-          top: 20, // Aumento del padding superiore
+          top: 20, 
           right: 20, 
           bottom: 0, 
           left: 0
@@ -193,7 +219,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           }
         },
         y: {
-          suggestedMax: yMaxLeads,
+          suggestedMax: activeMetric === 'performance' ? yMaxPerformance : yMaxLeads,
           beginAtZero: true,
           grid: {
             color: 'rgba(255, 255, 255, 0.1)',
@@ -255,6 +281,8 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
               if (context.parsed.y !== null) {
                 if (label.includes('ROAS')) {
                   label += context.parsed.y.toFixed(2) + 'x';
+                } else if (label.includes('Performance')) {
+                  label += context.parsed.y.toLocaleString() + '/100';
                 } else {
                   label += context.parsed.y.toLocaleString();
                 }
@@ -287,6 +315,28 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
   const chartData = {
     labels: processedData.dates,
     datasets: [
+      ...(activeMetric === 'performance' ? [{
+        label: 'Performance',
+        data: processedData.performance,
+        borderColor: '#10e972', // Verde brillante
+        backgroundColor: 'rgba(16, 233, 114, 0.5)',
+        yAxisID: 'y',
+        tension: 0.3,
+        borderWidth: 3,
+        // Effetto glow
+        shadowColor: 'rgba(16, 233, 114, 0.8)',
+        shadowBlur: 15,
+        fill: false,
+        // Aggiungi un effetto ombra intorno alla linea
+        borderDash: [],
+        pointBackgroundColor: '#10e972',
+        pointBorderColor: 'rgba(16, 233, 114, 0.8)',
+        pointHoverBackgroundColor: '#FFFFFF',
+        pointHoverBorderColor: '#10e972',
+        pointHoverRadius: 7,
+        pointRadius: 4,
+      }] : []),
+      
       ...(activeMetric === 'all' || activeMetric === 'leads' ? [{
         label: 'Lead generati',
         data: processedData.leads,
@@ -321,6 +371,18 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
   
   // Calcola le metriche riepilogative
   const metricSummary = [
+    {
+      id: 'performance',
+      label: 'Performance',
+      value: processedData.performance.length > 0 ? 
+             processedData.performance.reduce((sum, val) => sum + val, 0) / processedData.performance.length : 0,
+      isPerformance: true,
+      color: 'text-green-400',
+      bgColor: 'bg-green-500/20',
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+            </svg>
+    },
     {
       id: 'leads',
       label: 'Lead totali',
@@ -369,18 +431,21 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h3 className="text-lg font-medium mb-4 md:mb-0">Andamento campagne Facebook</h3>
         
-        <div className="flex space-x-2">
-          {['all', 'leads', 'conversions', 'roas'].map((metric) => (
+        <div className="flex flex-wrap gap-2">
+          {['performance', 'all', 'leads', 'conversions', 'roas'].map((metric) => (
             <button
               key={metric}
               onClick={() => setActiveMetric(metric as any)}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
                 activeMetric === metric
-                  ? 'bg-primary text-white'
+                  ? metric === 'performance'
+                    ? 'bg-green-500 text-white shadow-glow-green' 
+                    : 'bg-primary text-white'
                   : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
               }`}
             >
-              {metric === 'all' ? 'Tutte' : 
+              {metric === 'performance' ? 'Performance' : 
+               metric === 'all' ? 'Tutte' : 
                metric === 'leads' ? 'Lead' :
                metric === 'conversions' ? 'Conversioni' : 'ROAS'}
             </button>
@@ -389,30 +454,42 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       </div>
       
       {/* Riepilogo metriche */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {metricSummary.map((metric) => (
-          <motion.div
-            key={metric.id}
-            className={`p-4 rounded ${metric.bgColor} flex items-center`}
-            whileHover={{ scale: 1.02 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
-          >
-            <div className={`rounded-full p-2 ${metric.color} bg-white/10 mr-3`}>
-              {metric.icon}
-            </div>
-            <div>
-              <p className="text-sm text-zinc-400">{metric.label}</p>
-              <p className={`text-xl font-bold ${metric.color}`}>
-                {metric.isDecimal ? `${metric.value.toFixed(2)}x` : metric.value.toLocaleString()}
-              </p>
-            </div>
-          </motion.div>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 overflow-x-auto pb-2">
+        <div className="flex md:block min-w-[280px] space-x-2 md:space-x-0">
+          {metricSummary.map((metric) => (
+            <motion.div
+              key={metric.id}
+              className={`p-4 rounded ${metric.bgColor} flex items-center ${
+                metric.id === 'performance' ? 'md:mb-4 shadow-glow-sm' : 'md:mb-0'
+              }`}
+              whileHover={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              onClick={() => setActiveMetric(metric.id as any)}
+            >
+              <div className={`rounded-full p-2 ${metric.color} bg-white/10 mr-3`}>
+                {metric.icon}
+              </div>
+              <div>
+                <p className="text-sm text-zinc-400">{metric.label}</p>
+                <p className={`text-base md:text-xl font-bold ${metric.color}`}>
+                  {metric.isPerformance 
+                    ? `${Math.round(metric.value)}/100` 
+                    : metric.isDecimal 
+                      ? `${metric.value.toFixed(2)}x` 
+                      : metric.value.toLocaleString()}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </div>
       
       {/* Grafico a larghezza piena */}
-      <div className="w-full h-64 md:h-80">
-        <Line options={chartOptions} data={chartData} />
+      <div className="w-full h-64 md:h-80 overflow-visible">
+        <Line 
+          options={chartOptions} 
+          data={chartData} 
+        />
       </div>
     </motion.div>
   );
