@@ -78,7 +78,7 @@ export default function MarketingApiOverview() {
       
       {/* Grafico delle metriche principali */}
       {overviewData && (
-        <MarketingChart data={overviewData} isLoading={isLoadingOverview} />
+        <MarketingChart data={overviewData} isLoading={isLoadingOverview} timeRange={timeRange} />
       )}
       
       {/* Elenco delle campagne con struttura espandibile */}

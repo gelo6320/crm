@@ -1,5 +1,5 @@
 // components/tracciamento/MarketingChart.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,11 +9,14 @@ import {
   Title,
   Tooltip,
   Legend,
-  ChartOptions
+  ChartOptions,
+  TimeScale,
+  TimeSeriesScale
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { motion } from 'framer-motion';
 import { MarketingOverview } from '@/lib/api/marketing';
+import 'chartjs-adapter-date-fns';
 
 // Registra i componenti necessari per Chart.js
 ChartJS.register(
@@ -21,6 +24,8 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
+  TimeScale,
+  TimeSeriesScale,
   Title,
   Tooltip,
   Legend
@@ -29,10 +34,178 @@ ChartJS.register(
 interface MarketingChartProps {
   data: MarketingOverview;
   isLoading: boolean;
+  timeRange: '7d' | '30d' | '90d';
 }
 
-export default function MarketingChart({ data, isLoading }: MarketingChartProps) {
+export default function MarketingChart({ data, isLoading, timeRange }: MarketingChartProps) {
   const [activeMetric, setActiveMetric] = useState<'all' | 'leads' | 'conversions' | 'roas'>('all');
+  const [chartOptions, setChartOptions] = useState<ChartOptions<'line'>>({});
+  
+  // Calcola i valori massimi per la scala y
+  useEffect(() => {
+    // Trova il valore massimo delle serie di dati
+    const maxLeads = Math.max(...data.leads);
+    const maxConversions = Math.max(...data.conversions);
+    const maxRoas = Math.max(...data.roas);
+    
+    // Aggiungi un 20% in più per lo spazio
+    const yMaxLeads = Math.ceil(maxLeads * 1.2);
+    const yMaxConversions = Math.ceil(maxConversions * 1.2);
+    const yMaxRoas = Math.ceil(maxRoas * 1.2);
+    
+    // Configura le opzioni in base al timeRange
+    let xAxisConfig = {};
+    
+    if (timeRange === '7d') {
+      // Base giornaliera per 7 giorni
+      xAxisConfig = {
+        type: 'category' as const,
+        time: {
+          unit: 'day' as const,
+          displayFormats: {
+            day: 'dd/MM'
+          }
+        }
+      };
+    } else if (timeRange === '30d') {
+      // Base settimanale per 30 giorni
+      xAxisConfig = {
+        type: 'category' as const,
+        ticks: {
+          callback: function(val: any, index: number) {
+            // Mostra solo una data ogni 7 giorni (settimanale)
+            return index % 7 === 0 ? data.dates[index] : '';
+          },
+          maxRotation: 0
+        }
+      };
+    } else if (timeRange === '90d') {
+      // Base settimanale per 90 giorni
+      xAxisConfig = {
+        type: 'category' as const,
+        ticks: {
+          callback: function(val: any, index: number) {
+            // Mostra solo una data ogni 7 giorni (settimanale)
+            return index % 7 === 0 ? data.dates[index] : '';
+          },
+          maxRotation: 0
+        }
+      };
+    }
+    
+    // Aggiorna le opzioni del grafico
+    setChartOptions({
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index' as const,
+        intersect: false,
+      },
+      elements: {
+        point: {
+          radius: 2, // Punti più piccoli per un aspetto più pulito
+          hoverRadius: 5,
+        },
+        line: {
+          borderWidth: 2
+        }
+      },
+      layout: {
+        padding: {
+          top: 10, 
+          right: 20, 
+          bottom: 0, 
+          left: 0
+        }
+      },
+      scales: {
+        x: {
+          ...xAxisConfig,
+          grid: {
+            color: 'rgba(255, 255, 255, 0.1)',
+          },
+          ticks: {
+            color: 'rgba(255, 255, 255, 0.7)',
+            autoSkip: false,
+            font: {
+              size: 9
+            }
+          }
+        },
+        y: {
+          suggestedMax: yMaxLeads,
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(255, 255, 255, 0.1)',
+          },
+          ticks: {
+            color: 'rgba(255, 255, 255, 0.7)',
+            padding: 10,
+            precision: 0
+          }
+        },
+        // Scala secondaria per ROAS (se attivo)
+        y1: activeMetric === 'all' || activeMetric === 'roas' ? {
+          type: 'linear' as const,
+          display: true,
+          position: 'right' as const,
+          suggestedMax: yMaxRoas,
+          beginAtZero: true,
+          grid: {
+            drawOnChartArea: false,
+            color: 'rgba(255, 255, 255, 0.1)',
+          },
+          ticks: {
+            color: 'rgba(255, 255, 255, 0.7)',
+            padding: 10,
+            precision: 1
+          }
+        } : undefined
+      },
+      plugins: {
+        legend: {
+          position: 'top' as const,
+          align: 'start' as const,
+          labels: {
+            color: 'rgba(255, 255, 255, 0.7)',
+            usePointStyle: true,
+            pointStyle: 'circle',
+            padding: 20,
+            boxWidth: 8,
+            boxHeight: 8,
+            font: {
+              size: 11
+            }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          titleColor: 'rgba(255, 255, 255, 0.9)',
+          bodyColor: 'rgba(255, 255, 255, 0.9)',
+          borderColor: 'rgba(255, 107, 0, 0.5)',
+          borderWidth: 1,
+          padding: 12,
+          displayColors: true,
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) {
+                label += ': ';
+              }
+              if (context.parsed.y !== null) {
+                if (label.includes('ROAS')) {
+                  label += context.parsed.y.toFixed(2) + 'x';
+                } else {
+                  label += context.parsed.y;
+                }
+              }
+              return label;
+            }
+          }
+        },
+      },
+    });
+  }, [data, timeRange, activeMetric]);
   
   // Se i dati sono ancora in caricamento, mostra un placeholder
   if (isLoading) {
@@ -42,82 +215,6 @@ export default function MarketingChart({ data, isLoading }: MarketingChartProps)
       </div>
     );
   }
-  
-  // Opzioni del grafico
-  const options: ChartOptions<'line'> = {
-    responsive: true,
-    interaction: {
-      mode: 'index' as const,
-      intersect: false,
-    },
-    scales: {
-      x: {
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
-        ticks: {
-          color: 'rgba(255, 255, 255, 0.7)',
-        }
-      },
-      y: {
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
-        ticks: {
-          color: 'rgba(255, 255, 255, 0.7)',
-        }
-      },
-      // Scala secondaria per ROAS (se attivo)
-      y1: activeMetric === 'all' || activeMetric === 'roas' ? {
-        type: 'linear' as const,
-        display: true,
-        position: 'right' as const,
-        grid: {
-          drawOnChartArea: false,
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
-        ticks: {
-          color: 'rgba(255, 255, 255, 0.7)',
-        }
-      } : undefined
-    },
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: {
-          color: 'rgba(255, 255, 255, 0.7)',
-          usePointStyle: true,
-          pointStyle: 'circle',
-          padding: 20,
-        }
-      },
-      tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        titleColor: 'rgba(255, 255, 255, 0.9)',
-        bodyColor: 'rgba(255, 255, 255, 0.9)',
-        borderColor: 'rgba(255, 107, 0, 0.5)',
-        borderWidth: 1,
-        padding: 12,
-        displayColors: true,
-        callbacks: {
-          label: function(context) {
-            let label = context.dataset.label || '';
-            if (label) {
-              label += ': ';
-            }
-            if (context.parsed.y !== null) {
-              if (label.includes('ROAS')) {
-                label += context.parsed.y.toFixed(2) + 'x';
-              } else {
-                label += context.parsed.y;
-              }
-            }
-            return label;
-          }
-        }
-      },
-    },
-  };
   
   // Configura i dati del grafico in base alla metrica attiva
   const chartData = {
@@ -130,6 +227,7 @@ export default function MarketingChart({ data, isLoading }: MarketingChartProps)
         backgroundColor: 'rgba(59, 130, 246, 0.5)',
         yAxisID: 'y',
         tension: 0.2,
+        borderWidth: 2,
       }] : []),
       
       ...(activeMetric === 'all' || activeMetric === 'conversions' ? [{
@@ -139,6 +237,7 @@ export default function MarketingChart({ data, isLoading }: MarketingChartProps)
         backgroundColor: 'rgba(16, 185, 129, 0.5)',
         yAxisID: 'y',
         tension: 0.2,
+        borderWidth: 2,
       }] : []),
       
       ...(activeMetric === 'all' || activeMetric === 'roas' ? [{
@@ -148,6 +247,7 @@ export default function MarketingChart({ data, isLoading }: MarketingChartProps)
         backgroundColor: 'rgba(255, 107, 0, 0.5)',
         yAxisID: 'y1',
         tension: 0.2,
+        borderWidth: 2,
       }] : []),
     ],
   };
@@ -194,7 +294,7 @@ export default function MarketingChart({ data, isLoading }: MarketingChartProps)
 
   return (
     <motion.div 
-      className="bg-zinc-800 rounded-lg p-6 mb-6"
+      className="bg-zinc-800 rounded-lg p-6 mb-6 w-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -243,9 +343,9 @@ export default function MarketingChart({ data, isLoading }: MarketingChartProps)
         ))}
       </div>
       
-      {/* Grafico */}
-      <div className="h-64 md:h-80">
-        <Line options={options} data={chartData} />
+      {/* Grafico a larghezza piena */}
+      <div className="w-full h-64 md:h-80">
+        <Line options={chartOptions} data={chartData} />
       </div>
     </motion.div>
   );
