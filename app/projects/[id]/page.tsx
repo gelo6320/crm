@@ -748,7 +748,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 onClick={() => setIsAddingImage(true)}
                 className="btn btn-primary btn-sm"
               >
-                <Plus size={16} className="mr-1" />
+                <Plus size={16} className="inline-flex items-center justify-center mr-1" />
                 Aggiungi la prima immagine
               </button>
             </div>
@@ -891,7 +891,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 onClick={() => setIsAddingDocument(true)}
                 className="btn btn-primary btn-sm"
               >
-                <Plus size={16} className="mr-1" />
+                <Plus size={16} className="inline-flex items-center justify-center mr-1" />
                 Aggiungi il primo documento
               </button>
             </div>
@@ -1022,7 +1022,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 onClick={() => setIsAddingTask(true)}
                 className="btn btn-primary btn-sm"
               >
-                <Plus size={16} className="mr-1" />
+                <Plus size={16} className="inline-flex items-center justify-center mr-1" />
                 Aggiungi la prima attività
               </button>
             </div>

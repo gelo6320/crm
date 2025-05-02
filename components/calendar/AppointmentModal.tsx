@@ -306,7 +306,7 @@ export default function AppointmentModal({
               <button
                 type="button"
                 onClick={handleDelete}
-                className="btn btn-outline border-danger text-danger hover:bg-danger/10 text-xs sm:text-sm py-1 sm:py-1.5 px-2 sm:px-3"
+                className="inline-flex items-center justify-center btn btn-outline border-danger text-danger hover:bg-danger/10 text-xs sm:text-sm py-1 sm:py-1.5 px-2 sm:px-3"
                 title="Elimina"
               >
                 <Trash2 size={isMobile ? 14 : 16} className={isMobile ? '' : 'mr-1'} />
