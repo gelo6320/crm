@@ -8,30 +8,16 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzione
  * Interfaccia per le impostazioni utente
  */
 export interface UserSettings {
-  mongoDbUri?: string;
-  apiKeys?: {
-    facebookAccessToken?: string;
-    googleApiKey?: string;
-    facebookPixelId?: string;
-    facebookTestEventCode?: string;
+  mongoDbUri: string;
+  apiKeys: {
+    facebookAccessToken: string;
+    googleApiKey: string;
+    facebookPixelId: string;
   };
-  webhooks?: {
-    callbackUrl?: string;
+  webhooks: {
+    callbackUrl: string;
   };
-  isDevelopment?: boolean;
-  [key: string]: any;
-}
-
-/**
- * Interfaccia per le impostazioni nel formato atteso dal backend
- */
-interface BackendSettings {
-  mongodb_uri?: string;
-  access_token?: string;
-  meta_pixel_id?: string;
-  google_api_key?: string;
-  webhook_callback_url?: string;
-  is_development?: boolean;
+  isDevelopment: boolean;
 }
 
 /**
@@ -39,64 +25,31 @@ interface BackendSettings {
  */
 export async function fetchUserSettings(): Promise<UserSettings> {
   try {
-    // Ottieni le configurazioni dalla sessione attraverso check-auth
-    const authResponse = await axios.get(
-      `${API_BASE_URL}/api/check-auth`, 
+    // Utilizziamo il nuovo endpoint GET
+    const response = await axios.get(
+      `${API_BASE_URL}/api/user/config`,
       { withCredentials: true }
     );
     
-    // Verifica che l'utente sia autenticato
-    if (!authResponse.data.authenticated) {
-      throw new Error("Utente non autenticato");
+    if (!response.data.success) {
+      throw new Error(response.data.message || "Errore nel recupero delle configurazioni");
     }
     
-    // Per ora, recuperiamo le configurazioni salvate in localStorage come fallback
-    let savedConfig: UserSettings = {
-      mongoDbUri: "",
+    // Trasforma i dati dal formato backend al formato frontend
+    const backendConfig = response.data.config || {};
+    
+    return {
+      mongoDbUri: backendConfig.mongodb_uri || "",
       apiKeys: {
-        facebookAccessToken: "",
-        googleApiKey: "",
-        facebookPixelId: ""
+        facebookAccessToken: backendConfig.access_token || "",
+        googleApiKey: "", // Non disponibile dal backend, lasciamo vuoto
+        facebookPixelId: backendConfig.meta_pixel_id || ""
       },
       webhooks: {
-        callbackUrl: ""
+        callbackUrl: "" // Non disponibile dal backend, lasciamo vuoto
       },
-      isDevelopment: false
+      isDevelopment: false // Non disponibile dal backend, impostiamo su false
     };
-    
-    if (typeof window !== 'undefined') {
-      const savedConfigStr = localStorage.getItem('userConfig');
-      if (savedConfigStr) {
-        try {
-          // Assicuriamoci che il parsed config sia di tipo UserSettings
-          const parsedConfig = JSON.parse(savedConfigStr) as Partial<UserSettings>;
-          
-          // Aggiorniamo solo i campi che esistono nell'oggetto parsedConfig
-          if (parsedConfig.mongoDbUri !== undefined) {
-            savedConfig.mongoDbUri = parsedConfig.mongoDbUri;
-          }
-          if (parsedConfig.apiKeys) {
-            savedConfig.apiKeys = {
-              ...savedConfig.apiKeys,
-              ...parsedConfig.apiKeys
-            };
-          }
-          if (parsedConfig.webhooks) {
-            savedConfig.webhooks = {
-              ...savedConfig.webhooks,
-              ...parsedConfig.webhooks
-            };
-          }
-          if (parsedConfig.isDevelopment !== undefined) {
-            savedConfig.isDevelopment = parsedConfig.isDevelopment;
-          }
-        } catch (e) {
-          console.error("Errore nel parsing della configurazione salvata:", e);
-        }
-      }
-    }
-    
-    return savedConfig;
   } catch (error) {
     console.error("Errore durante il recupero delle impostazioni:", error);
     // Restituiamo un oggetto ben formattato con tutti i campi inizializzati
@@ -124,11 +77,6 @@ export async function saveUserSettings(settings: UserSettings): Promise<{
   config?: UserSettings;
 }> {
   try {
-    // Salva anche in localStorage per poterle recuperare successivamente
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('userConfig', JSON.stringify(settings));
-    }
-    
     // Trasforma i dati dal formato frontend al formato backend
     // Adattato in base al formato atteso da server.js
     const backendSettings = {
