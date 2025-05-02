@@ -236,22 +236,24 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           }
         },
         // Scala secondaria per ROAS (se attivo)
-        y1: activeMetric === 'all' || activeMetric === 'roas' ? {
-          type: 'linear' as const,
-          display: true,
-          position: 'right' as const,
-          suggestedMax: yMaxRoas,
-          beginAtZero: true,
-          grid: {
-            drawOnChartArea: false,
-            color: 'rgba(255, 255, 255, 0.1)',
-          },
-          ticks: {
-            color: 'rgba(255, 255, 255, 0.7)',
-            padding: 10,
-            precision: 1
+        ...(activeMetric === 'all' || activeMetric === 'roas' ? {
+          y1: {
+            type: 'linear' as const,
+            display: true,
+            position: 'right' as const,
+            suggestedMax: yMaxRoas,
+            beginAtZero: true,
+            grid: {
+              drawOnChartArea: false,
+              color: 'rgba(255, 255, 255, 0.1)',
+            },
+            ticks: {
+              color: 'rgba(255, 255, 255, 0.7)',
+              padding: 10,
+              precision: 1
+            }
           }
-        } : undefined
+        } : {})
       },
       plugins: {
         legend: {
@@ -480,7 +482,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       </div>
       
       {/* Grafico a larghezza piena */}
-      <div className="w-full h-64 md:h-80">
+      <div className="w-full h-64 md:h-80" style={{ width: '100%' }}>
         <Line 
           options={chartOptions} 
           data={chartData} 
