@@ -27,8 +27,8 @@ export default function CalendarPage() {
       const isMobileDevice = window.innerWidth < 768;
       setIsMobile(isMobileDevice);
       
-      // Imposta automaticamente la vista a "list" su mobile
-      if (isMobileDevice && view === "month") {
+      // Set view to "list" on mobile automatically
+      if (isMobileDevice) {
         setView("list");
       }
       
@@ -110,9 +110,6 @@ export default function CalendarPage() {
   
   const handleSelectDate = (date: Date) => {
     setSelectedDate(date);
-    if (view === "month") {
-      setView("list");
-    }
   };
   
   const handleNewAppointment = (start?: Date, end?: Date) => {
@@ -121,11 +118,11 @@ export default function CalendarPage() {
     let newEnd: Date;
     
     if (start && end) {
-      // Usa i parametri forniti
+      // Use provided parameters
       newStart = new Date(start);
       newEnd = new Date(end);
     } else {
-      // Usa la logica predefinita
+      // Use default logic
       const hours = now.getHours();
       const minutes = now.getMinutes();
       const roundedMinutes = Math.ceil(minutes / 15) * 15;
@@ -228,12 +225,12 @@ export default function CalendarPage() {
       <div className="flex flex-col space-y-2 mb-2 sm:space-y-0 sm:mb-2 sm:flex-row sm:justify-between sm:items-center">
         <h1 className="text-base sm:text-lg font-medium flex items-center">
           <CalendarIcon className="mr-1.5 sm:mr-2" size={isMobile ? 16 : 20} />
-          {isMobile && view === "list" ? formatDayTitle(selectedDate) : "Calendario"}
+          {isMobile ? formatDayTitle(selectedDate) : "Calendario"}
         </h1>
         
         <div className="flex items-center justify-between sm:justify-end">
-          {/* Navigazione mobile per la vista lista */}
-          {isMobile && view === "list" && (
+          {/* Mobile navigation for list view */}
+          {isMobile && (
             <div className="flex items-center bg-zinc-800 rounded-lg mr-auto">
               <button
                 onClick={() => navigateCalendar("prev")}
@@ -310,10 +307,10 @@ export default function CalendarPage() {
           
           {/* Mobile sidebar toggle */}
           {isMobile && selectedEvents.length > 0 && (
-            <div className="bg-zinc-800 rounded-lg flex sm:hidden">
+            <div className="bg-zinc-800 rounded-lg flex sm:hidden mr-2">
               <button
                 onClick={toggleSidebar}
-                className={`p-1.5 ${selectedEvents.length > 0 ? 'text-primary' : 'text-zinc-400'}`}
+                className={`p-1.5 relative ${selectedEvents.length > 0 ? 'text-primary' : 'text-zinc-400'}`}
               >
                 <Menu size={16} />
                 {selectedEvents.length > 0 && (
@@ -325,31 +322,10 @@ export default function CalendarPage() {
             </div>
           )}
           
-          {/* Month/List toggle on mobile (solo se non in vista lista) */}
-          {isMobile && (
-            <div className="bg-zinc-800 rounded-lg flex sm:hidden mx-2">
-              <button
-                onClick={() => setView("month")}
-                className={`p-1.5 ${view === "month" ? 'text-primary' : 'text-zinc-400'}`}
-                aria-label="Vista mensile"
-              >
-                <GridIcon size={16} />
-              </button>
-              
-              <button
-                onClick={() => setView("list")}
-                className={`p-1.5 ${view === "list" ? 'text-primary' : 'text-zinc-400'}`}
-                aria-label="Vista lista"
-              >
-                <List size={16} />
-              </button>
-            </div>
-          )}
-          
           {/* Button nuovo appuntamento */}
           <button
             onClick={() => handleNewAppointment()}
-            className="btn btn-primary inline-flex items-center justify-center py-1 px-2 sm:py-1.5 sm:px-3 text-xs sm:text-sm"
+            className="btn btn-primary inline-flex items-center justify-center py-1.5 px-2.5 sm:py-1.5 sm:px-3 text-xs sm:text-sm rounded-full"
           >
             <Plus size={isMobile ? 14 : 18} className="sm:mr-1" />
             <span className="hidden sm:inline">Nuovo</span>
@@ -359,7 +335,7 @@ export default function CalendarPage() {
       
       <div className="flex flex-col md:flex-row gap-0 md:gap-4 flex-1 overflow-hidden relative w-full mobile-calendar-container">
         {/* Calendar View */}
-        <div className={`flex-1 bg-zinc-800 md:bg-zinc-800 bg-black rounded-lg overflow-hidden min-h-[500px] ${
+        <div className={`flex-1 bg-zinc-900 md:bg-zinc-800 rounded-lg overflow-hidden min-h-[500px] ${
           isMobile && showSidebar ? 'hidden' : ''
         }`}>
           <CalendarView

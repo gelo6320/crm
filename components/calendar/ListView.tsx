@@ -43,7 +43,7 @@ export default function ListView({
     }));
   }, [events]);
   
-  // Ottiene l'icona in base al tipo di evento
+  // Get icon based on event type
   const getEventIcon = (event: CalendarEvent) => {
     if (event.eventType === 'reminder') {
       return <AlarmClock size={isMobile ? 14 : 16} className="text-purple-400" />;
@@ -52,7 +52,7 @@ export default function ListView({
     }
   };
   
-  // Ottiene una breve descrizione dell'evento
+  // Get a brief description of the event
   const getEventDescription = (event: CalendarEvent) => {
     if (event.description) {
       return event.description;
@@ -70,10 +70,10 @@ export default function ListView({
   
   if (groupedEvents.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-zinc-500 p-4">
-        <Calendar size={isMobile ? 32 : 40} className="mb-2 text-zinc-600" />
+      <div className="flex flex-col items-center justify-center h-full text-zinc-500 p-6">
+        <Calendar size={isMobile ? 38 : 42} className="mb-3 text-zinc-600" />
         <div className="text-center">
-          <p className="text-sm sm:text-base mb-1">Nessun elemento programmato</p>
+          <p className="text-sm sm:text-base mb-1.5 font-medium">Nessun elemento programmato</p>
           <p className="text-xs text-zinc-600">Clicca su + per aggiungere un appuntamento o promemoria</p>
         </div>
       </div>
@@ -81,7 +81,7 @@ export default function ListView({
   }
   
   return (
-    <div className="h-full overflow-y-auto p-2 sm:p-4">
+    <div className="h-full overflow-y-auto py-2 px-3 sm:p-4">
       {groupedEvents.map(({ date, events }) => {
         const isToday = new Date().toDateString() === date.toDateString();
         const isTomorrow = new Date(new Date().setDate(new Date().getDate() + 1)).toDateString() === date.toDateString();
@@ -97,14 +97,14 @@ export default function ListView({
         return (
           <div key={date.toISOString()} className="mb-3 sm:mb-4 animate-slide-up">
             <h3 className={`
-              text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 pb-1 border-b border-zinc-700
+              text-xs sm:text-sm font-medium mb-2 sm:mb-2.5 pb-1 border-b border-zinc-700
               ${isSelected ? "text-primary" : ""}
               ${isInPast ? "text-zinc-500" : ""}
             `}>
               {dateLabel}
             </h3>
             
-            <div className="space-y-1.5 sm:space-y-2">
+            <div className="space-y-2">
               {events.map(event => {
                 const isCompleted = event.status === 'completed';
                 const isCancelled = event.status === 'cancelled';
@@ -113,38 +113,38 @@ export default function ListView({
                   <div 
                     key={event.id}
                     className={`
-                      flex items-start bg-zinc-900/60 rounded p-2 cursor-pointer 
-                      hover:bg-zinc-900 transition-colors
+                      flex items-start bg-zinc-800 rounded-lg p-2.5 cursor-pointer
+                      hover:bg-zinc-700 active:bg-zinc-700 transition-colors
                       ${isCompleted ? 'opacity-70' : ''}
                       ${isCancelled ? 'opacity-50' : ''}
                     `}
                     onClick={() => onSelectEvent(event)}
                   >
-                    <div className="flex-shrink-0 w-14 sm:w-16 text-xs text-zinc-400 pt-0.5">
+                    <div className="flex-shrink-0 w-12 sm:w-16 text-xs text-zinc-400 pt-0.5">
                       {formatTime(new Date(event.start))}
                     </div>
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center">
                         <div 
-                          className="w-2 h-2 rounded-full mr-1.5 sm:mr-2 flex-shrink-0"
+                          className="w-2.5 h-2.5 rounded-full mr-2 flex-shrink-0"
                           style={{ backgroundColor: getEventColor(event.status, event.eventType) }}
                         ></div>
-                        <div className="font-medium text-xs sm:text-sm truncate pr-1">
+                        <div className="font-medium text-sm truncate pr-1">
                           {event.title}
                           {isCancelled && <span className="text-danger ml-1">(Cancellato)</span>}
                         </div>
                       </div>
                       
-                      <div className="flex flex-wrap items-center mt-1 text-[10px] sm:text-xs text-zinc-400">
-                        <div className="flex items-center mr-2 sm:mr-3">
-                          <Clock size={isMobile ? 10 : 12} className="mr-0.5 sm:mr-1 flex-shrink-0" />
+                      <div className="flex flex-wrap items-center mt-1.5 text-xs text-zinc-400">
+                        <div className="flex items-center mr-3">
+                          <Clock size={12} className="mr-1 flex-shrink-0" />
                           {formatTime(new Date(event.start))} - {formatTime(new Date(event.end))}
                         </div>
                         
                         {event.location && (
-                          <div className="flex items-center mr-2 sm:mr-3">
-                            <MapPin size={isMobile ? 10 : 12} className="mr-0.5 sm:mr-1 flex-shrink-0" />
+                          <div className="flex items-center mr-3">
+                            <MapPin size={12} className="mr-1 flex-shrink-0" />
                             {event.location === 'office' ? 'Ufficio' : 
                              event.location === 'client' ? 'Cliente' :
                              event.location === 'remote' ? 'Remoto' : 
@@ -152,17 +152,17 @@ export default function ListView({
                           </div>
                         )}
                         
-                        {/* Icona tipo evento */}
+                        {/* Event type icon */}
                         <div className="flex items-center">
                           {getEventIcon(event)}
-                          <span className="ml-0.5 sm:ml-1">
+                          <span className="ml-1">
                             {event.eventType === 'reminder' ? 'Promemoria' : 'Appuntamento'}
                           </span>
                         </div>
                       </div>
                       
                       {event.description && (
-                        <div className="text-[10px] sm:text-xs text-zinc-500 truncate mt-1">
+                        <div className="text-xs text-zinc-500 mt-1.5 line-clamp-2">
                           {event.description}
                         </div>
                       )}

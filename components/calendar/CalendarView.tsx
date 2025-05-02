@@ -16,7 +16,7 @@ interface CalendarViewProps {
   events: CalendarEvent[];
   onSelectDate: (date: Date) => void;
   onSelectEvent: (event: CalendarEvent) => void;
-  onCreateEvent?: (start: Date, end: Date) => void; // Nuova prop per creare eventi
+  onCreateEvent?: (start: Date, end: Date) => void; // Prop for creating events
 }
 
 export default function CalendarView({
@@ -50,11 +50,14 @@ export default function CalendarView({
     setIsDndReady(true);
   }, []);
   
+  // If mobile, use list view regardless of what view prop is passed
+  const effectiveView = isMobile ? "list" : view;
+  
   return (
-    <div className={`h-full transition-all duration-300 ${view === "list" && isMobile ? "bg-black" : ""} w-full`}>
+    <div className="h-full transition-all duration-300 w-full">
       {isDndReady ? (
         <DndProvider backend={backendForDND}>
-          {view === "month" && (
+          {effectiveView === "month" && (
             <MonthView
               selectedDate={selectedDate}
               events={events}
@@ -63,11 +66,12 @@ export default function CalendarView({
             />
           )}
           
-          {view === "list" && (
+          {effectiveView === "list" && (
             <ListView
               selectedDate={selectedDate}
               events={events}
               onSelectEvent={onSelectEvent}
+              isMobile={isMobile}
             />
           )}
         </DndProvider>
