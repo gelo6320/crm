@@ -3,13 +3,12 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { FunnelData, FunnelItem } from "@/types";
-import { updateLeadMetadata } from "@/lib/api/funnel";
 import FacebookEventModal from "./FacebookEventModal";
 import ValueModal from "./ValueModal";
 import { toast } from "@/components/ui/toaster";
 import axios from "axios";
 
-// Importazioni react-dnd
+// React-dnd imports
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TouchBackend } from "react-dnd-touch-backend";
@@ -30,11 +29,15 @@ const COLUMNS = [
   { id: "lost", title: "Persi", color: "bg-danger" },
 ];
 
-// Rilevazione backup condizionale
+// Conditional backend detection
 const DndBackend = isTouchDevice() ? TouchBackend : HTML5Backend;
 const touchBackendOptions = {
-  enableMouseEvents: true, // Consente di usare mouse su dispositivi touch
-  delayTouchStart: 100, // Piccolo ritardo per evitare conflitti con lo scrolling
+  enableMouseEvents: true,
+  delayTouchStart: 50,      // Reduced delay for better responsiveness
+  touchSlop: 10,            // Number of pixels to move before drag starts
+  ignoreContextMenu: true,  // Ignore context menu events
+  enableHoverOutsideTarget: true, // Enable hover events outside target
+  enableKeyboardEvents: true // Enable keyboard events
 };
 
 interface CustomFunnelBoardProps {
@@ -43,7 +46,7 @@ interface CustomFunnelBoardProps {
   onLeadMove: () => Promise<void>;
 }
 
-// Componente Principale
+// Main Component
 export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMove }: CustomFunnelBoardProps) {
   const [editingLead, setEditingLead] = useState<FunnelItem | null>(null);
   const [isMoving, setIsMoving] = useState(false);
@@ -53,33 +56,53 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     newStatus: string;
   } | null>(null);
   
-  // Ref per il contenitore principale
+  // Ref for the main container
   const boardRef = useRef<HTMLDivElement>(null);
   
-  // Hook per configurare l'autoscroll
+  // State for auto scrolling
+  const [isScrolling, setIsScrolling] = useState<"left" | "right" | null>(null);
+  const scrollIntervalRef = useRef<number | null>(null);
+
+  // Set up auto-scroll when isScrolling changes
   useEffect(() => {
-    // Otteniamo l'elemento container
-    const container = boardRef.current;
-    if (!container) return;
-    
-    const handleScroll = () => {
-      // Registriamo lo scroll per debug
-      if (container.scrollLeft === 0) {
-        console.log("Container scrolled to start");
-      } else if (container.scrollLeft + container.clientWidth >= container.scrollWidth) {
-        console.log("Container scrolled to end");
+    if (!boardRef.current || !isScrolling) {
+      if (scrollIntervalRef.current) {
+        window.clearInterval(scrollIntervalRef.current);
+        scrollIntervalRef.current = null;
       }
-    };
+      return;
+    }
     
-    container.addEventListener('scroll', handleScroll);
+    const container = boardRef.current;
+    const scrollAmount = isScrolling === "left" ? -15 : 15;
+    
+    // Create interval for continuous scrolling
+    scrollIntervalRef.current = window.setInterval(() => {
+      if (container) {
+        // Check if we can scroll further
+        if (
+          (isScrolling === "left" && container.scrollLeft > 0) ||
+          (isScrolling === "right" && 
+           container.scrollLeft < container.scrollWidth - container.clientWidth)
+        ) {
+          container.scrollBy({ left: scrollAmount, behavior: "auto" });
+        } else {
+          // Stop scrolling if we reached the edge
+          setIsScrolling(null);
+        }
+      }
+    }, 16); // ~60fps for smooth scrolling
     
     return () => {
-      container.removeEventListener('scroll', handleScroll);
+      if (scrollIntervalRef.current) {
+        window.clearInterval(scrollIntervalRef.current);
+        scrollIntervalRef.current = null;
+      }
     };
-  }, []);
+  }, [isScrolling]);
 
-  // Handle lead movement between columns
-  const handleMoveLead = (lead: FunnelItem, targetStatus: string) => {
+  // Handle lead movement between columns with error handling
+  const handleMoveLead = async (lead: FunnelItem, targetStatus: string) => {
     if (!lead || lead.status === targetStatus) return;
 
     // Store the previous status
@@ -88,44 +111,75 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     // Update state to show movement is in progress
     setIsMoving(true);
 
-    // First update the UI immediately for better UX
-    const updatedFunnelData = { ...funnelData };
+    try {
+      // First update the UI immediately for better UX
+      const updatedFunnelData = { ...funnelData };
 
-    // Remove lead from the source column
-    updatedFunnelData[prevStatus as keyof FunnelData] = updatedFunnelData[
-      prevStatus as keyof FunnelData
-    ].filter((item) => item._id !== lead._id);
+      // Remove lead from the source column
+      updatedFunnelData[prevStatus as keyof FunnelData] = updatedFunnelData[
+        prevStatus as keyof FunnelData
+      ].filter((item) => item._id !== lead._id);
 
-    // Update lead status
-    const updatedLead = { ...lead, status: targetStatus };
+      // Update lead status
+      const updatedLead = { ...lead, status: targetStatus };
 
-    // Add lead to the target column
-    updatedFunnelData[targetStatus as keyof FunnelData] = [
-      ...updatedFunnelData[targetStatus as keyof FunnelData],
-      updatedLead,
-    ];
+      // Add lead to the target column
+      updatedFunnelData[targetStatus as keyof FunnelData] = [
+        ...updatedFunnelData[targetStatus as keyof FunnelData],
+        updatedLead,
+      ];
 
-    // Update state
-    setFunnelData(updatedFunnelData);
+      // Update state
+      setFunnelData(updatedFunnelData);
 
-    // Mostra modale di conferma solo per spostamenti a "customer" (acquisto)
-    if (targetStatus === "customer") {
-      // Store the moving lead data for the modal
-      setMovingLead({
-        lead: updatedLead,
-        prevStatus,
-        newStatus: targetStatus,
-      });
-    } else {
-      // Per gli altri stati, aggiorna direttamente tramite API
-      updateLeadDirectly(updatedLead, prevStatus, targetStatus);
+      // Show confirmation modal only for moves to "customer" (purchase)
+      if (targetStatus === "customer") {
+        // Store the moving lead data for the modal
+        setMovingLead({
+          lead: updatedLead,
+          prevStatus,
+          newStatus: targetStatus,
+        });
+      } else {
+        // For other statuses, update directly via API
+        await updateLeadDirectly(updatedLead, prevStatus, targetStatus);
+      }
+    } catch (error) {
+      console.error("Error during lead move preparation:", error);
+      toast("error", "Errore spostamento", "Si è verificato un errore durante lo spostamento del lead");
+      // Revert UI state in case of error
+      handleUndoMove();
+    } finally {
+      if (targetStatus !== "customer") {
+        setIsMoving(false);
+      }
     }
   };
 
-  // Funzione per aggiornare direttamente il lead senza mostrare modale
+  // Function to directly update lead without showing modal
   const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: string) => {
     try {
-      // Chiama direttamente l'API del funnel per lo spostamento normale
+      // Fetch the latest lead status first to ensure consistency
+      const checkResponse = await axios.get(
+        `${API_BASE_URL}/api/leads/${lead.type}/${lead._id}`,
+        { withCredentials: true }
+      );
+      
+      const currentStatus = checkResponse.data?.status || fromStage;
+      
+      // Only proceed if the current status matches our expected fromStage
+      if (currentStatus !== fromStage) {
+        console.warn(`Status mismatch: expected ${fromStage}, got ${currentStatus}`);
+        
+        // Refresh funnel data to sync with server
+        await onLeadMove();
+        
+        // Show notification to user
+        toast("warning", "Stato aggiornato", "Lo stato del lead è stato aggiornato da un altro utente");
+        return;
+      }
+      
+      // Call the funnel API for normal movement
       const response = await axios.post(
         `${API_BASE_URL}/api/sales-funnel/move`,
         {
@@ -137,9 +191,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         { withCredentials: true }
       );
       
-      // Se la chiamata API ha successo, aggiorna i dati del funnel
+      // If the API call is successful, update the funnel data
       if (response.data.success) {
-        // Aggiorna i dati del funnel tramite la callback
+        // Update funnel data via callback
         await onLeadMove();
         
         toast("success", "Lead spostato", `Lead spostato con successo in ${toStage}`);
@@ -149,9 +203,19 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     } catch (error) {
       console.error("Error during lead move:", error);
       
-      // Ripristina lo stato precedente in caso di errore
+      // Restore previous state in case of error
       handleUndoMoveWithLead(lead, toStage, fromStage);
-      toast("error", "Errore spostamento", "Si è verificato un errore durante lo spostamento del lead");
+      
+      // Extract error message for user feedback
+      let errorMessage = "Si è verificato un errore durante lo spostamento del lead";
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      toast("error", "Errore spostamento", errorMessage);
+      
+      // Refresh funnel data to ensure consistency
+      await onLeadMove();
     } finally {
       setIsMoving(false);
     }
@@ -162,8 +226,31 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     if (!movingLead) return;
     
     try {
-      // Chiama direttamente l'API per aggiornare lo stato a "customer"
-      // L'evento di acquisto verrà gestito dalle opzioni nel modale
+      // Fetch the latest lead status first to ensure consistency
+      const checkResponse = await axios.get(
+        `${API_BASE_URL}/api/leads/${movingLead.lead.type}/${movingLead.lead._id}`,
+        { withCredentials: true }
+      );
+      
+      const currentStatus = checkResponse.data?.status || movingLead.prevStatus;
+      
+      // Only proceed if the current status matches our expected fromStage
+      if (currentStatus !== movingLead.prevStatus) {
+        console.warn(`Status mismatch: expected ${movingLead.prevStatus}, got ${currentStatus}`);
+        
+        // Show notification to user
+        toast("warning", "Stato aggiornato", "Lo stato del lead è stato aggiornato da un altro utente");
+        
+        // Refresh funnel data to sync with server
+        await onLeadMove();
+        
+        setMovingLead(null);
+        setIsMoving(false);
+        return;
+      }
+      
+      // Call directly to the API to update to "customer" status
+      // Purchase event will be handled by options in the modal
       const response = await axios.post(
         `${API_BASE_URL}/api/sales-funnel/move`,
         {
@@ -176,7 +263,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       );
       
       if (response.data.success) {
-        // Aggiorna i dati del funnel tramite la callback
+        // Update funnel data via callback
         await onLeadMove();
         
         toast("success", "Lead convertito", "Lead convertito in cliente con successo");
@@ -186,7 +273,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     } catch (error) {
       console.error("Error during lead conversion:", error);
       
-      // Ripristina lo stato precedente in caso di errore
+      // Restore previous state in case of error
       if (movingLead) {
         handleUndoMoveWithLead(
           movingLead.lead, 
@@ -195,7 +282,16 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         );
       }
       
-      toast("error", "Errore conversione", "Si è verificato un errore durante la conversione del lead");
+      // Extract error message for user feedback
+      let errorMessage = "Si è verificato un errore durante la conversione del lead";
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      toast("error", "Errore conversione", errorMessage);
+      
+      // Refresh funnel data to ensure consistency
+      await onLeadMove();
     } finally {
       setMovingLead(null);
       setIsMoving(false);
@@ -216,7 +312,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     setIsMoving(false);
   };
   
-  // Funzione di supporto per il ripristino dello stato
+  // Support function for state restoration
   const handleUndoMoveWithLead = (lead: FunnelItem, currentStatus: string, targetStatus: string) => {
     const updatedFunnelData = { ...funnelData };
 
@@ -247,7 +343,11 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
     try {
       // Update the lead metadata via API
-      await updateLeadMetadata(editingLead._id, editingLead.type, value, service);
+      await axios.post(
+        `${API_BASE_URL}/api/leads/${editingLead.type}/${editingLead._id}/update-metadata`,
+        { value, service },
+        { withCredentials: true }
+      );
 
       // Update local state for immediate UI update
       const updatedFunnelData = { ...funnelData };
@@ -270,12 +370,11 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
 
-  // Componente draggable
-  const LeadCard = ({ lead }: { lead: FunnelItem }) => {
-    // Utilizzo di ref standard
+  // Draggable component
+  const LeadCard = React.memo(({ lead }: { lead: FunnelItem }) => {
     const cardRef = useRef<HTMLDivElement>(null);
     
-    // useDrag con collezione
+    // useDrag with collection
     const [{ isDragging }, connectDrag] = useDrag(
       () => ({
         type: 'LEAD',
@@ -284,7 +383,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           isDragging: !!monitor.isDragging(),
         }),
         end: (item, monitor) => {
-          // Gestisce il caso in cui il drag termina senza un drop
+          // Handle case where drag ends without a drop
           if (!monitor.didDrop()) {
             console.log('Drag terminated without drop');
           }
@@ -293,7 +392,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       [lead]
     );
     
-    // Colleghiamo il ref con il connettore tramite useEffect
+    // Connect the ref with connector via useEffect
     useEffect(() => {
       if (cardRef.current) {
         connectDrag(cardRef.current);
@@ -303,11 +402,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     return (
       <div
         ref={cardRef}
-        className={`funnel-card ${isDragging ? 'opacity-50' : ''}`}
+        className={`funnel-card ${isDragging ? 'dragging' : ''}`}
         style={{
           borderLeftColor: getBorderColor(lead.status),
           opacity: isDragging ? 0.5 : 1,
-          cursor: 'grab',
         }}
       >
         <div className="flex justify-between items-center mb-1">
@@ -333,69 +431,19 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         </div>
       </div>
     );
-  };
+  });
+  
+  LeadCard.displayName = 'LeadCard';
 
-  // Componente per la colonna
-  const FunnelColumn = ({ id, title, color, leads }: { id: string; title: string; color: string; leads: FunnelItem[] }) => {
-    // Utilizziamo lo state per tracciare se siamo in hover
-    const [isOverState, setIsOver] = useState(false);
+  // Column component
+  const FunnelColumn = React.memo(({ id, title, color, leads }: { id: string; title: string; color: string; leads: FunnelItem[] }) => {
+    const [isOver, setIsOver] = useState(false);
     
-    // Utilizzo di ref standard per il corpo della colonna
+    // Standard ref for column body
     const bodyRef = useRef<HTMLDivElement>(null);
     
-    // Funzione per autoscroll che viene richiamata durante l'hover
-    const handleAutoScroll = useCallback((clientX: number) => {
-      if (!boardRef.current) return;
-      
-      // Ottenimento delle dimensioni del contenitore
-      const containerRect = boardRef.current.getBoundingClientRect();
-      const containerScrollLeft = boardRef.current.scrollLeft;
-      const containerWidth = boardRef.current.clientWidth;
-      const containerScrollWidth = boardRef.current.scrollWidth;
-      
-      // Definizione delle zone di autoscroll (20% di ciascun lato)
-      const scrollZoneSize = Math.min(150, containerWidth * 0.2);
-      
-      // Calcolo delle posizioni delle zone di scroll relative al container
-      const leftScrollZone = containerRect.left + scrollZoneSize;
-      const rightScrollZone = containerRect.right - scrollZoneSize;
-      
-      // Calcolo della velocità di scroll in base alla distanza dal bordo
-      const calculateScrollSpeed = (distance: number, maxDistance: number) => {
-        const baseSpeed = 5;
-        const maxSpeed = 20;
-        const ratio = 1 - Math.min(1, Math.max(0, distance / maxDistance));
-        return Math.round(baseSpeed + ((maxSpeed - baseSpeed) * ratio));
-      };
-      
-      // Scroll a sinistra se siamo nella zona sinistra
-      if (clientX < leftScrollZone) {
-        const distance = clientX - containerRect.left;
-        const scrollSpeed = calculateScrollSpeed(distance, scrollZoneSize);
-        
-        // Controllo se possiamo scrollare ulteriormente a sinistra
-        if (containerScrollLeft > 0) {
-          boardRef.current.scrollBy({ left: -scrollSpeed, behavior: 'auto' });
-          return true; // Abbiamo fatto scroll
-        }
-      }
-      // Scroll a destra se siamo nella zona destra
-      else if (clientX > rightScrollZone) {
-        const distance = containerRect.right - clientX;
-        const scrollSpeed = calculateScrollSpeed(distance, scrollZoneSize);
-        
-        // Controllo se possiamo scrollare ulteriormente a destra
-        if (containerScrollLeft < containerScrollWidth - containerWidth) {
-          boardRef.current.scrollBy({ left: scrollSpeed, behavior: 'auto' });
-          return true; // Abbiamo fatto scroll
-        }
-      }
-      
-      return false; // Non abbiamo fatto scroll
-    }, []);
-    
-    // useDrop con collezione
-    const [{ isOver }, connectDrop] = useDrop(
+    // useDrop with collection
+    const [{ isOverCurrent }, connectDrop] = useDrop(
       () => ({
         accept: 'LEAD',
         drop: (item: { lead: FunnelItem }) => {
@@ -403,38 +451,43 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           return { status: id };
         },
         collect: (monitor) => ({
-          isOver: !!monitor.isOver(),
+          isOverCurrent: !!monitor.isOver({ shallow: true }),
         }),
         hover: (item, monitor) => {
           if (!boardRef.current) return;
           
-          // Aggiorniamo lo stato isOver
-          if (!isOverState && monitor.isOver()) {
-            setIsOver(true);
-          } else if (isOverState && !monitor.isOver()) {
-            setIsOver(false);
+          // Update isOver state
+          const isHovering = monitor.isOver({ shallow: true });
+          if (isOver !== isHovering) {
+            setIsOver(isHovering);
           }
           
-          // Ottenimento della posizione del mouse
+          // Get mouse position
           const clientOffset = monitor.getClientOffset();
           if (!clientOffset) return;
           
-          // Gestiamo l'autoscroll
-          if (handleAutoScroll(clientOffset.x)) {
-            // Se abbiamo fatto scroll, richiediamo un altro frame per continuare
-            requestAnimationFrame(() => {
-              const newOffset = monitor.getClientOffset();
-              if (newOffset) {
-                handleAutoScroll(newOffset.x);
-              }
-            });
+          // Handle auto-scroll based on mouse position
+          const containerRect = boardRef.current.getBoundingClientRect();
+          const scrollAreaSize = Math.min(150, containerRect.width * 0.2);
+          
+          // Define scroll zones - 20% of container width on each side
+          const leftScrollZone = containerRect.left + scrollAreaSize;
+          const rightScrollZone = containerRect.right - scrollAreaSize;
+          
+          // Determine if we should scroll and in which direction
+          if (clientOffset.x < leftScrollZone) {
+            setIsScrolling("left");
+          } else if (clientOffset.x > rightScrollZone) {
+            setIsScrolling("right");
+          } else {
+            setIsScrolling(null);
           }
         },
       }),
-      [id, isOverState, handleAutoScroll]
+      [id, isOver]
     );
     
-    // Colleghiamo il ref con il connettore tramite useEffect
+    // Connect the ref with connector via useEffect
     useEffect(() => {
       if (bodyRef.current) {
         connectDrop(bodyRef.current);
@@ -454,7 +507,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         
         <div
           ref={bodyRef}
-          className={`funnel-body ${isOver ? 'drop-target-active' : ''}`}
+          className={`funnel-body ${isOverCurrent ? 'drop-target-active' : ''}`}
         >
           {leads.length > 0 ? (
             leads.map((lead) => (
@@ -468,19 +521,23 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         </div>
       </div>
     );
-  };
+  });
+  
+  FunnelColumn.displayName = 'FunnelColumn';
 
   return (
     <DndProvider
       backend={DndBackend}
       options={isTouchDevice() ? touchBackendOptions : undefined}
     >
-      {/* Aggiungiamo il nostro custom drag layer per una migliore esperienza visiva */}
+      {/* Add our custom drag layer for better visual experience */}
       <CustomDragLayer />
       
       <div
         ref={boardRef}
-        className="funnel-board-container w-full overflow-x-auto"
+        className={`funnel-board-container w-full overflow-x-auto ${
+          isScrolling ? `scrolling-${isScrolling}` : ""
+        }`}
         id="funnel-board-container"
       >
         <div className="funnel-board min-w-max flex gap-4 p-2">
@@ -496,7 +553,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         </div>
       </div>
 
-      {/* Facebook Event Modal for Lead Movement - Solo per stato "customer" */}
+      {/* Facebook Event Modal for Lead Movement - Only for "customer" status */}
       {movingLead && (
         <FacebookEventModal
           lead={movingLead.lead}

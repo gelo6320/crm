@@ -1,154 +1,384 @@
 /* app/react-dnd-styles.css */
-/* Stili dedicati per react-dnd */
+/* Dedicated styles for react-dnd */
 
-/* Migliora la fluidità dello scrolling orizzontale */
+/* Improve horizontal scrolling fluidity */
 .funnel-board-container {
-    scroll-behavior: auto !important; /* Usa 'auto' invece di 'smooth' per il miglior autoscroll */
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: #4b5563 #1f2937;
-    overscroll-behavior-x: none; /* Previene lo scroll "bounce" su iOS */
-    will-change: scroll-position; /* Ottimizza per lo scrolling */
-    position: relative;
-    z-index: 1;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-  
-  /* Indicatore visivo per zona di auto-scroll */
-  .funnel-board-container::before,
-  .funnel-board-container::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 60px;
-    pointer-events: none;
-    z-index: 10;
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  
-  .funnel-board-container::before {
-    left: 0;
-    background: linear-gradient(to right, rgba(255, 107, 0, 0.1), transparent);
-  }
-  
-  .funnel-board-container::after {
-    right: 0;
-    background: linear-gradient(to left, rgba(255, 107, 0, 0.1), transparent);
-  }
-  
-  .funnel-board-container.scrolling-left::before,
-  .funnel-board-container.scrolling-right::after {
+  scroll-behavior: auto !important; /* Use 'auto' instead of 'smooth' for best auto-scroll */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937;
+  overscroll-behavior-x: none; /* Prevent "bounce" scroll on iOS */
+  will-change: scroll-position; /* Optimize for scrolling */
+  position: relative;
+  z-index: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+  padding-bottom: 10px; /* Add padding for bottom scrollbar */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.funnel-board-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.funnel-board-container::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 6px;
+}
+
+.funnel-board-container::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 6px;
+}
+
+.funnel-board-container::-webkit-scrollbar-thumb:hover {
+  background: #FF6B00;
+}
+
+/* Visual indicator for auto-scroll zone */
+.funnel-board-container::before,
+.funnel-board-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.funnel-board-container::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(255, 107, 0, 0.1), transparent);
+}
+
+.funnel-board-container::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(255, 107, 0, 0.1), transparent);
+}
+
+.funnel-board-container.scrolling-left::before,
+.funnel-board-container.scrolling-right::after {
+  opacity: 1;
+}
+
+/* Improved style for card during dragging */
+.funnel-card {
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  will-change: transform, opacity;
+  margin-bottom: 8px;
+  cursor: grab;
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), 
+              box-shadow 0.15s cubic-bezier(0.2, 0, 0, 1),
+              opacity 0.15s cubic-bezier(0.2, 0, 0, 1);
+  border-width: 0 0 0 3px;
+  border-style: solid;
+  border-color: #71717a;
+  border-radius: 6px;
+  background-color: #18181b;
+  padding: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Touch feedback animation */
+.funnel-card.touched {
+  background-color: #27272a;
+}
+
+.funnel-card.touch-ready-to-drag {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
     opacity: 1;
+    transform: scale(1);
   }
-  
-  /* Stile migliorato per la card durante il trascinamento */
-  .funnel-card {
-    user-select: none;
-    touch-action: none;
-    will-change: transform, opacity;
-    margin-bottom: 8px;
-    cursor: grab;
-    transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), 
-                box-shadow 0.15s cubic-bezier(0.2, 0, 0, 1),
-                opacity 0.15s cubic-bezier(0.2, 0, 0, 1);
+  50% {
+    opacity: 0.9;
+    transform: scale(1.03);
   }
-  
-  .funnel-card:active {
-    cursor: grabbing;
-  }
-  
-  /* Stile speciale per la card durante il trascinamento */
-  .funnel-card.dragging {
-    opacity: 0.6 !important;
-    transform: scale(1.02) !important;
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.25) !important;
-    cursor: grabbing !important;
-    z-index: 999 !important;
-  }
-  
-  /* Migliora la visibilità della colonna target durante il drop */
-  .funnel-body.drop-target-active {
-    background-color: rgba(255, 107, 0, 0.05) !important;
-    box-shadow: inset 0 0 0 2px rgba(255, 107, 0, 0.3) !important;
-    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
-  }
-  
-  /* Crea un drag preview personalizzato */
-  .funnel-drag-preview {
-    position: fixed;
-    top: 0;
-    left: 0;
-    pointer-events: none;
-    z-index: 1000;
-    transform-origin: top left;
-    transition: transform 0.1s linear;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-    opacity: 0.85;
-    max-width: 250px;
-  }
-  
-  /* Personalizzazioni per dispositivi touch */
+}
+
+.funnel-card:active {
+  cursor: grabbing;
+  background-color: #27272a;
+}
+
+/* Special style for card during dragging */
+.funnel-card.dragging {
+  opacity: 0.6 !important;
+  transform: scale(1.02) !important;
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.25) !important;
+  cursor: grabbing !important;
+  z-index: 999 !important;
+}
+
+/* Improve visibility of target column during drop */
+.funnel-body.drop-target-active {
+  background-color: rgba(255, 107, 0, 0.05) !important;
+  box-shadow: inset 0 0 0 2px rgba(255, 107, 0, 0.3) !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+/* Create a custom drag preview */
+.funnel-drag-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1000;
+  transform-origin: top left;
+  transition: transform 0.1s linear;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  opacity: 0.85;
+  max-width: 250px;
+}
+
+/* Customization for touch devices */
+html.has-touch .funnel-card {
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+/* Ensure cards have proper size on touch devices */
+@media (max-width: 767px) {
   html.has-touch .funnel-card {
-    touch-action: none;
-    pointer-events: auto;
-    -webkit-tap-highlight-color: transparent;
+    padding: 14px; /* Slightly larger touch target on mobile */
+    margin-bottom: 10px;
+    min-height: 80px; /* Ensure enough area to grab */
   }
   
-  /* Imposta lo stile del layout colonne */
-  .funnel-board {
-    display: flex;
-    gap: 12px;
-    padding: 0 12px;
-    min-width: max-content;
-    min-height: 600px;
-    margin-bottom: 16px;
+  html.has-touch .edit-btn {
+    padding: 6px;
+    margin: -4px;
+  }
+}
+
+/* Set column layout style */
+.funnel-board {
+  display: flex;
+  gap: 12px;
+  padding: 0 12px;
+  min-width: max-content;
+  min-height: 600px;
+  margin-bottom: 16px;
+}
+
+.funnel-column {
+  min-width: 250px;
+  max-width: 250px;
+  background-color: #27272a; /* zinc-800 */
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  transition: all 0.2s ease;
+}
+
+/* Continuation of improved CSS for react-dnd */
+
+.funnel-header {
+  padding: 12px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: transparent; /* Allow column.color to define the color */
+}
+
+.funnel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  height: calc(600px - 48px); /* Total height - header height */
+  position: relative;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937;
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
+}
+
+/* For Webkit browsers */
+.funnel-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.funnel-body::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 6px;
+}
+
+.funnel-body::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 6px;
+}
+
+.funnel-body::-webkit-scrollbar-thumb:hover {
+  background: #FF6B00;
+}
+
+/* Improve fade-in animation for columns */
+.column-fade-transition {
+  opacity: 0.7;
+  transition: opacity 0.3s ease-out;
+}
+
+/* Add touch-specific optimizations */
+@media (pointer: coarse) {
+  /* Applied when touch is the primary input */
+  .funnel-board-container {
+    overflow-x: scroll;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory; /* Enable snap scrolling */
   }
   
   .funnel-column {
-    min-width: 250px;
-    max-width: 250px;
-    background-color: #27272a; /* zinc-800 */
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    height: 600px;
-    transition: all 0.2s ease;
+    scroll-snap-align: start; /* Snap each column */
+    min-width: 85vw; /* Make columns almost full width on mobile */
+    max-width: 85vw;
+    margin-right: 5px;
   }
   
-  .funnel-header {
-    padding: 12px;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .funnel-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-    height: calc(600px - 48px); /* Altezza totale - altezza header */
-    position: relative;
-  }
-  
-  /* Migliora l'animazione di fade-in per le colonne */
-  .column-fade-transition {
-    opacity: 0.7;
-    transition: opacity 0.3s ease-out;
-  }
-  
-  /* Migliora la visualizzazione per schermi piccoli */
-  @media (max-width: 640px) {
+  /* Only show one column at a time on very small screens */
+  @media (max-width: 380px) {
     .funnel-column {
-      min-width: 220px;
-      max-width: 220px;
-    }
-    
-    .funnel-card {
-      padding: 10px;
+      min-width: 95vw;
+      max-width: 95vw;
     }
   }
+
+  /* Make cards easier to interact with on touch */
+  .funnel-card {
+    min-height: 80px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  
+  /* Add visual feedback for touch interactions */
+  .funnel-card:active {
+    background-color: #27272a;
+    transform: scale(0.98);
+  }
+  
+  /* Enhanced touch feedback */
+  .funnel-card.touched::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    box-shadow: 0 0 0 2px #FF6B00;
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 2;
+  }
+}
+
+/* Enhance display for medium screens */
+@media (min-width: 640px) and (max-width: 1024px) {
+  .funnel-column {
+    min-width: 240px;
+    max-width: 240px;
+  }
+  
+  .funnel-board {
+    gap: 10px;
+    padding: 0 10px;
+  }
+}
+
+/* Enhance display for larger screens */
+@media (min-width: 1025px) {
+  .funnel-column {
+    min-width: 280px;
+    max-width: 280px;
+  }
+  
+  .funnel-board {
+    gap: 16px;
+    padding: 0 16px;
+  }
+  
+  .funnel-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .funnel-card:hover:not(.dragging) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: #1e1e24;
+  }
+}
+
+/* Animation for when items are moved */
+@keyframes highlight-card {
+  0% {
+    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0);
+    background-color: #18181b;
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(255, 107, 0, 1);
+    background-color: #27272a;
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0);
+    background-color: #18181b;
+  }
+}
+
+.funnel-card.added {
+  animation: highlight-card 2s ease-out forwards;
+}
+
+/* Fix for iOS specific issues */
+@supports (-webkit-touch-callout: none) {
+  /* Target iOS devices */
+  .funnel-board-container {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .funnel-card {
+    /* Disable rubber-banding effect that can break drag and drop */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: auto;
+  }
+  
+  /* Prevent scrolling while dragging */
+  body.is-dragging {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
+}
+
+/* Accessibility improvements */
+.funnel-card:focus-visible {
+  outline: 2px solid #FF6B00;
+  outline-offset: 2px;
+}
+
+.funnel-board-container:focus-visible {
+  outline: 2px solid #FF6B00;
+  outline-offset: -2px;
+}
+
+/* Status colors for cards */
+.funnel-card.status-new { border-left-color: #71717a; }
+.funnel-card.status-contacted { border-left-color: #3498db; }
+.funnel-card.status-qualified { border-left-color: #FF6B00; }
+.funnel-card.status-opportunity { border-left-color: #e67e22; }
+.funnel-card.status-proposal { border-left-color: #FF8C38; }
+.funnel-card.status-customer { border-left-color: #27ae60; }
+.funnel-card.status-lost { border-left-color: #e74c3c; }

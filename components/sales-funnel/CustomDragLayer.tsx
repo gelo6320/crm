@@ -5,12 +5,13 @@ import { useDragLayer } from 'react-dnd';
 import { FunnelItem } from '@/types';
 import { formatDate } from '@/lib/utils/date';
 import { formatMoney } from '@/lib/utils/format';
+import { useEffect, useState } from 'react';
 
 interface CustomDragLayerProps {
   snapToGrid?: boolean;
 }
 
-// Componente per visualizzare un'anteprima personalizzata durante il trascinamento
+// Component to display a custom preview during dragging
 export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerProps) {
   const {
     itemType,
@@ -26,23 +27,47 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     isDragging: monitor.isDragging(),
   }));
 
-  // Se non stiamo trascinando o non abbiamo offset validi, non mostriamo nulla
+  // State to track if touch is being used
+  const [isTouch, setIsTouch] = useState(false);
+  
+  // Detect touch device on mount
+  useEffect(() => {
+    setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    
+    // Add body class while dragging to prevent iOS scroll issues
+    if (isDragging) {
+      document.body.classList.add('is-dragging');
+    } else {
+      document.body.classList.remove('is-dragging');
+    }
+    
+    return () => {
+      document.body.classList.remove('is-dragging');
+    };
+  }, [isDragging]);
+
+  // If we're not dragging or don't have valid offsets, show nothing
   if (!isDragging || !currentOffset || !initialOffset) {
     return null;
   }
 
-  // Funzione per calcolare lo stile dell'anteprima
+  // Function to calculate the preview style
   const getItemStyles = () => {
     const { x, y } = currentOffset;
     
-    const transform = `translate(${x}px, ${y}px)`;
+    // Apply scale for touch devices to make preview larger & more visible
+    const scale = isTouch ? 1.1 : 1;
+    const transform = `translate(${x}px, ${y}px) scale(${scale})`;
+    
     return {
       transform,
       WebkitTransform: transform,
+      opacity: 0.8,
+      zIndex: 1000,
     };
   };
 
-  // Funzione per determinare il colore del bordo in base allo stato
+  // Function to determine border color based on status
   const getBorderColor = (status: string): string => {
     switch (status) {
       case "new": return "#71717a"; // zinc-500
@@ -56,9 +81,9 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     }
   };
 
-  // Renderizziamo l'anteprima in base al tipo di elemento trascinato
+  // Render the preview based on the type of dragged element
   const renderItem = () => {
-    // Se il tipo è 'LEAD', renderizziamo un'anteprima di card
+    // If type is 'LEAD', render a card preview
     if (itemType === 'LEAD' && item.lead) {
       const lead = item.lead as FunnelItem;
       
@@ -66,10 +91,10 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
         <div
           className="funnel-card"
           style={{
-            width: '250px', // Larghezza fissa per una buona visualizzazione
+            width: '250px', // Fixed width for good visualization
             borderLeftColor: getBorderColor(lead.status),
             borderLeftWidth: '3px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.4)',
             background: '#18181b',
             borderRadius: '6px',
             padding: '12px',
@@ -93,20 +118,26 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
       );
     }
     
-    // Se non riconosciamo il tipo, restituiamo null
+    // If we don't recognize the type, return null
     return null;
   };
 
-  // Se non sappiamo come renderizzare questo tipo, non mostriamo nulla
+  // If we don't know how to render this type, show nothing
   if (!renderItem()) {
     return null;
   }
 
-  // Renderizziamo l'anteprima personalizzata
+  // Render the custom preview
   return (
-    <div
+    <div 
       className="funnel-drag-preview"
-      style={getItemStyles()}
+      style={{
+        ...getItemStyles(),
+        position: 'fixed',
+        pointerEvents: 'none',
+        zIndex: 1000,
+        transformOrigin: '0 0',
+      }}
     >
       {renderItem()}
     </div>
