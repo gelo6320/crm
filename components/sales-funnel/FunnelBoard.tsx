@@ -157,79 +157,90 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   };
 
   // Function to directly update lead without showing modal
-  const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: string) => {
-    try {
-      // Fetch the latest lead status first to ensure consistency
-      const checkResponse = await axios.get(
-        `${API_BASE_URL}/api/leads/${lead.type}/${lead._id}`,
-        { withCredentials: true }
-      );
+  // Modifica la funzione updateLeadDirectly in FunnelBoard.tsx
+const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: string) => {
+  try {
+    // Recupera lo stato attuale dal server
+    const checkResponse = await axios.get(
+      `${API_BASE_URL}/api/leads/${lead.type}/${lead._id}`,
+      { withCredentials: true }
+    );
+    
+    // Ottieni lo stato attuale dal database
+    const currentDbStatus = checkResponse.data?.status;
+    
+    // Determina la mappatura degli stati solo per tipo booking
+    let actualFromStage = fromStage;
+    let actualToStage = toStage;
+    
+    if (lead.type === 'booking') {
+      // Mappa gli stati del funnel a quelli del database per il tipo booking
+      const bookingStatusMap: Record<string, string> = {
+        'new': 'pending',
+        'contacted': 'confirmed', 
+        'qualified': 'completed',
+        'opportunity': 'opportunity',
+        'proposal': 'proposal',
+        'customer': 'customer',
+        'lost': 'cancelled'
+      };
       
-      const currentStatus = checkResponse.data?.status || fromStage;
-      
-      // For bookings, we need to map the status
-      let mappedCurrentStatus = currentStatus;
-      if (lead.type === 'booking') {
-        // Map the booking status to funnel status
-        if (currentStatus === 'pending') mappedCurrentStatus = 'new';
-        else if (currentStatus === 'confirmed') mappedCurrentStatus = 'contacted';
-        else if (currentStatus === 'completed') mappedCurrentStatus = 'qualified';
-        else if (currentStatus === 'cancelled') mappedCurrentStatus = 'lost';
+      // Se lo stato nel database è uno degli stati nativi delle prenotazioni,
+      // usiamo quello come actual fromStage
+      if (['pending', 'confirmed', 'completed', 'cancelled'].includes(currentDbStatus)) {
+        // Nessun avviso, sappiamo che c'è una mappatura
+        actualFromStage = currentDbStatus;
       }
       
-      // Only proceed if the current status matches our expected fromStage
-      if (mappedCurrentStatus !== fromStage) {
-        console.warn(`Status mismatch: expected ${fromStage}, got ${currentStatus} (mapped to ${mappedCurrentStatus})`);
-        
-        // Refresh funnel data to sync with server
-        await onLeadMove();
-        
-        // Show notification to user
-        toast("warning", "Stato aggiornato", "Lo stato del lead è stato aggiornato da un altro utente");
-        return;
+      // Mappa lo stato di destinazione se necessario
+      if (bookingStatusMap[toStage]) {
+        actualToStage = bookingStatusMap[toStage];
       }
-      
-      // Call the funnel API for normal movement
-      const response = await axios.post(
-        `${API_BASE_URL}/api/sales-funnel/move`,
-        {
-          leadId: lead._id,
-          leadType: lead.type,
-          fromStage: fromStage,
-          toStage: toStage
-        },
-        { withCredentials: true }
-      );
-      
-      // If the API call is successful, update the funnel data
-      if (response.data.success) {
-        // Update funnel data via callback
-        await onLeadMove();
-        
-        toast("success", "Lead spostato", `Lead spostato con successo in ${toStage}`);
-      } else {
-        throw new Error(response.data.message || "Errore durante lo spostamento del lead");
-      }
-    } catch (error) {
-      console.error("Error during lead move:", error);
-      
-      // Restore previous state in case of error
-      handleUndoMoveWithLead(lead, toStage, fromStage);
-      
-      // Extract error message for user feedback
-      let errorMessage = "Si è verificato un errore durante lo spostamento del lead";
-      if (axios.isAxiosError(error) && error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      
-      toast("error", "Errore spostamento", errorMessage);
-      
-      // Refresh funnel data to ensure consistency
-      await onLeadMove();
-    } finally {
-      setIsMoving(false);
     }
-  };
+    
+    // Chiamata API per lo spostamento effettivo
+    const response = await axios.post(
+      `${API_BASE_URL}/api/sales-funnel/move`,
+      {
+        leadId: lead._id,
+        leadType: lead.type,
+        fromStage: actualFromStage, // Usa lo stato effettivo del database
+        toStage: actualToStage,     // Usa lo stato mappato per la destinazione
+        originalFromStage: fromStage, // Invia anche lo stato originale per riferimento
+        originalToStage: toStage      // Invia anche lo stato destinazione originale
+      },
+      { withCredentials: true }
+    );
+    
+    // Se la chiamata API è riuscita, aggiorna i dati del funnel
+    if (response.data.success) {
+      // Aggiorna dati funnel tramite callback
+      await onLeadMove();
+      
+      toast("success", "Lead spostato", `Lead spostato con successo in ${toStage}`);
+    } else {
+      throw new Error(response.data.message || "Errore durante lo spostamento del lead");
+    }
+  } catch (error) {
+    console.error("Error during lead move:", error);
+    
+    // Ripristina lo stato precedente in caso di errore
+    handleUndoMoveWithLead(lead, toStage, fromStage);
+    
+    // Estrai il messaggio di errore per il feedback all'utente
+    let errorMessage = "Si è verificato un errore durante lo spostamento del lead";
+    if (axios.isAxiosError(error) && error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    }
+    
+    toast("error", "Errore spostamento", errorMessage);
+    
+    // Aggiorna i dati del funnel per garantire la coerenza
+    await onLeadMove();
+  } finally {
+    setIsMoving(false);
+  }
+};
 
   // Handle confirming the lead move after showing the modal
   const handleConfirmMove = async () => {
