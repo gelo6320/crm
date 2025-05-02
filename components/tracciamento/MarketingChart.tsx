@@ -40,18 +40,94 @@ interface MarketingChartProps {
 export default function MarketingChart({ data, isLoading, timeRange }: MarketingChartProps) {
   const [activeMetric, setActiveMetric] = useState<'all' | 'leads' | 'conversions' | 'roas'>('all');
   const [chartOptions, setChartOptions] = useState<ChartOptions<'line'>>({});
+  const [processedData, setProcessedData] = useState<{
+    dates: string[];
+    leads: number[];
+    conversions: number[];
+    roas: number[];
+  }>({ dates: [], leads: [], conversions: [], roas: [] });
+  
+  // Elabora i dati in base al timeRange
+  useEffect(() => {
+    if (!data || !data.dates || data.dates.length === 0) {
+      return;
+    }
+    
+    let processedDates: string[] = [];
+    let processedLeads: number[] = [];
+    let processedConversions: number[] = [];
+    let processedRoas: number[] = [];
+    
+    if (timeRange === '7d') {
+      // Per 7 giorni, usa i dati giornalieri originali
+      processedDates = [...data.dates];
+      processedLeads = [...data.leads];
+      processedConversions = [...data.conversions];
+      processedRoas = [...data.roas];
+    } else {
+      // Per 30 o 90 giorni, aggrega i dati settimanalmente
+      const numDays = data.dates.length;
+      const weeklyData: {
+        dates: string[];
+        leads: number[];
+        conversions: number[];
+        roas: number[];
+      } = { dates: [], leads: [], conversions: [], roas: [] };
+      
+      // Calcola il numero di giorni per settimana e aggrega
+      const daysPerWeek = 7;
+      for (let i = 0; i < numDays; i += daysPerWeek) {
+        // Usa l'ultimo giorno della settimana come etichetta
+        const endIndex = Math.min(i + daysPerWeek - 1, numDays - 1);
+        const dateLabel = data.dates[endIndex];
+        weeklyData.dates.push(dateLabel);
+        
+        // Calcola la media dei valori per la settimana
+        let weekLeads = 0;
+        let weekConversions = 0;
+        let weekRoas = 0;
+        let daysInThisWeek = 0;
+        
+        for (let j = i; j <= endIndex; j++) {
+          weekLeads += data.leads[j];
+          weekConversions += data.conversions[j];
+          weekRoas += data.roas[j];
+          daysInThisWeek++;
+        }
+        
+        // Salva i totali settimanali
+        weeklyData.leads.push(weekLeads);
+        weeklyData.conversions.push(weekConversions);
+        weeklyData.roas.push(Number((weekRoas / daysInThisWeek).toFixed(2))); // Media ROAS
+      }
+      
+      processedDates = weeklyData.dates;
+      processedLeads = weeklyData.leads;
+      processedConversions = weeklyData.conversions;
+      processedRoas = weeklyData.roas;
+    }
+    
+    setProcessedData({
+      dates: processedDates,
+      leads: processedLeads,
+      conversions: processedConversions,
+      roas: processedRoas
+    });
+  }, [data, timeRange]);
   
   // Calcola i valori massimi per la scala y
   useEffect(() => {
-    // Trova il valore massimo delle serie di dati
-    const maxLeads = Math.max(...data.leads);
-    const maxConversions = Math.max(...data.conversions);
-    const maxRoas = Math.max(...data.roas);
+    if (processedData.dates.length === 0) return;
     
-    // Aggiungi un 20% in più per lo spazio
-    const yMaxLeads = Math.ceil(maxLeads * 1.2);
-    const yMaxConversions = Math.ceil(maxConversions * 1.2);
-    const yMaxRoas = Math.ceil(maxRoas * 1.2);
+    // Trova il valore massimo delle serie di dati
+    const maxLeads = Math.max(...processedData.leads);
+    const maxConversions = Math.max(...processedData.conversions);
+    const maxRoas = Math.max(...processedData.roas);
+    
+    // Aggiungi un 40% in più per lo spazio (aumentato dal 20%)
+    const yMaxLeads = Math.ceil(maxLeads * 1.4);
+    const yMaxConversions = Math.ceil(maxConversions * 1.4);
+    const yMaxRoas = Math.ceil(maxRoas * 1.4);
     
     // Configura le opzioni in base al timeRange
     let xAxisConfig = {};
@@ -67,27 +143,11 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           }
         }
       };
-    } else if (timeRange === '30d') {
-      // Base settimanale per 30 giorni
+    } else if (timeRange === '30d' || timeRange === '90d') {
+      // Base settimanale per 30 e 90 giorni
       xAxisConfig = {
         type: 'category' as const,
         ticks: {
-          callback: function(val: any, index: number) {
-            // Mostra solo una data ogni 7 giorni (settimanale)
-            return index % 7 === 0 ? data.dates[index] : '';
-          },
-          maxRotation: 0
-        }
-      };
-    } else if (timeRange === '90d') {
-      // Base settimanale per 90 giorni
-      xAxisConfig = {
-        type: 'category' as const,
-        ticks: {
-          callback: function(val: any, index: number) {
-            // Mostra solo una data ogni 7 giorni (settimanale)
-            return index % 7 === 0 ? data.dates[index] : '';
-          },
           maxRotation: 0
         }
       };
@@ -103,8 +163,8 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       },
       elements: {
         point: {
-          radius: 2, // Punti più piccoli per un aspetto più pulito
-          hoverRadius: 5,
+          radius: 3, // Punti leggermente più grandi
+          hoverRadius: 6,
         },
         line: {
           borderWidth: 2
@@ -112,7 +172,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       },
       layout: {
         padding: {
-          top: 10, 
+          top: 20, // Aumento del padding superiore
           right: 20, 
           bottom: 0, 
           left: 0
@@ -128,7 +188,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
             color: 'rgba(255, 255, 255, 0.7)',
             autoSkip: false,
             font: {
-              size: 9
+              size: 10
             }
           }
         },
@@ -196,16 +256,23 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
                 if (label.includes('ROAS')) {
                   label += context.parsed.y.toFixed(2) + 'x';
                 } else {
-                  label += context.parsed.y;
+                  label += context.parsed.y.toLocaleString();
                 }
               }
               return label;
+            },
+            title: function(tooltipItems) {
+              // Formatta la data in base al timeRange
+              if (timeRange === '30d' || timeRange === '90d') {
+                return 'Settimana del ' + tooltipItems[0].label;
+              } 
+              return tooltipItems[0].label;
             }
           }
         },
       },
     });
-  }, [data, timeRange, activeMetric]);
+  }, [processedData, timeRange, activeMetric]);
   
   // Se i dati sono ancora in caricamento, mostra un placeholder
   if (isLoading) {
@@ -218,11 +285,11 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
   
   // Configura i dati del grafico in base alla metrica attiva
   const chartData = {
-    labels: data.dates,
+    labels: processedData.dates,
     datasets: [
       ...(activeMetric === 'all' || activeMetric === 'leads' ? [{
         label: 'Lead generati',
-        data: data.leads,
+        data: processedData.leads,
         borderColor: '#3b82f6', // blue-500
         backgroundColor: 'rgba(59, 130, 246, 0.5)',
         yAxisID: 'y',
@@ -232,7 +299,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       
       ...(activeMetric === 'all' || activeMetric === 'conversions' ? [{
         label: 'Conversioni',
-        data: data.conversions,
+        data: processedData.conversions,
         borderColor: '#10b981', // emerald-500
         backgroundColor: 'rgba(16, 185, 129, 0.5)',
         yAxisID: 'y',
@@ -242,7 +309,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       
       ...(activeMetric === 'all' || activeMetric === 'roas' ? [{
         label: 'ROAS',
-        data: data.roas,
+        data: processedData.roas,
         borderColor: '#FF6B00', // primary
         backgroundColor: 'rgba(255, 107, 0, 0.5)',
         yAxisID: 'y1',

@@ -53,6 +53,19 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     }
   };
 
+  // Troncamento di testo con fade
+  const getTruncatedText = (text: string, maxLength: number = 28) => {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    
+    return (
+      <div className="relative">
+        <span className="truncate block w-full">{text}</span>
+        <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-r from-transparent to-zinc-900/30"></div>
+      </div>
+    );
+  };
+
   // Animazioni per framer-motion
   const tableRowVariants = {
     hidden: { opacity: 0, y: 10 },
@@ -114,7 +127,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
       <div className="overflow-x-auto">
         {/* Header row */}
         <div className="min-w-full">
-          <div className="bg-zinc-900 rounded text-xs text-zinc-400 font-medium grid grid-cols-8 gap-2 mb-2 p-3">
+          <div className="bg-zinc-900 rounded sticky top-0 z-10 text-xs text-zinc-400 font-medium grid grid-cols-8 gap-2 mb-2 p-3">
             <div className="col-span-2">CAMPAGNA</div>
             <div className="text-right">SPESA</div>
             <div className="text-right">LEAD</div>
@@ -154,8 +167,10 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                       >
                         <ChevronRight size={18} />
                       </motion.span>
-                      <div className="flex flex-col">
-                        <span className="font-medium truncate">{campaign.name}</span>
+                      <div className="flex flex-col max-w-[260px] overflow-hidden">
+                        <div className="font-medium">
+                          {getTruncatedText(campaign.name, 30)}
+                        </div>
                         <span className={`text-xs ${getStatusClass(campaign.status)}`}>
                           {campaign.status} · Budget: {formatCurrency(campaign.dailyBudget)}/giorno
                         </span>
@@ -192,7 +207,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                       >
                         <div className="pl-8 pr-4 py-3 space-y-2">
                           {/* AdSet header */}
-                          <div className="bg-zinc-800/80 rounded text-xs text-zinc-400 font-medium grid grid-cols-8 gap-2 mb-2 p-2">
+                          <div className="bg-zinc-800/80 rounded sticky top-0 z-10 text-xs text-zinc-400 font-medium grid grid-cols-8 gap-2 mb-2 p-2">
                             <div className="col-span-2">AD SET</div>
                             <div className="text-right">SPESA</div>
                             <div className="text-right">LEAD</div>
@@ -220,8 +235,10 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                     >
                                       <ChevronRight size={16} />
                                     </motion.span>
-                                    <div className="flex flex-col">
-                                      <span className="truncate text-sm">{adSet.name}</span>
+                                    <div className="flex flex-col max-w-[240px] overflow-hidden">
+                                      <div className="truncate relative text-sm">
+                                        {getTruncatedText(adSet.name, 28)}
+                                      </div>
                                       <span className={`text-xs ${getStatusClass(adSet.status)}`}>
                                         {adSet.status}
                                       </span>
@@ -258,7 +275,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                     >
                                       <div className="pl-6 pr-2 py-2 space-y-1">
                                         {/* Ad header */}
-                                        <div className="bg-zinc-700/30 rounded text-xs text-zinc-500 font-medium grid grid-cols-8 gap-2 mb-1 p-2">
+                                        <div className="bg-zinc-700/30 rounded sticky top-0 z-10 text-xs text-zinc-500 font-medium grid grid-cols-8 gap-2 mb-1 p-2">
                                           <div className="col-span-2">ANNUNCIO</div>
                                           <div className="text-right">SPESA</div>
                                           <div className="text-right">LEAD</div>
@@ -274,8 +291,10 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                             key={ad.id}
                                             className="grid grid-cols-8 gap-2 p-2 rounded items-center bg-zinc-700/10 hover:bg-zinc-700/20 transition-colors"
                                           >
-                                            <div className="col-span-2 flex flex-col">
-                                              <span className="truncate text-xs">{ad.name}</span>
+                                            <div className="col-span-2 flex flex-col max-w-[220px] overflow-hidden">
+                                              <div className="truncate relative text-xs">
+                                                {getTruncatedText(ad.name, 26)}
+                                              </div>
                                               <span className={`text-xs ${getStatusClass(ad.status)}`}>
                                                 {ad.status}
                                               </span>
