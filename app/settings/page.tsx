@@ -13,9 +13,10 @@ export default function SettingsPage() {
     apiKeys: {
       facebookAccessToken: "",
       googleApiKey: "",
+      facebookPixelId: "" // Aggiunto questo campo mancante
     },
     webhooks: {
-      callbackUrl: "",
+      callbackUrl: ""
     },
     isDevelopment: false,
   });
@@ -50,19 +51,25 @@ export default function SettingsPage() {
     // Gestisci campi nidificati (es. apiKeys.facebookAccessToken)
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
-      setSettings(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: type === "checkbox" ? checked : value
-        }
-      }));
+      
+      // Utilizziamo un tipizzazione sicura verificando che parent sia una chiave valida di UserSettings
+      if (parent === 'apiKeys' || parent === 'webhooks') {
+        setSettings(prev => ({
+          ...prev,
+          [parent]: {
+            ...prev[parent],
+            [child]: type === "checkbox" ? checked : value
+          }
+        }));
+      }
     } else {
-      // Gestisci campi normali
-      setSettings(prev => ({
-        ...prev,
-        [name]: type === "checkbox" ? checked : value
-      }));
+      // Gestisci campi normali utilizzando tipizzazione specifica
+      if (name === 'mongoDbUri') {
+        setSettings(prev => ({ ...prev, mongoDbUri: value }));
+      } else if (name === 'isDevelopment') {
+        setSettings(prev => ({ ...prev, isDevelopment: checked || false }));
+      }
+      // Aggiungi altri campi diretti se necessario
     }
   };
   
@@ -159,6 +166,30 @@ export default function SettingsPage() {
               </div>
               <p className="mt-1 text-xs text-zinc-400">
                 Token di accesso a Facebook Conversion API
+              </p>
+            </div>
+            
+            {/* Facebook Pixel ID */}
+            <div>
+              <label htmlFor="apiKeys.facebookPixelId" className="block text-sm font-medium mb-1">
+                Facebook Pixel ID
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Key size={16} className="text-zinc-500" />
+                </div>
+                <input
+                  type="text"
+                  id="apiKeys.facebookPixelId"
+                  name="apiKeys.facebookPixelId"
+                  value={settings.apiKeys?.facebookPixelId || ""}
+                  onChange={handleChange}
+                  className="input w-full pl-10"
+                  placeholder="123456789012345"
+                />
+              </div>
+              <p className="mt-1 text-xs text-zinc-400">
+                ID del Pixel Facebook
               </p>
             </div>
             
