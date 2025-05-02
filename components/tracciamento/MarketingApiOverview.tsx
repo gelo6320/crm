@@ -48,7 +48,6 @@ export default function MarketingApiOverview() {
       transition={{ duration: 0.3 }}
     >
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-medium">Facebook Marketing API</h2>
         
         <div className="flex space-x-2">
           {/* Filtro intervallo di tempo */}

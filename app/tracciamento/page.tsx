@@ -224,11 +224,6 @@ export default function TracciamentoPage() {
     <div className="space-y-4 animate-fade-in">
       {/* Header con titolo e controlli */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-lg font-medium flex items-center">
-          <ChartBar className="mr-2" size={20} />
-          Tracciamento
-        </h1>
-        
         <div className="flex items-center gap-2">
           {activeTab === 'landing-pages' && (
             <>

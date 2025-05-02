@@ -63,7 +63,6 @@ export default function SalesFunnelPage() {
       
       <div className="space-y-4 animate-fade-in">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-medium">Sales Funnel</h1>
           <button 
             onClick={loadFunnelData}
             className="btn btn-outline p-1.5"
