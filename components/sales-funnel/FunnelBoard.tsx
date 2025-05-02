@@ -535,9 +535,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       
       <div
         ref={boardRef}
-        className={`funnel-board-container w-full overflow-x-auto ${
-          isScrolling ? `scrolling-${isScrolling}` : ""
-        }`}
+        className="funnel-board-container w-full overflow-x-auto"
         id="funnel-board-container"
       >
         <div className="funnel-board min-w-max flex gap-4 p-2">

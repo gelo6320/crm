@@ -37,34 +37,7 @@
   background: #FF6B00;
 }
 
-/* Visual indicator for auto-scroll zone */
-.funnel-board-container::before,
-.funnel-board-container::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 60px;
-  pointer-events: none;
-  z-index: 10;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.funnel-board-container::before {
-  left: 0;
-  background: linear-gradient(to right, rgba(255, 107, 0, 0.1), transparent);
-}
-
-.funnel-board-container::after {
-  right: 0;
-  background: linear-gradient(to left, rgba(255, 107, 0, 0.1), transparent);
-}
-
-.funnel-board-container.scrolling-left::before,
-.funnel-board-container.scrolling-right::after {
-  opacity: 1;
-}
+/* Removed visual auto-scroll indicators */
 
 /* Improved style for card during dragging */
 .funnel-card {
@@ -184,8 +157,6 @@ html.has-touch .funnel-card {
   height: 600px;
   transition: all 0.2s ease;
 }
-
-/* Continuation of improved CSS for react-dnd */
 
 .funnel-header {
   padding: 12px;
@@ -382,3 +353,11 @@ html.has-touch .funnel-card {
 .funnel-card.status-proposal { border-left-color: #FF8C38; }
 .funnel-card.status-customer { border-left-color: #27ae60; }
 .funnel-card.status-lost { border-left-color: #e74c3c; }
+
+.bg-zinc-700 { background-color: #3f3f46; }
+.bg-info { background-color: #3498db; }
+.bg-primary { background-color: #FF6B00; }
+.bg-warning { background-color: #e67e22; }
+.bg-primary-hover { background-color: #FF8C38; }
+.bg-success { background-color: #27ae60; }
+.bg-danger { background-color: #e74c3c; }

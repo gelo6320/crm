@@ -57,7 +57,15 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     
     // Apply scale for touch devices to make preview larger & more visible
     const scale = isTouch ? 1.1 : 1;
-    const transform = `translate(${x}px, ${y}px) scale(${scale})`;
+    
+    // Apply constraints to keep the preview within the viewport
+    const windowWidth = window.innerWidth;
+    const previewWidth = 250; // Our fixed preview width
+    
+    // Constrain X to ensure the preview doesn't go off-screen
+    const constrainedX = Math.max(0, Math.min(windowWidth - previewWidth, x));
+    
+    const transform = `translate(${constrainedX}px, ${y}px) scale(${scale})`;
     
     return {
       transform,
