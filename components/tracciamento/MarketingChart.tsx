@@ -436,7 +436,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       transition={{ duration: 0.3 }}
     >
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <h3 className="text-lg font-medium mb-4 md:mb-0">Andamento campagne Facebook</h3>
+        <h3 className="text-lg font-medium mb-4 md:mb-0">Panoramica</h3>
         
         <div className="flex flex-wrap gap-2">
           {['performance', 'all', 'leads', 'conversions', 'roas'].map((metric) => (

@@ -271,11 +271,6 @@ export default function Dashboard() {
     <div className="space-y-3 sm:space-y-6 animate-fade-in">
       {/* Header with notifications count */}
       <div className="flex items-center justify-between mb-2 sm:mb-4">
-        <h1 className="text-base sm:text-lg font-medium flex items-center">
-          <BarChart size={isMobile ? 16 : 20} className="mr-1.5 sm:mr-2 text-primary" />
-          Dashboard
-        </h1>
-        
         <div className="flex items-center space-x-2 sm:space-x-3">
           <div className="relative">
             <button className="btn btn-outline inline-flex items-center justify-center p-1.5 sm:p-2 relative">

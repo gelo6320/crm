@@ -383,11 +383,6 @@ export default function ContactsPage() {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-lg font-medium flex items-center">
-          <Users className="mr-2" size={20} />
-          Tutti i Contatti
-        </h1>
-        
         <div className="flex items-center gap-2">
           {/* Barra di ricerca */}
           <form onSubmit={handleSearch} className="relative">

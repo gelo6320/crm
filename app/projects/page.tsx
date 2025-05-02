@@ -133,9 +133,7 @@ export default function ProjectsPage() {
   
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <h1 className="text-lg font-medium">Progetti e Cantieri</h1>
-        
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">    
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           {/* Ricerca */}
           <form onSubmit={handleSearch} className="relative flex-1 sm:max-w-xs">

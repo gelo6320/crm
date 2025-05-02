@@ -146,7 +146,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     return (
       <div className="bg-zinc-800 rounded-lg p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-medium">Campagne Facebook</h3>
+          <h3 className="text-lg font-medium">Dati</h3>
         </div>
         <div className="overflow-x-auto">
           <div className="h-12 bg-zinc-700/50 rounded animate-pulse mb-4"></div>
@@ -166,7 +166,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
       transition={{ duration: 0.3, delay: 0.1 }}
     >
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-medium">Campagne Facebook</h3>
+        <h3 className="text-lg font-medium">Dati</h3>
         <span className="text-sm text-zinc-400">{campaigns.length} campagne attive</span>
       </div>
 

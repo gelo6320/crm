@@ -49,7 +49,6 @@ export default function MySitesPage() {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-medium">I tuoi siti</h1>
         <div className="flex items-center space-x-2">
           <button 
             onClick={handleRefresh}

@@ -90,10 +90,10 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
     // Common links for all users (excluding contacts)
     const commonLinks: SidebarLink[] = [
       { name: "Dashboard", href: "/", icon: BarChart3 },
+      { name: "Tracciamento", href: "/tracciamento", icon: LineChart },
+      { name: "Sales Funnel", href: "/sales-funnel", icon: Users },
       { name: "Calendario", href: "/calendar", icon: Calendar },
       { name: "Eventi Facebook", href: "/events", icon: Share2 },
-      { name: "Sales Funnel", href: "/sales-funnel", icon: Users },
-      { name: "Tracciamento", href: "/tracciamento", icon: LineChart },
       { name: "I tuoi siti", href: "/my-sites", icon: Globe },
       { name: "Progetti", href: "/projects", icon: ConstructionIcon },
     ];

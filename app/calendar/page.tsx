@@ -223,11 +223,6 @@ export default function CalendarPage() {
     style={{ WebkitTouchCallout: "none" }}
     >
       <div className="flex flex-col space-y-2 mb-2 sm:space-y-0 sm:mb-2 sm:flex-row sm:justify-between sm:items-center">
-        <h1 className="text-base sm:text-lg font-medium flex items-center">
-          <CalendarIcon className="mr-1.5 sm:mr-2" size={isMobile ? 16 : 20} />
-          {isMobile ? formatDayTitle(selectedDate) : "Calendario"}
-        </h1>
-        
         <div className="flex items-center justify-between sm:justify-end">
           {/* Mobile navigation for list view */}
           {isMobile && (
