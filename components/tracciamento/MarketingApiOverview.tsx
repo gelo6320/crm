@@ -11,7 +11,7 @@ export default function MarketingApiOverview() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoadingOverview, setIsLoadingOverview] = useState(true);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(true);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('7d'); // Impostato a '7d' come predefinito
   
   // Carica i dati all'avvio e quando cambia l'intervallo di tempo
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function MarketingApiOverview() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl font-medium">Facebook Marketing API</h2>
         
         <div className="flex space-x-2">
@@ -70,6 +70,7 @@ export default function MarketingApiOverview() {
             onClick={loadMarketingData}
             className="btn btn-outline p-1.5"
             disabled={isLoadingOverview || isLoadingCampaigns}
+            aria-label="Aggiorna dati"
           >
             <RefreshCw size={16} className={isLoadingOverview || isLoadingCampaigns ? "animate-spin" : ""} />
           </button>
