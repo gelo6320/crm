@@ -167,9 +167,19 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       
       const currentStatus = checkResponse.data?.status || fromStage;
       
+      // For bookings, we need to map the status
+      let mappedCurrentStatus = currentStatus;
+      if (lead.type === 'booking') {
+        // Map the booking status to funnel status
+        if (currentStatus === 'pending') mappedCurrentStatus = 'new';
+        else if (currentStatus === 'confirmed') mappedCurrentStatus = 'contacted';
+        else if (currentStatus === 'completed') mappedCurrentStatus = 'qualified';
+        else if (currentStatus === 'cancelled') mappedCurrentStatus = 'lost';
+      }
+      
       // Only proceed if the current status matches our expected fromStage
-      if (currentStatus !== fromStage) {
-        console.warn(`Status mismatch: expected ${fromStage}, got ${currentStatus}`);
+      if (mappedCurrentStatus !== fromStage) {
+        console.warn(`Status mismatch: expected ${fromStage}, got ${currentStatus} (mapped to ${mappedCurrentStatus})`);
         
         // Refresh funnel data to sync with server
         await onLeadMove();
