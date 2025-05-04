@@ -1,6 +1,6 @@
 // components/tracciamento/flow-nodes/ActionNode.tsx
 import { Handle, Position } from 'reactflow';
-import { MousePointer, ArrowUp, FileText } from 'lucide-react';
+import { MousePointer, ArrowUp, FileText, Mail } from 'lucide-react';
 
 interface ActionNodeProps {
   data: {
@@ -14,6 +14,9 @@ interface ActionNodeProps {
 }
 
 export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
+  // Log per debug (rimuovere in produzione)
+  // console.log("ActionNode - dati ricevuti:", data.detail);
+  
   const getActionIcon = () => {
     switch (data.detail.type) {
       case 'click':
@@ -27,6 +30,14 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
         if (data.detail.type === 'event' && data.detail.data?.name === 'generic_click') {
           return <MousePointer size={14} className="mr-2 text-info" />;
         }
+        // Per eventi con fieldName = email
+        if (data.detail.type === 'event' && data.detail.data?.fieldName === 'email') {
+          return <Mail size={14} className="mr-2 text-info" />;
+        }
+        // Per eventi con tagName (probabilmente click)
+        if (data.detail.type === 'event' && data.detail.data?.tagName) {
+          return <MousePointer size={14} className="mr-2 text-info" />;
+        }
         return <MousePointer size={14} className="mr-2 text-info" />;
     }
   };
@@ -35,6 +46,16 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
     // Gestisci l'evento generic_click
     if (data.detail.type === 'event' && data.detail.data?.name === 'generic_click') {
       return 'Click Generico';
+    }
+    
+    // Gestisci eventi con dati di click
+    if (data.detail.type === 'event' && data.detail.data?.tagName) {
+      return `Click ${data.detail.data.tagName}`;
+    }
+    
+    // Gestisci eventi con fieldName = email
+    if (data.detail.type === 'event' && data.detail.data?.fieldName === 'email') {
+      return 'Email Compilata';
     }
     
     if (data.detail.type === 'click') {
@@ -56,12 +77,13 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
   // Ottieni l'etichetta principale (seconda riga del label)
   const mainLabel = data.label.split('\n')[1] || data.label;
 
-  // Verifica se abbiamo un evento di tipo generic_click
-  const isGenericClick = data.detail.type === 'event' && data.detail.data?.name === 'generic_click';
+  // Verifica se abbiamo un evento di tipo click (in vari formati)
+  const isGenericClick = data.detail.type === 'event' && 
+    (data.detail.data?.name === 'generic_click' || data.detail.data?.tagName);
   
-  // Estrai le informazioni dal eventData per gli eventi generic_click
-  const clickEventData = isGenericClick ? data.detail.data?.eventData || {} : {};
-
+  // Verifica se è un evento di compilazione email
+  const isEmailField = data.detail.type === 'event' && data.detail.data?.fieldName === 'email';
+  
   return (
     <div className="p-3 rounded-md min-w-[200px] bg-info/20 border border-info text-white">
       <Handle
@@ -83,26 +105,51 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
       {/* Visualizzazione per click generici */}
       {isGenericClick && (
         <>
-          {clickEventData.tagName && (
+          {data.detail.data?.tagName && (
             <div className="text-xs text-white mt-1">
-              Tag: {clickEventData.tagName}
+              Tag: {data.detail.data.tagName}
             </div>
           )}
-          {clickEventData.id && (
-            <div className="text-xs text-white mt-1 truncate" title={clickEventData.id}>
-              ID: {clickEventData.id}
+          {data.detail.data?.id && (
+            <div className="text-xs text-white mt-1 truncate" title={data.detail.data.id}>
+              ID: {data.detail.data.id}
             </div>
           )}
-          {clickEventData.text && (
-            <div className="text-xs text-white mt-1 truncate" title={clickEventData.text}>
-              Testo: {clickEventData.text}
+          {data.detail.data?.text && (
+            <div className="text-xs text-white mt-1 truncate" title={data.detail.data.text}>
+              Testo: {data.detail.data.text}
             </div>
           )}
-          {clickEventData.class && (
-            <div className="text-xs text-white mt-1 truncate" title={clickEventData.class}>
-              Classe: {clickEventData.class.length > 20 
-                ? clickEventData.class.substring(0, 20) + '...' 
-                : clickEventData.class}
+          {data.detail.data?.class && (
+            <div className="text-xs text-white mt-1 truncate" title={data.detail.data.class}>
+              Classe: {data.detail.data.class.length > 20 
+                ? data.detail.data.class.substring(0, 20) + '...' 
+                : data.detail.data.class}
+            </div>
+          )}
+          {/* Mostra posizione click se disponibile */}
+          {data.detail.data?.position && (
+            <div className="text-xs text-white mt-1">
+              Posizione: {data.detail.data.position.x}, {data.detail.data.position.y}
+            </div>
+          )}
+        </>
+      )}
+      
+      {/* Visualizzazione per campi email compilati */}
+      {isEmailField && (
+        <>
+          <div className="text-xs text-white mt-1">
+            Campo: {data.detail.data.fieldName}
+          </div>
+          {data.detail.data?.form && (
+            <div className="text-xs text-white mt-1">
+              Form: {data.detail.data.form}
+            </div>
+          )}
+          {data.detail.data?.url && (
+            <div className="text-xs text-white mt-1 truncate" title={data.detail.data.url}>
+              URL: {data.detail.data.url}
             </div>
           )}
         </>
@@ -117,12 +164,15 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
         </div>
       )}
       
-      {data.detail.type === 'scroll' && data.detail.data?.depth && (
+      {/* Visualizzazione per scroll */}
+      {(data.detail.type === 'scroll' || 
+        (data.detail.type === 'event' && (data.detail.data?.depth !== undefined || data.detail.data?.percent !== undefined))) && (
         <div className="text-xs text-white mt-1">
-          Profondità: {data.detail.data.depth}%
+          Profondità: {data.detail.data?.depth || data.detail.data?.percent || 0}%
         </div>
       )}
       
+      {/* Visualizzazione per form submit */}
       {data.detail.type === 'form_submit' && data.detail.data?.formId && (
         <div className="text-xs text-white mt-1">
           Form ID: {data.detail.data.formId}

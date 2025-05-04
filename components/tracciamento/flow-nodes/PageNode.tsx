@@ -1,21 +1,50 @@
 // components/tracciamento/flow-nodes/PageNode.tsx
 import { Handle, Position } from 'reactflow';
-import { Eye } from 'lucide-react';
+import { Eye, Globe, Link, Calendar } from 'lucide-react';
 
 interface PageNodeProps {
   data: {
     label: string;
     detail: {
-      data: {
-        url: string;
-        title: string;
-      }
+      data: Record<string, any>;
+      timestamp: string;
     }
   };
   isConnectable: boolean;
 }
 
 export default function PageNode({ data, isConnectable }: PageNodeProps) {
+  // Estrai l'URL e il titolo in modo sicuro
+  const url = data.detail.data?.url || '';
+  const title = data.detail.data?.title || 'Pagina senza titolo';
+  const referrer = data.detail.data?.referrer || '';
+  
+  // Estrai il pathname dall'URL in modo sicuro
+  const getPathname = (url: string): string => {
+    try {
+      return new URL(url).pathname;
+    } catch (e) {
+      return url;
+    }
+  };
+  
+  // Crea un'etichetta più compatta per l'URL
+  const displayUrl = url.length > 40 ? url.substring(0, 37) + '...' : url;
+  
+  // Ottieni il tempo formattato
+  const getFormattedTime = (): string => {
+    try {
+      const date = new Date(data.detail.timestamp);
+      return date.toLocaleTimeString('it-IT', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch (e) {
+      return '';
+    }
+  };
+  
   return (
     <div className="p-3 rounded-md min-w-[200px] bg-primary/20 border border-primary text-white">
       <Handle
@@ -30,12 +59,27 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
         <span className="text-xs font-medium text-white">Visualizzazione Pagina</span>
       </div>
       
-      <div className="font-medium text-sm truncate text-white" title={data.label}>
-        {data.label.split('\n')[1] || data.label}
+      <div className="font-medium text-sm truncate text-white" title={title}>
+        {title}
       </div>
       
-      <div className="text-xs text-white mt-1 truncate" title={data.detail.data?.url}>
-        {data.detail.data?.url || 'N/D'}
+      <div className="text-xs text-white mt-1 flex items-center" title={url}>
+        <Globe size={12} className="mr-1 text-zinc-400" />
+        <span className="truncate">{displayUrl}</span>
+      </div>
+      
+      {referrer && (
+        <div className="text-xs text-white mt-1 flex items-center" title={`Referrer: ${referrer}`}>
+          <Link size={12} className="mr-1 text-zinc-400" />
+          <span className="truncate">
+            {referrer.length > 30 ? referrer.substring(0, 27) + '...' : referrer}
+          </span>
+        </div>
+      )}
+      
+      <div className="text-xs text-zinc-400 mt-1 flex items-center">
+        <Calendar size={12} className="mr-1 text-zinc-500" />
+        <span>{getFormattedTime()}</span>
       </div>
       
       <Handle

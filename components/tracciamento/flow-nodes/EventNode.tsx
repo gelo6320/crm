@@ -1,6 +1,6 @@
 // components/tracciamento/flow-nodes/EventNode.tsx
 import { Handle, Position } from 'reactflow';
-import { AlertCircle, Mail, User, Phone, MessageSquare, Tag, DollarSign, FileText, Calendar } from 'lucide-react';
+import { AlertCircle, Mail, User, Phone, MessageSquare, Tag, DollarSign, Calendar } from 'lucide-react';
 
 interface EventNodeProps {
   data: {
@@ -8,6 +8,7 @@ interface EventNodeProps {
     detail: {
       type: string;
       data: any;
+      timestamp: string;
     }
   };
   isConnectable: boolean;
@@ -23,6 +24,12 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
       return `Conversione: ${data.detail.data.conversionType}`;
     }
     
+    // Converisione nel campo name
+    if (data.detail.data?.name && data.detail.data.name.includes('conversion_')) {
+      const conversionType = data.detail.data.name.replace('conversion_', '');
+      return `Conversione: ${conversionType}`;
+    }
+    
     // Lead acquisition
     if ((data.detail.data?.name && data.detail.data.name.includes('lead_acquisition')) || 
         (data.detail.data?.formType)) {
@@ -30,11 +37,8 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
     }
     
     // Conversione generica
-    if ((data.detail.data?.name && data.detail.data.name.includes('conversion')) || 
-        data.detail.data?.category === 'conversion') {
-      const eventName = data.detail.data.name || '';
-      const conversionType = eventName.replace('conversion_', '');
-      return `Conversione: ${conversionType || 'standard'}`;
+    if (data.detail.data?.category === 'conversion') {
+      return 'Conversione';
     }
     
     return 'Evento di Conversione';
@@ -52,6 +56,20 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
     data.detail.data?.conversionType || 
     (data.detail.data?.name && data.detail.data.name.includes('conversion')) ||
     data.detail.data?.category === 'conversion';
+  
+  // Ottieni la data formattata
+  const getFormattedTime = () => {
+    try {
+      const date = new Date(data.detail.timestamp);
+      return date.toLocaleTimeString('it-IT', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch (e) {
+      return '';
+    }
+  };
   
   return (
     <div className="p-3 rounded-md min-w-[200px] bg-danger/20 border border-danger text-white">
@@ -91,20 +109,14 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
           )}
           
           {/* Valore della conversione */}
-          {data.detail.data?.value !== undefined && (
+          {(data.detail.data?.value !== undefined) && (
             <div className="text-xs text-white mt-1 truncate flex items-center">
               <DollarSign size={12} className="mr-1" />
-              <span>Valore: {typeof data.detail.data.value === 'object' 
-                ? (data.detail.data.value.$numberInt || data.detail.data.value) 
+              <span>Valore: {typeof data.detail.data.value === 'object' && data.detail.data.value !== null
+                ? ('$numberInt' in data.detail.data.value 
+                   ? (data.detail.data.value as any).$numberInt 
+                   : data.detail.data.value)
                 : data.detail.data.value}</span>
-            </div>
-          )}
-          
-          {/* Timestamp della conversione se diverso dall'evento */}
-          {data.detail.data?.timestamp && (
-            <div className="text-xs text-white mt-1 truncate flex items-center">
-              <Calendar size={12} className="mr-1" />
-              <span>{new Date(data.detail.data.timestamp).toLocaleTimeString()}</span>
             </div>
           )}
         </>
@@ -116,7 +128,7 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
           {/* Tipo di form */}
           {data.detail.data?.formType && (
             <div className="text-xs text-white mt-1 truncate flex items-center">
-              <FileText size={12} className="mr-1" />
+              <Tag size={12} className="mr-1" />
               <span>Form: {data.detail.data.formType}</span>
             </div>
           )}
@@ -172,6 +184,12 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
           )}
         </>
       )}
+      
+      {/* Timestamp */}
+      <div className="text-xs text-zinc-400 mt-1 flex items-center">
+        <Calendar size={12} className="mr-1 text-zinc-500" />
+        <span>{getFormattedTime()}</span>
+      </div>
       
       <Handle
         type="source"
