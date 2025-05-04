@@ -1,6 +1,6 @@
 // components/tracciamento/flow-nodes/EventNode.tsx
 import { Handle, Position } from 'reactflow';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Mail, User, Phone, MessageSquare } from 'lucide-react';
 
 interface EventNodeProps {
   data: {
@@ -10,7 +10,8 @@ interface EventNodeProps {
         name: string;
         value?: string | number;
         category?: string;
-        type?: string; // Aggiungiamo la proprietà type come opzionale
+        type?: string;
+        eventData?: Record<string, any>;
       }
     }
   };
@@ -23,17 +24,30 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
     if (data.detail.data?.name?.includes('exit_intent')) {
       return 'Exit Intent';
     }
+    
     if (data.detail.data?.name?.includes('conversion')) {
-      // Verifichiamo se type esiste prima di usarlo
-      const conversionType = data.detail.data.type || '';
-      return `Conversione: ${conversionType}`;
+      // Verifichiamo se eventData.conversionType esiste prima di usarlo
+      const conversionType = data.detail.data.eventData?.conversionType || data.detail.data.type || '';
+      return `Conversione: ${conversionType || 'contatto'}`;
     }
+    
+    if (data.detail.data?.name?.includes('lead_acquisition')) {
+      return 'Acquisizione Lead';
+    }
+    
     return 'Evento di Conversione';
   };
   
   // Ottieni l'etichetta principale (seconda riga del label)
   const mainLabel = data.label.split('\n')[1] || data.label;
-
+  
+  // Estrai eventData per gli eventi di conversione
+  const eventData = data.detail.data?.eventData || {};
+  
+  // Determina il tipo di conversione
+  const isLeadAcquisition = data.detail.data?.name?.includes('lead_acquisition');
+  const isFormConversion = data.detail.data?.name?.includes('conversion');
+  
   return (
     <div className="p-3 rounded-md min-w-[200px] bg-danger/20 border border-danger text-white">
       <Handle
@@ -58,10 +72,57 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
         </div>
       )}
       
-      {data.detail.data?.value && (
-        <div className="text-xs text-white mt-1 truncate">
-          Valore: {data.detail.data.value}
-        </div>
+      {/* Visualizzazione per conversione standard */}
+      {isFormConversion && (
+        <>
+          {eventData.conversionType && (
+            <div className="text-xs text-white mt-1 truncate">
+              Tipo: {eventData.conversionType}
+            </div>
+          )}
+          {eventData.value !== undefined && (
+            <div className="text-xs text-white mt-1 truncate">
+              Valore: {eventData.value}
+            </div>
+          )}
+        </>
+      )}
+      
+      {/* Visualizzazione specifica per lead acquisition */}
+      {isLeadAcquisition && (
+        <>
+          {eventData.formType && (
+            <div className="text-xs text-white mt-1 truncate">
+              Form: {eventData.formType}
+            </div>
+          )}
+          {eventData.firstName && (
+            <div className="text-xs text-white mt-1 flex items-center">
+              <User size={12} className="mr-1" />
+              <span className="truncate">
+                {eventData.firstName} {eventData.lastName || ''}
+              </span>
+            </div>
+          )}
+          {eventData.email && (
+            <div className="text-xs text-white mt-1 flex items-center">
+              <Mail size={12} className="mr-1" />
+              <span className="truncate">{typeof eventData.email === 'string' && eventData.email.length > 20 ? 'Email presente' : eventData.email}</span>
+            </div>
+          )}
+          {eventData.phone && (
+            <div className="text-xs text-white mt-1 flex items-center">
+              <Phone size={12} className="mr-1" />
+              <span className="truncate">{eventData.phone}</span>
+            </div>
+          )}
+          {eventData.formData?.message && (
+            <div className="text-xs text-white mt-1 flex items-center">
+              <MessageSquare size={12} className="mr-1" />
+              <span className="truncate">{eventData.formData.message.length > 15 ? 'Messaggio presente' : eventData.formData.message}</span>
+            </div>
+          )}
+        </>
       )}
       
       <Handle
