@@ -28,6 +28,7 @@ import { ArrowLeft, ZoomIn, ZoomOut, MousePointer, Info, AlertCircle, Eye, Arrow
 import PageNode from './flow-nodes/PageNode';
 import ActionNode from './flow-nodes/ActionNode';
 import EventNode from './flow-nodes/EventNode';
+import NavigationNode from './flow-nodes/NavigationNode';
 
 interface SessionFlowProps {
   sessionDetails: SessionDetail[];
@@ -41,6 +42,7 @@ const nodeTypes = {
   pageNode: PageNode,
   actionNode: ActionNode,
   eventNode: EventNode,
+  navigationNode: NavigationNode, // Aggiungi il nuovo tipo
 };
 
 export default function SessionFlow({
@@ -91,20 +93,32 @@ export default function SessionFlow({
     });
     
     sessionDetails.forEach((detail, index) => {
-
       let nodeType = 'actionNode';
       let nodeBackground = '#3498db'; // Default blu
       let nodeBorder = '1px solid #1e6091';
       let nodeTextColor = 'white';
       
+      // Determina il tipo di nodo in base al tipo di evento
       if (detail.type === 'page_view') {
         nodeType = 'pageNode';
         nodeBackground = '#FF6B00'; // Primario
         nodeBorder = '1px solid #d05600';
-      } else if (detail.type === 'event') {
+      } else if (detail.type === 'event' && 
+        (detail.data?.category === 'conversion' || detail.data?.name?.includes('conversion'))) {
         nodeType = 'eventNode';
         nodeBackground = '#e74c3c'; // Rosso per eventi di conversione
         nodeBorder = '1px solid #c0392b';
+      } else if (
+        detail.type === 'scroll' || 
+        detail.type === 'time_on_page' || 
+        detail.type === 'exit_intent' ||
+        (detail.type === 'event' && detail.data?.category === 'navigation') ||
+        (detail.type === 'event' && detail.data?.name?.includes('exit_intent'))
+      ) {
+        // Eventi di navigazione
+        nodeType = 'navigationNode';
+        nodeBackground = '#2ecc71'; // Verde per eventi di navigazione
+        nodeBorder = '1px solid #27ae60';
       }
       
       // Crea il nodo
@@ -213,7 +227,13 @@ export default function SessionFlow({
         
         case 'scroll':
           const direction = detail.data?.direction === 'up' ? 'verso l\'alto' : 'verso il basso';
-          return `Scroll Pagina ${direction}\nProfondità: ${detail.data?.depth || '?'}%`;
+          return `Navigazione: Scroll ${direction}\nProfondità: ${detail.data?.depth || '?'}%`;
+        
+        case 'time_on_page':
+          return `Navigazione: Tempo sulla Pagina\nDurata: ${formatTime(detail.data?.duration || 0)}`;
+          
+        case 'exit_intent':
+          return `Navigazione: Exit Intent\nUtente in uscita`;
         
         case 'form_submit':
           if (detail.data?.formId) {
@@ -223,9 +243,11 @@ export default function SessionFlow({
         
         case 'event':
           // Migliora le informazioni sugli eventi di conversione
-          if (detail.data?.name?.includes('exit_intent')) {
-            return `Exit Intent\nUtente in uscita`;
-          } else if (detail.data?.name?.includes('conversion')) {
+          if (detail.data?.category === 'navigation') {
+            return `Navigazione\n${detail.data.name || 'Interazione pagina'}`;
+          } else if (detail.data?.name?.includes('exit_intent')) {
+            return `Navigazione: Exit Intent\nUtente in uscita`;
+          } else if (detail.data?.name?.includes('conversion') || detail.data?.category === 'conversion') {
             const conversionType = detail.data.type || '';
             if (conversionType) {
               return `Conversione\n${conversionType}`;
@@ -405,6 +427,8 @@ export default function SessionFlow({
                       return '#FF6B00';
                     case 'eventNode':
                       return '#e74c3c';
+                    case 'navigationNode':
+                      return '#2ecc71';
                     default:
                       return '#3498db';
                   }
@@ -440,6 +464,10 @@ export default function SessionFlow({
                   <div className="flex items-center">
                     <div className="w-3 h-3 rounded-full bg-info mr-2"></div>
                     <span className="text-xs">Interazione</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full bg-success mr-2"></div>
+                    <span className="text-xs">Navigazione</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-3 h-3 rounded-full bg-danger mr-2"></div>

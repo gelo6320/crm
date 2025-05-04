@@ -95,15 +95,21 @@ export async function fetchSessions(
   }
 }
 
+
 /**
  * Recupera i dettagli di una sessione
- * @param sessionId - ID della sessione
+ * @param {string} sessionId - ID della sessione
  */
 export async function fetchSessionDetails(sessionId: string): Promise<SessionDetail[]> {
   try {
     console.log(`Recupero dettagli sessione per ID: ${sessionId}`);
+    
+    // Usa il punto di accesso configurato in CONFIG
     const url = `${CONFIG.api.endpoints.sessionDetails}/${encodeURIComponent(sessionId)}`;
+    
+    // Effettua la chiamata API e restituisci direttamente il risultato
     const result = await trackingApi.get<SessionDetail[]>(url);
+    
     console.log(`Dettagli sessione ricevuti: ${result.length} elementi`);
     return result;
   } catch (error) {

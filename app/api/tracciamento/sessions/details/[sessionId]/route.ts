@@ -9,18 +9,16 @@ import type { NextRequest } from 'next/server';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ sessionId: string }> }
+  { params }: { params: { sessionId: string } }
 ) {
   try {
     // Ottieni l'ID sessione dai parametri dell'URL
-    const paramsData = await params;
-    const sessionId = paramsData.sessionId;
+    const sessionId = params.sessionId;
     
-    // In un'implementazione reale, qui ci sarebbe la logica per recuperare i dati dal database
-    // Per ora restituiamo dati mockati
+    console.log(`Recupero dettagli sessione per ID: ${sessionId}`);
     
     // Simula un piccolo ritardo per mostrare il caricamento
-    await new Promise(resolve => setTimeout(resolve, 600));
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     // Genera dettagli sessione di esempio
     const now = Date.now();
@@ -53,7 +51,7 @@ export async function GET(
         }
       },
       
-      // Scroll nella pagina
+      // Scroll nella pagina - MODIFICATO come evento di navigazione
       {
         id: `${sessionId}_detail_2`,
         sessionId: sessionId,
@@ -61,7 +59,20 @@ export async function GET(
         timestamp: new Date(baseTime + 45 * 1000).toISOString(), // +45 secondi
         data: {
           direction: 'down',
-          depth: 35 // percentuale
+          depth: 35, // percentuale
+          category: 'navigation' // Aggiunta categoria
+        }
+      },
+      
+      // Tempo sulla pagina - NUOVO evento di navigazione
+      {
+        id: `${sessionId}_detail_time_1`,
+        sessionId: sessionId,
+        type: 'time_on_page',
+        timestamp: new Date(baseTime + 60 * 1000).toISOString(), // +1 minuto
+        data: {
+          duration: 60, // secondi
+          category: 'navigation'
         }
       },
       
@@ -91,7 +102,7 @@ export async function GET(
         }
       },
       
-      // Altro scroll
+      // Altro scroll - MODIFICATO come evento di navigazione
       {
         id: `${sessionId}_detail_5`,
         sessionId: sessionId,
@@ -99,7 +110,23 @@ export async function GET(
         timestamp: new Date(baseTime + 3 * 60 * 1000).toISOString(), // +3 minuti
         data: {
           direction: 'down',
-          depth: 70
+          depth: 70,
+          category: 'navigation' // Aggiunta categoria
+        }
+      },
+      
+      // Exit intent - NUOVO evento di navigazione
+      {
+        id: `${sessionId}_detail_exit_1`,
+        sessionId: sessionId,
+        type: 'exit_intent',
+        timestamp: new Date(baseTime + 3 * 60 * 1000 + 30 * 1000).toISOString(), // +3 min e 30 sec
+        data: {
+          category: 'navigation',
+          mousePosition: {
+            x: 800,
+            y: 5
+          }
         }
       },
       
@@ -129,7 +156,19 @@ export async function GET(
         }
       },
       
-      // Scroll nella pagina di ristrutturazioni
+      // Altro tempo sulla pagina - NUOVO evento di navigazione
+      {
+        id: `${sessionId}_detail_time_2`,
+        sessionId: sessionId,
+        type: 'time_on_page',
+        timestamp: new Date(baseTime + 4 * 60 * 1000 + 30 * 1000).toISOString(), // +4 min e 30 sec
+        data: {
+          duration: 120, // secondi
+          category: 'navigation'
+        }
+      },
+      
+      // Scroll nella pagina di ristrutturazioni - MODIFICATO come evento di navigazione
       {
         id: `${sessionId}_detail_8`,
         sessionId: sessionId,
@@ -137,7 +176,8 @@ export async function GET(
         timestamp: new Date(baseTime + 5 * 60 * 1000).toISOString(), // +5 minuti
         data: {
           direction: 'down',
-          depth: 65
+          depth: 65,
+          category: 'navigation' // Aggiunta categoria
         }
       },
       
@@ -210,6 +250,9 @@ export async function GET(
     if (sessionId === 'session3') {
       return NextResponse.json(details.slice(0, 5));
     }
+    
+    // Ordina gli eventi cronologicamente per sicurezza
+    details.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     
     return NextResponse.json(details);
   } catch (error) {
