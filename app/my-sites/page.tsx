@@ -48,7 +48,7 @@ export default function MySitesPage() {
   
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-end">
         <div className="flex items-center space-x-2">
           <button 
             onClick={handleRefresh}

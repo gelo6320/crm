@@ -99,8 +99,6 @@ export default function SettingsPage() {
   
   return (
     <div className="max-w-3xl mx-auto animate-fade-in">
-      <h1 className="text-lg font-medium mb-6">Impostazioni CRM</h1>
-      
       <div className="card mb-6">
         <div className="p-4 border-b border-zinc-700">
           <h2 className="text-base font-medium">Configurazione Sistema</h2>
