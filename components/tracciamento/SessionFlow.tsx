@@ -92,14 +92,18 @@ export default function SessionFlow({
       console.log(`Dettaglio ${index}:`, detail);
     });
     
-    // Modifica nel file SessionFlow.tsx all'interno della funzione useEffect
-    // Dove viene definito il tipo di nodo in base al tipo di evento
-    
     sessionDetails.forEach((detail, index) => {
       let nodeType = 'actionNode';
       let nodeBackground = '#3498db'; // Default blu
       let nodeBorder = '1px solid #1e6091';
       let nodeTextColor = 'white';
+    
+      // Debug: log completo di ogni dettaglio
+      console.log(`Processamento nodo ${index}:`, {
+        type: detail.type,
+        eventName: detail.data?.name || detail.data?.eventName,
+        category: detail.data?.category
+      });
     
       // Determina il tipo di nodo in base al tipo di evento
       if (detail.type === 'page_view') {
@@ -107,36 +111,77 @@ export default function SessionFlow({
         nodeBackground = '#FF6B00'; // Primario
         nodeBorder = '1px solid #d05600';
       } 
-      // Identifica correttamente gli eventi di conversione
+      // Eventi di conversione - verifica tutte le possibili strutture
       else if (
+        // Conversioni standard
         (detail.type === 'event' && detail.data?.category === 'conversion') || 
+        // Conversioni specifiche
+        (detail.type === 'event' && detail.data?.conversionType) ||
+        // Nome dell'evento contiene "conversion"
         (detail.type === 'event' && detail.data?.name && 
-          (detail.data.name.includes('conversion') || detail.data.name.includes('lead_acquisition')))
+          (detail.data.name.includes('conversion') || detail.data.name.includes('lead_acquisition'))) ||
+        // Nome dell'evento in eventName contiene "conversion"
+        (detail.type === 'event' && detail.data?.eventName && 
+          (detail.data.eventName.includes('conversion') || detail.data.eventName.includes('lead_acquisition')))
       ) {
         nodeType = 'eventNode';
         nodeBackground = '#e74c3c'; // Rosso per eventi di conversione
         nodeBorder = '1px solid #c0392b';
       }
-      // Identifica correttamente i generic_click come actionNode
-      else if (detail.type === 'event' && detail.data?.name === 'generic_click') {
+      // Eventi di click - verifica tutte le possibili strutture 
+      else if (
+        // Click diretti come tipo
+        detail.type === 'click' ||
+        // Generic click come evento
+        (detail.type === 'event' && detail.data?.name === 'generic_click') ||
+        // Eventi con tagName (probable click)
+        (detail.type === 'event' && detail.data?.tagName) ||
+        // Eventi con campo email compilato
+        (detail.type === 'event' && detail.data?.fieldName === 'email')
+      ) {
         nodeType = 'actionNode';
         nodeBackground = '#3498db'; // Blu per click
         nodeBorder = '1px solid #1e6091';
       }
-      // Gli eventi di navigazione rimangono invariati
+      // Eventi media
+      else if (
+        (detail.type === 'event' && detail.data?.category === 'media') ||
+        (detail.type === 'event' && detail.data?.name && 
+          (detail.data.name.includes('video') || detail.data.name.includes('audio')))
+      ) {
+        nodeType = 'actionNode';
+        nodeBackground = '#9b59b6'; // Viola per media
+        nodeBorder = '1px solid #8e44ad';
+      }
+      // Eventi di form
+      else if (
+        detail.type === 'form_submit' ||
+        (detail.type === 'event' && detail.data?.category === 'form') ||
+        (detail.type === 'event' && detail.data?.name && detail.data.name.includes('form'))
+      ) {
+        nodeType = 'actionNode';
+        nodeBackground = '#f39c12'; // Arancione per form
+        nodeBorder = '1px solid #d35400';
+      }
+      // Gli eventi di navigazione
       else if (
         detail.type === 'scroll' || 
         detail.type === 'time_on_page' || 
         detail.type === 'exit_intent' ||
         (detail.type === 'event' && detail.data?.category === 'navigation') ||
-        (detail.type === 'event' && detail.data?.name && detail.data.name.includes('exit_intent')) ||
         (detail.type === 'event' && detail.data?.name && 
-          ['scroll', 'scroll_depth', 'scroll_bottom', 'time_on_page', 
-           'session_end', 'page_visibility'].includes(detail.data.name)) ||
-        (detail.type === 'event' && detail.data?.depth !== undefined) ||
-        (detail.type === 'event' && detail.data?.totalScrollDistance !== undefined) ||
-        (detail.type === 'event' && detail.data?.timeOnPage !== undefined) ||
-        (detail.type === 'event' && detail.data?.seconds !== undefined)
+          (detail.data.name.includes('exit_intent') || 
+           detail.data.name.includes('scroll') || 
+           detail.data.name.includes('navigation') ||
+           detail.data.name.includes('page_visibility') ||
+           detail.data.name.includes('session_end'))) ||
+        // Verifica di proprietà specifiche di navigazione
+        (detail.type === 'event' && 
+          (detail.data?.depth !== undefined || 
+           detail.data?.totalScrollDistance !== undefined || 
+           detail.data?.timeOnPage !== undefined || 
+           detail.data?.seconds !== undefined ||
+           detail.data?.visible !== undefined))
       ) {
         nodeType = 'navigationNode';
         nodeBackground = '#2ecc71'; // Verde per eventi di navigazione
@@ -169,7 +214,6 @@ export default function SessionFlow({
       
       // Crea i bordi tra i nodi
       if (index > 0) {
-
         const timeBetween = getTimeDifference(
           new Date(sessionDetails[index - 1].timestamp),
           new Date(detail.timestamp)
@@ -215,7 +259,6 @@ export default function SessionFlow({
     }, 100);
   }, [sessionDetails, isLoading, setNodes, setEdges]);
   
-  // Ottieni un'etichetta per il nodo in base al tipo di dettaglio
   const getNodeLabel = (detail: SessionDetail) => {
     const defaultLabel = "Evento non specificato";
     
@@ -225,18 +268,27 @@ export default function SessionFlow({
     }
     
     try {
+      // Log completo dei dati per debug
+      console.log(`getNodeLabel - elaborazione dettaglio:`, {
+        type: detail.type,
+        data: detail.data
+      });
+      
       switch (detail.type) {
+        // ===== VISUALIZZAZIONE PAGINA =====
         case 'page_view':
-          // Aggiungi un controllo per assicurarti che l'URL sia definito
           if (detail.data?.url) {
             const pageTitle = detail.data.title || new URL(detail.data.url).pathname;
             return `Visualizzazione Pagina\n${pageTitle}`;
           }
           return `Visualizzazione Pagina\n${detail.data?.title || 'Pagina sconosciuta'}`;
         
+        // ===== CLICK DIRETTI =====
         case 'click':
-          // Migliora l'etichetta del click con più dettagli sull'elemento
-          if (detail.data?.formId) {
+          // Verifica la struttura dei dati del click
+          if (detail.data?.tagName) {
+            return `Click su ${detail.data.tagName}\n${detail.data.text || 'elemento'}`;
+          } else if (detail.data?.formId) {
             return `Click su Campo Form\n${detail.data.element || 'campo'}`;
           } else if (detail.data?.selector && detail.data.selector.includes('form')) {
             return `Click su Form\n${detail.data.element || 'elemento'}`;
@@ -247,91 +299,206 @@ export default function SessionFlow({
           }
           return `Click su Elemento\n${detail.data?.element || 'elemento'}`;
         
+        // ===== SCROLL DIRETTI =====
         case 'scroll':
           const direction = detail.data?.direction === 'up' ? 'verso l\'alto' : 'verso il basso';
-          return `Navigazione: Scroll ${direction}\nProfondità: ${detail.data?.depth || '?'}%`;
+          return `Navigazione: Scroll ${direction}\nProfondità: ${detail.data?.depth || detail.data?.percent || '?'}%`;
         
+        // ===== TEMPO SULLA PAGINA DIRETTI =====
         case 'time_on_page':
-          return `Navigazione: Tempo sulla Pagina\nDurata: ${formatTime(detail.data?.duration || 0)}`;
+          return `Navigazione: Tempo sulla Pagina\nDurata: ${formatTime(detail.data?.duration || detail.data?.seconds || 0)}`;
           
+        // ===== EXIT INTENT DIRETTI =====
         case 'exit_intent':
           return `Navigazione: Exit Intent\nUtente in uscita`;
         
+        // ===== FORM SUBMIT DIRETTI =====
         case 'form_submit':
           if (detail.data?.formId) {
             return `Invio Form\n${detail.data.formId}`;
           }
           return `Invio Form\n${detail.data?.page || 'pagina'}`;
         
-          case 'event':
-          // Identificazione eventi click generici
-          if (detail.data?.name === 'generic_click') {
-            const tagName = detail.data?.eventData?.tagName || 'elemento';
-            const text = detail.data?.eventData?.text || '';
+        // ===== EVENTI GENERICI =====
+        case 'event':
+          // ----- CLICK GENERICI -----
+          if (detail.data?.name === 'generic_click' || (detail.data?.tagName && detail.data?.text)) {
+            const tagName = detail.data?.tagName || 'elemento';
+            const text = detail.data?.text || '';
             return `Click su ${tagName}\n${text}`;
           }
           
-          // Identificazione eventi di interazione (email_collected, etc)
-          else if (detail.data?.category === 'interaction') {
-            return `Interazione\n${detail.data?.name || 'sconosciuta'}`;
+          // ----- EMAIL COMPILATA -----
+          if (detail.data?.fieldName === 'email') {
+            return `Campo Email Compilato\n${detail.data.form || 'Form'}`;
           }
           
-          // Gestione eventi di conversione
-          else if ((detail.data?.name && detail.data.name.includes('conversion')) || detail.data?.category === 'conversion') {
-            const conversionType = detail.data?.eventData?.conversionType || '';
-            if (conversionType) {
-              return `Conversione\n${conversionType}`;
-            } else if (detail.data?.name && detail.data.name.includes('lead_acquisition')) {
-              return `Conversione Lead\n${detail.data?.name}`;
-            }
-            return `Conversione\n${detail.data.name || 'sconosciuta'}`;
-          } 
+          // ----- CONVERSIONI -----
+          if (detail.data?.conversionType || 
+              (detail.data?.name && detail.data.name.includes('conversion')) ||
+              (detail.data?.eventName && detail.data.eventName.includes('conversion')) ||
+              detail.data?.category === 'conversion') {
+            
+            const conversionType = detail.data?.conversionType || 
+                                 (detail.data?.name?.replace('conversion_', '') || 
+                                 'standard');
+            
+            const value = typeof detail.data?.value === 'object' && detail.data?.value !== null 
+                                  ? ('$numberInt' in detail.data.value 
+                                     ? (detail.data.value as any).$numberInt 
+                                     : detail.data.value)
+                                  : detail.data?.value;
+            
+            return `Conversione\n${conversionType}${value ? ` (${value})` : ''}`;
+          }
           
-          // Eventi di navigazione specifici per nome
-          else if (detail.data?.name && (
-            detail.data.name === 'session_end' || 
-            detail.data.name === 'page_visibility' ||
-            detail.data.name === 'scroll' ||
-            detail.data.name === 'scroll_depth' ||
-            detail.data.name === 'scroll_bottom' ||
-            detail.data.name === 'time_on_page')) {
-          
-            // Eventi di navigazione specifici
-            if (detail.data.name === 'session_end') {
-              return `Navigazione: Fine Sessione\nPagine viste: ${detail.data?.data?.pageViews ?? 'N/D'}`;
-            } else if (detail.data.name === 'page_visibility') {
-              return `Navigazione: Visibilità Pagina\n${detail.data?.data?.visible ? 'Pagina visibile' : 'Pagina nascosta'}`;
-            } else if (detail.data.name === 'scroll_bottom') {
-              return `Navigazione: Fine Pagina\nTempo sulla pagina: ${detail.data?.data?.timeOnPage ?? 0}s`;
-            } else if (detail.data.name === 'time_on_page') {
-              return `Navigazione: Tempo sulla Pagina\nDurata: ${detail.data?.data?.seconds ?? 0}s`;
-            } else if (detail.data.name === 'scroll_depth') {
-              return `Navigazione: Profondità Scroll\n${detail.data?.data?.depth ?? 0}%`;
-            } else if (detail.data.name === 'scroll') {
-              return `Navigazione: Scroll\nProfondità: ${detail.data?.data?.percent ?? 0}%`;
+          // ----- LEAD ACQUISITION -----
+          if ((detail.data?.name && detail.data.name.includes('lead_acquisition')) ||
+              (detail.data?.eventName && detail.data.eventName.includes('lead_acquisition')) ||
+              detail.data?.formType) {
+            
+            let leadInfo = '';
+            if (detail.data?.firstName) {
+              leadInfo = `${detail.data.firstName} ${detail.data.lastName || ''}`;
+            } else if (detail.data?.email) {
+              leadInfo = detail.data.email.includes('consent_not_granted') 
+                      ? 'Dati anonimi' 
+                      : 'Email raccolto';
+            } else {
+              leadInfo = 'Lead acquisito';
             }
             
-            // Caso generico di navigazione
-            return `Navigazione\n${detail.data.name}`;
+            return `Acquisizione Lead\n${leadInfo}`;
           }
           
-          // Eventi generici
-          else if (detail.data?.name) {
-            if (detail.data.category) {
+          // ----- EVENTI DI NAVIGAZIONE -----
+          // Scroll
+          if (detail.data?.name === 'scroll' || 
+              detail.data?.name === 'scroll_depth' || 
+              detail.data?.name === 'scroll_bottom' ||
+              detail.data?.depth !== undefined ||
+              detail.data?.totalScrollDistance !== undefined ||
+              detail.data?.percent !== undefined) {
+            
+            const depth = detail.data?.depth || 
+                        detail.data?.percent || 
+                        (detail.data?.data?.depth) || 
+                        (detail.data?.data?.percent) || 
+                        '?';
+            
+            if (detail.data?.name === 'scroll_bottom') {
+              return `Navigazione: Fine Pagina\nScroll 100%`;
+            }
+            
+            return `Navigazione: Scroll\nProfondità: ${depth}%`;
+          }
+          
+          // Tempo sulla pagina
+          if (detail.data?.name === 'time_on_page' || 
+              detail.data?.timeOnPage !== undefined || 
+              detail.data?.seconds !== undefined) {
+            
+            const seconds = detail.data?.timeOnPage || 
+                          detail.data?.seconds || 
+                          detail.data?.data?.timeOnPage || 
+                          detail.data?.data?.seconds || 
+                          0;
+            
+            return `Navigazione: Tempo Pagina\nDurata: ${seconds}s`;
+          }
+          
+          // Visibilità pagina
+          if (detail.data?.name === 'page_visibility' || detail.data?.visible !== undefined) {
+            const isVisible = detail.data?.visible || 
+                            (detail.data?.data?.visible);
+            
+            return `Navigazione: Visibilità\n${isVisible ? 'Pagina visibile' : 'Pagina nascosta'}`;
+          }
+          
+          // Fine sessione
+          if (detail.data?.name === 'session_end' || detail.data?.totalTimeOnPage) {
+            const totalTime = detail.data?.totalTimeOnPage || 
+                            detail.data?.data?.totalTimeOnPage || 
+                            0;
+            
+            const pageViews = detail.data?.pageViews || 
+                            detail.data?.data?.pageViews || 
+                            1;
+            
+            return `Navigazione: Fine Sessione\nPagine: ${pageViews}, Tempo: ${totalTime}s`;
+          }
+          
+          // Exit intent
+          if (detail.data?.name && detail.data.name.includes('exit_intent')) {
+            return `Navigazione: Exit Intent\nUtente in uscita`;
+          }
+          
+          // ----- EVENTI MEDIA -----
+          if (detail.data?.category === 'media' || 
+              (detail.data?.name && 
+                (detail.data.name.includes('video') || 
+                 detail.data.name.includes('audio')))) {
+            
+            let mediaType = 'Media';
+            let action = 'Interazione';
+            
+            if (detail.data?.name) {
+              if (detail.data.name.includes('video')) mediaType = 'Video';
+              if (detail.data.name.includes('audio')) mediaType = 'Audio';
+              if (detail.data.name.includes('start')) action = 'Avvio';
+              if (detail.data.name.includes('progress')) action = 'Progresso';
+              if (detail.data.name.includes('complete')) action = 'Completato';
+              if (detail.data.name.includes('pause')) action = 'Pausa';
+            }
+            
+            const progress = detail.data?.progress || 
+                           detail.data?.data?.progress || 
+                           '?';
+            
+            return `${mediaType}: ${action}\nProgresso: ${progress}%`;
+          }
+          
+          // ----- EVENTI FUNNEL -----
+          if (detail.data?.name === 'funnel_progression' || 
+              detail.data?.funnelName || 
+              (detail.data?.fromStep !== undefined && detail.data?.toStep !== undefined)) {
+            
+            const funnelName = detail.data?.funnelName || 'principale';
+            const toStep = detail.data?.toStep || 
+                         detail.data?.data?.toStep || 
+                         '?';
+            
+            return `Funnel: Passaggio\n${funnelName} → Step ${toStep}`;
+          }
+          
+          // ----- ALTRI EVENTI CON NOME -----
+          if (detail.data?.name) {
+            if (detail.data?.category) {
               return `Evento: ${detail.data.name}\n${detail.data.category}`;
             }
             return `Evento\n${detail.data.name}`;
+          } else if (detail.data?.eventName) {
+            if (detail.data?.category) {
+              return `Evento: ${detail.data.eventName}\n${detail.data.category}`;
+            }
+            return `Evento\n${detail.data.eventName}`;
           }
+          
+          // Fallback
           return `Evento\n${detail.data?.type || 'generico'}`;
         
+        // ===== FALLBACK PER ALTRI TIPI =====
         default:
           if (detail.data?.name) {
             return `${detail.type}\n${detail.data.name}`;
+          } else if (detail.data?.eventName) {
+            return `${detail.type}\n${detail.data.eventName}`;
           }
           return detail.type;
       }
     } catch (error) {
       console.error("Errore durante la generazione dell'etichetta del nodo:", error);
+      console.error("Dettaglio problematico:", detail);
       return defaultLabel;
     }
   };
