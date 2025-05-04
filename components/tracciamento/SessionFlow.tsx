@@ -113,7 +113,11 @@ export default function SessionFlow({
         detail.type === 'time_on_page' || 
         detail.type === 'exit_intent' ||
         (detail.type === 'event' && detail.data?.category === 'navigation') ||
-        (detail.type === 'event' && detail.data?.name?.includes('exit_intent'))
+        (detail.type === 'event' && detail.data?.name?.includes('exit_intent')) ||
+        // Aggiungi queste nuove condizioni
+        (detail.type === 'event' && detail.data?.depth !== undefined) || // Eventi di scroll
+        (detail.type === 'event' && detail.data?.totalScrollDistance !== undefined) || // Eventi di scroll
+        (detail.type === 'event' && detail.data?.timeOnPage !== undefined) // Eventi di tempo sulla pagina
       ) {
         // Eventi di navigazione
         nodeType = 'navigationNode';
@@ -241,25 +245,33 @@ export default function SessionFlow({
           }
           return `Invio Form\n${detail.data?.page || 'pagina'}`;
         
-        case 'event':
-          // Migliora le informazioni sugli eventi di conversione
-          if (detail.data?.category === 'navigation') {
-            return `Navigazione\n${detail.data.name || 'Interazione pagina'}`;
-          } else if (detail.data?.name?.includes('exit_intent')) {
-            return `Navigazione: Exit Intent\nUtente in uscita`;
-          } else if (detail.data?.name?.includes('conversion') || detail.data?.category === 'conversion') {
-            const conversionType = detail.data.type || '';
-            if (conversionType) {
-              return `Conversione\n${conversionType}`;
+          case 'event':
+            // Identifica eventi di navigazione (scroll, tempo sulla pagina, ecc.)
+            if (detail.data?.depth !== undefined || detail.data?.totalScrollDistance !== undefined) {
+              // È un evento di scroll
+              const depth = detail.data?.depth || '?';
+              const direction = detail.data?.direction === 'up' ? 'verso l\'alto' : 'verso il basso';
+              return `Navigazione: Scroll ${direction}\nProfondità: ${depth}%`;
+            } else if (detail.data?.timeOnPage !== undefined) {
+              // È un evento di tempo sulla pagina
+              return `Navigazione: Tempo sulla Pagina\nDurata: ${formatTime(detail.data?.timeOnPage || 0)}`;
+            } else if (detail.data?.category === 'navigation') {
+              return `Navigazione\n${detail.data.name || 'Interazione pagina'}`;
+            } else if (detail.data?.name?.includes('exit_intent')) {
+              return `Navigazione: Exit Intent\nUtente in uscita`;
+            } else if (detail.data?.name?.includes('conversion') || detail.data?.category === 'conversion') {
+              const conversionType = detail.data.type || '';
+              if (conversionType) {
+                return `Conversione\n${conversionType}`;
+              }
+              return `Conversione\n${detail.data.name}`;
+            } else if (detail.data?.name) {
+              if (detail.data.category) {
+                return `Evento: ${detail.data.name}\n${detail.data.category}`;
+              }
+              return `Evento\n${detail.data.name}`;
             }
-            return `Conversione\n${detail.data.name}`;
-          } else if (detail.data?.name) {
-            if (detail.data.category) {
-              return `Evento: ${detail.data.name}\n${detail.data.category}`;
-            }
-            return `Evento\n${detail.data.name}`;
-          }
-          return `Evento\n${detail.data?.type || 'conversione'}`;
+            return `Evento\n${detail.data?.type || 'generico'}`;
         
         default:
           if (detail.data?.name) {
