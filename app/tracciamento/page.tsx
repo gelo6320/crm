@@ -143,14 +143,12 @@ export default function TracciamentoPage() {
     }
   };
 
+  // Fetch dei dettagli di una sessione
   const loadSessionDetails = async (sessionId: string) => {
     try {
       setIsLoadingDetails(true);
       setSessionDetails([]);
-      
-      // Chiama la funzione semplificata in lib/api/tracciamento.ts
       const data = await fetchSessionDetails(sessionId);
-      
       setSessionDetails(data);
     } catch (error) {
       console.error("Errore durante il caricamento dei dettagli della sessione:", error);
