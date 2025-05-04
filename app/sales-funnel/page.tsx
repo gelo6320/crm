@@ -62,7 +62,7 @@ export default function SalesFunnelPage() {
       <DeviceDetectionInitializer />
       
       <div className="space-y-4 animate-fade-in">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-end">
           <button 
             onClick={loadFunnelData}
             className="btn btn-outline p-1.5"

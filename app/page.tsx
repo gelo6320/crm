@@ -270,19 +270,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-3 sm:space-y-6 animate-fade-in">
       {/* Header with notifications count */}
-      <div className="flex items-center justify-between mb-2 sm:mb-4">
+      <div className="flex items-center justify-end mb-2 sm:mb-4">
         <div className="flex items-center space-x-2 sm:space-x-3">
-          <div className="relative">
-            <button className="btn btn-outline inline-flex items-center justify-center p-1.5 sm:p-2 relative">
-              <Bell size={isMobile ? 16 : 18} />
-              {viewedCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[10px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
-                  {viewedCount}
-                </span>
-              )}
-            </button>
-          </div>
-          
           <button 
             onClick={loadData}
             className="btn btn-outline p-1 sm:p-1.5"

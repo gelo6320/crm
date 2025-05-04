@@ -222,7 +222,7 @@ export default function CalendarPage() {
     <div className="h-[calc(100vh-60px)] sm:h-[calc(100vh-100px)] flex flex-col animate-fade-in w-full calendar-page-container no-scroll"
     style={{ WebkitTouchCallout: "none" }}
     >
-      <div className="flex flex-col space-y-2 mb-2 sm:space-y-0 sm:mb-2 sm:flex-row sm:justify-between sm:items-center">
+      <div className="flex flex-col space-y-2 mb-2 sm:space-y-0 sm:mb-2 sm:flex-row sm:justify-end sm:items-center">
         <div className="flex items-center justify-between sm:justify-end">
           {/* Mobile navigation for list view */}
           {isMobile && (
