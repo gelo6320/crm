@@ -42,12 +42,15 @@ export default function MarketingApiOverview() {
   
   return (
     <motion.div 
-      className="space-y-4"
+      className="space-y-3"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-xl font-semibold">Facebook Ads</h2>
+        
+        {/* Controlli spostati a destra */}
         <div className="flex space-x-2">
           {/* Filtro intervallo di tempo */}
           <div className="relative">
@@ -81,7 +84,15 @@ export default function MarketingApiOverview() {
       )}
       
       {/* Elenco delle campagne con struttura espandibile */}
-      <CampaignList campaigns={campaigns} isLoading={isLoadingCampaigns} />
+      <div className="mt-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-medium">Dati</h3>
+          {campaigns.length > 0 && (
+            <span className="text-sm text-zinc-400">{campaigns.filter(c => c.status === 'ACTIVE').length} campagne attive</span>
+          )}
+        </div>
+        <CampaignList campaigns={campaigns} isLoading={isLoadingCampaigns} />
+      </div>
     </motion.div>
   );
 }

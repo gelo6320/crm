@@ -157,11 +157,11 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
     const maxRoas = Math.max(...processedData.roas);
     const maxPerformance = Math.max(...processedData.performance);
     
-    // Aggiungi un 40% in più per lo spazio
-    const yMaxLeads = Math.ceil(maxLeads * 1.4);
-    const yMaxConversions = Math.ceil(maxConversions * 1.4);
-    const yMaxRoas = Math.ceil(maxRoas * 1.4);
-    const yMaxPerformance = Math.ceil(maxPerformance * 1.4);
+    // Aggiungi un 30% in più per lo spazio (ridotto da 40%)
+    const yMaxLeads = Math.ceil(maxLeads * 1.3);
+    const yMaxConversions = Math.ceil(maxConversions * 1.3);
+    const yMaxRoas = Math.ceil(maxRoas * 1.3);
+    const yMaxPerformance = Math.ceil(maxPerformance * 1.3);
     
     // Configura le opzioni in base al timeRange
     let xAxisConfig = {};
@@ -200,21 +200,21 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       },
       elements: {
         point: {
-          radius: isMobile ? (activeMetric === 'performance' ? 3 : 2) : (activeMetric === 'performance' ? 4 : 3), // Punti più piccoli su mobile
+          radius: isMobile ? (activeMetric === 'performance' ? 3 : 2) : (activeMetric === 'performance' ? 4 : 3),
           hoverRadius: isMobile ? 4 : 6,
         },
         line: {
-          borderWidth: activeMetric === 'performance' ? 3 : 2
+          borderWidth: activeMetric === 'performance' ? 2 : 1.5, // Linee più sottili
         }
       },
       animation: {
-        duration: 1000, // Ridotta per migliori performance
+        duration: 800, // Ridotta per migliori performance
         easing: 'easeOutQuart'
       },
       layout: {
         padding: {
-          top: 20,
-          right: isMobile ? 10 : 20, 
+          top: 10, // Ridotto
+          right: isMobile ? 0 : 5, // Ridotto
           bottom: 0, 
           left: isMobile ? 0 : 0
         }
@@ -223,14 +223,18 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         x: {
           ...xAxisConfig,
           grid: {
-            color: 'rgba(255, 255, 255, 0.1)',
+            color: 'rgba(255, 255, 255, 0.05)', // Assi più sottili
+            lineWidth: 0.5, // Assi più sottili
+          },
+          border: {
+            width: 0.5, // Bordo più sottile
           },
           ticks: {
-            color: 'rgba(255, 255, 255, 0.7)',
+            color: 'rgba(255, 255, 255, 0.6)',
             autoSkip: true,
-            maxTicksLimit: isMobile ? 5 : undefined, // Limita il numero di tick su mobile
+            maxTicksLimit: isMobile ? 5 : 7, // Limita il numero di tick
             font: {
-              size: isMobile ? 8 : 10
+              size: isMobile ? 8 : 9 // Font più piccolo
             }
           }
         },
@@ -238,13 +242,20 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           suggestedMax: activeMetric === 'performance' ? yMaxPerformance : yMaxLeads,
           beginAtZero: true,
           grid: {
-            color: 'rgba(255, 255, 255, 0.1)',
+            color: 'rgba(255, 255, 255, 0.05)', // Assi più sottili
+            lineWidth: 0.5, // Assi più sottili
+          },
+          border: {
+            width: 0.5, // Bordo più sottile
           },
           ticks: {
-            color: 'rgba(255, 255, 255, 0.7)',
-            padding: isMobile ? 5 : 10,
+            color: 'rgba(255, 255, 255, 0.6)',
+            padding: isMobile ? 2 : 5, // Ridotto
             precision: 0,
-            maxTicksLimit: isMobile ? 5 : undefined // Limita il numero di tick su mobile
+            maxTicksLimit: isMobile ? 4 : 5, // Limita il numero di tick
+            font: {
+              size: isMobile ? 8 : 9 // Font più piccolo
+            }
           }
         },
         // Scala secondaria per ROAS (se attivo)
@@ -257,30 +268,38 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
             beginAtZero: true,
             grid: {
               drawOnChartArea: false,
-              color: 'rgba(255, 255, 255, 0.1)',
+              color: 'rgba(255, 255, 255, 0.05)', // Assi più sottili
+              lineWidth: 0.5, // Assi più sottili
+            },
+            border: {
+              width: 0.5, // Bordo più sottile
             },
             ticks: {
-              color: 'rgba(255, 255, 255, 0.7)',
-              padding: isMobile ? 5 : 10,
+              color: 'rgba(255, 255, 255, 0.6)',
+              padding: isMobile ? 2 : 5, // Ridotto
               precision: 1,
-              maxTicksLimit: isMobile ? 5 : undefined // Limita il numero di tick su mobile
+              maxTicksLimit: isMobile ? 4 : 5, // Limita il numero di tick
+              font: {
+                size: isMobile ? 8 : 9 // Font più piccolo
+              }
             }
           }
         } : {})
       },
       plugins: {
         legend: {
+          display: !isMobile, // Nascondi la legenda su mobile
           position: 'top' as const,
           align: 'start' as const,
           labels: {
             color: 'rgba(255, 255, 255, 0.7)',
             usePointStyle: true,
             pointStyle: 'circle',
-            padding: isMobile ? 10 : 20,
-            boxWidth: 8,
-            boxHeight: 8,
+            padding: isMobile ? 5 : 10, // Ridotto
+            boxWidth: 6, // Ridotto
+            boxHeight: 6, // Ridotto
             font: {
-              size: isMobile ? 9 : 11
+              size: isMobile ? 8 : 10 // Font più piccolo
             }
           }
         },
@@ -290,7 +309,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           bodyColor: 'rgba(255, 255, 255, 0.9)',
           borderColor: activeMetric === 'performance' ? 'rgba(34, 197, 94, 0.5)' : 'rgba(255, 107, 0, 0.5)',
           borderWidth: 1,
-          padding: isMobile ? 8 : 12,
+          padding: isMobile ? 6 : 8, // Ridotto
           displayColors: true,
           callbacks: {
             label: function(context) {
@@ -338,7 +357,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
     // Forza un resize dopo il rendering iniziale
     const resizeTimeout = setTimeout(() => {
       handleResize();
-    }, 100);
+    }, 50); // Tempo ridotto
     
     return () => {
       window.removeEventListener('resize', handleResize);
@@ -363,8 +382,8 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
   // Se i dati sono ancora in caricamento, mostra un placeholder
   if (isLoading) {
     return (
-      <div className="bg-zinc-800 rounded-lg p-4 h-80 flex items-center justify-center">
-        <div className="animate-spin h-10 w-10 border-t-2 border-b-2 border-primary rounded-full"></div>
+      <div className="bg-zinc-800 rounded-lg p-3 h-60 flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
       </div>
     );
   }
@@ -380,15 +399,15 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         backgroundColor: 'rgba(16, 185, 129, 0.3)',
         yAxisID: 'y',
         tension: 0.3,
-        borderWidth: 3,
+        borderWidth: 2, // Ridotto
         fill: true,
         pointBackgroundColor: '#10b981',
         pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
+        pointBorderWidth: 1, // Ridotto
         pointHoverBackgroundColor: '#ffffff',
         pointHoverBorderColor: '#10b981',
-        pointHoverBorderWidth: 3,
-        pointHoverRadius: 6,
+        pointHoverBorderWidth: 2, // Ridotto
+        pointHoverRadius: 5, // Ridotto
         borderJoinStyle: 'round' as const,
       }] : []),
       
@@ -399,7 +418,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         backgroundColor: 'rgba(59, 130, 246, 0.5)',
         yAxisID: 'y',
         tension: 0.2,
-        borderWidth: 2,
+        borderWidth: 1.5, // Ridotto
         fill: false,
       }] : []),
       
@@ -410,7 +429,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         backgroundColor: 'rgba(16, 185, 129, 0.5)',
         yAxisID: 'y',
         tension: 0.2,
-        borderWidth: 2,
+        borderWidth: 1.5, // Ridotto
         fill: false,
       }] : []),
       
@@ -421,7 +440,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         backgroundColor: 'rgba(255, 107, 0, 0.5)',
         yAxisID: 'y1',
         tension: 0.2,
-        borderWidth: 2,
+        borderWidth: 1.5, // Ridotto
         fill: false,
       }] : []),
     ],
@@ -437,7 +456,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       isDecimal: true,
       color: 'text-emerald-500',
       bgColor: 'bg-emerald-500/20',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
             </svg>
     },
@@ -447,7 +466,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       value: data.totalLeads,
       color: 'text-blue-500',
       bgColor: 'bg-blue-500/20',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
               <circle cx="9" cy="7" r="4"></circle>
               <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -460,7 +479,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       value: data.totalConversions,
       color: 'text-emerald-500',
       bgColor: 'bg-emerald-500/20',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
     },
@@ -471,7 +490,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       isDecimal: true,
       color: 'text-primary',
       bgColor: 'bg-primary/20',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
               <line x1="12" y1="8" x2="12" y2="16"></line>
               <line x1="8" y1="12" x2="16" y2="12"></line>
@@ -481,62 +500,58 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
 
   return (
     <motion.div 
-      className="bg-zinc-800 rounded-lg p-4 sm:p-6 mb-6 w-full"
+      className="bg-zinc-800 rounded-lg p-3 sm:p-4 mb-3 w-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6">
-        <h3 className="text-lg font-medium mb-3 md:mb-0">Panoramica</h3>
-        
-        <div className="flex flex-wrap gap-2">
-          {['performance', 'all', 'leads', 'conversions', 'roas'].map((metric) => (
-            <button
-              key={metric}
-              onClick={() => setActiveMetric(metric as any)}
-              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-medium rounded transition-all ${
-                activeMetric === metric
-                  ? metric === 'performance' ? 'bg-emerald-500 text-white' : 'bg-primary text-white'
-                  : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-              }`}
-            >
-              {metric === 'performance' ? 'Performance' :
-               metric === 'all' ? 'Tutte' : 
-               metric === 'leads' ? 'Lead' :
-               metric === 'conversions' ? 'Conversioni' : 'ROAS'}
-            </button>
-          ))}
-        </div>
-      </div>
-      
-      {/* Riepilogo metriche */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-6">
+      {/* Riepilogo metriche - Stile a schede con padding ridotto */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
         {metricSummary.map((metric) => (
-          <motion.div
+          <button
             key={metric.id}
-            className={`p-2 md:p-4 rounded ${metric.bgColor} flex items-center`}
-            whileHover={{ scale: 1.02 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            onClick={() => setActiveMetric(metric.id as any)}
+            className={`p-2 rounded ${metric.bgColor} flex items-center ${activeMetric === metric.id ? 'ring-1 ring-white/30' : ''}`}
           >
-            <div className={`rounded-full p-1.5 md:p-2 ${metric.color} bg-white/10 mr-2 md:mr-3`}>
+            <div className={`rounded-full p-1.5 ${metric.color} bg-white/10 mr-2`}>
               {metric.icon}
             </div>
-            <div>
-              <p className="text-xs md:text-sm text-zinc-400">{metric.label}</p>
-              <p className={`text-base md:text-xl font-bold ${metric.color}`}>
+            <div className="text-left">
+              <p className="text-xs text-zinc-400">{metric.label}</p>
+              <p className={`text-sm font-bold ${metric.color}`}>
                 {metric.isDecimal ? `${metric.value.toFixed(1)}` : metric.value.toLocaleString()}
                 {metric.id === 'roas' ? 'x' : ''}
               </p>
             </div>
-          </motion.div>
+          </button>
+        ))}
+      </div>
+      
+      {/* Filtri metrica - versione mobile più compatta */}
+      <div className="flex flex-wrap gap-1.5 -mx-1 px-1 mb-3 overflow-x-auto scrollbar-none">
+        {['performance', 'all', 'leads', 'conversions', 'roas'].map((metric) => (
+          <button
+            key={metric}
+            onClick={() => setActiveMetric(metric as any)}
+            className={`px-2.5 py-1 text-xs font-medium rounded-full transition-all ${
+              activeMetric === metric
+                ? metric === 'performance' ? 'bg-emerald-500 text-white' : 'bg-primary text-white'
+                : 'bg-zinc-700 text-zinc-300'
+            }`}
+          >
+            {metric === 'performance' ? 'Performance' :
+             metric === 'all' ? 'Tutte' : 
+             metric === 'leads' ? 'Lead' :
+             metric === 'conversions' ? 'Conv.' : 'ROAS'}
+          </button>
         ))}
       </div>
       
       {/* Grafico a larghezza piena con spazio negativo orizzontale su mobile */}
       <div 
         ref={chartContainerRef}
-        className="w-full h-64 md:h-80 -mx-2 sm:mx-0" 
-        style={{ width: 'calc(100% + 16px)', marginLeft: '-8px' }}
+        className="w-full h-56 md:h-64 -mx-3 sm:mx-0" 
+        style={{ width: 'calc(100% + 24px)', marginLeft: '-12px' }}
       >
         <Line 
           ref={chartRef}
@@ -549,8 +564,8 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
                 const { ctx } = chart;
                 if (activeMetric === 'performance' && chart.getDatasetMeta(0)?.visible) {
                   ctx.save();
-                  ctx.shadowColor = 'rgba(16, 185, 129, 0.6)';
-                  ctx.shadowBlur = 8;
+                  ctx.shadowColor = 'rgba(16, 185, 129, 0.4)'; // Ridotto
+                  ctx.shadowBlur = 4; // Ridotto
                 }
               },
               afterDatasetsDraw(chart) {

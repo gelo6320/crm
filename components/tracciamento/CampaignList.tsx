@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Campaign, AdSet, Ad } from '@/lib/api/marketing';
-import { ChevronDown, ChevronRight, ChevronUp, DollarSign, BarChart2, Users, Activity, ArrowLeft, ArrowRight } from 'lucide-react';
+import { ChevronRight, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface CampaignListProps {
   campaigns: Campaign[];
@@ -99,22 +99,59 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     }
   };
 
-  // Troncamento di testo con fade
-  const getTruncatedText = (text: string, maxLength: number = 28) => {
+  // Sistema migliorato per l'abbreviazione dei nomi delle campagne
+  const getSmartTruncatedName = (text: string, maxLength: number = 28) => {
     if (!text) return '';
     if (text.length <= maxLength) return text;
     
-    return (
-      <div className="relative">
-        <span className="truncate block w-full">{text}</span>
-        <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-r from-transparent to-zinc-900/30"></div>
-      </div>
-    );
+    // Abbreviazioni comuni in italiano
+    const abbreviations: Record<string, string> = {
+      'Campagna': 'Camp.',
+      'Lead': 'Ld',
+      'Generation': 'Gen',
+      'Generazione': 'Gen',
+      'Conversione': 'Conv',
+      'Conversioni': 'Conv',
+      'Remarketing': 'Rmkt',
+      'Clienti': 'Cl.',
+      'Cliente': 'Cl.',
+      'Esistenti': 'Esist.',
+      'Esistente': 'Esist.',
+      'Brand': 'Br.',
+      'Awareness': 'Awar.',
+      'Facebook': 'FB',
+      'Instagram': 'IG',
+      'Marketing': 'Mkt',
+      'Promozione': 'Promo',
+      'Vendita': 'Vnd',
+      'Vendite': 'Vnd'
+    };
+    
+    // Sostituisci parole intere (non parti di parole)
+    let words = text.split(' ');
+    words = words.map(word => abbreviations[word] || word);
+    
+    let result = words.join(' ');
+    
+    // Se è ancora troppo lungo, tronca con ellipsis intelligente
+    if (result.length > maxLength) {
+      const halfLength = Math.floor(maxLength / 2) - 1;
+      return result.substring(0, halfLength) + '...' + result.substring(result.length - halfLength);
+    }
+    
+    return result;
+  };
+
+  // Ottieni class CSS per valori positivi/negativi
+  const getValueColorClass = (value: number) => {
+    if (value > 0) return 'text-emerald-400';
+    if (value < 0) return 'text-red-400';
+    return 'text-zinc-400';
   };
 
   // Animazioni per framer-motion
   const tableRowVariants = {
-    hidden: { opacity: 0, y: 10 },
+    hidden: { opacity: 0, y: 8 },
     show: { 
       opacity: 1, 
       y: 0,
@@ -134,24 +171,21 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
       transition: { duration: 0.2 }
     }
   };
-
-  // Ottieni class CSS per valori positivi/negativi
-  const getValueColorClass = (value: number) => {
-    if (value > 0) return 'text-emerald-400';
-    if (value < 0) return 'text-red-400';
-    return 'text-zinc-400';
-  };
+  
+  // Elementi visualizzabili su mobile vs desktop
+  const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
   
   if (isLoading) {
     return (
-      <div className="bg-zinc-800 rounded-lg p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-medium">Dati</h3>
+      <div className="rounded-lg p-3 md:p-4">
+        <div className="flex justify-between items-center mb-3">
+          <div className="h-5 w-20 bg-zinc-700/50 rounded animate-pulse"></div>
+          <div className="h-5 w-32 bg-zinc-700/50 rounded animate-pulse"></div>
         </div>
         <div className="overflow-x-auto">
-          <div className="h-12 bg-zinc-700/50 rounded animate-pulse mb-4"></div>
+          <div className="h-10 bg-zinc-700/50 rounded animate-pulse mb-3"></div>
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-16 bg-zinc-700/30 rounded animate-pulse mb-2"></div>
+            <div key={i} className="h-14 bg-zinc-700/30 rounded animate-pulse mb-2"></div>
           ))}
         </div>
       </div>
@@ -160,56 +194,51 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
 
   return (
     <motion.div 
-      className="bg-zinc-800 rounded-lg p-6"
-      initial={{ opacity: 0, y: 20 }}
+      className="rounded-lg"
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: 0.1 }}
+      transition={{ duration: 0.3 }}
     >
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-medium">Dati</h3>
-        <span className="text-sm text-zinc-400">{campaigns.length} campagne attive</span>
-      </div>
-
-      <div className="relative">
+      <div className="relative mb-1">
         {/* Pulsanti di scorrimento */}
         {showScrollButtons && (
           <>
             <button 
               onClick={scrollLeft}
               disabled={!canScrollLeft}
-              className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-2 rounded-full shadow-lg ${!canScrollLeft ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
+              className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-1.5 rounded-full shadow-lg ${!canScrollLeft ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
             >
-              <ArrowLeft size={18} className="text-zinc-200" />
+              <ArrowLeft size={16} className="text-zinc-200" />
             </button>
             
             <button 
               onClick={scrollRight}
               disabled={!canScrollRight}
-              className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-2 rounded-full shadow-lg ${!canScrollRight ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
+              className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-1.5 rounded-full shadow-lg ${!canScrollRight ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
             >
-              <ArrowRight size={18} className="text-zinc-200" />
+              <ArrowRight size={16} className="text-zinc-200" />
             </button>
           </>
         )}
       
         {/* Ombre di sfumatura per indicare lo scorrimento */}
         {canScrollLeft && (
-          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-zinc-800 to-transparent z-10"></div>
+          <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-zinc-800 to-transparent z-10"></div>
         )}
         
         {canScrollRight && (
-          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-zinc-800 to-transparent z-10"></div>
+          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-zinc-800 to-transparent z-10"></div>
         )}
       
         {/* Tabella con scorrimento orizzontale */}
         <div 
           ref={tableRef}
-          className="overflow-x-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-800 pb-2"
+          className="overflow-x-auto scrollbar-none pb-1"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
-          <div className="min-w-[800px] md:min-w-full">
+          <div className="min-w-[800px] md:w-full">
             {/* Header row */}
-            <div className="bg-zinc-900 rounded sticky top-0 z-10 text-xs text-zinc-400 font-medium grid grid-cols-8 gap-2 mb-2 p-3">
+            <div className="bg-zinc-700/30 text-xs text-zinc-400 font-medium grid grid-cols-8 gap-1 md:gap-2 p-2.5 rounded-t border-b border-zinc-700/50">
               <div className="col-span-2">CAMPAGNA</div>
               <div className="text-right">SPESA</div>
               <div className="text-right">LEAD</div>
@@ -226,7 +255,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
               variants={{
                 show: {
                   transition: {
-                    staggerChildren: 0.05
+                    staggerChildren: 0.03
                   }
                 }
               }}
@@ -238,7 +267,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                   <React.Fragment key={campaign.id}>
                     <motion.div
                       variants={tableRowVariants}
-                      className={`grid grid-cols-8 gap-2 p-3 rounded items-center cursor-pointer hover:bg-zinc-700/30 transition-colors ${isExpanded ? 'bg-zinc-700/20' : 'bg-zinc-900/30'}`}
+                      className={`grid grid-cols-8 gap-1 md:gap-2 p-2.5 items-center cursor-pointer hover:bg-zinc-700/10 transition-colors ${isExpanded ? 'bg-zinc-700/10' : ''}`}
                       onClick={() => toggleCampaign(campaign.id)}
                     >
                       <div className="col-span-2 flex items-center">
@@ -247,34 +276,34 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                           transition={{ duration: 0.2 }}
                           className="mr-2 text-primary flex-shrink-0"
                         >
-                          <ChevronRight size={18} />
+                          <ChevronRight size={16} />
                         </motion.span>
-                        <div className="flex flex-col max-w-[260px] overflow-hidden">
-                          <div className="font-medium">
-                            {getTruncatedText(campaign.name, 30)}
+                        <div className="flex flex-col overflow-hidden">
+                          <div className="font-medium text-sm">
+                            {getSmartTruncatedName(campaign.name, isMobileView ? 20 : 30)}
                           </div>
                           <span className={`text-xs ${getStatusClass(campaign.status)}`}>
-                            {campaign.status} · Budget: {formatCurrency(campaign.dailyBudget)}/giorno
+                            {campaign.status} · Budget: {formatCurrency(campaign.dailyBudget).replace(',00', '')}/g
                           </span>
                         </div>
                       </div>
-                      <div className="text-right font-medium">
-                        {formatCurrency(campaign.spend)}
+                      <div className="text-right font-medium text-sm">
+                        {formatCurrency(campaign.spend).replace(',00', '')}
                       </div>
-                      <div className="text-right font-medium">
+                      <div className="text-right font-medium text-sm">
                         {campaign.leads.toLocaleString()}
                       </div>
-                      <div className="text-right font-medium">
-                        {formatCurrency(campaign.costPerLead)}
+                      <div className="text-right font-medium text-sm">
+                        {formatCurrency(campaign.costPerLead).replace(',00', '')}
                       </div>
-                      <div className="text-right font-medium">
+                      <div className="text-right font-medium text-sm">
                         {campaign.conversions.toLocaleString()}
                       </div>
-                      <div className="text-right font-medium">
-                        {formatCurrency(campaign.costPerConversion)}
+                      <div className="text-right font-medium text-sm">
+                        {formatCurrency(campaign.costPerConversion).replace(',00', '')}
                       </div>
-                      <div className={`text-right font-medium ${getValueColorClass(campaign.roas)}`}>
-                        {campaign.roas.toFixed(2)}x
+                      <div className={`text-right font-medium text-sm ${getValueColorClass(campaign.roas)}`}>
+                        {campaign.roas.toFixed(1)}x
                       </div>
                     </motion.div>
                     
@@ -287,15 +316,15 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                           exit="hidden"
                           variants={expandedContentVariants}
                         >
-                          <div className="pl-8 pr-4 py-3 space-y-2">
+                          <div className="pl-6 pr-2 py-1 space-y-1">
                             {/* AdSet header */}
-                            <div className="bg-zinc-800/80 rounded sticky top-0 z-10 text-xs text-zinc-400 font-medium grid grid-cols-8 gap-2 mb-2 p-2">
+                            <div className="bg-zinc-800/80 text-xs text-zinc-400 font-medium grid grid-cols-8 gap-1 md:gap-2 p-2 my-1 rounded">
                               <div className="col-span-2">AD SET</div>
                               <div className="text-right">SPESA</div>
                               <div className="text-right">LEAD</div>
-                              <div className="text-right">COSTO/LEAD</div>
-                              <div className="text-right">CONVERSIONI</div>
-                              <div className="text-right">COSTO/CONV</div>
+                              <div className="text-right">COSTO/L</div>
+                              <div className="text-right">CONV</div>
+                              <div className="text-right">COSTO/C</div>
                               <div className="text-right">ROAS</div>
                             </div>
                             
@@ -306,43 +335,43 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                               return (
                                 <React.Fragment key={adSet.id}>
                                   <div
-                                    className={`grid grid-cols-8 gap-2 p-2 rounded items-center cursor-pointer hover:bg-zinc-700/30 transition-colors ${isAdSetExpanded ? 'bg-zinc-700/20' : 'bg-zinc-800/50'}`}
+                                    className={`grid grid-cols-8 gap-1 md:gap-2 p-2 rounded items-center cursor-pointer hover:bg-zinc-700/10 transition-colors ${isAdSetExpanded ? 'bg-zinc-700/10' : ''}`}
                                     onClick={() => toggleAdSet(adSet.id)}
                                   >
                                     <div className="col-span-2 flex items-center">
                                       <motion.span
                                         animate={{ rotate: isAdSetExpanded ? 90 : 0 }}
                                         transition={{ duration: 0.2 }}
-                                        className="mr-2 text-primary flex-shrink-0"
+                                        className="mr-1.5 text-primary flex-shrink-0"
                                       >
-                                        <ChevronRight size={16} />
+                                        <ChevronRight size={14} />
                                       </motion.span>
-                                      <div className="flex flex-col max-w-[240px] overflow-hidden">
-                                        <div className="truncate relative text-sm">
-                                          {getTruncatedText(adSet.name, 28)}
+                                      <div className="flex flex-col overflow-hidden">
+                                        <div className="text-xs">
+                                          {getSmartTruncatedName(adSet.name, isMobileView ? 18 : 26)}
                                         </div>
                                         <span className={`text-xs ${getStatusClass(adSet.status)}`}>
                                           {adSet.status}
                                         </span>
                                       </div>
                                     </div>
-                                    <div className="text-right text-sm">
-                                      {formatCurrency(adSet.spend)}
+                                    <div className="text-right text-xs">
+                                      {formatCurrency(adSet.spend).replace(',00', '')}
                                     </div>
-                                    <div className="text-right text-sm">
+                                    <div className="text-right text-xs">
                                       {adSet.leads.toLocaleString()}
                                     </div>
-                                    <div className="text-right text-sm">
-                                      {formatCurrency(adSet.costPerLead)}
+                                    <div className="text-right text-xs">
+                                      {formatCurrency(adSet.costPerLead).replace(',00', '')}
                                     </div>
-                                    <div className="text-right text-sm">
+                                    <div className="text-right text-xs">
                                       {adSet.conversions.toLocaleString()}
                                     </div>
-                                    <div className="text-right text-sm">
-                                      {formatCurrency(adSet.costPerConversion)}
+                                    <div className="text-right text-xs">
+                                      {formatCurrency(adSet.costPerConversion).replace(',00', '')}
                                     </div>
-                                    <div className={`text-right text-sm ${getValueColorClass(adSet.roas)}`}>
-                                      {adSet.roas.toFixed(2)}x
+                                    <div className={`text-right text-xs ${getValueColorClass(adSet.roas)}`}>
+                                      {adSet.roas.toFixed(1)}x
                                     </div>
                                   </div>
                                   
@@ -355,15 +384,15 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                         exit="hidden"
                                         variants={expandedContentVariants}
                                       >
-                                        <div className="pl-6 pr-2 py-2 space-y-1">
+                                        <div className="pl-5 pr-1 py-1">
                                           {/* Ad header */}
-                                          <div className="bg-zinc-700/30 rounded sticky top-0 z-10 text-xs text-zinc-500 font-medium grid grid-cols-8 gap-2 mb-1 p-2">
+                                          <div className="bg-zinc-700/20 text-xs text-zinc-500 font-medium grid grid-cols-8 gap-1 md:gap-2 p-1.5 my-1 rounded">
                                             <div className="col-span-2">ANNUNCIO</div>
                                             <div className="text-right">SPESA</div>
                                             <div className="text-right">LEAD</div>
-                                            <div className="text-right">COSTO/LEAD</div>
-                                            <div className="text-right">CONVERSIONI</div>
-                                            <div className="text-right">COSTO/CONV</div>
+                                            <div className="text-right">C/L</div>
+                                            <div className="text-right">CONV</div>
+                                            <div className="text-right">C/C</div>
                                             <div className="text-right">ROAS</div>
                                           </div>
                                           
@@ -371,33 +400,33 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                           {adSet.ads.map(ad => (
                                             <div
                                               key={ad.id}
-                                              className="grid grid-cols-8 gap-2 p-2 rounded items-center bg-zinc-700/10 hover:bg-zinc-700/20 transition-colors"
+                                              className="grid grid-cols-8 gap-1 md:gap-2 p-1.5 rounded items-center hover:bg-zinc-700/10 transition-colors"
                                             >
-                                              <div className="col-span-2 flex flex-col max-w-[220px] overflow-hidden">
-                                                <div className="truncate relative text-xs">
-                                                  {getTruncatedText(ad.name, 26)}
+                                              <div className="col-span-2 flex flex-col overflow-hidden">
+                                                <div className="text-xs opacity-90">
+                                                  {getSmartTruncatedName(ad.name, isMobileView ? 16 : 24)}
                                                 </div>
-                                                <span className={`text-xs ${getStatusClass(ad.status)}`}>
+                                                <span className={`text-[10px] leading-tight ${getStatusClass(ad.status)}`}>
                                                   {ad.status}
                                                 </span>
                                               </div>
-                                              <div className="text-right text-xs">
-                                                {formatCurrency(ad.spend)}
+                                              <div className="text-right text-[10px]">
+                                                {formatCurrency(ad.spend).replace(',00', '')}
                                               </div>
-                                              <div className="text-right text-xs">
+                                              <div className="text-right text-[10px]">
                                                 {ad.leads.toLocaleString()}
                                               </div>
-                                              <div className="text-right text-xs">
-                                                {formatCurrency(ad.costPerLead)}
+                                              <div className="text-right text-[10px]">
+                                                {formatCurrency(ad.costPerLead).replace(',00', '')}
                                               </div>
-                                              <div className="text-right text-xs">
+                                              <div className="text-right text-[10px]">
                                                 {ad.conversions.toLocaleString()}
                                               </div>
-                                              <div className="text-right text-xs">
-                                                {formatCurrency(ad.costPerConversion)}
+                                              <div className="text-right text-[10px]">
+                                                {formatCurrency(ad.costPerConversion).replace(',00', '')}
                                               </div>
-                                              <div className={`text-right text-xs ${getValueColorClass(ad.roas)}`}>
-                                                {ad.roas.toFixed(2)}x
+                                              <div className={`text-right text-[10px] ${getValueColorClass(ad.roas)}`}>
+                                                {ad.roas.toFixed(1)}x
                                               </div>
                                             </div>
                                           ))}
@@ -422,10 +451,10 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
       
       {/* Indicatore mobile di scorrimento orizzontale */}
       {showScrollButtons && (
-        <div className="flex justify-center mt-4 md:hidden">
+        <div className="flex justify-center mt-2 mb-1 md:hidden">
           <div className="flex items-center space-x-1">
             <span className="text-xs text-zinc-400">Scorri per vedere tutti i dati</span>
-            <ArrowRight size={14} className="text-zinc-400" />
+            <ArrowRight size={12} className="text-zinc-400" />
           </div>
         </div>
       )}
