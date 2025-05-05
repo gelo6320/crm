@@ -75,3 +75,69 @@ export interface SessionDetail {
     [key: string]: any;
   };
 }
+
+// Interfaccia per le statistiche di tracciamento
+export interface TrackingStats {
+  summary: {
+    totalVisits: number;
+    uniqueVisitors: number;
+    pageViews: number;
+    bounceRate: number;
+    avgTimeOnSite: number;
+    conversions: {
+      total: number;
+      byType?: Record<string, number>;
+    };
+    conversionRate: number;
+    avgConversionValue?: number;
+  };
+  chartData?: Array<{
+    date: string | Date;
+    visits: number;
+    uniqueVisitors: number;
+    pageViews: number;
+    conversions: number;
+    conversionRate: number;
+  }>;
+  sources?: Record<string, number>;
+  devices?: {
+    mobile: number;
+    desktop: number;
+  };
+  trends?: {
+    visitsGrowth: number;
+    visitorGrowth: number;
+    conversionsGrowth: number;
+    convRateChange: number;
+    prevPeriodVisits: number;
+    prevPeriodVisitors: number;
+    prevPeriodConversions: number;
+    prevPeriodConvRate: number;
+  };
+  previousPeriod?: {
+    summary: {
+      totalVisits: number;
+      uniqueVisitors: number;
+      pageViews: number;
+      conversions: {
+        total: number;
+      };
+    };
+    chartData?: Array<{
+      date: string | Date;
+      visits: number;
+      uniqueVisitors: number;
+      pageViews: number;
+      conversions: number;
+      conversionRate: number;
+    }>;
+  };
+  topLandingPages?: LandingPage[];
+  landingPagesTrends?: Array<{
+    url: string;
+    visits: number;
+    uniqueUsers: number;
+    conversionRate: number;
+    growth: number;
+  }>;
+}
