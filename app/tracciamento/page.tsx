@@ -363,7 +363,6 @@ export default function TracciamentoPage() {
       {/* Facebook Ads (solo visibile quando non ci sono landing page selezionate) */}
       {!selectedLandingPage && (
         <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">Facebook Ads</h2>
           <div className="card">
             <MarketingApiOverview />
           </div>

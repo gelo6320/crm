@@ -48,7 +48,6 @@ export default function MarketingApiOverview() {
       transition={{ duration: 0.3 }}
     >
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xl font-semibold">Facebook Ads</h2>
         
         {/* Controlli spostati a destra */}
         <div className="flex space-x-2">
