@@ -130,41 +130,64 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   // Handle lead movement between columns with error handling
   const handleMoveLead = async (lead: FunnelItem, targetStatus: string) => {
     if (!lead || lead.status === targetStatus) return;
-
+  
     // Store the previous status
     const prevStatus = lead.status;
-
+  
     // Update state to show movement is in progress
     setIsMoving(true);
-
+  
     try {
       // First update the UI immediately for better UX
       const updatedFunnelData = { ...funnelData };
-
-      // Remove lead from the source column
-      if (prevStatus in updatedFunnelData && Array.isArray(updatedFunnelData[prevStatus as keyof FunnelData])) {
+  
+      // Verify the previous status exists and is an array before filtering
+      if (
+        prevStatus && 
+        prevStatus in updatedFunnelData && 
+        updatedFunnelData[prevStatus as keyof FunnelData] && 
+        Array.isArray(updatedFunnelData[prevStatus as keyof FunnelData])
+      ) {
         // Remove lead from the source column
         updatedFunnelData[prevStatus as keyof FunnelData] = updatedFunnelData[
           prevStatus as keyof FunnelData
         ].filter((item) => item._id !== lead._id);
       } else {
-        console.warn(`Invalid source status: ${prevStatus}`);
+        console.warn(`Invalid source status: ${prevStatus}`, {
+          prevStatus,
+          hasKey: prevStatus in updatedFunnelData,
+          valueType: updatedFunnelData[prevStatus as keyof FunnelData] ? 
+            typeof updatedFunnelData[prevStatus as keyof FunnelData] : 'undefined',
+          isArray: updatedFunnelData[prevStatus as keyof FunnelData] ? 
+            Array.isArray(updatedFunnelData[prevStatus as keyof FunnelData]) : false
+        });
+        
         setIsMoving(false);
         return;
       }
-
+  
+      // Verify the target status exists and is an array before adding to it
+      if (
+        !(targetStatus in updatedFunnelData) || 
+        !updatedFunnelData[targetStatus as keyof FunnelData] ||
+        !Array.isArray(updatedFunnelData[targetStatus as keyof FunnelData])
+      ) {
+        // Initialize the target column if it doesn't exist
+        updatedFunnelData[targetStatus as keyof FunnelData] = [];
+      }
+  
       // Update lead status
       const updatedLead = { ...lead, status: targetStatus };
-
+  
       // Add lead to the target column
       updatedFunnelData[targetStatus as keyof FunnelData] = [
         ...updatedFunnelData[targetStatus as keyof FunnelData],
         updatedLead,
       ];
-
+  
       // Update state
       setFunnelData(updatedFunnelData);
-
+  
       // Show confirmation modal only for moves to "customer" (purchase)
       if (targetStatus === "customer") {
         // Store the moving lead data for the modal
@@ -180,8 +203,13 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     } catch (error) {
       console.error("Error during lead move preparation:", error);
       toast("error", "Errore spostamento", "Si è verificato un errore durante lo spostamento del lead");
-      // Revert UI state in case of error
-      handleUndoMove();
+      
+      // Safely revert UI state in case of error
+      if (lead) {
+        handleUndoMoveWithLead(lead, targetStatus, prevStatus);
+      } else if (movingLead) {
+        handleUndoMove();
+      }
     } finally {
       if (targetStatus !== "customer") {
         setIsMoving(false);
@@ -353,36 +381,74 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
   // Handle undoing the lead move if canceled
   const handleUndoMove = () => {
-    if (!movingLead) return;
+    // If we have movingLead data, use it to undo the move
+    if (movingLead) {
+      handleUndoMoveWithLead(
+        movingLead.lead, 
+        movingLead.newStatus, 
+        movingLead.prevStatus
+      );
+      
+      setMovingLead(null);
+    } else {
+      // If we don't have movingLead data, refresh the data from the server
+      toast("info", "Aggiornamento dati", "Aggiornamento dei dati del funnel in corso...");
+      
+      onLeadMove().catch(error => {
+        console.error("Error refreshing funnel data:", error);
+        toast("error", "Errore aggiornamento", "Si è verificato un errore durante l'aggiornamento dei dati");
+      });
+    }
     
-    handleUndoMoveWithLead(
-      movingLead.lead, 
-      movingLead.newStatus, 
-      movingLead.prevStatus
-    );
-    
-    setMovingLead(null);
     setIsMoving(false);
   };
   
   // Support function for state restoration
   const handleUndoMoveWithLead = (lead: FunnelItem, currentStatus: string, targetStatus: string) => {
-    const updatedFunnelData = { ...funnelData };
-
-    // Remove lead from the current column
-    updatedFunnelData[currentStatus as keyof FunnelData] = updatedFunnelData[
-      currentStatus as keyof FunnelData
-    ].filter((item) => item._id !== lead._id);
-
-    // Restore lead to the target column with original status
-    const revertedLead = { ...lead, status: targetStatus };
-    updatedFunnelData[targetStatus as keyof FunnelData] = [
-      ...updatedFunnelData[targetStatus as keyof FunnelData],
-      revertedLead,
-    ];
-
-    // Update state
-    setFunnelData(updatedFunnelData);
+    try {
+      const updatedFunnelData = { ...funnelData };
+  
+      // Verify the current status exists before attempting to filter
+      if (
+        currentStatus && 
+        currentStatus in updatedFunnelData && 
+        updatedFunnelData[currentStatus as keyof FunnelData] && 
+        Array.isArray(updatedFunnelData[currentStatus as keyof FunnelData])
+      ) {
+        // Remove lead from the current column
+        updatedFunnelData[currentStatus as keyof FunnelData] = updatedFunnelData[
+          currentStatus as keyof FunnelData
+        ].filter((item) => item._id !== lead._id);
+      }
+  
+      // Verify the target status exists before adding the lead back
+      if (
+        !(targetStatus in updatedFunnelData) || 
+        !updatedFunnelData[targetStatus as keyof FunnelData] ||
+        !Array.isArray(updatedFunnelData[targetStatus as keyof FunnelData])
+      ) {
+        // Initialize the target column if it doesn't exist
+        updatedFunnelData[targetStatus as keyof FunnelData] = [];
+      }
+  
+      // Restore lead to the target column with original status
+      const revertedLead = { ...lead, status: targetStatus };
+      updatedFunnelData[targetStatus as keyof FunnelData] = [
+        ...updatedFunnelData[targetStatus as keyof FunnelData],
+        revertedLead,
+      ];
+  
+      // Update state
+      setFunnelData(updatedFunnelData);
+    } catch (error) {
+      console.error("Error during undo move:", error);
+      toast("error", "Errore ripristino", "Si è verificato un errore durante il ripristino dello stato precedente");
+      
+      // Force refresh data from server as last resort
+      onLeadMove().catch(e => 
+        console.error("Failed to refresh funnel data:", e)
+      );
+    }
   };
 
   // Handle editing a lead's value and service
