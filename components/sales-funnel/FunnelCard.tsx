@@ -1,5 +1,5 @@
 // components/sales-funnel/FunnelCard.tsx
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Pencil } from "lucide-react";
 import { FunnelItem } from "@/types";
 import { formatDate } from "@/lib/utils/date";
@@ -22,97 +22,90 @@ export default function FunnelCard({
   onTouchEnd, 
   isDragging 
 }: FunnelCardProps) {
-  // Create a React ref
+  // Crea un ref React
   const cardRef = useRef<HTMLDivElement>(null);
   
-  // Simplified state management
+  // Sposta gli stati all'interno del componente
   const [isTouched, setIsTouched] = useState(false);
-  const touchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [touchTimer, setTouchTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (touchTimerRef.current) {
-        clearTimeout(touchTimerRef.current);
-        touchTimerRef.current = null;
-      }
-    };
-  }, []);
-
-  // Memoized handlers for better performance
-  const handleTouchStart = useCallback((e: TouchEvent) => {
-    // Set touch active state
-    setIsTouched(true);
-    
-    // Clear any existing timer
-    if (touchTimerRef.current) {
-      clearTimeout(touchTimerRef.current);
-    }
-    
-    // Create a timer for "ready to drag" animation
-    touchTimerRef.current = setTimeout(() => {
-      if (cardRef.current) {
-        cardRef.current.classList.add('touch-ready-to-drag');
-      }
-    }, 100); // Slightly faster than before (was 120ms)
-  }, []);
-  
-  const handleTouchEnd = useCallback(() => {
-    // Reset touch state
-    setIsTouched(false);
-    
-    // Remove animation class
-    if (cardRef.current) {
-      cardRef.current.classList.remove('touch-ready-to-drag');
-    }
-    
-    // Clear timer
-    if (touchTimerRef.current) {
-      clearTimeout(touchTimerRef.current);
-      touchTimerRef.current = null;
-    }
-  }, []);
-  
-  const handleTouchMove = useCallback(() => {
-    // Remove animation class when user starts dragging
-    if (cardRef.current) {
-      cardRef.current.classList.remove('touch-ready-to-drag');
-    }
-    
-    // Clear timer
-    if (touchTimerRef.current) {
-      clearTimeout(touchTimerRef.current);
-      touchTimerRef.current = null;
-    }
-  }, []);
-
-  // Add event listeners with useEffect
+  // Effetto per il touch feedback
   useEffect(() => {
     const cardElement = cardRef.current;
     if (!cardElement) return;
     
-    // Add event listeners with passive: true for better performance
-    cardElement.addEventListener('touchstart', handleTouchStart, { passive: true });
-    cardElement.addEventListener('touchend', handleTouchEnd, { passive: true });
-    cardElement.addEventListener('touchcancel', handleTouchEnd, { passive: true });
-    cardElement.addEventListener('touchmove', handleTouchMove, { passive: true });
+    const handleTouchStart = (e: TouchEvent) => {
+      console.log(`[Touch Debug] Touch start su card ${lead._id} (${lead.name})`, e.touches[0].clientX, e.touches[0].clientY);
+      
+      // Imposta lo stato di touch attivo
+      setIsTouched(true);
+      
+      // Crea un timer per indicare all'utente quando può iniziare a trascinare
+      const timer = setTimeout(() => {
+        // Aggiungi una classe per l'animazione "pronto per il trascinamento"
+        if (cardElement) {
+          cardElement.classList.add('touch-ready-to-drag');
+        }
+      }, 120); // Breve ritardo per attivare l'animazione
+      
+      setTouchTimer(timer);
+    };
+    
+    const handleTouchEnd = () => {
+      // Resetta lo stato di touch
+      setIsTouched(false);
+      
+      // Rimuovi la classe per l'animazione
+      if (cardElement) {
+        cardElement.classList.remove('touch-ready-to-drag');
+      }
+      
+      // Cancella il timer se esiste
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        setTouchTimer(null);
+      }
+    };
+    
+    const handleTouchMove = () => {
+      // Se l'utente inizia a trascinare, la classe verrà rimossa automaticamente
+      if (cardElement) {
+        cardElement.classList.remove('touch-ready-to-drag');
+      }
+      
+      // Cancella il timer se esiste
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        setTouchTimer(null);
+      }
+    };
+    
+    // Aggiungi event listener
+    cardElement.addEventListener('touchstart', handleTouchStart);
+    cardElement.addEventListener('touchend', handleTouchEnd);
+    cardElement.addEventListener('touchcancel', handleTouchEnd);
+    cardElement.addEventListener('touchmove', handleTouchMove);
     
     return () => {
-      // Remove event listeners on cleanup
+      // Rimuovi event listener alla pulizia
       cardElement.removeEventListener('touchstart', handleTouchStart);
       cardElement.removeEventListener('touchend', handleTouchEnd);
       cardElement.removeEventListener('touchcancel', handleTouchEnd);
       cardElement.removeEventListener('touchmove', handleTouchMove);
+      
+      // Cancella il timer se esiste
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+      }
     };
-  }, [handleTouchStart, handleTouchEnd, handleTouchMove]);
+  }, [lead._id, lead.name, touchTimer]);
 
   return (
     <div
       ref={cardRef}
       className={`funnel-card ${isDragging ? "opacity-40" : ""} ${isTouched ? "touched" : ""}`}
       style={{ 
-        borderLeftColor: getBorderColor(lead.status),
-        willChange: isTouched ? 'transform, opacity' : 'auto' // Optimize rendering
+        borderLeftColor: getBorderColor(lead.status)
       }}
       onMouseDown={(e) => onDragStart(lead, e)}
       onTouchStart={(e) => onDragStart(lead, e)}

@@ -5,7 +5,7 @@ import { useDragLayer } from 'react-dnd';
 import { FunnelItem } from '@/types';
 import { formatDate } from '@/lib/utils/date';
 import { formatMoney } from '@/lib/utils/format';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 
 interface CustomDragLayerProps {
   snapToGrid?: boolean;
@@ -30,43 +30,15 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
   // State to track if touch is being used
   const [isTouch, setIsTouch] = useState(false);
   
-  // Detect touch device on mount - only runs once
+  // Detect touch device on mount
   useEffect(() => {
     setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
     
-    // Add a passive listener for smoother performance
-    const handleTouchStart = () => {
-      setIsTouch(true);
-    };
-    
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    
-    return () => {
-      window.removeEventListener('touchstart', handleTouchStart);
-    };
-  }, []);
-  
-  // Handle body class for iOS scroll issues - separate effect for performance
-  useEffect(() => {
+    // Add body class while dragging to prevent iOS scroll issues
     if (isDragging) {
       document.body.classList.add('is-dragging');
-      
-      // For iOS specifically, we need to prevent touchmove to stop scrolling
-      const preventTouchMove = (e: TouchEvent) => {
-        if (e.target && 
-            (e.target as HTMLElement).closest && 
-            (e.target as HTMLElement).closest('.funnel-card, .funnel-drag-preview')) {
-          e.preventDefault();
-        }
-      };
-      
-      // Add with passive: false to ensure preventDefault works
-      document.addEventListener('touchmove', preventTouchMove, { passive: false });
-      
-      return () => {
-        document.body.classList.remove('is-dragging');
-        document.removeEventListener('touchmove', preventTouchMove);
-      };
+    } else {
+      document.body.classList.remove('is-dragging');
     }
     
     return () => {
@@ -79,12 +51,12 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     return null;
   }
 
-  // Function to calculate the preview style - now using useMemo for performance
+  // Function to calculate the preview style
   const getItemStyles = () => {
     const { x, y } = currentOffset;
     
     // Apply scale for touch devices to make preview larger & more visible
-    const scale = isTouch ? 1.05 : 1; // Reduced scale for better performance
+    const scale = isTouch ? 1.1 : 1;
     
     // Apply constraints to keep the preview within the viewport
     const windowWidth = window.innerWidth;
@@ -93,18 +65,13 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     // Constrain X to ensure the preview doesn't go off-screen
     const constrainedX = Math.max(0, Math.min(windowWidth - previewWidth, x));
     
-    // Use translateX/Y for better performance than translate()
-    const transform = `translateX(${constrainedX}px) translateY(${y}px) scale(${scale})`;
+    const transform = `translate(${constrainedX}px, ${y}px) scale(${scale})`;
     
     return {
       transform,
       WebkitTransform: transform,
       opacity: 0.8,
       zIndex: 1000,
-      position: "fixed" as const,
-      pointerEvents: "none" as const,
-      touchAction: "none" as const,
-      willChange: "transform", // Hint for browser optimization
     };
   };
 
@@ -122,46 +89,65 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     }
   };
 
-  // Render the preview based on the type of dragged element - optimize with early returns
-  if (itemType !== 'LEAD' || !item.lead) {
+  // Render the preview based on the type of dragged element
+  const renderItem = () => {
+    // If type is 'LEAD', render a card preview
+    if (itemType === 'LEAD' && item.lead) {
+      const lead = item.lead as FunnelItem;
+      
+      return (
+        <div
+          className="funnel-card"
+          style={{
+            width: '250px', // Fixed width for good visualization
+            borderLeftColor: getBorderColor(lead.status),
+            borderLeftWidth: '3px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.4)',
+            background: '#18181b',
+            borderRadius: '6px',
+            padding: '12px',
+          }}
+        >
+          <div className="flex justify-between items-center mb-1">
+            <div className="font-medium text-sm truncate pr-1">
+              {lead.name}
+            </div>
+          </div>
+          <div className="text-xs text-zinc-400">
+            <div>{formatDate(lead.createdAt)}</div>
+            {lead.value ? (
+              <div className="text-primary font-medium my-1">
+                €{formatMoney(lead.value)}
+              </div>
+            ) : null}
+            {lead.service ? <div className="italic">{lead.service}</div> : null}
+          </div>
+        </div>
+      );
+    }
+    
+    // If we don't recognize the type, return null
+    return null;
+  };
+
+  // If we don't know how to render this type, show nothing
+  if (!renderItem()) {
     return null;
   }
-  
-  const lead = item.lead as FunnelItem;
-  
-  // Render the custom preview with reduced complexity
+
+  // Render the custom preview
   return (
     <div 
       className="funnel-drag-preview"
-      style={getItemStyles()}
+      style={{
+        ...getItemStyles(),
+        position: 'fixed',
+        pointerEvents: 'none',
+        zIndex: 1000,
+        transformOrigin: '0 0',
+      }}
     >
-      <div
-        className="funnel-card"
-        style={{
-          width: '250px', // Fixed width for good visualization
-          borderLeftColor: getBorderColor(lead.status),
-          borderLeftWidth: '3px',
-          boxShadow: '0 8px 15px rgba(0, 0, 0, 0.3)', // Lighter shadow for performance
-          background: '#18181b',
-          borderRadius: '6px',
-          padding: '12px',
-        } as React.CSSProperties}
-      >
-        <div className="flex justify-between items-center mb-1">
-          <div className="font-medium text-sm truncate pr-1">
-            {lead.name}
-          </div>
-        </div>
-        <div className="text-xs text-zinc-400">
-          <div>{formatDate(lead.createdAt)}</div>
-          {lead.value ? (
-            <div className="text-primary font-medium my-1">
-              €{formatMoney(lead.value)}
-            </div>
-          ) : null}
-          {lead.service ? <div className="italic">{lead.service}</div> : null}
-        </div>
-      </div>
+      {renderItem()}
     </div>
   );
 }
