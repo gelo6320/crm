@@ -47,7 +47,7 @@ export default function MarketingApiOverview() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="p-20 flex items-center justify-between mb-3">
+      <div className="pt-5 pr-5 flex items-center justify-end mb-3">
         
         {/* Controlli spostati a destra */}
         <div className="flex space-x-2">
@@ -85,9 +85,9 @@ export default function MarketingApiOverview() {
       {/* Elenco delle campagne con struttura espandibile */}
       <div className="mt-3">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-medium">Dati</h3>
+          <h3 className="pl-5 text-lg font-medium">Dati</h3>
           {campaigns.length > 0 && (
-            <span className="text-sm text-zinc-400">{campaigns.filter(c => c.status === 'ACTIVE').length} campagne attive</span>
+            <span className="pr-5 text-sm text-zinc-400">{campaigns.filter(c => c.status === 'ACTIVE').length} campagne attive</span>
           )}
         </div>
         <CampaignList campaigns={campaigns} isLoading={isLoadingCampaigns} />
