@@ -142,9 +142,16 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       const updatedFunnelData = { ...funnelData };
 
       // Remove lead from the source column
-      updatedFunnelData[prevStatus as keyof FunnelData] = updatedFunnelData[
-        prevStatus as keyof FunnelData
-      ].filter((item) => item._id !== lead._id);
+      if (prevStatus in updatedFunnelData && Array.isArray(updatedFunnelData[prevStatus as keyof FunnelData])) {
+        // Remove lead from the source column
+        updatedFunnelData[prevStatus as keyof FunnelData] = updatedFunnelData[
+          prevStatus as keyof FunnelData
+        ].filter((item) => item._id !== lead._id);
+      } else {
+        console.warn(`Invalid source status: ${prevStatus}`);
+        setIsMoving(false);
+        return;
+      }
 
       // Update lead status
       const updatedLead = { ...lead, status: targetStatus };
