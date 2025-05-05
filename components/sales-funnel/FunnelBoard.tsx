@@ -71,6 +71,89 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   const scrollIntervalRef = useRef<number | null>(null);
   const scrollStartTimeRef = useRef<number>(Date.now());
 
+  // Map database statuses to funnel statuses
+  const mapDatabaseStatusToFunnelStatus = (dbStatus: string): string => {
+    // Reverse mapping from database status to funnel status
+    const reverseBookingStatusMap: Record<string, string> = {
+      'pending': 'new',
+      'confirmed': 'contacted',
+      'completed': 'qualified',
+      'cancelled': 'lost',
+      // These are the same in both directions
+      'opportunity': 'opportunity',
+      'proposal': 'proposal',
+      'customer': 'customer'
+    };
+
+    // Return the mapped funnel status or the original if no mapping exists
+    return reverseBookingStatusMap[dbStatus] || dbStatus;
+  };
+
+  // Initialize funnel data - ensure all columns exist and leads are in correct columns
+  useEffect(() => {
+    // Make sure all columns defined in COLUMNS exist in funnelData and are arrays
+    const updatedFunnelData = { ...funnelData };
+    let needsUpdate = false;
+    
+    // Check each column and ensure it exists as an array
+    COLUMNS.forEach(column => {
+      if (
+        !(column.id in updatedFunnelData) || 
+        !updatedFunnelData[column.id as keyof FunnelData] ||
+        !Array.isArray(updatedFunnelData[column.id as keyof FunnelData])
+      ) {
+        // Initialize missing column
+        updatedFunnelData[column.id as keyof FunnelData] = [];
+        needsUpdate = true;
+        console.log(`Initialized missing column: ${column.id}`);
+      }
+    });
+    
+    // Handle any items with database statuses
+    Object.keys(updatedFunnelData).forEach(columnId => {
+      const column = updatedFunnelData[columnId as keyof FunnelData];
+      if (Array.isArray(column)) {
+        // Check each lead in the column
+        column.forEach(lead => {
+          // If the lead's status doesn't match a funnel column, needs mapping
+          if (!COLUMNS.some(col => col.id === lead.status)) {
+            const mappedStatus = mapDatabaseStatusToFunnelStatus(lead.status);
+            console.log(`Found lead with database status: ${lead.status}, mapped to: ${mappedStatus}`);
+            
+            // Only move the lead if the mapping is different from its current position
+            if (mappedStatus !== columnId) {
+              // Create a copy to place in the correct column
+              const updatedLead = { ...lead };
+              
+              // Remove from current column
+              updatedFunnelData[columnId as keyof FunnelData] = updatedFunnelData[
+                columnId as keyof FunnelData
+              ].filter(item => item._id !== lead._id);
+              
+              // Add to mapped column
+              if (
+                !(mappedStatus in updatedFunnelData) || 
+                !updatedFunnelData[mappedStatus as keyof FunnelData] ||
+                !Array.isArray(updatedFunnelData[mappedStatus as keyof FunnelData])
+              ) {
+                updatedFunnelData[mappedStatus as keyof FunnelData] = [];
+              }
+              
+              updatedFunnelData[mappedStatus as keyof FunnelData].push(updatedLead);
+              needsUpdate = true;
+            }
+          }
+        });
+      }
+    });
+    
+    // Update state if needed
+    if (needsUpdate) {
+      console.log("Updating funnel data with initialized columns");
+      setFunnelData(updatedFunnelData);
+    }
+  }, []); // Run only on mount to avoid infinite loops
+
   // Optimized auto-scroll when isScrolling changes
   useEffect(() => {
     if (!boardRef.current || !isScrolling) {
@@ -130,17 +213,20 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   // Handle lead movement between columns with error handling
   const handleMoveLead = async (lead: FunnelItem, targetStatus: string) => {
     if (!lead || lead.status === targetStatus) return;
-  
-    // Store the previous status
-    const prevStatus = lead.status;
-  
+
+    // Map the lead's status from database status to funnel status if needed
+    const mappedPrevStatus = mapDatabaseStatusToFunnelStatus(lead.status);
+    
+    // Store the previous status (now mapped if needed)
+    const prevStatus = mappedPrevStatus;
+
     // Update state to show movement is in progress
     setIsMoving(true);
-  
+
     try {
       // First update the UI immediately for better UX
       const updatedFunnelData = { ...funnelData };
-  
+
       // Verify the previous status exists and is an array before filtering
       if (
         prevStatus && 
@@ -153,8 +239,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           prevStatus as keyof FunnelData
         ].filter((item) => item._id !== lead._id);
       } else {
-        console.warn(`Invalid source status: ${prevStatus}`, {
-          prevStatus,
+        console.warn(`Invalid source status: ${lead.status} (mapped to ${prevStatus})`, {
+          originalStatus: lead.status,
+          mappedStatus: prevStatus,
           hasKey: prevStatus in updatedFunnelData,
           valueType: updatedFunnelData[prevStatus as keyof FunnelData] ? 
             typeof updatedFunnelData[prevStatus as keyof FunnelData] : 'undefined',
@@ -162,10 +249,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
             Array.isArray(updatedFunnelData[prevStatus as keyof FunnelData]) : false
         });
         
-        setIsMoving(false);
-        return;
+        // Instead of returning early, let's try to continue if we can add to the target
+        console.log("Continuing with move operation despite invalid source status");
       }
-  
+
       // Verify the target status exists and is an array before adding to it
       if (
         !(targetStatus in updatedFunnelData) || 
@@ -175,40 +262,46 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         // Initialize the target column if it doesn't exist
         updatedFunnelData[targetStatus as keyof FunnelData] = [];
       }
-  
+
       // Update lead status
       const updatedLead = { ...lead, status: targetStatus };
-  
+
       // Add lead to the target column
       updatedFunnelData[targetStatus as keyof FunnelData] = [
         ...updatedFunnelData[targetStatus as keyof FunnelData],
         updatedLead,
       ];
-  
+
       // Update state
       setFunnelData(updatedFunnelData);
-  
+
       // Show confirmation modal only for moves to "customer" (purchase)
       if (targetStatus === "customer") {
         // Store the moving lead data for the modal
         setMovingLead({
           lead: updatedLead,
-          prevStatus,
+          prevStatus: lead.status, // Keep original status for API call
           newStatus: targetStatus,
         });
       } else {
         // For other statuses, update directly via API
-        await updateLeadDirectly(updatedLead, prevStatus, targetStatus);
+        await updateLeadDirectly(updatedLead, lead.status, targetStatus); // Use original status for API call
       }
     } catch (error) {
       console.error("Error during lead move preparation:", error);
       toast("error", "Errore spostamento", "Si è verificato un errore durante lo spostamento del lead");
       
       // Safely revert UI state in case of error
-      if (lead) {
-        handleUndoMoveWithLead(lead, targetStatus, prevStatus);
-      } else if (movingLead) {
-        handleUndoMove();
+      try {
+        if (lead) {
+          handleUndoMoveWithLead(lead, targetStatus, lead.status); // Use original status
+        } else if (movingLead) {
+          handleUndoMove();
+        }
+      } catch (undoError) {
+        console.error("Failed to undo move:", undoError);
+        // Force refresh as last resort
+        onLeadMove().catch(e => console.error("Failed to refresh funnel data:", e));
       }
     } finally {
       if (targetStatus !== "customer") {
@@ -403,41 +496,52 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     setIsMoving(false);
   };
   
-  // Support function for state restoration
+  // Support function for state restoration with status mapping
   const handleUndoMoveWithLead = (lead: FunnelItem, currentStatus: string, targetStatus: string) => {
     try {
       const updatedFunnelData = { ...funnelData };
-  
+      
+      // Map the statuses from database status to funnel status if needed
+      const mappedCurrentStatus = mapDatabaseStatusToFunnelStatus(currentStatus);
+      const mappedTargetStatus = mapDatabaseStatusToFunnelStatus(targetStatus);
+
       // Verify the current status exists before attempting to filter
       if (
-        currentStatus && 
-        currentStatus in updatedFunnelData && 
-        updatedFunnelData[currentStatus as keyof FunnelData] && 
-        Array.isArray(updatedFunnelData[currentStatus as keyof FunnelData])
+        mappedCurrentStatus && 
+        mappedCurrentStatus in updatedFunnelData && 
+        updatedFunnelData[mappedCurrentStatus as keyof FunnelData] && 
+        Array.isArray(updatedFunnelData[mappedCurrentStatus as keyof FunnelData])
       ) {
         // Remove lead from the current column
-        updatedFunnelData[currentStatus as keyof FunnelData] = updatedFunnelData[
-          currentStatus as keyof FunnelData
+        updatedFunnelData[mappedCurrentStatus as keyof FunnelData] = updatedFunnelData[
+          mappedCurrentStatus as keyof FunnelData
         ].filter((item) => item._id !== lead._id);
+      } else {
+        console.warn(`Invalid current status during undo: ${currentStatus} (mapped to ${mappedCurrentStatus})`, {
+          originalStatus: currentStatus,
+          mappedStatus: mappedCurrentStatus,
+          leadId: lead._id
+        });
+        // We'll continue and try to add to the target column
       }
-  
+
       // Verify the target status exists before adding the lead back
       if (
-        !(targetStatus in updatedFunnelData) || 
-        !updatedFunnelData[targetStatus as keyof FunnelData] ||
-        !Array.isArray(updatedFunnelData[targetStatus as keyof FunnelData])
+        !(mappedTargetStatus in updatedFunnelData) || 
+        !updatedFunnelData[mappedTargetStatus as keyof FunnelData] ||
+        !Array.isArray(updatedFunnelData[mappedTargetStatus as keyof FunnelData])
       ) {
         // Initialize the target column if it doesn't exist
-        updatedFunnelData[targetStatus as keyof FunnelData] = [];
+        updatedFunnelData[mappedTargetStatus as keyof FunnelData] = [];
       }
-  
+
       // Restore lead to the target column with original status
-      const revertedLead = { ...lead, status: targetStatus };
-      updatedFunnelData[targetStatus as keyof FunnelData] = [
-        ...updatedFunnelData[targetStatus as keyof FunnelData],
+      const revertedLead = { ...lead, status: targetStatus }; // Keep the original database status
+      updatedFunnelData[mappedTargetStatus as keyof FunnelData] = [
+        ...updatedFunnelData[mappedTargetStatus as keyof FunnelData],
         revertedLead,
       ];
-  
+
       // Update state
       setFunnelData(updatedFunnelData);
     } catch (error) {
@@ -470,19 +574,29 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
       // Update local state for immediate UI update
       const updatedFunnelData = { ...funnelData };
-      const status = editingLead.status as keyof FunnelData;
-
-      // Find and update the lead in its column
-      updatedFunnelData[status] = updatedFunnelData[status].map((item) =>
-        item._id === editingLead._id
-          ? { ...item, value, service }
-          : item
-      );
-
-      setFunnelData(updatedFunnelData);
-      setEditingLead(null);
+      const mappedStatus = mapDatabaseStatusToFunnelStatus(editingLead.status);
       
-      toast("success", "Lead aggiornato", "Valore e servizio aggiornati con successo");
+      // Find and update the lead in its column
+      if (
+        mappedStatus in updatedFunnelData && 
+        Array.isArray(updatedFunnelData[mappedStatus as keyof FunnelData])
+      ) {
+        updatedFunnelData[mappedStatus as keyof FunnelData] = updatedFunnelData[mappedStatus as keyof FunnelData].map((item) =>
+          item._id === editingLead._id
+            ? { ...item, value, service }
+            : item
+        );
+
+        setFunnelData(updatedFunnelData);
+        toast("success", "Lead aggiornato", "Valore e servizio aggiornati con successo");
+      } else {
+        // If we can't find the column, refresh the funnel data
+        console.warn(`Could not find column ${mappedStatus} for edited lead`);
+        await onLeadMove();
+        toast("info", "Lead aggiornato", "Dati aggiornati, ricaricamento funnel");
+      }
+      
+      setEditingLead(null);
     } catch (error) {
       console.error("Error updating lead value:", error);
       toast("error", "Errore aggiornamento", "Si è verificato un errore durante l'aggiornamento dei dati");
@@ -712,6 +826,10 @@ function getBorderColor(status: string): string {
     case "proposal": return "#FF8C38"; // primary-hover
     case "customer": return "#27ae60"; // success
     case "lost": return "#e74c3c"; // danger
+    case "pending": return "#71717a"; // same as new
+    case "confirmed": return "#3498db"; // same as contacted
+    case "completed": return "#FF6B00"; // same as qualified
+    case "cancelled": return "#e74c3c"; // same as lost
     default: return "#71717a"; // zinc-500
   }
 }
