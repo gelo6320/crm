@@ -32,18 +32,18 @@ const COLUMNS = [
 // Conditional backend detection
 const DndBackend = isTouchDevice() ? TouchBackend : HTML5Backend;
 
-// Optimized touch backend options
+// Optimized touch backend options with more responsive settings
 const touchBackendOptions = {
   enableMouseEvents: true,
-  delayTouchStart: 150,      // Increased delay to avoid accidental drags
-  touchSlop: 5,              // Reduced to make dragging start with smaller movements
+  delayTouchStart: 100,      // Reduced from 150ms to make it more responsive
+  touchSlop: 3,              // Further reduced to require less movement to start drag
   ignoreContextMenu: true,
   enableKeyboardEvents: true,
-  enableTouchEvents: true,   // Make sure touch events are enabled
+  enableTouchEvents: true,
   enableHoverOutsideTarget: true,
-  scrollAngleRanges: [       // Define vertical/horizontal scroll thresholds
-    { start: 30, end: 150 }, // Horizontal-ish scrolling
-    { start: 210, end: 330 } // Horizontal-ish scrolling (other direction)
+  scrollAngleRanges: [
+    { start: 30, end: 150 },
+    { start: 210, end: 330 }
   ]
 };
 
@@ -416,29 +416,83 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
 
-  // Draggable component
+  // Draggable component - ENHANCED FOR MOBILE
   const LeadCard = React.memo(({ lead }: { lead: FunnelItem }) => {
     const cardRef = useRef<HTMLDivElement>(null);
+    const touchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [isLongPress, setIsLongPress] = useState(false);
     
-    // useDrag with collection
+    // Enhanced useDrag with improved touch handling
     const [{ isDragging }, connectDrag] = useDrag(
       () => ({
         type: 'LEAD',
-        item: { lead },
+        item: () => {
+          // Apply a class to the body when dragging starts
+          document.body.classList.add('is-dragging');
+          return { lead };
+        },
         collect: (monitor) => ({
           isDragging: !!monitor.isDragging(),
         }),
         end: (item, monitor) => {
-          // Handle case where drag ends without a drop
+          // Remove the class when dragging ends
+          document.body.classList.remove('is-dragging');
+          setIsLongPress(false);
+          
           if (!monitor.didDrop()) {
             console.log('Drag terminated without drop');
           }
-        }
+        },
+        // These options help with mobile dragging
+        options: {
+          dropEffect: 'move',
+        },
       }),
       [lead]
     );
     
-    // Connect the ref with connector via useEffect
+    // Handle touch events manually to improve responsiveness
+    const handleTouchStart = useCallback(() => {
+      // Clear any existing timeout
+      if (touchTimeoutRef.current) {
+        clearTimeout(touchTimeoutRef.current);
+      }
+      
+      // Set a timeout to trigger "long press" state
+      touchTimeoutRef.current = setTimeout(() => {
+        setIsLongPress(true);
+        // Add a visual indicator class
+        if (cardRef.current) {
+          cardRef.current.classList.add('touch-active');
+        }
+      }, 80); // Very short delay to make it feel responsive
+    }, []);
+    
+    const handleTouchEnd = useCallback(() => {
+      // Clear timeout if touch ends
+      if (touchTimeoutRef.current) {
+        clearTimeout(touchTimeoutRef.current);
+        touchTimeoutRef.current = null;
+      }
+      
+      setIsLongPress(false);
+      
+      // Remove visual indicator
+      if (cardRef.current) {
+        cardRef.current.classList.remove('touch-active');
+      }
+    }, []);
+    
+    // Clean up on unmount
+    useEffect(() => {
+      return () => {
+        if (touchTimeoutRef.current) {
+          clearTimeout(touchTimeoutRef.current);
+        }
+      };
+    }, []);
+    
+    // Connect the drag ref
     useEffect(() => {
       if (cardRef.current) {
         connectDrag(cardRef.current);
@@ -448,12 +502,18 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     return (
       <div
         ref={cardRef}
-        className={`funnel-card ${isDragging ? 'dragging' : ''}`}
+        className={`funnel-card ${isDragging ? 'dragging' : ''} ${isLongPress ? 'long-press' : ''}`}
         style={{
           borderLeftColor: getBorderColor(lead.status),
           opacity: isDragging ? 0.5 : 1,
-          willChange: 'transform, opacity' // Performance optimization
-        }}
+          willChange: 'transform, opacity' as const,
+          // Add a subtle transform to give visual feedback
+          transform: isLongPress && !isDragging ? 'scale(1.02)' : 'scale(1)',
+          transition: 'transform 0.1s ease-out, opacity 0.2s ease-out',
+        } as React.CSSProperties}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
       >
         <div className="flex justify-between items-center mb-1">
           <div className="font-medium text-sm truncate pr-1">

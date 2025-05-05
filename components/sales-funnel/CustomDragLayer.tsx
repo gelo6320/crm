@@ -50,8 +50,23 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
   useEffect(() => {
     if (isDragging) {
       document.body.classList.add('is-dragging');
-    } else {
-      document.body.classList.remove('is-dragging');
+      
+      // For iOS specifically, we need to prevent touchmove to stop scrolling
+      const preventTouchMove = (e: TouchEvent) => {
+        if (e.target && 
+            (e.target as HTMLElement).closest && 
+            (e.target as HTMLElement).closest('.funnel-card, .funnel-drag-preview')) {
+          e.preventDefault();
+        }
+      };
+      
+      // Add with passive: false to ensure preventDefault works
+      document.addEventListener('touchmove', preventTouchMove, { passive: false });
+      
+      return () => {
+        document.body.classList.remove('is-dragging');
+        document.removeEventListener('touchmove', preventTouchMove);
+      };
     }
     
     return () => {
@@ -86,7 +101,10 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
       WebkitTransform: transform,
       opacity: 0.8,
       zIndex: 1000,
-      willChange: 'transform', // Hint for browser optimization
+      position: "fixed" as const,
+      pointerEvents: "none" as const,
+      touchAction: "none" as const,
+      willChange: "transform", // Hint for browser optimization
     };
   };
 
@@ -115,13 +133,7 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
   return (
     <div 
       className="funnel-drag-preview"
-      style={{
-        ...getItemStyles(),
-        position: 'fixed',
-        pointerEvents: 'none',
-        zIndex: 1000,
-        transformOrigin: '0 0',
-      }}
+      style={getItemStyles()}
     >
       <div
         className="funnel-card"
@@ -133,7 +145,7 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
           background: '#18181b',
           borderRadius: '6px',
           padding: '12px',
-        }}
+        } as React.CSSProperties}
       >
         <div className="flex justify-between items-center mb-1">
           <div className="font-medium text-sm truncate pr-1">
