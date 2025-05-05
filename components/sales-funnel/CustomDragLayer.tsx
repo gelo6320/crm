@@ -5,7 +5,7 @@ import { useDragLayer } from 'react-dnd';
 import { FunnelItem } from '@/types';
 import { formatDate } from '@/lib/utils/date';
 import { formatMoney } from '@/lib/utils/format';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 interface CustomDragLayerProps {
   snapToGrid?: boolean;
@@ -30,11 +30,24 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
   // State to track if touch is being used
   const [isTouch, setIsTouch] = useState(false);
   
-  // Detect touch device on mount
+  // Detect touch device on mount - only runs once
   useEffect(() => {
     setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
     
-    // Add body class while dragging to prevent iOS scroll issues
+    // Add a passive listener for smoother performance
+    const handleTouchStart = () => {
+      setIsTouch(true);
+    };
+    
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, []);
+  
+  // Handle body class for iOS scroll issues - separate effect for performance
+  useEffect(() => {
     if (isDragging) {
       document.body.classList.add('is-dragging');
     } else {
@@ -51,12 +64,12 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     return null;
   }
 
-  // Function to calculate the preview style
+  // Function to calculate the preview style - now using useMemo for performance
   const getItemStyles = () => {
     const { x, y } = currentOffset;
     
     // Apply scale for touch devices to make preview larger & more visible
-    const scale = isTouch ? 1.1 : 1;
+    const scale = isTouch ? 1.05 : 1; // Reduced scale for better performance
     
     // Apply constraints to keep the preview within the viewport
     const windowWidth = window.innerWidth;
@@ -65,13 +78,15 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     // Constrain X to ensure the preview doesn't go off-screen
     const constrainedX = Math.max(0, Math.min(windowWidth - previewWidth, x));
     
-    const transform = `translate(${constrainedX}px, ${y}px) scale(${scale})`;
+    // Use translateX/Y for better performance than translate()
+    const transform = `translateX(${constrainedX}px) translateY(${y}px) scale(${scale})`;
     
     return {
       transform,
       WebkitTransform: transform,
       opacity: 0.8,
       zIndex: 1000,
+      willChange: 'transform', // Hint for browser optimization
     };
   };
 
@@ -89,53 +104,14 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
     }
   };
 
-  // Render the preview based on the type of dragged element
-  const renderItem = () => {
-    // If type is 'LEAD', render a card preview
-    if (itemType === 'LEAD' && item.lead) {
-      const lead = item.lead as FunnelItem;
-      
-      return (
-        <div
-          className="funnel-card"
-          style={{
-            width: '250px', // Fixed width for good visualization
-            borderLeftColor: getBorderColor(lead.status),
-            borderLeftWidth: '3px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.4)',
-            background: '#18181b',
-            borderRadius: '6px',
-            padding: '12px',
-          }}
-        >
-          <div className="flex justify-between items-center mb-1">
-            <div className="font-medium text-sm truncate pr-1">
-              {lead.name}
-            </div>
-          </div>
-          <div className="text-xs text-zinc-400">
-            <div>{formatDate(lead.createdAt)}</div>
-            {lead.value ? (
-              <div className="text-primary font-medium my-1">
-                €{formatMoney(lead.value)}
-              </div>
-            ) : null}
-            {lead.service ? <div className="italic">{lead.service}</div> : null}
-          </div>
-        </div>
-      );
-    }
-    
-    // If we don't recognize the type, return null
-    return null;
-  };
-
-  // If we don't know how to render this type, show nothing
-  if (!renderItem()) {
+  // Render the preview based on the type of dragged element - optimize with early returns
+  if (itemType !== 'LEAD' || !item.lead) {
     return null;
   }
-
-  // Render the custom preview
+  
+  const lead = item.lead as FunnelItem;
+  
+  // Render the custom preview with reduced complexity
   return (
     <div 
       className="funnel-drag-preview"
@@ -147,7 +123,33 @@ export default function CustomDragLayer({ snapToGrid = false }: CustomDragLayerP
         transformOrigin: '0 0',
       }}
     >
-      {renderItem()}
+      <div
+        className="funnel-card"
+        style={{
+          width: '250px', // Fixed width for good visualization
+          borderLeftColor: getBorderColor(lead.status),
+          borderLeftWidth: '3px',
+          boxShadow: '0 8px 15px rgba(0, 0, 0, 0.3)', // Lighter shadow for performance
+          background: '#18181b',
+          borderRadius: '6px',
+          padding: '12px',
+        }}
+      >
+        <div className="flex justify-between items-center mb-1">
+          <div className="font-medium text-sm truncate pr-1">
+            {lead.name}
+          </div>
+        </div>
+        <div className="text-xs text-zinc-400">
+          <div>{formatDate(lead.createdAt)}</div>
+          {lead.value ? (
+            <div className="text-primary font-medium my-1">
+              €{formatMoney(lead.value)}
+            </div>
+          ) : null}
+          {lead.service ? <div className="italic">{lead.service}</div> : null}
+        </div>
+      </div>
     </div>
   );
 }

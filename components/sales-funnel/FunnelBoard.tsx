@@ -31,13 +31,20 @@ const COLUMNS = [
 
 // Conditional backend detection
 const DndBackend = isTouchDevice() ? TouchBackend : HTML5Backend;
+
+// Optimized touch backend options
 const touchBackendOptions = {
   enableMouseEvents: true,
-  delayTouchStart: 50,      // Reduced delay for better responsiveness
-  touchSlop: 10,            // Number of pixels to move before drag starts
-  ignoreContextMenu: true,  // Ignore context menu events
-  enableHoverOutsideTarget: true, // Enable hover events outside target
-  enableKeyboardEvents: true // Enable keyboard events
+  delayTouchStart: 150,      // Increased delay to avoid accidental drags
+  touchSlop: 5,              // Reduced to make dragging start with smaller movements
+  ignoreContextMenu: true,
+  enableKeyboardEvents: true,
+  enableTouchEvents: true,   // Make sure touch events are enabled
+  enableHoverOutsideTarget: true,
+  scrollAngleRanges: [       // Define vertical/horizontal scroll thresholds
+    { start: 30, end: 150 }, // Horizontal-ish scrolling
+    { start: 210, end: 330 } // Horizontal-ish scrolling (other direction)
+  ]
 };
 
 interface CustomFunnelBoardProps {
@@ -62,8 +69,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   // State for auto scrolling
   const [isScrolling, setIsScrolling] = useState<"left" | "right" | null>(null);
   const scrollIntervalRef = useRef<number | null>(null);
+  const scrollStartTimeRef = useRef<number>(Date.now());
 
-  // Set up auto-scroll when isScrolling changes
+  // Optimized auto-scroll when isScrolling changes
   useEffect(() => {
     if (!boardRef.current || !isScrolling) {
       if (scrollIntervalRef.current) {
@@ -74,11 +82,29 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
     
     const container = boardRef.current;
-    const scrollAmount = isScrolling === "left" ? -15 : 15;
     
-    // Create interval for continuous scrolling
+    // Dynamic scroll speed - faster when closer to the edge
+    const calculateScrollSpeed = () => {
+      // Base speed: 8px per interval
+      const baseSpeed = 8;
+      // Maximum additional speed: 20px
+      const maxAdditionalSpeed = 20;
+      // Acceleration factor (0-1)
+      const acceleration = 0.7;
+      
+      // Increase speed the longer we scroll in one direction
+      const scrollDuration = Date.now() - scrollStartTimeRef.current;
+      const accelerationFactor = Math.min(1, scrollDuration / 1000 * acceleration);
+      
+      return Math.round(baseSpeed + (maxAdditionalSpeed * accelerationFactor));
+    };
+    
+    // Create interval for continuous scrolling with dynamic speed
     scrollIntervalRef.current = window.setInterval(() => {
       if (container) {
+        const speed = calculateScrollSpeed();
+        const scrollAmount = isScrolling === "left" ? -speed : speed;
+        
         // Check if we can scroll further
         if (
           (isScrolling === "left" && container.scrollLeft > 0) ||
@@ -157,90 +183,89 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   };
 
   // Function to directly update lead without showing modal
-  // Modifica la funzione updateLeadDirectly in FunnelBoard.tsx
-const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: string) => {
-  try {
-    // Recupera lo stato attuale dal server
-    const checkResponse = await axios.get(
-      `${API_BASE_URL}/api/leads/${lead.type}/${lead._id}`,
-      { withCredentials: true }
-    );
-    
-    // Ottieni lo stato attuale dal database
-    const currentDbStatus = checkResponse.data?.status;
-    
-    // Determina la mappatura degli stati solo per tipo booking
-    let actualFromStage = fromStage;
-    let actualToStage = toStage;
-    
-    if (lead.type === 'booking') {
-      // Mappa gli stati del funnel a quelli del database per il tipo booking
-      const bookingStatusMap: Record<string, string> = {
-        'new': 'pending',
-        'contacted': 'confirmed', 
-        'qualified': 'completed',
-        'opportunity': 'opportunity',
-        'proposal': 'proposal',
-        'customer': 'customer',
-        'lost': 'cancelled'
-      };
+  const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: string) => {
+    try {
+      // Recupera lo stato attuale dal server
+      const checkResponse = await axios.get(
+        `${API_BASE_URL}/api/leads/${lead.type}/${lead._id}`,
+        { withCredentials: true }
+      );
       
-      // Se lo stato nel database è uno degli stati nativi delle prenotazioni,
-      // usiamo quello come actual fromStage
-      if (['pending', 'confirmed', 'completed', 'cancelled'].includes(currentDbStatus)) {
-        // Nessun avviso, sappiamo che c'è una mappatura
-        actualFromStage = currentDbStatus;
+      // Ottieni lo stato attuale dal database
+      const currentDbStatus = checkResponse.data?.status;
+      
+      // Determina la mappatura degli stati solo per tipo booking
+      let actualFromStage = fromStage;
+      let actualToStage = toStage;
+      
+      if (lead.type === 'booking') {
+        // Mappa gli stati del funnel a quelli del database per il tipo booking
+        const bookingStatusMap: Record<string, string> = {
+          'new': 'pending',
+          'contacted': 'confirmed', 
+          'qualified': 'completed',
+          'opportunity': 'opportunity',
+          'proposal': 'proposal',
+          'customer': 'customer',
+          'lost': 'cancelled'
+        };
+        
+        // Se lo stato nel database è uno degli stati nativi delle prenotazioni,
+        // usiamo quello come actual fromStage
+        if (['pending', 'confirmed', 'completed', 'cancelled'].includes(currentDbStatus)) {
+          // Nessun avviso, sappiamo che c'è una mappatura
+          actualFromStage = currentDbStatus;
+        }
+        
+        // Mappa lo stato di destinazione se necessario
+        if (bookingStatusMap[toStage]) {
+          actualToStage = bookingStatusMap[toStage];
+        }
       }
       
-      // Mappa lo stato di destinazione se necessario
-      if (bookingStatusMap[toStage]) {
-        actualToStage = bookingStatusMap[toStage];
+      // Chiamata API per lo spostamento effettivo
+      const response = await axios.post(
+        `${API_BASE_URL}/api/sales-funnel/move`,
+        {
+          leadId: lead._id,
+          leadType: lead.type,
+          fromStage: actualFromStage, // Usa lo stato effettivo del database
+          toStage: actualToStage,     // Usa lo stato mappato per la destinazione
+          originalFromStage: fromStage, // Invia anche lo stato originale per riferimento
+          originalToStage: toStage      // Invia anche lo stato destinazione originale
+        },
+        { withCredentials: true }
+      );
+      
+      // Se la chiamata API è riuscita, aggiorna i dati del funnel
+      if (response.data.success) {
+        // Aggiorna dati funnel tramite callback
+        await onLeadMove();
+        
+        toast("success", "Lead spostato", `Lead spostato con successo in ${toStage}`);
+      } else {
+        throw new Error(response.data.message || "Errore durante lo spostamento del lead");
       }
-    }
-    
-    // Chiamata API per lo spostamento effettivo
-    const response = await axios.post(
-      `${API_BASE_URL}/api/sales-funnel/move`,
-      {
-        leadId: lead._id,
-        leadType: lead.type,
-        fromStage: actualFromStage, // Usa lo stato effettivo del database
-        toStage: actualToStage,     // Usa lo stato mappato per la destinazione
-        originalFromStage: fromStage, // Invia anche lo stato originale per riferimento
-        originalToStage: toStage      // Invia anche lo stato destinazione originale
-      },
-      { withCredentials: true }
-    );
-    
-    // Se la chiamata API è riuscita, aggiorna i dati del funnel
-    if (response.data.success) {
-      // Aggiorna dati funnel tramite callback
+    } catch (error) {
+      console.error("Error during lead move:", error);
+      
+      // Ripristina lo stato precedente in caso di errore
+      handleUndoMoveWithLead(lead, toStage, fromStage);
+      
+      // Estrai il messaggio di errore per il feedback all'utente
+      let errorMessage = "Si è verificato un errore durante lo spostamento del lead";
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      toast("error", "Errore spostamento", errorMessage);
+      
+      // Aggiorna i dati del funnel per garantire la coerenza
       await onLeadMove();
-      
-      toast("success", "Lead spostato", `Lead spostato con successo in ${toStage}`);
-    } else {
-      throw new Error(response.data.message || "Errore durante lo spostamento del lead");
+    } finally {
+      setIsMoving(false);
     }
-  } catch (error) {
-    console.error("Error during lead move:", error);
-    
-    // Ripristina lo stato precedente in caso di errore
-    handleUndoMoveWithLead(lead, toStage, fromStage);
-    
-    // Estrai il messaggio di errore per il feedback all'utente
-    let errorMessage = "Si è verificato un errore durante lo spostamento del lead";
-    if (axios.isAxiosError(error) && error.response?.data?.message) {
-      errorMessage = error.response.data.message;
-    }
-    
-    toast("error", "Errore spostamento", errorMessage);
-    
-    // Aggiorna i dati del funnel per garantire la coerenza
-    await onLeadMove();
-  } finally {
-    setIsMoving(false);
-  }
-};
+  };
 
   // Handle confirming the lead move after showing the modal
   const handleConfirmMove = async () => {
@@ -427,6 +452,7 @@ const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: 
         style={{
           borderLeftColor: getBorderColor(lead.status),
           opacity: isDragging ? 0.5 : 1,
+          willChange: 'transform, opacity' // Performance optimization
         }}
       >
         <div className="flex justify-between items-center mb-1">
@@ -463,7 +489,7 @@ const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: 
     // Standard ref for column body
     const bodyRef = useRef<HTMLDivElement>(null);
     
-    // useDrop with collection
+    // useDrop with collection - SIMPLIFIED hover handler
     const [{ isOverCurrent }, connectDrop] = useDrop(
       () => ({
         accept: 'LEAD',
@@ -495,6 +521,14 @@ const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: 
           const leftScrollZone = containerRect.left + scrollAreaSize;
           const rightScrollZone = containerRect.right - scrollAreaSize;
           
+          // Update scroll start time if we change direction or start scrolling
+          if (
+            (clientOffset.x < leftScrollZone && isScrolling !== "left") ||
+            (clientOffset.x > rightScrollZone && isScrolling !== "right")
+          ) {
+            scrollStartTimeRef.current = Date.now();
+          }
+          
           // Determine if we should scroll and in which direction
           if (clientOffset.x < leftScrollZone) {
             setIsScrolling("left");
@@ -505,7 +539,7 @@ const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: 
           }
         },
       }),
-      [id, isOver]
+      [id, isOver, isScrolling]
     );
     
     // Connect the ref with connector via useEffect
@@ -528,7 +562,7 @@ const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: 
         
         <div
           ref={bodyRef}
-          className={`funnel-body ${isOverCurrent ? 'drop-target-active' : ''}`}
+          className={`funnel-body ${isOverCurrent ? 'drag-over' : ''}`}
         >
           {leads.length > 0 ? (
             leads.map((lead) => (
@@ -552,7 +586,7 @@ const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: 
       options={isTouchDevice() ? touchBackendOptions : undefined}
     >
       {/* Add our custom drag layer for better visual experience */}
-      <CustomDragLayer />
+      <CustomDragLayer snapToGrid={false} />
       
       <div
         ref={boardRef}
