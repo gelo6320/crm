@@ -42,9 +42,6 @@ export default function TracciamentoPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("7d"); // '24h', '7d', '30d', 'all'
   
-  // Stato per il tab attivo (aggiungiamo il tab Marketing)
-  const [activeTab, setActiveTab] = useState<'landing-pages' | 'marketing'>('landing-pages');
-  
   const router = useRouter();
 
   // Carica le landing page all'avvio
@@ -216,7 +213,7 @@ export default function TracciamentoPage() {
     setSelectedLandingPage(null);
   };
 
-  if (isLoading && landingPages.length === 0 && activeTab === 'landing-pages') {
+  if (isLoading && landingPages.length === 0) {
     return <LoadingSpinner />;
   }
 
@@ -225,74 +222,46 @@ export default function TracciamentoPage() {
       {/* Header con titolo e controlli */}
       <div className="flex items-center justify-end flex-wrap gap-4">
         <div className="flex items-center gap-2">
-          {activeTab === 'landing-pages' && (
-            <>
-              {/* Barra di ricerca */}
-              <form onSubmit={handleSearch} className="relative">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={selectedLandingPage ? "Cerca utenti..." : "Cerca landing page..."}
-                  className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 pl-9 text-sm w-full focus:ring-primary focus:border-primary"
-                />
-                <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-zinc-400" />
-              </form>
-              
-              {/* Filtro intervallo di tempo */}
-              <div className="relative">
-                <select
-                  value={timeRange}
-                  onChange={(e) => handleTimeRangeChange(e.target.value)}
-                  className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 text-sm appearance-none pr-8 focus:ring-primary focus:border-primary"
-                >
-                  <option value="24h">Ultime 24 ore</option>
-                  <option value="7d">Ultimi 7 giorni</option>
-                  <option value="30d">Ultimi 30 giorni</option>
-                  <option value="all">Tutti i dati</option>
-                </select>
-                <Filter size={14} className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-zinc-400 pointer-events-none" />
-              </div>
-              
-              {/* Refresh button */}
-              <button 
-                onClick={handleRefresh}
-                className="btn btn-outline p-1.5"
-                disabled={isLoading || isLoadingUsers || isLoadingSessions || isLoadingDetails}
-              >
-                <RefreshCw size={16} className={isLoading || isLoadingUsers || isLoadingSessions || isLoadingDetails ? "animate-spin" : ""} />
-              </button>
-            </>
-          )}
+          {/* Barra di ricerca */}
+          <form onSubmit={handleSearch} className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={selectedLandingPage ? "Cerca utenti..." : "Cerca landing page..."}
+              className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 pl-9 text-sm w-full focus:ring-primary focus:border-primary"
+            />
+            <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-zinc-400" />
+          </form>
+          
+          {/* Filtro intervallo di tempo */}
+          <div className="relative">
+            <select
+              value={timeRange}
+              onChange={(e) => handleTimeRangeChange(e.target.value)}
+              className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 text-sm appearance-none pr-8 focus:ring-primary focus:border-primary"
+            >
+              <option value="24h">Ultime 24 ore</option>
+              <option value="7d">Ultimi 7 giorni</option>
+              <option value="30d">Ultimi 30 giorni</option>
+              <option value="all">Tutti i dati</option>
+            </select>
+            <Filter size={14} className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-zinc-400 pointer-events-none" />
+          </div>
+          
+          {/* Refresh button */}
+          <button 
+            onClick={handleRefresh}
+            className="btn btn-outline p-1.5"
+            disabled={isLoading || isLoadingUsers || isLoadingSessions || isLoadingDetails}
+          >
+            <RefreshCw size={16} className={isLoading || isLoadingUsers || isLoadingSessions || isLoadingDetails ? "animate-spin" : ""} />
+          </button>
         </div>
       </div>
       
-      {/* Tabs di navigazione */}
-      <div className="border-b border-zinc-700 flex space-x-2">
-        <button
-          onClick={() => setActiveTab('landing-pages')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-            activeTab === 'landing-pages'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-zinc-400 hover:text-white hover:border-zinc-500'
-          }`}
-        >
-          Landing Pages
-        </button>
-        <button
-          onClick={() => setActiveTab('marketing')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-            activeTab === 'marketing'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-zinc-400 hover:text-white hover:border-zinc-500'
-          }`}
-        >
-          Facebook Ads
-        </button>
-      </div>
-      
-      {/* Breadcrumb di navigazione (solo per landing pages) */}
-      {activeTab === 'landing-pages' && (selectedLandingPage || selectedUser || selectedSession) && (
+      {/* Breadcrumb di navigazione */}
+      {(selectedLandingPage || selectedUser || selectedSession) && (
         <div className="flex items-center text-xs text-zinc-400 space-x-1 py-2">
           <button 
             onClick={() => {
@@ -345,55 +314,60 @@ export default function TracciamentoPage() {
         </div>
       )}
       
-      {/* Contenuto principale - Visualizzazione condizionale in base al tab attivo */}
-      {activeTab === 'landing-pages' ? (
-        <div className="card overflow-hidden">
-          {/* Visualizzazione delle landing page */}
-          {!selectedLandingPage && (
-            <LandingPageList 
-              landingPages={landingPages}
-              onSelectLandingPage={handleSelectLandingPage}
-              isLoading={isLoading}
-              searchQuery={searchQuery}
-            />
-          )}
-          
-          {/* Visualizzazione degli utenti di una landing page */}
-          {selectedLandingPage && !selectedUser && (
-            <UsersList 
-              users={users}
-              landingPage={selectedLandingPage}
-              onSelectUser={handleSelectUser}
-              onBack={handleBackFromLandingPage}
-              isLoading={isLoadingUsers}
-              searchQuery={searchQuery}
-            />
-          )}
-          
-          {/* Visualizzazione delle sessioni di un utente */}
-          {selectedUser && !selectedSession && (
-            <SessionsList 
-              sessions={sessions}
-              user={selectedUser}
-              onSelectSession={handleSelectSession}
-              onBack={handleBackFromUser}
-              isLoading={isLoadingSessions}
-            />
-          )}
-          
-          {/* Visualizzazione del percorso di una sessione */}
-          {selectedSession && (
-            <SessionFlow 
-              sessionDetails={sessionDetails}
-              session={selectedSession}
-              onBack={handleBackFromSession}
-              isLoading={isLoadingDetails}
-            />
-          )}
+      {/* Contenuto principale - Landing Pages */}
+      <div className="card overflow-hidden">
+        {/* Visualizzazione delle landing page */}
+        {!selectedLandingPage && (
+          <LandingPageList 
+            landingPages={landingPages}
+            onSelectLandingPage={handleSelectLandingPage}
+            isLoading={isLoading}
+            searchQuery={searchQuery}
+          />
+        )}
+        
+        {/* Visualizzazione degli utenti di una landing page */}
+        {selectedLandingPage && !selectedUser && (
+          <UsersList 
+            users={users}
+            landingPage={selectedLandingPage}
+            onSelectUser={handleSelectUser}
+            onBack={handleBackFromLandingPage}
+            isLoading={isLoadingUsers}
+            searchQuery={searchQuery}
+          />
+        )}
+        
+        {/* Visualizzazione delle sessioni di un utente */}
+        {selectedUser && !selectedSession && (
+          <SessionsList 
+            sessions={sessions}
+            user={selectedUser}
+            onSelectSession={handleSelectSession}
+            onBack={handleBackFromUser}
+            isLoading={isLoadingSessions}
+          />
+        )}
+        
+        {/* Visualizzazione del percorso di una sessione */}
+        {selectedSession && (
+          <SessionFlow 
+            sessionDetails={sessionDetails}
+            session={selectedSession}
+            onBack={handleBackFromSession}
+            isLoading={isLoadingDetails}
+          />
+        )}
+      </div>
+      
+      {/* Facebook Ads (solo visibile quando non ci sono landing page selezionate) */}
+      {!selectedLandingPage && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Facebook Ads</h2>
+          <div className="card">
+            <MarketingApiOverview />
+          </div>
         </div>
-      ) : (
-        /* Visualizzazione della sezione Marketing API */
-        <MarketingApiOverview />
       )}
     </div>
   );
