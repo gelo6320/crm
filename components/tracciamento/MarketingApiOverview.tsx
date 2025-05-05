@@ -47,7 +47,7 @@ export default function MarketingApiOverview() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="p-20 flex items-center justify-between mb-3">
         
         {/* Controlli spostati a destra */}
         <div className="flex space-x-2">
