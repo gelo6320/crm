@@ -1,5 +1,5 @@
 // components/tracciamento/MarketingChart.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -49,6 +49,13 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
     roas: number[];
     performance: number[];
   }>({ dates: [], leads: [], conversions: [], roas: [], performance: [] });
+  
+  // Riferimento al contenitore del grafico
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartInstance = useRef<any>(null);
+  
+  // Aggiunto per risolvere il problema di rendering iniziale
+  const [isChartInitialized, setIsChartInitialized] = useState(false);
   
   // Elabora i dati in base al timeRange
   useEffect(() => {
@@ -179,6 +186,9 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         }
       };
     }
+
+    // Adatta configurazione per mobile
+    const isMobile = window.innerWidth < 768;
     
     // Aggiorna le opzioni del grafico
     setChartOptions({
@@ -190,23 +200,23 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       },
       elements: {
         point: {
-          radius: activeMetric === 'performance' ? 4 : 3, // Punti più grandi per performance
-          hoverRadius: 6,
+          radius: isMobile ? (activeMetric === 'performance' ? 3 : 2) : (activeMetric === 'performance' ? 4 : 3), // Punti più piccoli su mobile
+          hoverRadius: isMobile ? 4 : 6,
         },
         line: {
           borderWidth: activeMetric === 'performance' ? 3 : 2
         }
       },
       animation: {
-        duration: 1500,
+        duration: 1000, // Ridotta per migliori performance
         easing: 'easeOutQuart'
       },
       layout: {
         padding: {
           top: 20,
-          right: 20, 
+          right: isMobile ? 10 : 20, 
           bottom: 0, 
-          left: 0
+          left: isMobile ? 0 : 0
         }
       },
       scales: {
@@ -217,9 +227,10 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           },
           ticks: {
             color: 'rgba(255, 255, 255, 0.7)',
-            autoSkip: false,
+            autoSkip: true,
+            maxTicksLimit: isMobile ? 5 : undefined, // Limita il numero di tick su mobile
             font: {
-              size: 10
+              size: isMobile ? 8 : 10
             }
           }
         },
@@ -231,8 +242,9 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           },
           ticks: {
             color: 'rgba(255, 255, 255, 0.7)',
-            padding: 10,
-            precision: 0
+            padding: isMobile ? 5 : 10,
+            precision: 0,
+            maxTicksLimit: isMobile ? 5 : undefined // Limita il numero di tick su mobile
           }
         },
         // Scala secondaria per ROAS (se attivo)
@@ -249,8 +261,9 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
             },
             ticks: {
               color: 'rgba(255, 255, 255, 0.7)',
-              padding: 10,
-              precision: 1
+              padding: isMobile ? 5 : 10,
+              precision: 1,
+              maxTicksLimit: isMobile ? 5 : undefined // Limita il numero di tick su mobile
             }
           }
         } : {})
@@ -263,11 +276,11 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
             color: 'rgba(255, 255, 255, 0.7)',
             usePointStyle: true,
             pointStyle: 'circle',
-            padding: 20,
+            padding: isMobile ? 10 : 20,
             boxWidth: 8,
             boxHeight: 8,
             font: {
-              size: 11
+              size: isMobile ? 9 : 11
             }
           }
         },
@@ -277,7 +290,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           bodyColor: 'rgba(255, 255, 255, 0.9)',
           borderColor: activeMetric === 'performance' ? 'rgba(34, 197, 94, 0.5)' : 'rgba(255, 107, 0, 0.5)',
           borderWidth: 1,
-          padding: 12,
+          padding: isMobile ? 8 : 12,
           displayColors: true,
           callbacks: {
             label: function(context) {
@@ -307,7 +320,45 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         },
       },
     });
+
+    // Imposta che il grafico è stato inizializzato
+    setIsChartInitialized(true);
   }, [processedData, timeRange, activeMetric]);
+
+  // Gestisci il resize della finestra
+  useEffect(() => {
+    const handleResize = () => {
+      if (chartInstance.current) {
+        chartInstance.current.resize();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    
+    // Forza un resize dopo il rendering iniziale
+    const resizeTimeout = setTimeout(() => {
+      handleResize();
+    }, 100);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimeout);
+    };
+  }, []);
+
+  // Forza un aggiornamento del grafico dopo il rendering
+  useLayoutEffect(() => {
+    if (isChartInitialized && chartInstance.current) {
+      chartInstance.current.resize();
+    }
+  }, [isChartInitialized]);
+  
+  // Ottieni e salva l'istanza del grafico
+  const chartRef = (chart: any) => {
+    if (chart !== null) {
+      chartInstance.current = chart;
+    }
+  };
   
   // Se i dati sono ancora in caricamento, mostra un placeholder
   if (isLoading) {
@@ -430,20 +481,20 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
 
   return (
     <motion.div 
-      className="bg-zinc-800 rounded-lg p-6 mb-6 w-full"
+      className="bg-zinc-800 rounded-lg p-4 sm:p-6 mb-6 w-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-        <h3 className="text-lg font-medium mb-4 md:mb-0">Panoramica</h3>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6">
+        <h3 className="text-lg font-medium mb-3 md:mb-0">Panoramica</h3>
         
         <div className="flex flex-wrap gap-2">
           {['performance', 'all', 'leads', 'conversions', 'roas'].map((metric) => (
             <button
               key={metric}
               onClick={() => setActiveMetric(metric as any)}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
+              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-medium rounded transition-all ${
                 activeMetric === metric
                   ? metric === 'performance' ? 'bg-emerald-500 text-white' : 'bg-primary text-white'
                   : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
@@ -459,20 +510,20 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       </div>
       
       {/* Riepilogo metriche */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-6">
         {metricSummary.map((metric) => (
           <motion.div
             key={metric.id}
-            className={`p-4 rounded ${metric.bgColor} flex items-center`}
+            className={`p-2 md:p-4 rounded ${metric.bgColor} flex items-center`}
             whileHover={{ scale: 1.02 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            <div className={`rounded-full p-2 ${metric.color} bg-white/10 mr-3`}>
+            <div className={`rounded-full p-1.5 md:p-2 ${metric.color} bg-white/10 mr-2 md:mr-3`}>
               {metric.icon}
             </div>
             <div>
-              <p className="text-sm text-zinc-400">{metric.label}</p>
-              <p className={`text-xl font-bold ${metric.color}`}>
+              <p className="text-xs md:text-sm text-zinc-400">{metric.label}</p>
+              <p className={`text-base md:text-xl font-bold ${metric.color}`}>
                 {metric.isDecimal ? `${metric.value.toFixed(1)}` : metric.value.toLocaleString()}
                 {metric.id === 'roas' ? 'x' : ''}
               </p>
@@ -481,9 +532,14 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         ))}
       </div>
       
-      {/* Grafico a larghezza piena */}
-      <div className="w-full h-64 md:h-80" style={{ width: '100%' }}>
+      {/* Grafico a larghezza piena con spazio negativo orizzontale su mobile */}
+      <div 
+        ref={chartContainerRef}
+        className="w-full h-64 md:h-80 -mx-2 sm:mx-0" 
+        style={{ width: 'calc(100% + 16px)', marginLeft: '-8px' }}
+      >
         <Line 
+          ref={chartRef}
           options={chartOptions} 
           data={chartData} 
           plugins={[
