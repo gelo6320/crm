@@ -26,9 +26,9 @@ export default function FacebookEventModal({
   const [sendToFacebook, setSendToFacebook] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Map the status to an appropriate Facebook event
+  // Mappa lo stato a un evento Facebook appropriato
   useEffect(() => {
-    // For purchase events, always use "Purchase"
+    // Per gli eventi di acquisto, usa sempre "Purchase"
     if (lead.status === "customer") {
       setEventName("Purchase");
     } else {
@@ -53,10 +53,10 @@ export default function FacebookEventModal({
     setIsSubmitting(true);
     
     try {
-      // API call to confirm the move and send the event to Facebook
+      // Chiamata API per confermare lo spostamento e inviare l'evento a Facebook
       await updateLeadStage(
         lead._id,
-        lead.type || 'form', // Default to 'form' if type is not specified
+        lead.type,
         previousStatus,
         lead.status,
         sendToFacebook ? {
@@ -157,19 +157,19 @@ export default function FacebookEventModal({
               </label>
             </div>
             
-            {lead.value ? (
+            {lead.value && (
               <div className="flex items-center justify-between py-2 px-3 bg-zinc-900 rounded">
                 <span className="text-sm text-zinc-400">Valore:</span>
                 <span className="text-sm font-medium">€{lead.value.toLocaleString('it-IT')}</span>
               </div>
-            ) : null}
+            )}
             
-            {lead.service ? (
+            {lead.service && (
               <div className="flex items-center justify-between py-2 px-3 bg-zinc-900 rounded">
                 <span className="text-sm text-zinc-400">Servizio:</span>
                 <span className="text-sm font-medium">{lead.service}</span>
               </div>
-            ) : null}
+            )}
           </div>
           
           <div className="flex justify-between space-x-2 mt-6">
