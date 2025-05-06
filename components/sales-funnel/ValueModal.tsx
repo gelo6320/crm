@@ -1,4 +1,4 @@
-// components/sales-funnel/EditValueModal.tsx
+// components/sales-funnel/ValueModal.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,13 +7,13 @@ import { FunnelItem } from "@/types";
 import { updateLeadMetadata } from "@/lib/api/funnel";
 import { toast } from "@/components/ui/toaster";
 
-interface EditValueModalProps {
+interface ValueModalProps {
   lead: FunnelItem;
   onClose: () => void;
   onSave: (value: number, service: string) => void;
 }
 
-export default function EditValueModal({ lead, onClose, onSave }: EditValueModalProps) {
+export default function ValueModal({ lead, onClose, onSave }: ValueModalProps) {
   const [value, setValue] = useState<string>(lead.value?.toString() || "");
   const [service, setService] = useState<string>(lead.service || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,13 +48,29 @@ export default function EditValueModal({ lead, onClose, onSave }: EditValueModal
     setIsSubmitting(true);
     
     try {
+      // Process the update with the onSave callback
       await onSave(Number(value) || 0, service);
+      
+      // Update the lead metadata directly via API as a backup/failsafe
+      try {
+        await updateLeadMetadata(
+          lead._id,
+          lead.type || 'form',
+          Number(value) || 0,
+          service
+        );
+      } catch (updateError) {
+        console.error("Backup update failed, relying on callback:", updateError);
+        // Continue execution - the primary update is through the callback
+      }
+      
       toast("success", "Lead aggiornato", "Valore e servizio aggiornati con successo");
     } catch (error) {
       console.error("Errore durante l'aggiornamento:", error);
       toast("error", "Errore", "Si è verificato un errore durante l'aggiornamento");
     } finally {
       setIsSubmitting(false);
+      onClose();
     }
   };
   
