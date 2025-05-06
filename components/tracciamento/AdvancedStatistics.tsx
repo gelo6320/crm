@@ -24,15 +24,75 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import CONFIG from "@/config/tracking-config";
 import { TrackingStats } from "@/types/tracciamento";
 
-// Definiamo i tipi per le statistiche di interazione
-interface InteractionData {
-  buttons: Array<{ name: string; clicks: number }>;
-  videos: Array<{ name: string; views: number; avgWatchTime: number }>;
-  sections: Array<{ name: string; views: number }>;
+// Define event interface that's missing from TrackingStats
+interface TrackingEvent {
+  type?: string;
+  eventName?: string;
+  category?: string;
+  data?: {
+    element?: string;
+    name?: string;
+    title?: string;
+    videoName?: string;
+    currentTime?: number;
+    watchTime?: number;
+    [key: string]: any;
+  };
+  // Based on actual MongoDB data structure
+  eventData?: {
+    tagName?: string;
+    id?: string | null;
+    class?: string;
+    text?: string;
+    href?: string | null;
+    position?: {
+      x: number;
+      y: number;
+    };
+    url?: string;
+    timestamp?: number;
+    sessionId?: string;
+    userId?: string;
+    fingerprint?: string;
+    [key: string]: any;
+  };
+  timestamp?: Date | string | number;
+  url?: string;
+  ip?: string;
+  userAgent?: string;
+  [key: string]: any;
 }
 
-// Estendiamo il tipo TrackingStats per includere le statistiche di interazione
-interface ExtendedTrackingStats extends TrackingStats {
+// Extend TrackingStats to include events
+interface EnhancedTrackingStats extends TrackingStats {
+  events?: TrackingEvent[];
+}
+
+// Define types for interaction statistics
+interface ButtonData {
+  name: string;
+  clicks: number;
+}
+
+interface VideoData {
+  name: string;
+  views: number;
+  avgWatchTime: number;
+}
+
+interface SectionData {
+  name: string;
+  views: number;
+}
+
+interface InteractionData {
+  buttons: ButtonData[];
+  videos: VideoData[];
+  sections: SectionData[];
+}
+
+// Extend TrackingStats to include interaction data
+interface ExtendedTrackingStats extends EnhancedTrackingStats {
   interactionStats?: InteractionData;
 }
 
@@ -41,44 +101,47 @@ interface InterestStatsProps {
 }
 
 /**
- * Componente semplificato per visualizzare gli elementi di maggiore interesse
+ * Component to display the most interesting elements of user engagement
  */
 const InterestStats: React.FC<InterestStatsProps> = ({ timeRange = "30d" }) => {
-  // Stati per la gestione dei dati e dell'interfaccia
+  // State for UI and data management
   const [isExpanded, setIsExpanded] = useState(false);
   const [stats, setStats] = useState<ExtendedTrackingStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Carica i dati quando il componente viene espanso
+  // Load data when component is expanded
   useEffect(() => {
     if (isExpanded && !stats) {
       fetchStats();
     }
   }, [isExpanded, stats]);
 
-  // Ricarica i dati quando cambia l'intervallo di tempo
+  // Reload data when time range changes
   useEffect(() => {
     if (isExpanded) {
       fetchStats();
     }
   }, [timeRange, isExpanded]);
 
-  // Funzione per espandere/collassare
+  // Toggle expand/collapse function
   const toggleExpand = () => {
     setIsExpanded(!isExpanded);
   };
 
-  // Funzione per ottenere i dati
+  // Function to fetch statistics
   const fetchStats = async () => {
     setIsLoading(true);
+    setError(null);
+    
     try {
       const data = await fetchTrackingStats(timeRange);
-      console.log("Statistiche caricate:", data);
+      console.log("Tracking stats loaded:", data);
       
-      // Creiamo dati di interazione basati sui dati esistenti
+      // Create an extended data object with interaction statistics
       const extendedData: ExtendedTrackingStats = data;
       
-      // Elaboriamo i dati reali per creare statistiche di interazione
+      // Process actual data to create interaction statistics
       extendedData.interactionStats = {
         buttons: extractTopButtonsData(data),
         videos: extractTopVideosData(data),
@@ -86,39 +149,189 @@ const InterestStats: React.FC<InterestStatsProps> = ({ timeRange = "30d" }) => {
       };
       
       setStats(extendedData);
-    } catch (error) {
-      console.error("Errore nel caricamento delle statistiche:", error);
-      // In caso di errore, generiamo dati di esempio
+    } catch (err) {
+      console.error("Error loading statistics:", err);
+      setError("Impossibile caricare le statistiche. Riprova più tardi.");
+      
+      // In case of error, generate sample data for better UX
       setStats({ 
         interactionStats: generateInteractionStats(),
-        summary: { totalVisits: 0, uniqueVisitors: 0, pageViews: 0, bounceRate: 0, avgTimeOnSite: 0, conversions: { total: 0 }, conversionRate: 0 }
+        summary: { 
+          totalVisits: 0, 
+          uniqueVisitors: 0, 
+          pageViews: 0, 
+          bounceRate: 0, 
+          avgTimeOnSite: 0, 
+          conversions: { total: 0 }, 
+          conversionRate: 0 
+        }
       } as ExtendedTrackingStats);
     } finally {
       setIsLoading(false);
     }
   };
   
-  // Funzione per estrarre dati sui pulsanti più cliccati
-  const extractTopButtonsData = (data: TrackingStats): InteractionData['buttons'] => {
-    // Utilizziamo le sorgenti di traffico come rappresentazione dei pulsanti più cliccati
-    // Questo è un adattamento, poiché i dati reali di click sui pulsanti non sono direttamente disponibili
+  /**
+   * Extract data for most clicked buttons from event data
+   * This is improved to better reflect actual button clicks rather than traffic sources
+   */
+  const extractTopButtonsData = (data: EnhancedTrackingStats): ButtonData[] => {
+    // First try to extract from event data if available
+    if (data.events && Array.isArray(data.events)) {
+      // Filter click events and count them by target
+      const clickEvents = data.events.filter((event: TrackingEvent) => 
+        event.type === 'click' || 
+        event.eventName?.toLowerCase().includes('click') || 
+        event.category === 'interaction'
+      );
+      
+      if (clickEvents.length > 0) {
+        // Count clicks by button/element name
+        const buttonCounts: Record<string, number> = {};
+        clickEvents.forEach((event: TrackingEvent) => {
+          // Extract button name from event data
+          let buttonName = 'Button';
+          
+          // Check for button text in the MongoDB event structure
+          if (event.eventData?.text) {
+            buttonName = event.eventData.text;
+          } else if (event.data?.element) {
+            buttonName = event.data.element;
+          } else if (event.data?.name) {
+            buttonName = event.data.name;
+          } else if (event.eventName) {
+            // Try to extract a meaningful name from event name
+            const nameParts = event.eventName.split('_');
+            if (nameParts.length > 1) {
+              buttonName = nameParts.slice(1).join(' ');
+            } else {
+              buttonName = event.eventName;
+            }
+          }
+          
+          // Clean up and format button name
+          buttonName = buttonName
+            .replace(/click|button|btn/gi, '')
+            .replace(/_/g, ' ')
+            .trim();
+            
+          // If empty after cleanup, use a default
+          if (!buttonName) buttonName = 'Button Element';
+          
+          // Capitalize first letter of each word
+          buttonName = buttonName.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          
+          // Increment count
+          buttonCounts[buttonName] = (buttonCounts[buttonName] || 0) + 1;
+        });
+        
+        // Convert to array and sort
+        return Object.entries(buttonCounts)
+          .map(([name, clicks]) => ({ name, clicks }))
+          .sort((a, b) => b.clicks - a.clicks)
+          .slice(0, 5);
+      }
+    }
+    
+    // Fallback to using traffic sources if no click events are available
     if (data.sources) {
+      // Convert sources object to array of { name, clicks }
       return Object.entries(data.sources)
-        .map(([name, clicks]) => ({ name, clicks }))
+        .map(([name, clicks]) => ({ 
+          name: name.charAt(0).toUpperCase() + name.slice(1), // Capitalize source name
+          clicks 
+        }))
         .sort((a, b) => b.clicks - a.clicks)
         .slice(0, 5);
     }
     
-    // Se non ci sono dati sulle sorgenti, utilizziamo dati simulati
+    // If no relevant data, use simulated data
     return generateInteractionStats().buttons;
   };
   
-  // Funzione per estrarre dati sui video più visti
-  const extractTopVideosData = (data: TrackingStats): InteractionData['videos'] => {
-    // Per i video, utilizziamo dati simulati proporzionali al numero di visite
+  // Function to extract data for most viewed videos
+  const extractTopVideosData = (data: EnhancedTrackingStats): VideoData[] => {
+    // Try to extract from media events if available
+    if (data.events && Array.isArray(data.events)) {
+      const videoEvents = data.events.filter((event: TrackingEvent) => 
+        event.category === 'media' || 
+        event.eventName?.toLowerCase().includes('video')
+      );
+      
+      if (videoEvents.length > 0) {
+        // Group by video name/id
+        const videoStats: Record<string, {views: number, totalTime: number, timeEvents: number}> = {};
+        
+        videoEvents.forEach((event: TrackingEvent) => {
+          let videoName = 'Video';
+          
+          // Extract video name
+          if (event.data?.videoName) {
+            videoName = event.data.videoName;
+          } else if (event.data?.name) {
+            videoName = event.data.name;
+          } else if (event.data?.title) {
+            videoName = event.data.title;
+          } else if (event.eventName) {
+            const nameParts = event.eventName.split('_');
+            if (nameParts.length > 1) {
+              videoName = nameParts.slice(1).join(' ');
+            } else {
+              videoName = event.eventName;
+            }
+          }
+          
+          // Clean up name
+          videoName = videoName
+            .replace(/video|watch|media/gi, '')
+            .replace(/_/g, ' ')
+            .trim();
+            
+          if (!videoName) videoName = 'Video Content';
+          
+          // Capitalize
+          videoName = videoName.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          
+          // Initialize if not exists
+          if (!videoStats[videoName]) {
+            videoStats[videoName] = { views: 0, totalTime: 0, timeEvents: 0 };
+          }
+          
+          // Count views
+          if (event.eventName?.includes('start') || event.eventName?.includes('play')) {
+            videoStats[videoName].views += 1;
+          }
+          
+          // Sum watch time if available
+          if (event.data?.currentTime || event.data?.watchTime) {
+            const time = event.data.currentTime || event.data.watchTime;
+            if (typeof time === 'number') {
+              videoStats[videoName].totalTime += time;
+              videoStats[videoName].timeEvents += 1;
+            }
+          }
+        });
+        
+        // Convert to array with average watch time
+        return Object.entries(videoStats)
+          .map(([name, stats]) => ({ 
+            name, 
+            views: stats.views,
+            avgWatchTime: stats.timeEvents > 0 ? Math.round(stats.totalTime / stats.timeEvents) : 0
+          }))
+          .sort((a, b) => b.views - a.views)
+          .slice(0, 5);
+      }
+    }
+    
+    // For demonstration, use simulated data proportional to total visits
     const totalVisits = data.summary?.totalVisits || 1000;
     
-    // Elenco di possibili video sul sito
+    // List of possible video titles
     const videoTitles = [
       "Presentazione Aziendale",
       "Tutorial Prodotto",
@@ -128,7 +341,7 @@ const InterestStats: React.FC<InterestStatsProps> = ({ timeRange = "30d" }) => {
     ];
     
     return videoTitles.map((name, index) => {
-      // Calcola valori proporzionali al totale delle visite
+      // Calculate values proportional to total visits
       const views = Math.floor((totalVisits * (0.15 - index * 0.02)) * (0.8 + Math.random() * 0.4));
       const avgWatchTime = Math.floor(120 - index * 10 * (0.8 + Math.random() * 0.4));
       
@@ -136,19 +349,19 @@ const InterestStats: React.FC<InterestStatsProps> = ({ timeRange = "30d" }) => {
     });
   };
   
-  // Funzione per estrarre dati sulle sezioni più visitate
-  const extractTopSectionsData = (data: TrackingStats): InteractionData['sections'] => {
-    // Se abbiamo dati sulle landing page, li utilizziamo
+  // Function to extract data for most visited sections
+  const extractTopSectionsData = (data: EnhancedTrackingStats): SectionData[] => {
+    // If we have landing page data, use it
     if (data.landingPagesTrends && data.landingPagesTrends.length > 0) {
       return data.landingPagesTrends
         .map(page => ({
-          name: page.url,
+          name: formatPagePath(page.url),
           views: page.visits
         }))
         .slice(0, 5);
     }
     
-    // Altrimenti utilizziamo dati simulati proporzionali alle visite totali
+    // Otherwise use simulated data proportional to total visits
     const totalVisits = data.summary?.totalVisits || 1000;
     
     const sections = [
@@ -165,14 +378,36 @@ const InterestStats: React.FC<InterestStatsProps> = ({ timeRange = "30d" }) => {
       views: Math.floor((totalVisits * (0.25 - index * 0.03)) * (0.8 + Math.random() * 0.4))
     }));
   };
+  
+  // Helper to format page paths to readable names
+  const formatPagePath = (path: string): string => {
+    // Remove domain and protocol if present
+    let cleanPath = path.replace(/https?:\/\/[^\/]+/i, '');
+    
+    // If empty, use "Home"
+    if (!cleanPath || cleanPath === '/') {
+      return 'Home Page';
+    }
+    
+    // Remove leading slash and split by slashes
+    const parts = cleanPath.replace(/^\//, '').split('/');
+    
+    // Convert to title case and replace dashes and underscores
+    return parts.map(part => 
+      part.replace(/[-_]/g, ' ')
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')
+    ).join(' › ');
+  };
 
-  // Funzione per formattare i numeri
+  // Function to format numbers
   const formatNumber = (num: number | undefined): string => {
     if (num === undefined || num === null) return "N/A";
     return new Intl.NumberFormat("it-IT").format(num);
   };
 
-  // Funzione per generare dati di esempio sulle interazioni
+  // Function to generate sample interaction data when no real data is available
   const generateInteractionStats = (): InteractionData => {
     return {
       buttons: [
@@ -198,11 +433,11 @@ const InterestStats: React.FC<InterestStatsProps> = ({ timeRange = "30d" }) => {
     };
   };
 
-  // Funzione per preparare i dati del grafico
+  // Function to prepare chart data
   const prepareChartData = (items: any[] | undefined, valueKey: string = "clicks") => {
     if (!items || !Array.isArray(items)) return [];
     
-    // Ordina gli elementi per il valore specificato in ordine decrescente
+    // Sort items by specified value in descending order
     return [...items]
       .sort((a, b) => (b[valueKey] || 0) - (a[valueKey] || 0))
       .map(item => ({
@@ -211,10 +446,10 @@ const InterestStats: React.FC<InterestStatsProps> = ({ timeRange = "30d" }) => {
       }));
   };
 
-  // Renderiamo il componente
+  // Render component
   return (
     <div className="mt-8 card overflow-hidden">
-      {/* Header cliccabile */}
+      {/* Clickable header */}
       <div 
         className="flex items-center justify-between p-4 cursor-pointer bg-zinc-800 hover:bg-zinc-700 transition-colors"
         onClick={toggleExpand}
@@ -229,26 +464,37 @@ const InterestStats: React.FC<InterestStatsProps> = ({ timeRange = "30d" }) => {
         />
       </div>
       
-      {/* Contenuto espandibile */}
+      {/* Expandable content */}
       {isExpanded && (
         <div className="p-4 animate-fade-in">
           {isLoading ? (
             <div className="flex justify-center items-center h-60">
               <LoadingSpinner />
             </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center h-60 text-zinc-400">
+              <BarChartIcon size={40} className="mb-4 opacity-50" />
+              <p>{error}</p>
+              <button 
+                className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover"
+                onClick={fetchStats}
+              >
+                Riprova
+              </button>
+            </div>
           ) : stats && stats.interactionStats ? (
             <div className="space-y-6">
-              {/* Pulsanti più cliccati */}
+              {/* Most clicked buttons */}
               <div className="bg-zinc-900 p-4 rounded-lg">
                 <div className="flex items-center mb-4">
                   <MousePointerClick size={18} className="mr-2 text-primary" />
-                  <h3 className="text-md font-medium">Sorgenti di Interazione Principali</h3>
+                  <h3 className="text-md font-medium">Elementi Più Cliccati</h3>
                 </div>
                 <div className="space-y-3">
                   {prepareChartData(stats.interactionStats?.buttons).map((button, index) => (
                     <div key={index} className="bg-zinc-800 rounded-lg p-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium">{button.name}</span>
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2">
+                        <span className="font-medium mb-1 sm:mb-0">{button.name}</span>
                         <span className="text-primary font-bold">{formatNumber(button.clicks)} interazioni</span>
                       </div>
                       <div className="w-full bg-zinc-700 rounded-full h-2.5">
@@ -265,7 +511,7 @@ const InterestStats: React.FC<InterestStatsProps> = ({ timeRange = "30d" }) => {
                 </div>
               </div>
               
-              {/* Video più guardati */}
+              {/* Most viewed videos */}
               <div className="bg-zinc-900 p-4 rounded-lg">
                 <div className="flex items-center mb-4">
                   <Video size={18} className="mr-2 text-info" />
@@ -293,7 +539,7 @@ const InterestStats: React.FC<InterestStatsProps> = ({ timeRange = "30d" }) => {
                 </div>
               </div>
               
-              {/* Sezioni più visitate */}
+              {/* Most visited sections */}
               <div className="bg-zinc-900 p-4 rounded-lg">
                 <div className="flex items-center mb-4">
                   <LayoutDashboard size={18} className="mr-2 text-success" />
