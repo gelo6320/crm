@@ -610,14 +610,8 @@ export default function ContactsPage() {
                             </svg>
                           </span>
                         ) : (
-                          <span className="inline-flex mr-2 text-gray-500" style={{ width: "16px", height: "16px" }}>
-                            <svg fill="currentColor" viewBox="0 0 490 490" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M245,0C109.69,0,0,109.69,0,245s109.69,245,245,245s245-109.69,245-245S380.31,0,245,0z M31.401,260.313h52.542
-                              c1.169,25.423,5.011,48.683,10.978,69.572H48.232C38.883,308.299,33.148,284.858,31.401,260.313z M320.58,229.688
-                              c-1.152-24.613-4.07-47.927-8.02-69.572h50.192c6.681,20.544,11.267,43.71,12.65,69.572H320.58z M206.38,329.885
-                              c-4.322-23.863-6.443-47.156-6.836-69.572h90.913c-0.392,22.416-2.514,45.709-6.837,69.572H206.38z M276.948,360.51
-                              c-7.18,27.563-17.573,55.66-31.951,83.818c-14.376-28.158-24.767-56.255-31.946-83.818H276.948z"/>
-                            </svg>
+                          <span className="inline-flex mr-2 text-gray-500">
+                            <Globe size={16} />
                           </span>
                         )}
                         <span className="font-medium">{contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}</span>
