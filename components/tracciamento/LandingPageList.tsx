@@ -2,6 +2,7 @@
 import { ExternalLink, Users, Clock, LineChart } from "lucide-react";
 import { LandingPage } from "@/types/tracciamento";
 import { formatDateTime } from "@/lib/utils/date";
+import { normalizeUrl, groupLandingPagesByNormalizedUrl } from "@/lib/utils/url-normalizer";
 
 interface LandingPageListProps {
   landingPages: LandingPage[];
@@ -16,12 +17,15 @@ export default function LandingPageList({
   isLoading,
   searchQuery
 }: LandingPageListProps) {
+  // Raggruppa le landing page per URL normalizzato per evitare duplicati
+  const groupedLandingPages = groupLandingPagesByNormalizedUrl(landingPages);
+  
   // Filtra le landing page in base alla query di ricerca
   const filteredLandingPages = searchQuery
-    ? landingPages.filter(page => 
-        page.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    ? groupedLandingPages.filter(page => 
+        normalizeUrl(page.url).toLowerCase().includes(searchQuery.toLowerCase()) ||
         page.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    : landingPages;
+    : groupedLandingPages;
 
   if (isLoading) {
     return (
