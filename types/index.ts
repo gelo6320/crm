@@ -62,6 +62,7 @@ export interface Stat {
   
   export interface FunnelItem extends Lead {
     type: 'form' | 'booking' | 'facebook';
+    leadId: string;
   }
   
   export interface FunnelData {

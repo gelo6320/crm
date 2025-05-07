@@ -316,7 +316,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     try {
       // Recupera lo stato attuale dal server
       const checkResponse = await axios.get(
-        `${API_BASE_URL}/api/leads/${lead._id}`,
+        `${API_BASE_URL}/api/leads/${lead.leadId || lead._id}`,
         { withCredentials: true }
       );
       
@@ -403,7 +403,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     try {
       // Fetch the latest lead status first to ensure consistency
       const checkResponse = await axios.get(
-        `${API_BASE_URL}/api/leads/${movingLead.lead._id}`,
+        `${API_BASE_URL}/api/leads/${movingLead.lead.leadId || movingLead.lead._id}`,
         { withCredentials: true }
       );
       

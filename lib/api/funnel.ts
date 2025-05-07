@@ -21,6 +21,7 @@ export async function fetchFunnelData(): Promise<{
     const allItems: FunnelItem[] = leadsData.map((lead: any) => {
       return {
         _id: lead._id,
+        leadId: lead.leadId || lead._id,
         name: [lead.firstName || '', lead.lastName || ''].filter(Boolean).join(' ') || lead.name || 'Contact',
         email: lead.email,
         phone: lead.phone || '',
@@ -188,14 +189,13 @@ export async function updateLeadStage(
     const response = await axios.post(
       `${API_BASE_URL}/api/sales-funnel/move`,
       {
-        leadId,
+        leadId, // This should be the actual leadId from the FunnelItem
         leadType,
         fromStage: dbFromStage,
         toStage: dbToStage,
         sendToFacebook: !!facebookOptions,
         facebookEvent: facebookOptions?.eventName || null,
         eventMetadata: facebookOptions?.eventMetadata || null,
-        // Include original values for reference
         originalFromStage: fromStage,
         originalToStage: toStage
       },
