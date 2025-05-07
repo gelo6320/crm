@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Facebook, Info } from "lucide-react";
-import { FunnelItem } from "@/types";
+import { X, Facebook, Info, AlertTriangle } from "lucide-react";
+import { FunnelItem, FunnelOperationResult } from "@/types";
 import { updateLeadStage } from "@/lib/api/funnel";
 import { toast } from "@/components/ui/toaster";
 
@@ -25,6 +25,37 @@ export default function FacebookEventModal({
   const [eventName, setEventName] = useState<string>("");
   const [sendToFacebook, setSendToFacebook] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasConsent, setHasConsent] = useState<boolean | null>(null);
+  const [isCheckingConsent, setIsCheckingConsent] = useState(true);
+  
+  // Verifica del consenso quando il modale si apre
+  useEffect(() => {
+    const checkConsent = async () => {
+      try {
+        setIsCheckingConsent(true);
+        // Facciamo una richiesta per ottenere i dati completi del lead, inclusi i consensi
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com"}/api/leads/${lead.leadId || lead._id}`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const leadData = await response.json();
+          // Verifica se il lead ha dato il consenso per le terze parti
+          setHasConsent(leadData.consent?.thirdParty === true);
+        } else {
+          // Se non possiamo ottenere i dati, assumiamo che non ci sia consenso
+          setHasConsent(false);
+        }
+      } catch (error) {
+        console.error("Errore nel recupero dei dati del consenso:", error);
+        setHasConsent(false);
+      } finally {
+        setIsCheckingConsent(false);
+      }
+    };
+    
+    checkConsent();
+  }, [lead._id, lead.leadId]);
   
   // Mappa lo stato a un evento Facebook appropriato
   useEffect(() => {
@@ -54,7 +85,7 @@ export default function FacebookEventModal({
     
     try {
       // Chiamata API per confermare lo spostamento e inviare l'evento a Facebook
-      await updateLeadStage(
+      const result = await updateLeadStage(
         lead._id,
         lead.type,
         previousStatus,
@@ -66,15 +97,30 @@ export default function FacebookEventModal({
             service: lead.service
           }
         } : undefined
-      );
+      ) as FunnelOperationResult; // Aggiungi questo cast
       
-      toast("success", "Lead spostato con successo", 
-        sendToFacebook 
-          ? `Evento "${eventName}" inviato a Facebook` 
-          : "Nessun evento inviato a Facebook"
-      );
-      
-      onSave();
+      if (result.success) {
+        if (result.consentError && sendToFacebook) {
+          toast("warning", "Lead spostato con limitazioni", 
+            "Lead spostato ma l'evento non è stato inviato a Facebook: consenso per terze parti mancante"
+          );
+        } else {
+          toast("success", "Lead spostato con successo", 
+            sendToFacebook 
+              ? `Evento "${eventName}" inviato a Facebook` 
+              : "Nessun evento inviato a Facebook"
+          );
+        }
+        
+        // Se è stata creata una scheda cliente, mostra un toast aggiuntivo
+        if (result.clientResult?.success) {
+          toast("success", "Cliente creato", "La scheda cliente è stata creata con successo");
+        }
+        
+        onSave();
+      } else {
+        throw new Error(result.message || "Errore sconosciuto");
+      }
     } catch (error) {
       console.error("Error during lead move:", error);
       toast("error", "Errore durante lo spostamento", "Si è verificato un errore, l'operazione verrà annullata");
@@ -123,6 +169,23 @@ export default function FacebookEventModal({
             </div>
           </div>
           
+          {isCheckingConsent ? (
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin mr-2 h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
+              <span className="text-sm">Verifica del consenso in corso...</span>
+            </div>
+          ) : !hasConsent && (
+            <div className="flex items-start p-3 mb-4 bg-danger/10 rounded border border-danger/20 text-danger">
+              <AlertTriangle size={18} className="mr-2 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <strong>Consenso per terze parti mancante!</strong> 
+                <br />
+                Questo lead non ha fornito il consenso per la condivisione dei dati con terze parti.
+                Puoi comunque spostare il lead ma l'evento non sarà inviato a Facebook.
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-4">
             <div>
               <label htmlFor="eventName" className="block text-sm font-medium mb-1">
@@ -151,9 +214,11 @@ export default function FacebookEventModal({
                 checked={sendToFacebook}
                 onChange={(e) => setSendToFacebook(e.target.checked)}
                 className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-primary focus:ring-primary"
+                disabled={!hasConsent}
               />
-              <label htmlFor="sendToFacebook" className="text-sm">
+              <label htmlFor="sendToFacebook" className={`text-sm ${!hasConsent ? 'text-zinc-500' : ''}`}>
                 Invia evento a Facebook
+                {!hasConsent && sendToFacebook && " (richiede consenso terze parti)"}
               </label>
             </div>
             
@@ -196,7 +261,7 @@ export default function FacebookEventModal({
                 </span>
               ) : (
                 <>
-                  {sendToFacebook && <Facebook size={16} className="mr-2" />}
+                  {sendToFacebook && hasConsent && <Facebook size={16} className="mr-2" />}
                   Conferma
                 </>
               )}

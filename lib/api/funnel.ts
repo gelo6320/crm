@@ -1,6 +1,7 @@
 // lib/api/funnel.ts
 import { FunnelData, FunnelItem, FunnelStats } from "@/types";
 import axios from "axios";
+import crypto from 'crypto';
 
 // Define base URL for APIs
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
@@ -32,7 +33,11 @@ export async function fetchFunnelData(): Promise<{
         status: mapDatabaseStatusToFunnelStatus(lead.status),
         source: lead.source || lead.formType || '',
         createdAt: lead.createdAt,
-        updatedAt: lead.updatedAt
+        updatedAt: lead.updatedAt,
+        // Aggiunta dei dati di consenso
+        consent: lead.consent || {},
+        // Aggiunta dei dati estesi per il tracciamento
+        extendedData: lead.extendedData || {}
       };
     });
     
@@ -116,12 +121,21 @@ function mapFunnelStatusToDatabaseStatus(funnelStatus: string): string {
     case 'new': return 'new';
     case 'contacted': return 'contacted';
     case 'qualified': return 'qualified';
-    case 'opportunity': return 'qualified'; // Map to closest equivalent
-    case 'proposal': return 'qualified'; // Map to closest equivalent
+    case 'opportunity': return 'opportunity'; // Ora mappato direttamente
+    case 'proposal': return 'proposal'; // Ora mappato direttamente
     case 'customer': return 'converted'; // Map 'customer' to 'converted'
     case 'lost': return 'lost';
     default: return 'new';
   }
+}
+
+// Funzione per hashare i dati utente per Facebook CAPI
+function hashDataForFacebook(data: string): string {
+  if (!data) return '';
+  return crypto
+    .createHash('sha256')
+    .update(data.trim().toLowerCase())
+    .digest('hex');
 }
 
 // Calculate funnel statistics
@@ -169,7 +183,21 @@ interface FacebookEventOptions {
   eventMetadata?: Record<string, any>;
 }
 
-// Updated function to support sending Facebook events
+// Funzione aggiornata per ottenere i dati completi del lead
+async function getLeadFullData(leadId: string): Promise<any> {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/api/leads/${leadId}`,
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Errore nel recupero dei dati completi del lead:", error);
+    throw error;
+  }
+}
+
+// Updated function to support sending Facebook events with improved data and consent checking
 export async function updateLeadStage(
   leadId: string,
   leadType: string,
@@ -180,29 +208,95 @@ export async function updateLeadStage(
   success: boolean;
   message: string;
   facebookResult?: any;
+  clientCreated?: boolean;
 }> {
   try {
+    // Prima otteniamo i dati completi del lead per verificare il consenso e raccogliere tutti i dati necessari
+    const leadFullData = await getLeadFullData(leadId);
+    
     // Convert funnel statuses to database statuses
     const dbFromStage = mapFunnelStatusToDatabaseStatus(fromStage);
     const dbToStage = mapFunnelStatusToDatabaseStatus(toStage);
     
+    // Preparazione dati per la Facebook CAPI
+    let facebookData = null;
+    let consentError = null;
+    
+    if (facebookOptions) {
+      // Verifica del consenso: controllo se il lead ha dato il consenso per terze parti
+      if (!leadFullData.consent?.thirdParty) {
+        consentError = "L'evento Facebook non può essere inviato: consenso per terze parti non fornito";
+        console.warn(consentError, leadId);
+        
+        // Non inviamo l'evento, ma continuiamo con l'aggiornamento dello stato
+        facebookData = null;
+      } else {
+        // Preparazione dei dati utente hashati per la CAPI
+        const userData = {
+          em: hashDataForFacebook(leadFullData.email),
+          ph: hashDataForFacebook(leadFullData.phone),
+          fn: hashDataForFacebook(leadFullData.firstName),
+          ln: hashDataForFacebook(leadFullData.lastName),
+          external_id: hashDataForFacebook(leadFullData.leadId)
+        };
+        
+        // Preparazione dei dati di tracciamento
+        const eventSourceUrl = leadFullData.extendedData?.landingPage || '';
+        
+        // Valore e valuta per il ROAS
+        let value = facebookOptions.eventMetadata?.value || leadFullData.value || 0;
+        const currency = leadFullData.extendedData?.currency || 'EUR';
+        
+        facebookData = {
+          eventName: facebookOptions.eventName,
+          userData: userData,
+          eventSourceUrl: eventSourceUrl,
+          eventId: `${leadId}_${Date.now()}`,
+          ipAddress: leadFullData.extendedData?.ipAddress || null,
+          userAgent: leadFullData.extendedData?.userAgent || null,
+          clientUserAgent: leadFullData.extendedData?.userAgent || null,
+          fbc: leadFullData.extendedData?.fbclid ? `fb.1.${Date.now()}.${leadFullData.extendedData.fbclid}` : null,
+          fbp: null, // Questo dovrebbe essere recuperato dai cookie del browser
+          value: value,
+          currency: currency,
+          customData: {
+            ...facebookOptions.eventMetadata,
+            value: value,
+            currency: currency,
+            service: leadFullData.service || facebookOptions.eventMetadata?.service,
+            content_name: leadFullData.service || facebookOptions.eventMetadata?.service,
+            content_category: leadType,
+            status: toStage
+          }
+        };
+      }
+    }
+    
+    // Prepara flag per registrazione cliente se convertito
+    const createClient = dbToStage === 'converted';
+    
+    // Chiamata API per lo spostamento con tutti i dati
     const response = await axios.post(
       `${API_BASE_URL}/api/sales-funnel/move`,
       {
-        leadId, // This should be the actual leadId from the FunnelItem
+        leadId,
         leadType,
         fromStage: dbFromStage,
         toStage: dbToStage,
-        sendToFacebook: !!facebookOptions,
-        facebookEvent: facebookOptions?.eventName || null,
-        eventMetadata: facebookOptions?.eventMetadata || null,
+        sendToFacebook: !!facebookData,
+        facebookData: facebookData,
         originalFromStage: fromStage,
-        originalToStage: toStage
+        originalToStage: toStage,
+        createClient: createClient,  // Flag per indicare che un nuovo cliente deve essere creato
+        consentError: consentError   // Passa eventuali errori di consenso al backend
       },
       { withCredentials: true }
     );
     
-    return response.data;
+    return {
+      ...response.data,
+      consentError: consentError
+    };
   } catch (error) {
     console.error("Error updating lead in funnel:", error);
     throw error;
