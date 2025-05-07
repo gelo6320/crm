@@ -280,7 +280,9 @@ export default function ContactsPage() {
       if (sourceFilter) queryParams.append('formType', sourceFilter);
       
       // Chiamata alla nuova API unificata
-      const response = await fetch(`${API_BASE_URL}/api/leads?${queryParams.toString()}`);
+      const response = await fetch(`${API_BASE_URL}/api/leads?${queryParams.toString()}`, {
+        credentials: 'include'
+      });
       const result = await response.json();
       
       if (result.success) {
