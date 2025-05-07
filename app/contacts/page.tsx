@@ -2,14 +2,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Users, Filter, Search, RefreshCw, ChevronDown, Phone, MessageCircle } from "lucide-react";
+import { Users, Filter, Search, RefreshCw, ChevronDown, Phone, MessageCircle, Globe } from "lucide-react";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import StatusBadge from "@/components/ui/StatusBadge";
 import Pagination from "@/components/ui/Pagination";
 import { formatDate } from "@/lib/utils/date";
 import { toast } from "@/components/ui/toaster";
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
 // Definizione dell'interfaccia per i contatti unificati basata sul nuovo schema
 interface Contact {
@@ -352,7 +353,7 @@ export default function ContactsPage() {
     setSelectedContact(contact);
   };
   
-  // Ottiene l'icona appropriata per il tipo di fonte
+      // Ottiene l'icona appropriata per il tipo di fonte
   const getSourceIcon = (sourceType: string) => {
     if (sourceType === 'facebook') {
       return (
@@ -373,9 +374,7 @@ export default function ContactsPage() {
     } else {
       return (
         <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary">
-          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M21 2H3a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1zm-1 18H4V4h16v16zM7 15h10v2H7zm0-4h10v2H7zm0-4h10v2H7z"/>
-          </svg>
+          <Globe className="h-3.5 w-3.5" />
         </span>
       );
     }

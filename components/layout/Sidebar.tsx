@@ -2,8 +2,7 @@
 import { 
   BarChart3, Calendar, FileText, Bookmark, 
   Facebook, Share2, Users, Settings, LogOut,
-  X, Globe, Shield, ChevronDown, ChevronRight, HardHat,
-  LineChart
+  X, Globe, Shield, HardHat, LineChart, Filter
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,7 +27,6 @@ interface SidebarLink {
   href: string;
   icon: React.ElementType;
   adminOnly?: boolean;
-  children?: SidebarLink[];
 }
 
 export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
@@ -36,7 +34,6 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
     const { logout } = useAuth();
     const { isAdmin } = useAuthz();
     const router = useRouter();
-    const [expandedMenus, setExpandedMenus] = useState<{ [key: string]: boolean }>({});
 
     const handleLogout = async () => {
         try {
@@ -46,52 +43,12 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
         }
     };
 
-    // Check if current path is part of menu or sub-item
-    useEffect(() => {
-      const expandedState: { [key: string]: boolean } = {};
-      
-      // Auto-expand menus containing current path
-      const checkPathInChildren = (links: SidebarLink[]) => {
-        links.forEach(link => {
-          if (link.children) {
-            const isActive = link.children.some(child => 
-              pathname === child.href || pathname.startsWith(child.href + '/')
-            );
-            
-            if (isActive) {
-              expandedState[link.name] = true;
-            }
-            
-            checkPathInChildren(link.children);
-          }
-        });
-      };
-      
-      checkPathInChildren(contactsLinks);
-      
-      setExpandedMenus(expandedState);
-    }, [pathname]);
-  
-    // Contacts menu with submenu
-    const contactsLinks: SidebarLink[] = [
-      { 
-        name: "Contatti", 
-        href: "/contacts", 
-        icon: Users,
-        children: [
-          { name: "Tutti i contatti", href: "/contacts", icon: Users },
-          { name: "Form di contatto", href: "/forms", icon: FileText },
-          { name: "Lead Facebook", href: "/facebook-leads", icon: Facebook },
-          { name: "Prenotazioni", href: "/bookings", icon: Bookmark },
-        ]
-      }
-    ];
-
-    // Common links for all users (excluding contacts)
+    // Common links for all users
     const commonLinks: SidebarLink[] = [
       { name: "Dashboard", href: "/", icon: BarChart3 },
+      { name: "Contatti", href: "/contacts", icon: Users },
       { name: "Tracciamento", href: "/tracciamento", icon: LineChart },
-      { name: "Sales Funnel", href: "/sales-funnel", icon: Users },
+      { name: "Sales Funnel", href: "/sales-funnel", icon: Filter },
       { name: "Calendario", href: "/calendar", icon: Calendar },
       { name: "Eventi Facebook", href: "/events", icon: Share2 },
       { name: "I tuoi siti", href: "/my-sites", icon: Globe },
@@ -109,18 +66,9 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
     // Filter admin links if needed
     const links: SidebarLink[] = [
       ...commonLinks,
-      ...contactsLinks,
       ...(isAdmin() ? adminLinks : []),
       settingsLink
     ];
-  
-    // Function to expand/collapse a menu
-    const toggleMenu = (menuName: string) => {
-      setExpandedMenus(prev => ({
-        ...prev,
-        [menuName]: !prev[menuName]
-      }));
-    };
   
     // Close sidebar function for mobile
     const closeSidebar = () => {
@@ -129,80 +77,27 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
       }
     };
   
-    // Render a sidebar link, recursively handling submenus
+    // Render a sidebar link
     const renderLink = (link: SidebarLink) => {
       const Icon = link.icon;
       const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
-      const hasChildren = link.children && link.children.length > 0;
-      const isExpanded = expandedMenus[link.name] || false;
-      
-      // If a submenu item is active, consider this as active too
-      const isChildActive = hasChildren && link.children!.some(
-        child => pathname === child.href || pathname.startsWith(child.href + '/')
-      );
       
       return (
-        <div key={link.name} className="space-y-1">
-          {/* Main link or button to open submenu */}
-          {hasChildren ? (
-            <button
-              onClick={() => toggleMenu(link.name)}
-              className={`
-                w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors
-                ${isActive || isChildActive 
-                  ? 'bg-primary/10 text-primary border-l-2 border-primary' 
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}
-                ${link.adminOnly ? 'border-r-2 border-primary' : ''}
-              `}
-            >
-              <div className="flex items-center">
-                <Icon size={18} className={`mr-2 ${isActive || isChildActive ? 'text-primary' : ''}`} />
-                {link.name}
-              </div>
-              {isExpanded ? 
-                <ChevronDown size={14} className={isActive || isChildActive ? 'text-primary' : ''} /> : 
-                <ChevronRight size={14} className={isActive || isChildActive ? 'text-primary' : ''} />
-              }
-            </button>
-          ) : (
-            <Link
-              href={link.href}
-              onClick={closeSidebar}
-              className={`
-                flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
-                ${isActive 
-                  ? 'bg-primary/10 text-primary border-l-2 border-primary' 
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}
-                ${link.adminOnly ? 'border-r-2 border-primary' : ''}
-              `}
-            >
-              <Icon size={18} className={`mr-2 ${isActive ? 'text-primary' : ''}`} />
-              {link.name}
-            </Link>
-          )}
-          
-          {/* Submenu */}
-          {hasChildren && isExpanded && (
-            <div className="pl-10 space-y-1 animate-fade-in">
-              {link.children!.map(childLink => (
-                <Link
-                  key={childLink.name}
-                  href={childLink.href}
-                  onClick={closeSidebar}
-                  className={`
-                    flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
-                    ${pathname === childLink.href 
-                      ? 'bg-primary/10 text-primary' 
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-700'}
-                  `}
-                >
-                  <childLink.icon size={16} className={`mr-2 ${pathname === childLink.href ? 'text-primary' : ''}`} />
-                  {childLink.name}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+        <Link
+          key={link.name}
+          href={link.href}
+          onClick={closeSidebar}
+          className={`
+            flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors
+            ${isActive 
+              ? 'bg-primary/10 text-primary border-l-2 border-primary' 
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}
+            ${link.adminOnly ? 'border-r-2 border-primary' : ''}
+          `}
+        >
+          <Icon size={18} className={`mr-2 ${isActive ? 'text-primary' : ''}`} />
+          {link.name}
+        </Link>
       );
     };
   
