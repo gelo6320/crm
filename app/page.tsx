@@ -171,7 +171,7 @@ export default function Dashboard() {
     
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-  
+
   const loadData = async () => {
     try {
       setIsLoading(true);
@@ -184,8 +184,11 @@ export default function Dashboard() {
       
       setStats(statsData);
       setRecentEvents(eventsData);
-      setNotifications(newContactsData);
-      setViewedCount(newContactsData.filter((contact: Contact) => !contact.viewed).length);
+      
+      // Only keep unviewed contacts for notifications
+      const unviewedContacts = newContactsData.filter((contact: Contact) => !contact.viewed);
+      setNotifications(unviewedContacts);
+      setViewedCount(unviewedContacts.length);
     } catch (error) {
       console.error("Error loading dashboard data:", error);
     } finally {
@@ -199,17 +202,13 @@ export default function Dashboard() {
       // Mark as viewed in the backend
       await markContactAsViewed(contact._id);
       
-      // Update local state
+      // Remove this contact from notifications list
       setNotifications(prevNotifications => 
-        prevNotifications.map(item =>
-          item._id === contact._id ? { ...item, viewed: true } : item
-        )
+        prevNotifications.filter((item: Contact) => item._id !== contact._id)
       );
       
-      // Update the unviewed count
-      if (!contact.viewed) {
-        setViewedCount(prev => Math.max(0, prev - 1));
-      }
+      // Update the count (should be one less now)
+      setViewedCount(prev => Math.max(0, prev - 1));
       
       // Navigate to the appropriate page based on contact type
       switch (contact.type) {
@@ -233,18 +232,13 @@ export default function Dashboard() {
   // Marks all contacts as viewed
   const handleViewAllContacts = async () => {
     try {
-      // Get only unviewed contacts
-      const unviewedContacts = notifications.filter(contact => !contact.viewed);
-      
       // Mark each contact as viewed
       await Promise.all(
-        unviewedContacts.map(contact => markContactAsViewed(contact._id))
+        notifications.map((contact: Contact) => markContactAsViewed(contact._id))
       );
       
-      // Update local state
-      setNotifications(prevNotifications => 
-        prevNotifications.map(contact => ({ ...contact, viewed: true }))
-      );
+      // Clear the notifications list entirely
+      setNotifications([]);
       
       // Reset unviewed count
       setViewedCount(0);
