@@ -49,7 +49,7 @@ interface ContactDetailModalProps {
 
 // Funzione per ottenere la fonte in formato leggibile
 function formatSource(source: string, formType: string): string {
-  if (formType === "facebook") return "Lead Facebook";
+  if (source === "facebook") return "Lead Facebook";
   if (formType === "booking") return "Prenotazione";
   if (source) return source;
   if (formType === "form" || formType === "contact") return "Form di contatto";
@@ -121,7 +121,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
           {/* Intestazione con nome e stato */}
           <div className="mb-6 flex justify-between items-center">
             <div className="flex items-center">
-              {contact.formType === "facebook" ? (
+              {contact.source === "facebook" ? (
                 <span className="inline-flex mr-2 text-blue-500" style={{ width: "24px", height: "24px" }}>
                   <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 287.56 191">
                     <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
@@ -278,7 +278,7 @@ export default function ContactsPage() {
       queryParams.append('page', currentPage.toString());
       if (selectedStatus) queryParams.append('status', selectedStatus);
       if (searchQuery) queryParams.append('search', searchQuery);
-      if (sourceFilter) queryParams.append('formType', sourceFilter);
+      if (sourceFilter) queryParams.append('source', sourceFilter);
       
       // Chiamata alla nuova API unificata
       const response = await fetch(`${API_BASE_URL}/api/leads?${queryParams.toString()}`, {
@@ -603,7 +603,7 @@ export default function ContactsPage() {
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center">
-                        {contact.formType === "facebook" ? (
+                        {contact.source === "facebook" ? (
                           <span className="inline-flex mr-2 text-blue-500" style={{ width: "16px", height: "16px" }}>
                             <svg viewBox="0 0 287.56 191" xmlns="http://www.w3.org/2000/svg">
                               <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
