@@ -7,6 +7,7 @@ import FacebookEventModal from "./FacebookEventModal";
 import ValueModal from "./ValueModal";
 import { toast } from "@/components/ui/toaster";
 import axios from "axios";
+import { updateLeadMetadata } from "@/lib/api/funnel";
 
 // React-dnd imports
 import { DndProvider, useDrag, useDrop } from "react-dnd";
@@ -566,10 +567,11 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
 
     try {
       // Update the lead metadata via API
-      await axios.post(
-        `${API_BASE_URL}/api/leads/${editingLead.type}/${editingLead._id}/update-metadata`,
-        { value, service },
-        { withCredentials: true }
+      await updateLeadMetadata(
+        editingLead._id,
+        editingLead.type,
+        value,
+        service
       );
 
       // Update local state for immediate UI update
