@@ -314,7 +314,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   // Function to directly update lead without showing modal
   const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: string) => {
     try {
-      // Recupera lo stato attuale dal server
+      // Use leadId instead of _id for the API call
       const checkResponse = await axios.get(
         `${API_BASE_URL}/api/leads/${lead.leadId || lead._id}`,
         { withCredentials: true }
@@ -356,12 +356,12 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       const response = await axios.post(
         `${API_BASE_URL}/api/sales-funnel/move`,
         {
-          leadId: lead._id,
+          leadId: lead.leadId || lead._id, // Use leadId with fallback
           leadType: lead.type,
-          fromStage: actualFromStage, // Usa lo stato effettivo del database
-          toStage: actualToStage,     // Usa lo stato mappato per la destinazione
-          originalFromStage: fromStage, // Invia anche lo stato originale per riferimento
-          originalToStage: toStage      // Invia anche lo stato destinazione originale
+          fromStage: actualFromStage,
+          toStage: actualToStage,
+          originalFromStage: fromStage,
+          originalToStage: toStage
         },
         { withCredentials: true }
       );
@@ -401,7 +401,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     if (!movingLead) return;
     
     try {
-      // Fetch the latest lead status first to ensure consistency
+      // Use leadId instead of _id for the API call
       const checkResponse = await axios.get(
         `${API_BASE_URL}/api/leads/${movingLead.lead.leadId || movingLead.lead._id}`,
         { withCredentials: true }
@@ -425,11 +425,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       }
       
       // Call directly to the API to update to "customer" status
-      // Purchase event will be handled by options in the modal
       const response = await axios.post(
         `${API_BASE_URL}/api/sales-funnel/move`,
         {
-          leadId: movingLead.lead._id,
+          leadId: movingLead.lead.leadId || movingLead.lead._id, // Use leadId with fallback
           leadType: movingLead.lead.type,
           fromStage: movingLead.prevStatus,
           toStage: movingLead.newStatus
@@ -564,11 +563,11 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   // Handle saving edits to a lead
   const handleSaveLeadValue = async (value: number, service: string) => {
     if (!editingLead) return;
-
+  
     try {
-      // Update the lead metadata via API
+      // Update the lead metadata via API using leadId
       await updateLeadMetadata(
-        editingLead._id,
+        editingLead.leadId || editingLead._id, // Use leadId with fallback
         editingLead.type,
         value,
         service
