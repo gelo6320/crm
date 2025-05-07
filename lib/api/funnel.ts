@@ -2,7 +2,7 @@
 import { FunnelData, FunnelItem, FunnelStats } from "@/types";
 import axios from "axios";
 
-// Definisci un'URL base per le API
+// Define base URL for APIs
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
 export async function fetchFunnelData(): Promise<{
@@ -10,37 +10,32 @@ export async function fetchFunnelData(): Promise<{
   funnelStats: FunnelStats;
 }> {
   try {
-    // Recupera tutti i dati dai diversi endpoint
-    const [formsResponse, bookingsResponse, facebookLeadsResponse] = await Promise.all([
-      axios.get(`${API_BASE_URL}/api/leads/forms?limit=100`, { withCredentials: true }),
-      axios.get(`${API_BASE_URL}/api/leads/bookings?limit=100`, { withCredentials: true }),
-      axios.get(`${API_BASE_URL}/api/leads/facebook?limit=100`, { withCredentials: true })
-    ]);
+    // Fetch all leads from the unified API endpoint
+    const response = await axios.get(`${API_BASE_URL}/api/leads?limit=200`, {
+      withCredentials: true
+    });
     
-    const formsData = formsResponse.data.data || [];
-    const bookingsData = bookingsResponse.data.data || [];
-    const facebookLeadsData = facebookLeadsResponse.data.data || [];
+    const leadsData = response.data.data || [];
     
-    // Mappa i lead in FunnelItem
-    const formItems: FunnelItem[] = formsData.map((form: any) => ({
-      ...form,
-      type: 'form'
-    }));
+    // Map the leads to FunnelItem format
+    const allItems: FunnelItem[] = leadsData.map((lead: any) => {
+      // Create a properly formatted FunnelItem from the lead data
+      return {
+        _id: lead._id,
+        name: [lead.firstName || '', lead.lastName || ''].filter(Boolean).join(' ') || lead.name || 'Contact',
+        email: lead.email,
+        phone: lead.phone || '',
+        type: lead.formType || 'form', // Default to 'form' if formType is missing
+        service: lead.extendedData?.formData?.service || '',
+        value: lead.extendedData?.value || 0,
+        status: mapDatabaseStatusToFunnelStatus(lead.status),
+        source: lead.source || lead.formType || '',
+        createdAt: lead.createdAt,
+        updatedAt: lead.updatedAt
+      };
+    });
     
-    const bookingItems: FunnelItem[] = bookingsData.map((booking: any) => ({
-      ...booking,
-      type: 'booking'
-    }));
-    
-    const facebookItems: FunnelItem[] = facebookLeadsData.map((lead: any) => ({
-      ...lead,
-      type: 'facebook'
-    }));
-    
-    // Combina tutti i lead
-    const allItems = [...formItems, ...bookingItems, ...facebookItems];
-    
-    // Inizializza il FunnelData con array vuoti
+    // Initialize the FunnelData with empty arrays
     const funnelData: FunnelData = {
       new: [],
       contacted: [],
@@ -51,25 +46,17 @@ export async function fetchFunnelData(): Promise<{
       lost: []
     };
     
-    // Raggruppa i lead per stato
+    // Group leads by mapped funnel status
     allItems.forEach(item => {
-      // lib/api/funnel.ts (continuazione)
       if (funnelData[item.status as keyof FunnelData]) {
         funnelData[item.status as keyof FunnelData].push(item);
-      } else if (item.status === 'pending' || item.status === 'confirmed' || item.status === 'completed') {
-        // Mappa gli stati specifici delle prenotazioni
-        const mappedStatus = mapBookingStatusToFunnelStatus(item.status);
-        funnelData[mappedStatus as keyof FunnelData].push({
-          ...item,
-          status: mappedStatus
-        });
       } else {
-        // Fallback per stati sconosciuti
+        // Fallback for unknown statuses
         funnelData.new.push(item);
       }
     });
     
-    // Calcola le statistiche
+    // Calculate statistics
     const funnelStats: FunnelStats = calculateFunnelStats(allItems);
     
     return {
@@ -77,9 +64,9 @@ export async function fetchFunnelData(): Promise<{
       funnelStats
     };
   } catch (error) {
-    console.error("Errore durante il recupero dei dati del funnel:", error);
+    console.error("Error fetching funnel data:", error);
     
-    // In caso di errore, restituisci un oggetto vuoto con la struttura corretta
+    // Return empty object with correct structure in case of error
     return {
       funnelData: {
         new: [],
@@ -102,18 +89,41 @@ export async function fetchFunnelData(): Promise<{
   }
 }
 
-// Mappa gli stati delle prenotazioni agli stati del funnel
-function mapBookingStatusToFunnelStatus(bookingStatus: string): string {
-  switch (bookingStatus) {
+// Map database statuses to funnel statuses
+function mapDatabaseStatusToFunnelStatus(dbStatus: string): string {
+  switch (dbStatus) {
+    case 'new': return 'new';
+    case 'contacted': return 'contacted';
+    case 'qualified': return 'qualified';
+    case 'converted': return 'customer'; // Map 'converted' to 'customer'
+    case 'lost': return 'lost';
+    // Legacy mappings for backward compatibility
     case 'pending': return 'new';
     case 'confirmed': return 'contacted';
     case 'completed': return 'qualified';
     case 'cancelled': return 'lost';
+    case 'opportunity': return 'opportunity';
+    case 'proposal': return 'proposal';
+    case 'customer': return 'customer';
+    default: return 'new'; // Default to 'new' for unknown statuses
+  }
+}
+
+// Map funnel statuses back to database statuses
+function mapFunnelStatusToDatabaseStatus(funnelStatus: string): string {
+  switch (funnelStatus) {
+    case 'new': return 'new';
+    case 'contacted': return 'contacted';
+    case 'qualified': return 'qualified';
+    case 'opportunity': return 'qualified'; // Map to closest equivalent
+    case 'proposal': return 'qualified'; // Map to closest equivalent
+    case 'customer': return 'converted'; // Map 'customer' to 'converted'
+    case 'lost': return 'lost';
     default: return 'new';
   }
 }
 
-// Calcola le statistiche del funnel
+// Calculate funnel statistics
 function calculateFunnelStats(items: FunnelItem[]): FunnelStats {
   const totalLeads = items.length;
   const customers = items.filter(item => item.status === 'customer').length;
@@ -123,7 +133,7 @@ function calculateFunnelStats(items: FunnelItem[]): FunnelStats {
   let realizedValue = 0;
   let lostValue = 0;
   
-  // Conteggio dei servizi
+  // Count services
   const serviceDistribution: Record<string, number> = {};
   
   items.forEach(item => {
@@ -137,7 +147,7 @@ function calculateFunnelStats(items: FunnelItem[]): FunnelStats {
       potentialValue += value;
     }
     
-    // Aggiorna la distribuzione dei servizi
+    // Update service distribution
     if (item.service) {
       serviceDistribution[item.service] = (serviceDistribution[item.service] || 0) + 1;
     }
@@ -154,44 +164,52 @@ function calculateFunnelStats(items: FunnelItem[]): FunnelStats {
 }
 
 interface FacebookEventOptions {
-    eventName: string;
-    eventMetadata?: Record<string, any>;
-  }
+  eventName: string;
+  eventMetadata?: Record<string, any>;
+}
 
-// Modifica la funzione per supportare l'invio di eventi Facebook
+// Updated function to support sending Facebook events
 export async function updateLeadStage(
-    leadId: string,
-    leadType: string,
-    fromStage: string,
-    toStage: string,
-    facebookOptions?: FacebookEventOptions
-  ): Promise<{
-    success: boolean;
-    message: string;
-    facebookResult?: any;
-  }> {
-    try {
-      const response = await axios.post(
-        `${API_BASE_URL}/api/sales-funnel/move`,
-        {
-          leadId,
-          leadType,
-          fromStage,
-          toStage,
-          sendToFacebook: !!facebookOptions,
-          facebookEvent: facebookOptions?.eventName || null,
-          eventMetadata: facebookOptions?.eventMetadata || null
-        },
-        { withCredentials: true }
-      );
-      
-      return response.data;
-    } catch (error) {
-      console.error("Errore durante l'aggiornamento del lead nel funnel:", error);
-      throw error;
-    }
+  leadId: string,
+  leadType: string,
+  fromStage: string,
+  toStage: string,
+  facebookOptions?: FacebookEventOptions
+): Promise<{
+  success: boolean;
+  message: string;
+  facebookResult?: any;
+}> {
+  try {
+    // Convert funnel statuses to database statuses
+    const dbFromStage = mapFunnelStatusToDatabaseStatus(fromStage);
+    const dbToStage = mapFunnelStatusToDatabaseStatus(toStage);
+    
+    const response = await axios.post(
+      `${API_BASE_URL}/api/sales-funnel/move`,
+      {
+        leadId,
+        leadType,
+        fromStage: dbFromStage,
+        toStage: dbToStage,
+        sendToFacebook: !!facebookOptions,
+        facebookEvent: facebookOptions?.eventName || null,
+        eventMetadata: facebookOptions?.eventMetadata || null,
+        // Include original values for reference
+        originalFromStage: fromStage,
+        originalToStage: toStage
+      },
+      { withCredentials: true }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error updating lead in funnel:", error);
+    throw error;
   }
+}
 
+// Updated function to handle value/service updates with the new schema
 export async function updateLeadMetadata(
   leadId: string,
   leadType: string,
@@ -202,20 +220,9 @@ export async function updateLeadMetadata(
   message: string;
 }> {
   try {
-    // Determina l'endpoint in base al tipo di lead
-    let endpoint;
-    if (leadType === 'form') {
-      endpoint = `${API_BASE_URL}/api/leads/forms/${leadId}/update-metadata`;
-    } else if (leadType === 'booking') {
-      endpoint = `${API_BASE_URL}/api/leads/bookings/${leadId}/update-metadata`;
-    } else if (leadType === 'facebook') {
-      endpoint = `${API_BASE_URL}/api/leads/facebook/${leadId}/update-metadata`;
-    } else {
-      throw new Error("Tipo di lead non valido");
-    }
-    
+    // Use the unified API endpoint for updating lead metadata
     const response = await axios.post(
-      endpoint,
+      `${API_BASE_URL}/api/leads/${leadId}/update-metadata`,
       {
         value: value !== undefined ? value : null,
         service: service || null
@@ -225,7 +232,7 @@ export async function updateLeadMetadata(
     
     return response.data;
   } catch (error) {
-    console.error("Errore durante l'aggiornamento dei metadati del lead:", error);
+    console.error("Error updating lead metadata:", error);
     throw error;
   }
 }
