@@ -10,6 +10,7 @@ import MarketingApiOverview from "@/components/tracciamento/MarketingApiOverview
 import UsersList from "@/components/tracciamento/UsersList";
 import SessionsList from "@/components/tracciamento/SessionsList";
 import SessionFlow from "@/components/tracciamento/SessionFlow";
+import AdvancedStatistics from "@/components/tracciamento/AdvancedStatistics";
 import { 
   fetchLandingPages, 
   fetchUsers, 
@@ -359,6 +360,11 @@ export default function TracciamentoPage() {
           />
         )}
       </div>
+      
+      {/* Statistiche Avanzate (solo quando non c'è una landing page selezionata) */}
+      {!selectedLandingPage && (
+        <AdvancedStatistics />
+      )}
       
       {/* Facebook Ads (solo visibile quando non ci sono landing page selezionate) */}
       {!selectedLandingPage && (
