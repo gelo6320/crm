@@ -49,7 +49,7 @@ interface ContactDetailModalProps {
 
 // Funzione per ottenere la fonte in formato leggibile
 function formatSource(source: string, formType: string): string {
-  if (source === "facebook") return "Lead Facebook";
+  if (source === "facebook") return "Facebook";
   if (formType === "booking") return "Prenotazione";
   if (source) return source;
   if (formType === "form" || formType === "contact") return "Form di contatto";

@@ -5,7 +5,7 @@ export default function LoadingSpinner() {
       <img 
         src="/logosito.webp" 
         alt="Loading" 
-        className="h-16 w-16 animate-spin"
+        className="h-16 w-24 animate-[spin_0.5s_linear_infinite]"
       />
     </div>
   );
