@@ -220,19 +220,22 @@ export async function updateLeadMetadata(
   message: string;
 }> {
   try {
-    // Use the unified API endpoint for updating lead metadata
+    // Use the unified API endpoint for all lead types
+    const endpoint = `${API_BASE_URL}/api/leads/${leadId}/update-metadata`;
+    
     const response = await axios.post(
-      `${API_BASE_URL}/api/leads/${leadId}/update-metadata`,
+      endpoint,
       {
         value: value !== undefined ? value : null,
-        service: service || null
+        service: service || null,
+        leadType: leadType // Include leadType in request body for reference
       },
       { withCredentials: true }
     );
     
     return response.data;
   } catch (error) {
-    console.error("Error updating lead metadata:", error);
+    console.error("Errore durante l'aggiornamento dei metadati del lead:", error);
     throw error;
   }
 }
