@@ -19,15 +19,15 @@ export async function fetchFunnelData(): Promise<{
     
     // Map the leads to FunnelItem format
     const allItems: FunnelItem[] = leadsData.map((lead: any) => {
-      // Create a properly formatted FunnelItem from the lead data
       return {
         _id: lead._id,
         name: [lead.firstName || '', lead.lastName || ''].filter(Boolean).join(' ') || lead.name || 'Contact',
         email: lead.email,
         phone: lead.phone || '',
-        type: lead.formType || 'form', // Default to 'form' if formType is missing
-        service: lead.extendedData?.formData?.service || '',
-        value: lead.extendedData?.value || 0,
+        type: lead.formType || 'form',
+        // Check both locations - prioritize top-level fields
+        service: lead.service || (lead.extendedData?.formData?.service) || '',
+        value: lead.value || lead.extendedData?.value || 0,
         status: mapDatabaseStatusToFunnelStatus(lead.status),
         source: lead.source || lead.formType || '',
         createdAt: lead.createdAt,
