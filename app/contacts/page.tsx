@@ -9,6 +9,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import Pagination from "@/components/ui/Pagination";
 import { formatDate } from "@/lib/utils/date";
 import { toast } from "@/components/ui/toaster";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
 // Definizione dell'interfaccia per i contatti unificati basata sul nuovo schema
 interface Contact {
@@ -279,7 +280,7 @@ export default function ContactsPage() {
       if (sourceFilter) queryParams.append('formType', sourceFilter);
       
       // Chiamata alla nuova API unificata
-      const response = await fetch(`/api/leads?${queryParams.toString()}`);
+      const response = await fetch(`${API_BASE_URL}/api/leads?${queryParams.toString()}`);
       const result = await response.json();
       
       if (result.success) {
