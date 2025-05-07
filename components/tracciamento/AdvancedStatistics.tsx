@@ -122,28 +122,65 @@ const SOURCE_COLORS: Record<string, string> = {
 
 const AdvancedStatistics: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
-  const [statistics, setStatistics] = useState<StatisticsData[]>([]);
+  const [allStatistics, setAllStatistics] = useState<StatisticsData[]>([]);
+  const [filteredStatistics, setFilteredStatistics] = useState<StatisticsData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<string>('7d');
 
   // Function to fetch statistics data directly from the server
-  const fetchStatistics = async (timeRangeParam: string): Promise<StatisticsData[]> => {
+  const fetchStatistics = async (): Promise<StatisticsData[]> => {
     try {
-      // Direct API call to the backend service
+      // Direct API call to the backend service - always request all data
       const response = await axios.get(`${API_BASE_URL}/api/tracciamento/statistics`, {
-        params: { timeRange: timeRangeParam },
+        // Qui rimuoviamo il timeRange o lo impostiamo esplicitamente ad 'all'
+        params: { timeRange: 'all' },
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json'
         }
       });
       
+      // Log di debug per verificare che arrivino i dati
+      console.log(`Ricevuti ${response.data?.length || 0} record statistici dal server`);
+      
       return response.data;
     } catch (error) {
       console.error('Error fetching statistics:', error);
       throw error;
     }
+  };
+
+  // Funzione per filtrare i dati in base al timeRange
+  const filterStatisticsByTimeRange = (data: StatisticsData[], range: string): StatisticsData[] => {
+    if (range === 'all' || !data.length) {
+      return data;
+    }
+
+    const now = new Date();
+    let cutoffDate: Date;
+
+    switch(range) {
+      case '24h':
+        cutoffDate = new Date(now);
+        cutoffDate.setDate(now.getDate() - 1);
+        break;
+      case '7d':
+        cutoffDate = new Date(now);
+        cutoffDate.setDate(now.getDate() - 7);
+        break;
+      case '30d':
+        cutoffDate = new Date(now);
+        cutoffDate.setDate(now.getDate() - 30);
+        break;
+      default:
+        return data;
+    }
+
+    return data.filter(stat => {
+      const statDate = new Date(stat.date);
+      return statDate >= cutoffDate;
+    });
   };
 
   const loadStatistics = async (): Promise<void> => {
@@ -153,8 +190,14 @@ const AdvancedStatistics: React.FC = () => {
     setError(null);
     
     try {
-      const data = await fetchStatistics(timeRange);
-      setStatistics(data);
+      const data = await fetchStatistics();
+      setAllStatistics(data);
+      
+      // Applica il filtro attuale
+      const filtered = filterStatisticsByTimeRange(data, timeRange);
+      setFilteredStatistics(filtered);
+      
+      console.log(`Filtrati ${filtered.length} record su ${data.length} totali`);
     } catch (err) {
       setError('Impossibile caricare le statistiche');
       console.error(err);
@@ -165,15 +208,23 @@ const AdvancedStatistics: React.FC = () => {
 
   useEffect(() => {
     loadStatistics();
-  }, [isExpanded, timeRange]);
+  }, [isExpanded]);
+
+  // Applica il filtro quando cambia il timeRange (senza ricaricare dal server)
+  useEffect(() => {
+    if (allStatistics.length > 0) {
+      const filtered = filterStatisticsByTimeRange(allStatistics, timeRange);
+      setFilteredStatistics(filtered);
+    }
+  }, [timeRange, allStatistics]);
 
   // Calcola statistiche aggregate se ci sono più giorni di dati
   const getAggregatedStats = (): AggregatedStats | null => {
-    if (!statistics || statistics.length === 0) {
+    if (!filteredStatistics || filteredStatistics.length === 0) {
       return null;
     }
 
-    return statistics.reduce((agg: Partial<AggregatedStats>, stat) => {
+    return filteredStatistics.reduce((agg: Partial<AggregatedStats>, stat) => {
       return {
         totalVisits: (agg.totalVisits || 0) + stat.totalVisits,
         uniqueVisitors: (agg.uniqueVisitors || 0) + stat.uniqueVisitors,
@@ -194,10 +245,10 @@ const AdvancedStatistics: React.FC = () => {
   
   // Prepara i dati per il grafico a torta delle sorgenti
   const prepareSourcesData = (): ChartDataItem[] => {
-    if (!statistics || statistics.length === 0) return [];
+    if (!filteredStatistics || filteredStatistics.length === 0) return [];
     
     // Combiniamo i dati di tutte le date
-    const combinedSources = statistics.reduce((acc: Record<string, number>, stat) => {
+    const combinedSources = filteredStatistics.reduce((acc: Record<string, number>, stat) => {
       if (!stat.sources) return acc;
       
       Object.entries(stat.sources).forEach(([source, count]) => {
@@ -216,10 +267,10 @@ const AdvancedStatistics: React.FC = () => {
   
   // Prepara i dati per il grafico Mobile vs Desktop
   const prepareMobileDesktopData = (): ChartDataItem[] => {
-    if (!statistics || statistics.length === 0) return [];
+    if (!filteredStatistics || filteredStatistics.length === 0) return [];
     
     // Combiniamo i dati di tutte le date
-    const combined = statistics.reduce((acc: { mobile: number, desktop: number }, stat) => {
+    const combined = filteredStatistics.reduce((acc: { mobile: number, desktop: number }, stat) => {
       if (!stat.mobileVsDesktop) return acc;
       
       acc.mobile = (acc.mobile || 0) + (stat.mobileVsDesktop.mobile || 0);
@@ -237,10 +288,10 @@ const AdvancedStatistics: React.FC = () => {
   
   // Prepara i dati per il grafico conversioni per sorgente
   const prepareConversionsBySourceData = (): ChartDataItem[] => {
-    if (!statistics || statistics.length === 0) return [];
+    if (!filteredStatistics || filteredStatistics.length === 0) return [];
     
     // Combiniamo i dati di tutte le date
-    const combinedConversions = statistics.reduce((acc: Record<string, number>, stat) => {
+    const combinedConversions = filteredStatistics.reduce((acc: Record<string, number>, stat) => {
       if (!stat.conversions || !stat.conversions.bySource) return acc;
       
       Object.entries(stat.conversions.bySource).forEach(([source, count]) => {
@@ -259,10 +310,10 @@ const AdvancedStatistics: React.FC = () => {
   
   // Prepara i dati per il grafico del tempo per sorgente
   const prepareTimeBySourceData = (): TimeSourceChartItem[] => {
-    if (!statistics || statistics.length === 0) return [];
+    if (!filteredStatistics || filteredStatistics.length === 0) return [];
     
     // Combiniamo i dati di tutte le date
-    const combinedTimeBySource = statistics.reduce((acc: Record<string, { totalTime: number, pageViews: number }>, stat) => {
+    const combinedTimeBySource = filteredStatistics.reduce((acc: Record<string, { totalTime: number, pageViews: number }>, stat) => {
       if (!stat.timeBySource) return acc;
       
       Object.entries(stat.timeBySource).forEach(([source, data]) => {
@@ -366,7 +417,7 @@ const AdvancedStatistics: React.FC = () => {
             </div>
           )}
           
-          {statistics.length === 0 && !isLoading && !error ? (
+          {filteredStatistics.length === 0 && !isLoading && !error ? (
             <div className="text-center py-8 text-zinc-400">
               <p>Nessun dato statistico disponibile</p>
               <button 
@@ -507,6 +558,11 @@ const AdvancedStatistics: React.FC = () => {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+              </div>
+              
+              {/* Informazioni sul dataset */}
+              <div className="mt-6 text-center text-xs text-zinc-500">
+                <p>Dati visualizzati: {filteredStatistics.length} di {allStatistics.length} record totali</p>
               </div>
               
               {/* Pulsante per aggiornare i dati */}
