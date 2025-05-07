@@ -201,7 +201,6 @@ export default function BancaDatiPage() {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-medium">Banca Dati</h1>
         <div className="flex items-center space-x-2">
           <form onSubmit={handleSearch} className="relative">
             <input
