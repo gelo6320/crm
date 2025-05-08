@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { X, Facebook, Info, AlertTriangle } from "lucide-react";
 import { FunnelItem, FunnelOperationResult } from "@/types";
-import { updateLeadStage } from "@/lib/api/funnel";
+import { updateLeadStage, getLeadFullData } from "@/lib/api/funnel";
 import { toast } from "@/components/ui/toaster";
 
 interface FacebookEventModalProps {
@@ -33,19 +33,11 @@ export default function FacebookEventModal({
     const checkConsent = async () => {
       try {
         setIsCheckingConsent(true);
-        // Facciamo una richiesta per ottenere i dati completi del lead, inclusi i consensi
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com"}/api/leads/${lead.leadId || lead._id}`, {
-          credentials: 'include'
-        });
+        // Use the getLeadFullData function instead of direct fetch
+        const leadData = await getLeadFullData(lead.leadId || lead._id);
         
-        if (response.ok) {
-          const leadData = await response.json();
-          // Verifica se il lead ha dato il consenso per le terze parti
-          setHasConsent(leadData.consent?.thirdParty === true);
-        } else {
-          // Se non possiamo ottenere i dati, assumiamo che non ci sia consenso
-          setHasConsent(false);
-        }
+        // Verifica se il lead ha dato il consenso per le terze parti
+        setHasConsent(leadData.consent?.thirdParty === true);
       } catch (error) {
         console.error("Errore nel recupero dei dati del consenso:", error);
         setHasConsent(false);
@@ -158,7 +150,7 @@ export default function FacebookEventModal({
                 <>
                   <br /><br />
                   <strong>Cliente acquisito!</strong> 
-                  Vuoi inviare l'evento di acquisto alla Conversion API di Facebook?
+                   Vuoi inviare l'evento di acquisto alla Conversion API di Facebook?
                 </>
               ) : (
                 <>

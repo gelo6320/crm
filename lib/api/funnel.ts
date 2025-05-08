@@ -184,7 +184,7 @@ interface FacebookEventOptions {
 }
 
 // Funzione aggiornata per ottenere i dati completi del lead
-async function getLeadFullData(leadId: string): Promise<any> {
+export async function getLeadFullData(leadId: string): Promise<any> {
   try {
     const response = await axios.get(
       `${API_BASE_URL}/api/leads/${leadId}`,
