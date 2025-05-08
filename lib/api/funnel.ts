@@ -183,16 +183,45 @@ interface FacebookEventOptions {
   eventMetadata?: Record<string, any>;
 }
 
-// Funzione aggiornata per ottenere i dati completi del lead
+// Funzione migliorata per ottenere i dati completi del lead
 export async function getLeadFullData(leadId: string): Promise<any> {
+  if (!leadId) {
+    console.error("ID lead mancante in getLeadFullData");
+    throw new Error("ID lead mancante");
+  }
+
+  // Stampa di debug per tracciare quale ID stiamo usando
+  console.log(`Recupero dati completi per lead con ID: ${leadId}`);
+  
   try {
+    // Controlla se l'ID è nel formato UUID (contiene trattini)
+    const isUuid = leadId.includes('-');
+    
+    // Se non è UUID, aggiungiamo un log per debug
+    if (!isUuid) {
+      console.warn(`Attenzione: L'ID fornito (${leadId}) potrebbe non essere un UUID.`);
+    }
+    
     const response = await axios.get(
       `${API_BASE_URL}/api/leads/${leadId}`,
       { withCredentials: true }
     );
+    
+    // Verifica se abbiamo ottenuto una risposta valida
+    if (!response.data) {
+      throw new Error("Risposta API vuota");
+    }
+    
+    // Log per confermare che abbiamo ottenuto i dati
+    console.log(`Dati del lead recuperati con successo. ID: ${leadId}, Nome: ${response.data.name || 'N/A'}`);
+    
     return response.data;
   } catch (error) {
-    console.error("Errore nel recupero dei dati completi del lead:", error);
+    // Log dettagliato dell'errore
+    console.error(`Errore nel recupero dei dati completi del lead (ID: ${leadId}):`, error);
+    
+    // Possiamo aggiungere qui una logica per un secondo tentativo con un ID diverso se necessario
+    
     throw error;
   }
 }
@@ -211,7 +240,8 @@ export async function updateLeadStage(
   clientCreated?: boolean;
 }> {
   try {
-    // Prima otteniamo i dati completi del lead per verificare il consenso e raccogliere tutti i dati necessari
+    // Prima otteniamo i dati completi del lead per verificare il consenso
+    console.log('Getting full lead data with ID:', leadId);
     const leadFullData = await getLeadFullData(leadId);
     
     // Convert funnel statuses to database statuses

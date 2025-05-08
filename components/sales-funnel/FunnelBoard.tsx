@@ -280,8 +280,12 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       if (targetStatus === "customer") {
         // Store the moving lead data for the modal
         setMovingLead({
-          lead: updatedLead,
-          prevStatus: lead.status, // Keep original status for API call
+          lead: {
+            ...updatedLead,
+            // Assicuriamoci che leadId sia sempre disponibile e prioritario
+            leadId: lead.leadId || lead._id
+          },
+          prevStatus: lead.status,
           newStatus: targetStatus,
         });
       } else {
@@ -401,9 +405,12 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     if (!movingLead) return;
     
     try {
-      // Use leadId instead of _id for the API call
+      // Otteniamo e usiamo sempre l'ID giusto
+      const idToUse = movingLead.lead.leadId || movingLead.lead._id;
+      console.log('Confirming move with ID:', idToUse);
+      
       const checkResponse = await axios.get(
-        `${API_BASE_URL}/api/leads/${movingLead.lead.leadId || movingLead.lead._id}`,
+        `${API_BASE_URL}/api/leads/${idToUse}`,
         { withCredentials: true }
       );
       
