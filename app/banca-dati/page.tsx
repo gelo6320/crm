@@ -236,6 +236,16 @@ export default function BancaDatiPage() {
           <Database size={16} className="inline-block mr-1 -mt-0.5" /> Visite
         </button>
         <button
+          onClick={() => handleTabChange("audiences")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 ${
+            activeTab === "audiences" 
+              ? "border-primary text-primary" 
+              : "border-transparent text-zinc-400 hover:text-white"
+          }`}
+        >
+          <BarChart2 size={16} className="inline-block mr-1 -mt-0.5" /> Conversioni
+        </button>
+        <button
           onClick={() => handleTabChange("clients")}
           className={`px-4 py-2 text-sm font-medium border-b-2 ${
             activeTab === "clients" 
@@ -244,16 +254,6 @@ export default function BancaDatiPage() {
           }`}
         >
           <Users size={16} className="inline-block mr-1 -mt-0.5" /> Clienti
-        </button>
-        <button
-          onClick={() => handleTabChange("audiences")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 ${
-            activeTab === "audiences" 
-              ? "border-primary text-primary" 
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
-        >
-          <BarChart2 size={16} className="inline-block mr-1 -mt-0.5" /> Facebook Audience
         </button>
       </div>
       
