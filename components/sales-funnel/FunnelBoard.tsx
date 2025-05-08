@@ -9,12 +9,29 @@ import { toast } from "@/components/ui/toaster";
 import axios from "axios";
 import { updateLeadMetadata } from "@/lib/api/funnel";
 
-// React-dnd imports
-import { DndProvider, useDrag, useDrop } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
-import { TouchBackend } from "react-dnd-touch-backend";
-import { isTouchDevice } from "@/lib/utils/device";
-import CustomDragLayer from "./CustomDragLayer";
+// dnd-kit imports
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
+  DragMoveEvent
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+
+// Utils
+import { formatDate } from "@/lib/utils/date";
+import { formatMoney } from "@/lib/utils/format";
 
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
@@ -30,24 +47,6 @@ const COLUMNS = [
   { id: "lost", title: "Persi", color: "bg-danger" },
 ];
 
-// Conditional backend detection
-const DndBackend = isTouchDevice() ? TouchBackend : HTML5Backend;
-
-// Optimized touch backend options
-const touchBackendOptions = {
-  enableMouseEvents: true,
-  delayTouchStart: 150,      // Increased delay to avoid accidental drags
-  touchSlop: 5,              // Reduced to make dragging start with smaller movements
-  ignoreContextMenu: true,
-  enableKeyboardEvents: true,
-  enableTouchEvents: true,   // Make sure touch events are enabled
-  enableHoverOutsideTarget: true,
-  scrollAngleRanges: [       // Define vertical/horizontal scroll thresholds
-    { start: 30, end: 150 }, // Horizontal-ish scrolling
-    { start: 210, end: 330 } // Horizontal-ish scrolling (other direction)
-  ]
-};
-
 interface CustomFunnelBoardProps {
   funnelData: FunnelData;
   setFunnelData: React.Dispatch<React.SetStateAction<FunnelData>>;
@@ -56,6 +55,7 @@ interface CustomFunnelBoardProps {
 
 // Main Component
 export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMove }: CustomFunnelBoardProps) {
+  // State for modals and lead operations
   const [editingLead, setEditingLead] = useState<FunnelItem | null>(null);
   const [isMoving, setIsMoving] = useState(false);
   const [movingLead, setMovingLead] = useState<{
@@ -64,13 +64,49 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     newStatus: string;
   } | null>(null);
   
-  // Ref for the main container
-  const boardRef = useRef<HTMLDivElement>(null);
+  // State for drag and drop
+  const [activeLead, setActiveLead] = useState<FunnelItem | null>(null);
+  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
   
-  // State for auto scrolling
-  const [isScrolling, setIsScrolling] = useState<"left" | "right" | null>(null);
-  const scrollIntervalRef = useRef<number | null>(null);
-  const scrollStartTimeRef = useRef<number>(Date.now());
+  // Refs for the board and its elements
+  const boardRef = useRef<HTMLDivElement>(null);
+  // Usiamo due ref separate per i diversi tipi di timer
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastClientX = useRef<number | null>(null);
+  
+  // Determine if it's a touch device
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  
+  // Detect touch device on mount
+  useEffect(() => {
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
+  
+  // Initialize sensors for drag and drop - optimized based on device type
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      // Pointer sensor for desktop with short delay
+      activationConstraint: {
+        delay: isTouchDevice ? 180 : 100,
+        tolerance: isTouchDevice ? 8 : 5,
+        // On touch devices, require press and hold before dragging starts
+        // This allows normal scrolling without triggering drag
+        ...( isTouchDevice ? { 
+          pressure: 0.3, // Requires moderate pressure on touch devices
+          pressDelay: 200 // Wait a bit before considering a press valid
+        } : {})
+      },
+    }),
+    useSensor(TouchSensor, {
+      // Touch sensor with optimized constraints
+      activationConstraint: {
+        delay: 200,
+        tolerance: 10,
+      },
+    }),
+    useSensor(KeyboardSensor, {})
+  );
 
   // Map database statuses to funnel statuses
   const mapDatabaseStatusToFunnelStatus = (dbStatus: string): string => {
@@ -106,7 +142,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         // Initialize missing column
         updatedFunnelData[column.id as keyof FunnelData] = [];
         needsUpdate = true;
-        console.log(`Initialized missing column: ${column.id}`);
       }
     });
     
@@ -119,7 +154,6 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           // If the lead's status doesn't match a funnel column, needs mapping
           if (!COLUMNS.some(col => col.id === lead.status)) {
             const mappedStatus = mapDatabaseStatusToFunnelStatus(lead.status);
-            console.log(`Found lead with database status: ${lead.status}, mapped to: ${mappedStatus}`);
             
             // Only move the lead if the mapping is different from its current position
             if (mappedStatus !== columnId) {
@@ -150,66 +184,206 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     
     // Update state if needed
     if (needsUpdate) {
-      console.log("Updating funnel data with initialized columns");
       setFunnelData(updatedFunnelData);
     }
   }, []); // Run only on mount to avoid infinite loops
 
-  // Optimized auto-scroll when isScrolling changes
-  useEffect(() => {
-    if (!boardRef.current || !isScrolling) {
-      if (scrollIntervalRef.current) {
-        window.clearInterval(scrollIntervalRef.current);
-        scrollIntervalRef.current = null;
+  // Auto-scroll function
+
+  const handleAutoScroll = useCallback((clientX: number) => {
+    if (!boardRef.current) return;
+    
+    const container = boardRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const scrollWidth = container.scrollWidth;
+    const containerWidth = containerRect.width;
+    
+    // Define scroll zones - 20% of container width on each side
+    const scrollZoneSize = Math.min(150, containerWidth * 0.2);
+    const leftScrollZone = containerRect.left + scrollZoneSize;
+    const rightScrollZone = containerRect.right - scrollZoneSize;
+    
+    // Calculate scroll speed based on position in scroll zone (max 20px per frame)
+    let scrollSpeed = 0;
+    
+    if (clientX < leftScrollZone) {
+      // Left scroll zone - calculate distance from edge for dynamic speed
+      const distanceFromEdge = Math.max(0, clientX - containerRect.left);
+      const scrollFactor = 1 - (distanceFromEdge / scrollZoneSize);
+      scrollSpeed = -Math.round(Math.min(20, 8 + (scrollFactor * 12)));
+    } else if (clientX > rightScrollZone) {
+      // Right scroll zone - calculate distance from edge for dynamic speed
+      const distanceFromEdge = Math.max(0, containerRect.right - clientX);
+      const scrollFactor = 1 - (distanceFromEdge / scrollZoneSize);
+      scrollSpeed = Math.round(Math.min(20, 8 + (scrollFactor * 12)));
+    }
+    
+    // If we need to scroll
+    if (scrollSpeed !== 0) {
+      // Check if we can scroll further in this direction
+      if ((scrollSpeed < 0 && container.scrollLeft > 0) || 
+          (scrollSpeed > 0 && container.scrollLeft < scrollWidth - containerWidth)) {
+        
+        // Auto-scroll in the calculated direction and speed
+        container.scrollBy({
+          left: scrollSpeed,
+          behavior: 'auto' // Use instant scroll for smoother animation
+        });
+        
+        // Store the last known client X position
+        lastClientX.current = clientX;
+        
+        // Continue scrolling in the next frame if we're not already
+        if (!animationFrameRef.current) {
+          animationFrameRef.current = requestAnimationFrame(() => {
+            animationFrameRef.current = null;
+            if (lastClientX.current !== null) {
+              handleAutoScroll(lastClientX.current);
+            }
+          });
+        }
       }
+    } else {
+      // If not in a scroll zone, stop auto-scrolling
+      lastClientX.current = null;
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    }
+  }, []);
+
+  // Clean up auto-scroll on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+  }, []);
+
+  // Handle drag start
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    // Get lead and column from the active element
+    const [leadId, columnId] = active.id.toString().split('||');
+    
+    // Find the lead in the column
+    const lead = funnelData[columnId as keyof FunnelData]?.find(
+      item => item._id === leadId
+    );
+    
+    if (lead) {
+      setActiveLead(lead);
+      setActiveColumnId(columnId);
+      document.body.classList.add('is-dragging');
+    }
+    
+    // Reset auto-scroll
+    lastClientX.current = null;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  };
+
+  // Handle drag move - for auto-scrolling
+  const handleDragMove = (event: DragMoveEvent) => {
+    // Get pointer coordinates safely from the event
+    const clientX = event.delta ? 
+      (document.documentElement.clientWidth / 2) + event.delta.x :
+      0;
+    
+    // If we have a valid clientX, start auto-scrolling
+    if (clientX > 0) {
+      handleAutoScroll(clientX);
+    }
+  };
+
+  // Handle drag over
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    
+    if (!over || !active) return;
+    
+    // Extract lead ID and source column ID from active
+    const [leadId, sourceColumnId] = active.id.toString().split('||');
+    
+    // Get the target column ID
+    const targetColumnId = over.id.toString();
+    
+    // If the target is the same column or not a valid column, ignore
+    if (targetColumnId === sourceColumnId || !COLUMNS.some(col => col.id === targetColumnId)) {
       return;
     }
     
-    const container = boardRef.current;
+    // Source column must exist
+    if (!sourceColumnId || !funnelData[sourceColumnId as keyof FunnelData]) {
+      return;
+    }
     
-    // Dynamic scroll speed - faster when closer to the edge
-    const calculateScrollSpeed = () => {
-      // Base speed: 8px per interval
-      const baseSpeed = 8;
-      // Maximum additional speed: 20px
-      const maxAdditionalSpeed = 20;
-      // Acceleration factor (0-1)
-      const acceleration = 0.7;
-      
-      // Increase speed the longer we scroll in one direction
-      const scrollDuration = Date.now() - scrollStartTimeRef.current;
-      const accelerationFactor = Math.min(1, scrollDuration / 1000 * acceleration);
-      
-      return Math.round(baseSpeed + (maxAdditionalSpeed * accelerationFactor));
-    };
+    // Find the lead in the source column
+    const leadIndex = funnelData[sourceColumnId as keyof FunnelData].findIndex(
+      item => item._id === leadId
+    );
     
-    // Create interval for continuous scrolling with dynamic speed
-    scrollIntervalRef.current = window.setInterval(() => {
-      if (container) {
-        const speed = calculateScrollSpeed();
-        const scrollAmount = isScrolling === "left" ? -speed : speed;
-        
-        // Check if we can scroll further
-        if (
-          (isScrolling === "left" && container.scrollLeft > 0) ||
-          (isScrolling === "right" && 
-           container.scrollLeft < container.scrollWidth - container.clientWidth)
-        ) {
-          container.scrollBy({ left: scrollAmount, behavior: "auto" });
-        } else {
-          // Stop scrolling if we reached the edge
-          setIsScrolling(null);
-        }
-      }
-    }, 16); // ~60fps for smooth scrolling
+    if (leadIndex < 0) return;
     
-    return () => {
-      if (scrollIntervalRef.current) {
-        window.clearInterval(scrollIntervalRef.current);
-        scrollIntervalRef.current = null;
-      }
-    };
-  }, [isScrolling]);
+    const lead = funnelData[sourceColumnId as keyof FunnelData][leadIndex];
+    
+    // Update the active lead's current location for visual feedback
+    setActiveColumnId(targetColumnId);
+  };
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    document.body.classList.remove('is-dragging');
+    
+    // Clear auto-scroll
+    lastClientX.current = null;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    
+    if (!over || !active || !activeLead) {
+      setActiveLead(null);
+      setActiveColumnId(null);
+      return;
+    }
+    
+    // Get target column ID
+    const targetColumnId = over.id.toString();
+    
+    // Check if it's a valid column
+    if (!COLUMNS.some(col => col.id === targetColumnId)) {
+      setActiveLead(null);
+      setActiveColumnId(null);
+      return;
+    }
+    
+    // Only move if the lead is being moved to a different column
+    if (activeLead.status !== targetColumnId) {
+      handleMoveLead(activeLead, targetColumnId);
+    }
+    
+    setActiveLead(null);
+    setActiveColumnId(null);
+  };
 
   // Handle lead movement between columns with error handling
   const handleMoveLead = async (lead: FunnelItem, targetStatus: string) => {
@@ -240,18 +414,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           prevStatus as keyof FunnelData
         ].filter((item) => item._id !== lead._id);
       } else {
-        console.warn(`Invalid source status: ${lead.status} (mapped to ${prevStatus})`, {
-          originalStatus: lead.status,
-          mappedStatus: prevStatus,
-          hasKey: prevStatus in updatedFunnelData,
-          valueType: updatedFunnelData[prevStatus as keyof FunnelData] ? 
-            typeof updatedFunnelData[prevStatus as keyof FunnelData] : 'undefined',
-          isArray: updatedFunnelData[prevStatus as keyof FunnelData] ? 
-            Array.isArray(updatedFunnelData[prevStatus as keyof FunnelData]) : false
-        });
-        
-        // Instead of returning early, let's try to continue if we can add to the target
-        console.log("Continuing with move operation despite invalid source status");
+        console.warn(`Invalid source status: ${lead.status} (mapped to ${prevStatus})`);
       }
 
       // Verify the target status exists and is an array before adding to it
@@ -282,7 +445,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         setMovingLead({
           lead: {
             ...updatedLead,
-            // Assicuriamoci che leadId sia sempre disponibile e prioritario
+            // Ensure leadId is always available
             leadId: lead.leadId || lead._id
           },
           prevStatus: lead.status,
@@ -324,15 +487,15 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         { withCredentials: true }
       );
       
-      // Ottieni lo stato attuale dal database
+      // Get current status from database
       const currentDbStatus = checkResponse.data?.status;
       
-      // Determina la mappatura degli stati solo per tipo booking
+      // Determine status mapping only for booking type
       let actualFromStage = fromStage;
       let actualToStage = toStage;
       
       if (lead.type === 'booking') {
-        // Mappa gli stati del funnel a quelli del database per il tipo booking
+        // Map funnel statuses to database statuses for booking type
         const bookingStatusMap: Record<string, string> = {
           'new': 'pending',
           'contacted': 'confirmed', 
@@ -343,20 +506,19 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           'lost': 'cancelled'
         };
         
-        // Se lo stato nel database è uno degli stati nativi delle prenotazioni,
-        // usiamo quello come actual fromStage
+        // If the status in the database is one of the native booking statuses,
+        // use that as the actual fromStage
         if (['pending', 'confirmed', 'completed', 'cancelled'].includes(currentDbStatus)) {
-          // Nessun avviso, sappiamo che c'è una mappatura
           actualFromStage = currentDbStatus;
         }
         
-        // Mappa lo stato di destinazione se necessario
+        // Map the destination status if needed
         if (bookingStatusMap[toStage]) {
           actualToStage = bookingStatusMap[toStage];
         }
       }
       
-      // Chiamata API per lo spostamento effettivo
+      // API call for actual move
       const response = await axios.post(
         `${API_BASE_URL}/api/sales-funnel/move`,
         {
@@ -370,9 +532,9 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         { withCredentials: true }
       );
       
-      // Se la chiamata API è riuscita, aggiorna i dati del funnel
+      // If the API call is successful, update funnel data
       if (response.data.success) {
-        // Aggiorna dati funnel tramite callback
+        // Update funnel data via callback
         await onLeadMove();
         
         toast("success", "Lead spostato", `Lead spostato con successo in ${toStage}`);
@@ -382,10 +544,10 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     } catch (error) {
       console.error("Error during lead move:", error);
       
-      // Ripristina lo stato precedente in caso di errore
+      // Restore previous state in case of error
       handleUndoMoveWithLead(lead, toStage, fromStage);
       
-      // Estrai il messaggio di errore per il feedback all'utente
+      // Extract error message for user feedback
       let errorMessage = "Si è verificato un errore durante lo spostamento del lead";
       if (axios.isAxiosError(error) && error.response?.data?.message) {
         errorMessage = error.response.data.message;
@@ -393,7 +555,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
       
       toast("error", "Errore spostamento", errorMessage);
       
-      // Aggiorna i dati del funnel per garantire la coerenza
+      // Update funnel data to ensure consistency
       await onLeadMove();
     } finally {
       setIsMoving(false);
@@ -405,9 +567,8 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     if (!movingLead) return;
     
     try {
-      // Otteniamo e usiamo sempre l'ID giusto
+      // Always get and use the right ID
       const idToUse = movingLead.lead.leadId || movingLead.lead._id;
-      console.log('Confirming move with ID:', idToUse);
       
       const checkResponse = await axios.get(
         `${API_BASE_URL}/api/leads/${idToUse}`,
@@ -524,11 +685,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           mappedCurrentStatus as keyof FunnelData
         ].filter((item) => item._id !== lead._id);
       } else {
-        console.warn(`Invalid current status during undo: ${currentStatus} (mapped to ${mappedCurrentStatus})`, {
-          originalStatus: currentStatus,
-          mappedStatus: mappedCurrentStatus,
-          leadId: lead._id
-        });
+        console.warn(`Invalid current status during undo: ${currentStatus} (mapped to ${mappedCurrentStatus})`);
         // We'll continue and try to add to the target column
       }
 
@@ -611,42 +768,13 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
 
-  // Draggable component
-  const LeadCard = React.memo(({ lead }: { lead: FunnelItem }) => {
-    const cardRef = useRef<HTMLDivElement>(null);
-    
-    // useDrag with collection
-    const [{ isDragging }, connectDrag] = useDrag(
-      () => ({
-        type: 'LEAD',
-        item: { lead },
-        collect: (monitor) => ({
-          isDragging: !!monitor.isDragging(),
-        }),
-        end: (item, monitor) => {
-          // Handle case where drag ends without a drop
-          if (!monitor.didDrop()) {
-            console.log('Drag terminated without drop');
-          }
-        }
-      }),
-      [lead]
-    );
-    
-    // Connect the ref with connector via useEffect
-    useEffect(() => {
-      if (cardRef.current) {
-        connectDrag(cardRef.current);
-      }
-    }, [connectDrag]);
-
+  // Lead card component
+  const LeadCard = React.memo(({ lead, columnId }: { lead: FunnelItem, columnId: string }) => {
     return (
-      <div
-        ref={cardRef}
-        className={`funnel-card ${isDragging ? 'dragging' : ''}`}
+      <div 
+        className="funnel-card"
         style={{
           borderLeftColor: getBorderColor(lead.status),
-          opacity: isDragging ? 0.5 : 1,
           willChange: 'transform, opacity' // Performance optimization
         }}
       >
@@ -677,77 +805,38 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   
   LeadCard.displayName = 'LeadCard';
 
-  // Column component
-  const FunnelColumn = React.memo(({ id, title, color, leads }: { id: string; title: string; color: string; leads: FunnelItem[] }) => {
-    const [isOver, setIsOver] = useState(false);
+  // Draggable lead card
+  const DraggableLeadCard = React.memo(({ lead, columnId }: { lead: FunnelItem, columnId: string }) => {
+    // Create a composite ID for the lead (lead._id + column)
+    const compositeId = `${lead._id}||${columnId}`;
     
-    // Standard ref for column body
-    const bodyRef = useRef<HTMLDivElement>(null);
-    
-    // useDrop with collection - SIMPLIFIED hover handler
-    const [{ isOverCurrent }, connectDrop] = useDrop(
-      () => ({
-        accept: 'LEAD',
-        drop: (item: { lead: FunnelItem }) => {
-          handleMoveLead(item.lead, id);
-          return { status: id };
-        },
-        collect: (monitor) => ({
-          isOverCurrent: !!monitor.isOver({ shallow: true }),
-        }),
-        hover: (item, monitor) => {
-          if (!boardRef.current) return;
-          
-          // Update isOver state
-          const isHovering = monitor.isOver({ shallow: true });
-          if (isOver !== isHovering) {
-            setIsOver(isHovering);
-          }
-          
-          // Get mouse position
-          const clientOffset = monitor.getClientOffset();
-          if (!clientOffset) return;
-          
-          // Handle auto-scroll based on mouse position
-          const containerRect = boardRef.current.getBoundingClientRect();
-          const scrollAreaSize = Math.min(150, containerRect.width * 0.2);
-          
-          // Define scroll zones - 20% of container width on each side
-          const leftScrollZone = containerRect.left + scrollAreaSize;
-          const rightScrollZone = containerRect.right - scrollAreaSize;
-          
-          // Update scroll start time if we change direction or start scrolling
-          if (
-            (clientOffset.x < leftScrollZone && isScrolling !== "left") ||
-            (clientOffset.x > rightScrollZone && isScrolling !== "right")
-          ) {
-            scrollStartTimeRef.current = Date.now();
-          }
-          
-          // Determine if we should scroll and in which direction
-          if (clientOffset.x < leftScrollZone) {
-            setIsScrolling("left");
-          } else if (clientOffset.x > rightScrollZone) {
-            setIsScrolling("right");
-          } else {
-            setIsScrolling(null);
-          }
-        },
-      }),
-      [id, isOver, isScrolling]
-    );
-    
-    // Connect the ref with connector via useEffect
-    useEffect(() => {
-      if (bodyRef.current) {
-        connectDrop(bodyRef.current);
-      }
-    }, [connectDrop]);
-
     return (
       <div 
-        className={`funnel-column ${isMoving ? 'column-fade-transition' : ''}`}
+        className="funnel-draggable"
+        data-lead-id={lead._id}
+        data-column-id={columnId}
       >
+        <LeadCard lead={lead} columnId={columnId} />
+      </div>
+    );
+  });
+  
+  DraggableLeadCard.displayName = 'DraggableLeadCard';
+
+  // Column component
+  const FunnelColumn = React.memo(({ 
+    id, 
+    title, 
+    color, 
+    leads 
+  }: { 
+    id: string; 
+    title: string; 
+    color: string; 
+    leads: FunnelItem[] 
+  }) => {
+    return (
+      <div className={`funnel-column ${isMoving ? 'column-fade-transition' : ''}`}>
         <div className={`funnel-header ${color}`}>
           <h3 className="text-sm font-medium">{title}</h3>
           <div className="w-5 h-5 rounded-full bg-black/25 flex items-center justify-center text-xs font-medium">
@@ -756,18 +845,27 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         </div>
         
         <div
-          ref={bodyRef}
-          className={`funnel-body ${isOverCurrent ? 'drag-over' : ''}`}
+          className={`funnel-body ${activeColumnId === id ? 'drag-over' : ''}`}
+          data-column-id={id}
         >
-          {leads.length > 0 ? (
-            leads.map((lead) => (
-              <LeadCard key={lead._id} lead={lead} />
-            ))
-          ) : (
-            <div className="text-center text-zinc-500 text-xs italic py-4">
-              Nessun lead
-            </div>
-          )}
+          <SortableContext 
+            items={leads.map(lead => `${lead._id}||${id}`)}
+            strategy={verticalListSortingStrategy}
+          >
+            {leads.length > 0 ? (
+              leads.map((lead) => (
+                <DraggableLeadCard 
+                  key={`${lead._id}||${id}`}
+                  lead={lead} 
+                  columnId={id}
+                />
+              ))
+            ) : (
+              <div className="text-center text-zinc-500 text-xs italic py-4">
+                Nessun lead
+              </div>
+            )}
+          </SortableContext>
         </div>
       </div>
     );
@@ -775,14 +873,18 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   
   FunnelColumn.displayName = 'FunnelColumn';
 
+  // Custom DragOverlay component is no longer needed since we're using the one from dnd-kit
+  // We'll use the official DragOverlay component from dnd-kit directly
+
   return (
-    <DndProvider
-      backend={DndBackend}
-      options={isTouchDevice() ? touchBackendOptions : undefined}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
     >
-      {/* Add our custom drag layer for better visual experience */}
-      <CustomDragLayer snapToGrid={false} />
-      
       <div
         ref={boardRef}
         className="funnel-board-container w-full overflow-x-auto"
@@ -795,11 +897,31 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
               id={column.id}
               title={column.title}
               color={column.color}
-              leads={funnelData[column.id as keyof FunnelData]}
+              leads={funnelData[column.id as keyof FunnelData] || []}
             />
           ))}
         </div>
       </div>
+
+      {/* Drag overlay - enhanced visualization */}
+      <DragOverlay>
+        {activeLead && (
+          <div 
+            style={{
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.7)',
+              width: '250px', // Fixed width for preview
+              borderLeft: `3px solid ${getBorderColor(activeLead.status)}`,
+              background: '#18181b',
+              borderRadius: '6px',
+              transform: isTouchDevice ? 'scale(1.05)' : 'scale(1.02)',
+              opacity: 0.9,
+              cursor: 'grabbing'
+            }}
+          >
+            <LeadCard lead={activeLead} columnId={activeColumnId || ''} />
+          </div>
+        )}
+      </DragOverlay>
 
       {/* Facebook Event Modal for Lead Movement - Only for "customer" status */}
       {movingLead && (
@@ -820,7 +942,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
           onSave={handleSaveLeadValue}
         />
       )}
-    </DndProvider>
+    </DndContext>
   );
 }
 
@@ -840,19 +962,4 @@ function getBorderColor(status: string): string {
     case "cancelled": return "#e74c3c"; // same as lost
     default: return "#71717a"; // zinc-500
   }
-}
-
-// Helper function to format date
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('it-IT', {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
-
-// Helper function to format money
-function formatMoney(value: number): string {
-  return value.toLocaleString('it-IT');
 }
