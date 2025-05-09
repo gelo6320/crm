@@ -1,16 +1,21 @@
 // app/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { Bell, Users, CheckCircle, ArrowRight, Filter, RefreshCw, 
-  Calendar, Bookmark, FileText, BarChart, ArrowUp, ArrowDown, PieChart, 
-  ChevronRight, Clock, Facebook } from "lucide-react";
+import { useState, useEffect, ReactNode } from "react";
+import { 
+  Bell, Users, CheckCircle, ArrowRight, RefreshCw, 
+  Calendar, Bookmark, FileText, BarChart, ArrowUp, ArrowDown, 
+  ChevronRight, Clock, Facebook, LayoutDashboard, 
+  TrendingUp, Zap, BadgeCheck, UserPlus,
+  LucideIcon
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { fetchDashboardStats, fetchRecentEvents, fetchNewContacts, markContactAsViewed } from "@/lib/api/dashboard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { motion, AnimatePresence } from "framer-motion";
 
-// Type for notifications
+// Types
 interface Contact {
   _id: string;
   name: string;
@@ -21,7 +26,6 @@ interface Contact {
   viewed: boolean;
 }
 
-// Type for events
 interface Event {
   _id: string;
   eventName: string;
@@ -31,20 +35,114 @@ interface Event {
   error?: string;
 }
 
-// Modified notifications panel component
-function NotificationsPanel({ 
-  notifications, 
-  viewedCount, 
-  onViewContact, 
-  onViewAll,
-  isMobile = false
-}: { 
+interface StatsData {
+  forms: {
+    total: number;
+    converted: number;
+    conversionRate: number;
+    trend: number;
+    thisWeek: number;
+    lastWeek: number;
+  };
+  bookings: {
+    total: number;
+    converted: number;
+    conversionRate: number;
+    trend: number;
+    thisWeek: number;
+    lastWeek: number;
+  };
+  facebook: {
+    total: number;
+    converted: number;
+    conversionRate: number;
+    trend: number;
+    thisWeek: number;
+    lastWeek: number;
+  };
+  events: {
+    total: number;
+    success: number;
+    successRate: number;
+  };
+  totalConversionRate: number;
+  totalTrend: number;
+  totalThisWeek: number;
+  totalLastWeek: number;
+}
+
+// Card container props
+interface AnimatedCardProps {
+  children: ReactNode;
+  delay?: number;
+  className?: string;
+}
+
+// Stat Card props
+interface StatCardProps {
+  title: string;
+  value: number | string;
+  icon: LucideIcon;
+  trend?: number | null;
+  bgColor?: string;
+  iconColor?: string;
+  delay?: number;
+}
+
+// Notification Panel props
+interface NotificationsPanelProps {
   notifications: Contact[];
   viewedCount: number;
   onViewContact: (contact: Contact) => void;
   onViewAll: () => void;
-  isMobile?: boolean;
-}) {
+}
+
+// Card container with animations
+const AnimatedCard = ({ children, delay = 0, className = "" }: AnimatedCardProps) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay: delay * 0.1 }}
+    className={`bg-zinc-800/90 backdrop-blur-sm rounded-xl border border-zinc-700/50 shadow-lg ${className}`}
+  >
+    {children}
+  </motion.div>
+);
+
+// Stat Card component
+const StatCard = ({ title, value, icon: Icon, trend = null, bgColor = "bg-zinc-800/50", iconColor = "text-primary", delay = 0 }: StatCardProps) => {  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: delay * 0.1 }}
+      className={`${bgColor} rounded-xl p-4 flex flex-col`}
+      whileHover={{ y: -5, transition: { duration: 0.2 } }}
+    >
+      <div className="flex justify-between items-start mb-3">
+        <div className={`rounded-full p-2 ${iconColor.replace('text-', 'bg-')}/10`}>
+          <Icon size={20} className={iconColor} />
+        </div>
+        {trend !== null && (
+          <div className={`flex items-center text-xs font-medium ${trend > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {trend > 0 ? <ArrowUp size={14} className="mr-1" /> : <ArrowDown size={14} className="mr-1" />}
+            {Math.abs(trend)}%
+          </div>
+        )}
+      </div>
+      <div className="font-medium text-zinc-400 text-sm mb-1">{title}</div>
+      <div className="text-2xl font-bold">{value}</div>
+    </motion.div>
+  );
+};
+
+// Notifications panel component
+function NotificationsPanel({ 
+  notifications, 
+  viewedCount, 
+  onViewContact, 
+  onViewAll 
+}: NotificationsPanelProps) {
   // Format time ago
   const getTimeAgo = (dateString: string): string => {
     const date = new Date(dateString);
@@ -63,85 +161,109 @@ function NotificationsPanel({
   // Source icon mapping
   const getSourceIcon = (type: string) => {
     switch (type) {
-      case 'form': return <FileText size={isMobile ? 14 : 16} className="text-emerald-400" />;
-      case 'booking': return <Bookmark size={isMobile ? 14 : 16} className="text-emerald-400" />;
-      case 'facebook': return <Facebook size={isMobile ? 14 : 16} className="text-emerald-400" />;
-      default: return <FileText size={isMobile ? 14 : 16} className="text-emerald-400" />;
+      case 'form': return <FileText className="text-emerald-400" />;
+      case 'booking': return <Bookmark className="text-emerald-400" />;
+      case 'facebook': return <Facebook className="text-emerald-400" />;
+      default: return <FileText className="text-emerald-400" />;
     }
   };
 
   return (
-    <div className="card overflow-hidden">
-      <div className="p-2 sm:p-4 border-b border-zinc-700 bg-gradient-to-r from-emerald-900/40 to-emerald-700/20 flex justify-between items-center">
-        <h2 className="text-sm sm:text-base font-medium flex items-center">
-          <Bell size={isMobile ? 14 : 16} className="mr-1.5 sm:mr-2 text-emerald-400" />
+    <AnimatedCard className="overflow-hidden h-full flex flex-col" delay={3}>
+      <div className="p-4 border-b border-zinc-700/50 bg-gradient-to-r from-emerald-900/40 to-emerald-700/20 flex justify-between items-center">
+        <h2 className="text-base font-semibold flex items-center">
+          <Bell size={18} className="mr-2 text-emerald-400" />
           Notifiche
           {viewedCount > 0 && (
-            <span className="ml-1.5 sm:ml-2 bg-emerald-500 text-white text-xs rounded-full px-1.5 py-0.5 text-[10px] sm:text-xs">
+            <motion.span 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="ml-2 bg-emerald-500 text-white text-xs rounded-full px-2 py-0.5"
+            >
               {viewedCount} nuovi
-            </span>
+            </motion.span>
           )}
         </h2>
       </div>
       
-      <div className="max-h-[300px] sm:max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-emerald-800 scrollbar-track-zinc-900">
-        {notifications.length > 0 ? (
-          <div className="divide-y divide-zinc-800">
-            {notifications.map((contact) => (
-              <div 
-                key={contact._id} 
-                className={`p-2 sm:p-3 hover:bg-zinc-800/30 transition-colors cursor-pointer
-                  ${!contact.viewed ? 
-                    "bg-emerald-900/10 border-l-2 border-emerald-500" : 
-                    "hover:border-l-2 hover:border-emerald-500/50"}
-                `}
-                onClick={() => onViewContact(contact)}
-              >
-                <div className="flex items-start space-x-1.5 sm:space-x-2">
-                  <div className="bg-emerald-900/60 rounded-full p-1 sm:p-1.5 mt-0.5">
-                    {getSourceIcon(contact.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-xs sm:text-sm">{contact.name}</div>
-                    <div className="text-xs sm:text-sm text-zinc-400 truncate">{contact.email}</div>
-                    <div className="flex items-center justify-between mt-0.5 sm:mt-1">
-                      <div className="text-[10px] sm:text-xs text-zinc-500 flex items-center">
-                        <Clock size={isMobile ? 10 : 12} className="mr-0.5 sm:mr-1" />
-                        {getTimeAgo(contact.createdAt)}
-                      </div>
-                      <div className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-400">
-                        {contact.type === 'form' ? 'Form' : 
-                         contact.type === 'booking' ? 'Prenotazione' : 'Facebook'}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-emerald-800 scrollbar-track-transparent">
+        <AnimatePresence>
+          {notifications.length > 0 ? (
+            <motion.div className="divide-y divide-zinc-800/50">
+              {notifications.map((contact, index) => (
+                <motion.div 
+                  key={contact._id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className={`p-4 hover:bg-zinc-700/20 transition-all cursor-pointer
+                    ${!contact.viewed ? 
+                      "bg-emerald-900/10 border-l-2 border-emerald-500" : 
+                      "hover:border-l-2 hover:border-emerald-500/50"}
+                  `}
+                  onClick={() => onViewContact(contact)}
+                  whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="bg-emerald-900/60 rounded-full p-2 mt-0.5">
+                      {getSourceIcon(contact.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-white">{contact.name}</div>
+                      <div className="text-sm text-zinc-400 truncate">{contact.email}</div>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="text-xs text-zinc-500 flex items-center">
+                          <Clock size={12} className="mr-1" />
+                          {getTimeAgo(contact.createdAt)}
+                        </div>
+                        <div className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-400">
+                          {contact.type === 'form' ? 'Form' : 
+                           contact.type === 'booking' ? 'Prenotazione' : 'Facebook'}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="p-4 sm:p-8 text-center text-zinc-500">
-            <Bell size={isMobile ? 20 : 24} className="mx-auto mb-2 text-emerald-700" />
-            <p className="text-sm">Nessuna notifica</p>
-          </div>
-        )}
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="p-8 text-center text-zinc-500 h-full flex flex-col items-center justify-center"
+            >
+              <Bell size={30} className="mx-auto mb-3 text-emerald-700 opacity-60" />
+              <p className="text-sm">Nessuna notifica</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       
-      <div className="p-2 sm:p-3 border-t border-zinc-700 bg-emerald-900/10">
-        <button 
+      <div className="p-3 border-t border-zinc-700/50 bg-emerald-900/10">
+        <motion.button 
           onClick={onViewAll}
-          className="btn btn-outline w-full inline-flex items-center justify-center border-emerald-600 text-emerald-400 hover:bg-emerald-900/40 hover:text-emerald-300 text-xs sm:text-sm py-1 sm:py-1.5"
+          className="w-full inline-flex items-center justify-center py-2.5 px-4 rounded-lg border border-emerald-600/50 text-emerald-400 hover:bg-emerald-900/40 hover:text-emerald-300 text-sm font-medium transition-all"
+          whileHover={{ scale: 1.02, backgroundColor: "rgba(16, 185, 129, 0.2)" }}
+          whileTap={{ scale: 0.98 }}
         >
-          <CheckCircle size={isMobile ? 12 : 14} className="mr-1 sm:mr-1.5" />
+          <CheckCircle size={16} className="mr-2" />
           Segna tutte come viste
-        </button>
+        </motion.button>
       </div>
-    </div>
+    </AnimatedCard>
   );
 }
 
+// Calculate trends based on previous period
+const calculateTrend = (current: number, previous: number): number => {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return Math.round(((current - previous) / previous) * 100);
+};
+
 export default function Dashboard() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<StatsData>({
     forms: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
     bookings: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
     facebook: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
@@ -154,25 +276,35 @@ export default function Dashboard() {
   
   const [recentEvents, setRecentEvents] = useState<Event[]>([]);
   const [notifications, setNotifications] = useState<Contact[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [viewedCount, setViewedCount] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [viewedCount, setViewedCount] = useState<number>(0);
   const router = useRouter();
 
   useEffect(() => {
     loadData();
-    
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    
-    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const loadData = async () => {
+  // Function to calculate real trends instead of using mock data
+  const processTrendData = (data: StatsData): StatsData => {
+    // Calculate trends for each channel
+    const processedData = { ...data };
+    
+    // Calculate form trends based on weeks
+    processedData.forms.trend = calculateTrend(data.forms.thisWeek, data.forms.lastWeek);
+    
+    // Calculate booking trends
+    processedData.bookings.trend = calculateTrend(data.bookings.thisWeek, data.bookings.lastWeek);
+    
+    // Calculate facebook trends
+    processedData.facebook.trend = calculateTrend(data.facebook.thisWeek, data.facebook.lastWeek);
+    
+    // Calculate total trend
+    processedData.totalTrend = calculateTrend(data.totalThisWeek, data.totalLastWeek);
+    
+    return processedData;
+  };
+
+  const loadData = async (): Promise<void> => {
     try {
       setIsLoading(true);
       
@@ -182,11 +314,13 @@ export default function Dashboard() {
         fetchNewContacts()
       ]);
       
-      setStats(statsData);
-      setRecentEvents(eventsData);
+      // Process trends with real calculations
+      const processedStats = processTrendData(statsData as StatsData);
+      setStats(processedStats);
+      setRecentEvents(eventsData as Event[]);
       
       // Only keep unviewed contacts for notifications
-      const unviewedContacts = newContactsData.filter((contact: Contact) => !contact.viewed);
+      const unviewedContacts = (newContactsData as Contact[]).filter((contact: Contact) => !contact.viewed);
       setNotifications(unviewedContacts);
       setViewedCount(unviewedContacts.length);
     } catch (error) {
@@ -197,7 +331,7 @@ export default function Dashboard() {
   };
   
   // Marks a single contact as viewed and navigates to the corresponding page
-  const handleViewContact = async (contact: Contact) => {
+  const handleViewContact = async (contact: Contact): Promise<void> => {
     try {
       // Mark as viewed in the backend
       await markContactAsViewed(contact._id);
@@ -207,7 +341,7 @@ export default function Dashboard() {
         prevNotifications.filter((item: Contact) => item._id !== contact._id)
       );
       
-      // Update the count (should be one less now)
+      // Update the count
       setViewedCount(prev => Math.max(0, prev - 1));
       
       // Navigate to the appropriate page based on contact type
@@ -230,7 +364,7 @@ export default function Dashboard() {
   };
   
   // Marks all contacts as viewed
-  const handleViewAllContacts = async () => {
+  const handleViewAllContacts = async (): Promise<void> => {
     try {
       // Mark each contact as viewed
       await Promise.all(
@@ -248,7 +382,17 @@ export default function Dashboard() {
   };
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <LoadingSpinner />
+        </motion.div>
+      </div>
+    );
   }
 
   // Format date
@@ -262,179 +406,310 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-3 sm:space-y-6 animate-fade-in">
-      {/* Header with notifications count */}
-      <div className="flex items-center justify-end mb-2 sm:mb-4">
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          <button 
+    <div className="max-w-full px-4 sm:px-6 py-6 space-y-6">
+      {/* Header with title and actions */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-3"
+        >
+          <div className="p-2 rounded-xl bg-emerald-900/20 text-emerald-400">
+            <LayoutDashboard size={24} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">Dashboard</h1>
+            <p className="text-zinc-400 text-sm">Panoramica contatti e conversioni</p>
+          </div>
+        </motion.div>
+        
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-2 self-end sm:self-center"
+        >
+          <motion.button 
             onClick={loadData}
-            className="btn btn-outline p-1 sm:p-1.5"
+            className="btn flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700 hover:border-primary hover:bg-primary/10 text-sm"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             title="Aggiorna dati"
           >
-            <RefreshCw size={isMobile ? 14 : 16} />
-          </button>
-        </div>
+            <RefreshCw size={16} />
+            Aggiorna
+          </motion.button>
+        </motion.div>
       </div>
       
-      {/* Total contacts trend card */}
-      <div className="card p-3 sm:p-4">
-        <div className="flex items-center justify-between mb-1 sm:mb-2">
-          <h2 className="text-sm sm:text-base font-medium">Andamento Contatti</h2>
-          
-          <div className={`${stats.totalTrend > 0 ? 'text-success' : 'text-danger'} flex items-center text-xs sm:text-sm font-medium`}>
-            {stats.totalTrend > 0 ? <ArrowUp size={isMobile ? 14 : 18} className="mr-0.5 sm:mr-1" /> : <ArrowDown size={isMobile ? 14 : 18} className="mr-0.5 sm:mr-1" />}
-            {Math.abs(stats.totalTrend)}% rispetto alla settimana precedente
+      {/* Conversion Overview */}
+      <AnimatedCard className="p-6" delay={1}>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col items-center text-center md:text-left md:items-start">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 rounded-full bg-primary/10">
+                <TrendingUp size={20} className="text-primary" />
+              </div>
+              <h2 className="text-base font-semibold">Conversione Globale</h2>
+            </div>
+            <div className="text-4xl font-bold text-primary mb-1">{stats.totalConversionRate}%</div>
+            <div className="flex items-center text-sm">
+              <span className={`flex items-center ${stats.totalTrend >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {stats.totalTrend >= 0 ? <ArrowUp size={14} className="mr-1" /> : <ArrowDown size={14} className="mr-1" />}
+                {Math.abs(stats.totalTrend)}%
+              </span>
+              <span className="text-zinc-500 ml-2">rispetto alla settimana precedente</span>
+            </div>
           </div>
+          
+          <div className="h-20 w-px bg-zinc-700 hidden md:block"></div>
+          
+          {/* Conversion funnel */}
+          <div className="flex-1 flex flex-col sm:flex-row items-center gap-4">
+            <motion.div 
+              whileHover={{ scale: 1.02 }}
+              className="rounded-xl bg-zinc-800/70 p-4 text-center flex-1 w-full"
+            >
+              <div className="text-3xl font-bold mb-1">
+                {stats.forms.total + stats.bookings.total + stats.facebook.total}
+              </div>
+              <div className="text-sm text-zinc-400">Lead totali</div>
+            </motion.div>
+            
+            <div className="hidden sm:flex items-center justify-center">
+              <motion.div
+                animate={{
+                  x: [0, 5, 0],
+                  transition: { repeat: Infinity, duration: 1.5 }
+                }}
+              >
+                <ArrowRight size={24} className="text-zinc-600" />
+              </motion.div>
+            </div>
+            
+            <motion.div 
+              whileHover={{ scale: 1.02 }}
+              className="rounded-xl bg-emerald-900/20 p-4 text-center flex-1 w-full"
+            >
+              <div className="text-3xl font-bold text-emerald-400 mb-1">
+                {stats.forms.converted + stats.bookings.converted + stats.facebook.converted}
+              </div>
+              <div className="text-sm text-zinc-400">Clienti acquisiti</div>
+            </motion.div>
+          </div>
+        </div>
+      </AnimatedCard>
+      
+      {/* Weekly trends */}
+      <AnimatedCard className="p-6" delay={2}>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-2 rounded-full bg-blue-500/10">
+            <BarChart size={18} className="text-blue-400" />
+          </div>
+          <h2 className="text-base font-semibold">Andamento Settimanale</h2>
         </div>
         
-        <div className="grid grid-cols-2 gap-2 sm:gap-4 mt-2 sm:mt-4">
-          <div className="bg-zinc-800/50 rounded-lg p-2 sm:p-4">
-            <div className="text-xs sm:text-sm text-zinc-400 mb-0.5 sm:mb-1">Questa settimana</div>
-            <div className="text-lg sm:text-2xl font-bold">{stats.totalThisWeek}</div>
-            <div className="text-[10px] sm:text-xs text-zinc-500 mt-0.5 sm:mt-1">nuovi contatti</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-zinc-800/50 rounded-xl p-4">
+            <div className="text-sm text-zinc-400 mb-1">Questa settimana</div>
+            <div className="flex items-end justify-between">
+              <div className="text-3xl font-bold">{stats.totalThisWeek}</div>
+              <div className="text-xs text-zinc-500">nuovi contatti</div>
+            </div>
+            
+            <div className="mt-4 h-2 bg-zinc-700/50 rounded-full">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, (stats.totalThisWeek / (stats.totalLastWeek || 1)) * 100)}%` }}
+                transition={{ duration: 1, delay: 0.5 }}
+                className="h-2 bg-primary rounded-full"
+              />
+            </div>
           </div>
           
-          <div className="bg-zinc-800/50 rounded-lg p-2 sm:p-4">
-            <div className="text-xs sm:text-sm text-zinc-400 mb-0.5 sm:mb-1">Settimana precedente</div>
-            <div className="text-lg sm:text-2xl font-bold">{stats.totalLastWeek}</div>
-            <div className="text-[10px] sm:text-xs text-zinc-500 mt-0.5 sm:mt-1">nuovi contatti</div>
+          <div className="bg-zinc-800/50 rounded-xl p-4">
+            <div className="text-sm text-zinc-400 mb-1">Settimana precedente</div>
+            <div className="flex items-end justify-between">
+              <div className="text-3xl font-bold">{stats.totalLastWeek}</div>
+              <div className="text-xs text-zinc-500">nuovi contatti</div>
+            </div>
+            
+            <div className="mt-4 h-2 bg-zinc-700/50 rounded-full">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, (stats.totalLastWeek / (stats.totalThisWeek || 1)) * 100)}%` }}
+                transition={{ duration: 1, delay: 0.5 }}
+                className="h-2 bg-zinc-600 rounded-full"
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </AnimatedCard>
       
       {/* Main dashboard grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column - Notifications panel */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 h-full">
           <NotificationsPanel 
             notifications={notifications} 
             viewedCount={viewedCount}
             onViewContact={handleViewContact}
             onViewAll={handleViewAllContacts}
-            isMobile={isMobile}
           />
         </div>
         
-        {/* Right column - Metrics */}
-        <div className="lg:col-span-2">
-          {/* Conversion rate overview */}
-          <div className="card mb-3 sm:mb-4">
-            <div className="p-2 sm:p-4 border-b border-zinc-700">
-              <h2 className="text-sm sm:text-base font-medium">Tasso di conversione complessivo</h2>
-            </div>
+        {/* Right column - Stats and Quick Links */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Quick stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <StatCard 
+              title="Prenotazioni" 
+              value={stats.bookings.total}
+              icon={Bookmark}
+              trend={stats.bookings.trend}
+              bgColor="bg-emerald-900/10"
+              iconColor="text-emerald-400"
+              delay={4}
+            />
             
-            <div className="p-3 sm:p-5 flex items-center justify-between">
-              <div className="flex flex-col items-center">
-                <div className="text-xl sm:text-3xl font-bold text-primary">{stats.totalConversionRate}%</div>
-                <div className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">Tasso di conversione globale</div>
-              </div>
-              
-              <div className="h-16 sm:h-20 w-1 bg-zinc-800 mx-2 sm:mx-6"></div>
-              
-              {/* Conversion funnel */}
-              <div className="flex-1 grid grid-cols-3 gap-1 sm:gap-2">
-                <div className="bg-zinc-800/50 rounded p-1 sm:p-2 text-center">
-                  <div className="text-base sm:text-2xl font-semibold">{stats.forms.total + stats.bookings.total + stats.facebook.total}</div>
-                  <div className="text-[10px] sm:text-xs text-zinc-400">Lead totali</div>
-                </div>
-                <div className="flex items-center justify-center">
-                  <ArrowRight size={isMobile ? 16 : 20} className="text-zinc-600" />
-                </div>
-                <div className="bg-zinc-800/50 rounded p-1 sm:p-2 text-center">
-                  <div className="text-base sm:text-2xl font-semibold text-success">{stats.forms.converted + stats.bookings.converted + stats.facebook.converted}</div>
-                  <div className="text-[10px] sm:text-xs text-zinc-400">Clienti acquisiti</div>
-                </div>
-              </div>
-            </div>
+            <StatCard 
+              title="Form" 
+              value={stats.forms.total}
+              icon={FileText}
+              trend={stats.forms.trend}
+              bgColor="bg-primary/10"
+              iconColor="text-primary"
+              delay={5}
+            />
+            
+            <StatCard 
+              title="Facebook" 
+              value={stats.facebook.total}
+              icon={Facebook}
+              trend={stats.facebook.trend}
+              bgColor="bg-blue-900/10"
+              iconColor="text-blue-400"
+              delay={6}
+            />
           </div>
           
           {/* Quick links */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-            <Link href="/forms" className="card p-2 sm:p-4 hover:border-primary transition-colors group">
-              <div className="flex items-center">
-                <div className="bg-primary/10 p-1 sm:p-2 rounded-lg mr-2 sm:mr-3 group-hover:bg-primary/20 transition-colors">
-                  <FileText size={isMobile ? 14 : 18} className="text-primary" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Link href="/forms" passHref>
+              <motion.div 
+                className="bg-zinc-800/80 hover:bg-zinc-700/30 border border-zinc-700/50 hover:border-primary/50 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all"
+                whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.05)" }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="bg-primary/10 p-2 rounded-lg">
+                  <FileText size={18} className="text-primary" />
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm">Form</div>
-                  <div className="text-[10px] sm:text-xs text-zinc-400">{stats.forms.total} contatti</div>
+                  <div className="text-sm font-medium">Form</div>
+                  <div className="text-xs text-zinc-400">{stats.forms.total} contatti</div>
                 </div>
-              </div>
+              </motion.div>
             </Link>
             
-            <Link href="/bookings" className="card p-2 sm:p-4 hover:border-primary transition-colors group">
-              <div className="flex items-center">
-                <div className="bg-success/10 p-1 sm:p-2 rounded-lg mr-2 sm:mr-3 group-hover:bg-success/20 transition-colors">
-                  <Bookmark size={isMobile ? 14 : 18} className="text-success" />
+            <Link href="/bookings" passHref>
+              <motion.div 
+                className="bg-zinc-800/80 hover:bg-zinc-700/30 border border-zinc-700/50 hover:border-emerald-500/50 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all"
+                whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.05)" }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="bg-emerald-500/10 p-2 rounded-lg">
+                  <Bookmark size={18} className="text-emerald-400" />
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm">Prenotazioni</div>
-                  <div className="text-[10px] sm:text-xs text-zinc-400">{stats.bookings.total} contatti</div>
+                  <div className="text-sm font-medium">Prenotazioni</div>
+                  <div className="text-xs text-zinc-400">{stats.bookings.total} contatti</div>
                 </div>
-              </div>
+              </motion.div>
             </Link>
             
-            <Link href="/facebook-leads" className="card p-2 sm:p-4 hover:border-primary transition-colors group">
-              <div className="flex items-center">
-                <div className="bg-blue-500/10 p-1 sm:p-2 rounded-lg mr-2 sm:mr-3 group-hover:bg-blue-500/20 transition-colors">
-                  <Facebook size={isMobile ? 14 : 18} className="text-blue-500" />
+            <Link href="/facebook-leads" passHref>
+              <motion.div 
+                className="bg-zinc-800/80 hover:bg-zinc-700/30 border border-zinc-700/50 hover:border-blue-500/50 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all"
+                whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.05)" }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="bg-blue-500/10 p-2 rounded-lg">
+                  <Facebook size={18} className="text-blue-500" />
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm">Facebook</div>
-                  <div className="text-[10px] sm:text-xs text-zinc-400">{stats.facebook.total} contatti</div>
+                  <div className="text-sm font-medium">Facebook</div>
+                  <div className="text-xs text-zinc-400">{stats.facebook.total} contatti</div>
                 </div>
-              </div>
+              </motion.div>
             </Link>
             
-            <Link href="/calendar" className="card p-2 sm:p-4 hover:border-primary transition-colors group">
-              <div className="flex items-center">
-                <div className="bg-zinc-700/50 p-1 sm:p-2 rounded-lg mr-2 sm:mr-3 group-hover:bg-zinc-700 transition-colors">
-                  <Calendar size={isMobile ? 14 : 18} className="text-zinc-300" />
+            <Link href="/calendar" passHref>
+              <motion.div 
+                className="bg-zinc-800/80 hover:bg-zinc-700/30 border border-zinc-700/50 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all"
+                whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.05)" }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="bg-zinc-700/50 p-2 rounded-lg">
+                  <Calendar size={18} className="text-zinc-300" />
                 </div>
                 <div>
-                  <div className="text-xs sm:text-sm">Calendario</div>
-                  <div className="text-[10px] sm:text-xs text-zinc-400">Visualizza</div>
+                  <div className="text-sm font-medium">Calendario</div>
+                  <div className="text-xs text-zinc-400">Visualizza</div>
                 </div>
-              </div>
+              </motion.div>
             </Link>
           </div>
-        </div>
-      </div>
-      
-      {/* Recent activity */}
-      <div className="card">
-        <div className="flex items-center justify-between p-2 sm:p-4 border-b border-zinc-700">
-          <h2 className="text-sm sm:text-base font-medium flex items-center">
-            <Clock size={isMobile ? 14 : 16} className="mr-1.5 sm:mr-2 text-primary" />
-            Attività recenti
-          </h2>
-          <Link href="/events" className="btn btn-outline btn-sm p-1 sm:p-1.5">
-            <ChevronRight size={isMobile ? 14 : 16} />
-          </Link>
-        </div>
-        
-        <div className="p-2 sm:p-4">
-          {recentEvents.length > 0 ? (
-            <div className="space-y-2 sm:space-y-3">
-              {recentEvents.slice(0, 5).map((event, index) => (
-                <div key={index} className="flex items-center justify-between hover:bg-zinc-800/30 p-1.5 sm:p-2 rounded transition-colors">
-                  <div className="flex items-center">
-                    <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${event.success ? 'bg-success' : 'bg-danger'} mr-2 sm:mr-3`}></div>
-                    <div>
-                      <div className="font-medium text-xs sm:text-sm">{event.eventName}</div>
-                      <div className="text-[10px] sm:text-xs text-zinc-400">{event.leadType === 'form' ? 'Form contatto' : 'Prenotazione'}</div>
-                    </div>
-                  </div>
-                  <div className="text-[10px] sm:text-xs text-zinc-500">{formatDate(event.createdAt)}</div>
+          
+          {/* Recent activity */}
+          <AnimatedCard className="overflow-hidden" delay={7}>
+            <div className="flex items-center justify-between p-4 border-b border-zinc-700/50 bg-gradient-to-r from-zinc-800 to-zinc-800/50">
+              <h2 className="text-base font-semibold flex items-center">
+                <Clock size={18} className="mr-2 text-primary" />
+                Attività recenti
+              </h2>
+              <Link href="/events" passHref>
+                <motion.div 
+                  className="p-2 rounded-lg hover:bg-zinc-700/30 transition-all"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <ChevronRight size={18} />
+                </motion.div>
+              </Link>
+            </div>
+            
+            <div className="p-4">
+              {recentEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {recentEvents.slice(0, 5).map((event, index) => (
+                    <motion.div 
+                      key={event._id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      className="flex items-center justify-between rounded-lg hover:bg-zinc-800/50 p-3 transition-all"
+                      whileHover={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${event.success ? 'bg-emerald-400' : 'bg-red-400'}`}></div>
+                        <div>
+                          <div className="font-medium text-sm">{event.eventName}</div>
+                          <div className="text-xs text-zinc-400">{event.leadType === 'form' ? 'Form contatto' : 'Prenotazione'}</div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-zinc-500 bg-zinc-800/80 px-2 py-1 rounded-full">
+                        {formatDate(event.createdAt)}
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className="p-8 text-center text-zinc-500">
+                  <Clock size={24} className="mx-auto mb-3 text-zinc-600" />
+                  <p className="text-sm">Nessuna attività recente</p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="p-4 sm:p-6 text-center text-zinc-500">
-              <Clock size={isMobile ? 20 : 24} className="mx-auto mb-2 text-zinc-600" />
-              <p className="text-sm">Nessuna attività recente</p>
-            </div>
-          )}
+          </AnimatedCard>
         </div>
       </div>
     </div>
