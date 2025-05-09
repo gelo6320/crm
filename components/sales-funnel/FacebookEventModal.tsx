@@ -78,7 +78,7 @@ export default function FacebookEventModal({
     try {
       // Chiamata API per confermare lo spostamento e inviare l'evento a Facebook
       const result = await updateLeadStage(
-        lead._id,
+        lead.leadId || lead._id,
         lead.type,
         previousStatus,
         lead.status,
