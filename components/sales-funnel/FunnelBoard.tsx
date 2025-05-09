@@ -624,14 +624,6 @@ export default function CustomFunnelBoard({
       return (
         <div
           className={`funnel-card ${isOverlay ? "is-overlay" : ""}`}
-          style={{
-            borderLeftColor: getBorderColor(lead.status),
-            transform: isOverlay && isTouchDevice ? "scale(1.05)" : undefined,
-            opacity: isOverlay ? 0.9 : 1,
-            boxShadow: isOverlay
-              ? "0 10px 25px rgba(0, 0, 0, 0.7)"
-              : "0 2px 4px rgba(0, 0, 0, 0.1)",
-          }}
         >
           <div className="flex justify-between items-center mb-1">
             <div className="font-medium text-sm truncate pr-1">{lead.name}</div>

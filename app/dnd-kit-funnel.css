@@ -115,6 +115,10 @@
     z-index: 1000;
     pointer-events: none;
   }
+
+  .is-touch-device .funnel-card.is-overlay {
+    transform: scale(1.05);
+  }
   
   .funnel-draggable {
     touch-action: none;
