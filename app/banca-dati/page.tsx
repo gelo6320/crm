@@ -31,6 +31,12 @@ interface Visit {
   isExitPoint: boolean;
   timeOnPage: number;
   scrollDepth: number;
+  location?: {
+    city: string;
+    region: string;
+    country: string;
+    country_code: string;
+  };
 }
 
 interface Client {
@@ -50,10 +56,17 @@ interface Client {
   convertedAt: string;
   leadSource: string;
   originalSource: string;
+  location?: {
+    city: string;
+    region: string;
+    country: string;
+    country_code: string;
+  };
   consent: {
     marketing: boolean;
     analytics: boolean;
     thirdParty: boolean;
+    
   };
 }
 
@@ -67,8 +80,18 @@ interface FacebookAudience {
   fbclid: string;
   hashedEmail: string;
   hashedPhone: string;
+  // Campi di localizzazione sia nella radice che nella struttura nidificata
   country: string;
   city: string;
+  region: string;  // Aggiungi questa proprietà
+  country_code: string; // Aggiungi questa proprietà
+  // Struttura nidificata opzionale per il nuovo formato
+  location?: {
+    city: string;
+    region: string;
+    country: string;
+    country_code: string;
+  };
   language: string;
   source: string;
   medium: string;
@@ -372,6 +395,7 @@ function VisitsTable({ visits, isLoading }: { visits: Visit[], isLoading: boolea
           <th className="px-4 py-2 text-left">Sessione</th>
           <th className="px-4 py-2 text-left">Referrer</th>
           <th className="px-4 py-2 text-left">IP</th>
+          <th className="px-4 py-2 text-left">Località</th>
           <th className="px-4 py-2 text-left">Durata</th>
         </tr>
       </thead>
@@ -392,6 +416,9 @@ function VisitsTable({ visits, isLoading }: { visits: Visit[], isLoading: boolea
             </td>
             <td className="px-4 py-2.5">
               {visit.ip || "-"}
+            </td>
+            <td className="px-4 py-2.5">
+              {visit.location ? `${visit.location.city || ''}, ${visit.location.region || ''}` : "-"}
             </td>
             <td className="px-4 py-2.5">
               {visit.timeOnPage ? `${Math.round(visit.timeOnPage)}s` : "-"}
@@ -429,6 +456,7 @@ function ClientsTable({ clients, isLoading }: { clients: Client[], isLoading: bo
           <th className="px-4 py-2 text-left">Nome</th>
           <th className="px-4 py-2 text-left">Email</th>
           <th className="px-4 py-2 text-left">Telefono</th>
+          <th className="px-4 py-2 text-left">Località</th>
           <th className="px-4 py-2 text-left">Fonte</th>
           <th className="px-4 py-2 text-left">Valore</th>
           <th className="px-4 py-2 text-left">Stato</th>
@@ -447,6 +475,9 @@ function ClientsTable({ clients, isLoading }: { clients: Client[], isLoading: bo
             </td>
             <td className="px-4 py-2.5">
               {client.phone || "-"}
+            </td>
+            <td className="px-4 py-2.5">
+              {client.location ? `${client.location.city || ''}, ${client.location.region || ''}` : "-"}
             </td>
             <td className="px-4 py-2.5">
               {client.leadSource || "-"}
@@ -479,7 +510,6 @@ function ClientsTable({ clients, isLoading }: { clients: Client[], isLoading: bo
   );
 }
 
-// Componente tabella audience Facebook
 // Componente tabella audience Facebook
 function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[], isLoading: boolean }) {
   if (isLoading && audiences.length === 0) {
@@ -533,7 +563,7 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
           <th className="px-4 py-2 text-left">Email</th>
           <th className="px-4 py-2 text-left">Telefono</th>
           <th className="px-4 py-2 text-left">Nome</th>
-          <th className="px-4 py-2 text-left">Paese</th>
+          <th className="px-4 py-2 text-left">Località</th>
           <th className="px-4 py-2 text-left">Fonte</th>
           <th className="px-4 py-2 text-left">Consenso Ads</th>
           <th className="px-4 py-2 text-left">Prima visita</th>
@@ -554,7 +584,9 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
               {getFullName(audience) || "-"}
             </td>
             <td className="px-4 py-2.5">
-              {getUserInfo(audience, 'country') || audience.country || "-"}
+              {audience.location ? 
+                `${audience.location.city || ''}, ${audience.location.region || ''}` : 
+                (audience.city ? `${audience.city || ''}, ${audience.region || ''}` : "-")}
             </td>
             <td className="px-4 py-2.5">
               {audience.source || "-"}
