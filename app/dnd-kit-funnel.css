@@ -78,8 +78,9 @@
   }
   
   .funnel-body.drag-over {
-    background-color: rgba(255, 107, 0, 0.05);
-    box-shadow: inset 0 0 0 2px rgba(255, 107, 0, 0.2);
+    background-color: rgba(255, 107, 0, 0.1) !important;  /* Aumentato per maggiore visibilità */
+    box-shadow: inset 0 0 0 2px rgba(255, 107, 0, 0.5) !important;  /* Bordo più visibile */
+    transition: all 0.15s ease-out !important;
   }
   
   .funnel-body::-webkit-scrollbar {

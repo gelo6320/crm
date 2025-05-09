@@ -187,6 +187,9 @@ export default function CustomFunnelBoard({
       
       // Aggiorna la colonna attiva per feedback visivo
       setActiveColumn(columnId);
+      
+      // Aggiungi questo log per debug
+      console.log("Dragging over column:", columnId);
     }
   };
 
@@ -706,7 +709,7 @@ export default function CustomFunnelBoard({
         columnId: id
       }
     });
-
+  
     return (
       <div className={`funnel-column ${isMoving ? "column-fade-transition" : ""}`}>
         <div className={`funnel-header ${color}`}>
@@ -715,10 +718,10 @@ export default function CustomFunnelBoard({
             {leads.length}
           </div>
         </div>
-
+  
         <div 
           ref={setNodeRef}
-          className={`funnel-body ${isOver || activeColumn === id ? "drag-over" : ""}`}
+          className={`funnel-body ${isOver ? "drag-over" : ""}`}
           data-column-id={id}
         >
           <SortableContext
@@ -741,17 +744,17 @@ export default function CustomFunnelBoard({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={rectIntersection} // Cambiato per migliore precisione con le colonne
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       autoScroll={{
         enabled: true,
-        acceleration: 5, // Ridotto per scrolling più fluido
-        interval: 5, // Ridotto per update più frequenti
+        acceleration: 5,
+        interval: 5,
         threshold: {
-          x: 0.15, // Ottimizzato per scorrimento orizzontale
+          x: 0.15,
           y: 0.15,
         },
       }}
