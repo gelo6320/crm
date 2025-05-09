@@ -9,8 +9,6 @@ import { FunnelData, FunnelStats as FunnelStatsType } from "@/types";
 import { fetchFunnelData } from "@/lib/api/funnel";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import DeviceDetectionInitializer from "@/app/_device";
-import "../funnel-styles.css";
-import "../react-dnd-styles.css";
 
 export default function SalesFunnelPage() {
   const [funnelData, setFunnelData] = useState<FunnelData>({
