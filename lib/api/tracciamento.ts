@@ -2,6 +2,9 @@
 import { LandingPage, TrackedUser, UserSession, SessionDetail, TrackingStats } from "@/types/tracciamento";
 import { trackingApi } from "./trackingClient";
 import CONFIG from "@/config/tracking-config";
+import axios from 'axios';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
 /**
  * Recupera l'elenco delle landing page con dati di tracciamento
@@ -25,10 +28,11 @@ export async function fetchLandingPages(
     }
     
     // Chiama l'API usando il client specifico per il tracciamento
-    return await trackingApi.get<LandingPage[]>(
-      CONFIG.api.endpoints.landingPages,
-      { params }
+    const response = await axios.get<LandingPage[]>(
+      `${API_BASE_URL}/api/tracciamento/landing-pages`,
+      { params, withCredentials: true }
     );
+    return response.data;
   } catch (error) {
     console.error("Errore nel recupero delle landing page:", error);
     throw error;
@@ -59,9 +63,11 @@ export async function fetchUsers(
     }
     
     // Chiama l'API
-    const url = `${CONFIG.api.endpoints.users}/${encodeURIComponent(landingPageId)}`;
-    
-    return await trackingApi.get<TrackedUser[]>(url, { params });
+    const response = await axios.get<TrackedUser[]>(
+      `${API_BASE_URL}/api/tracciamento/users/${encodeURIComponent(landingPageId)}`,
+      { params, withCredentials: true }
+    );
+    return response.data;
   } catch (error) {
     console.error("Errore nel recupero degli utenti:", error);
     throw error;
@@ -86,9 +92,11 @@ export async function fetchSessions(
     }
     
     // Chiama l'API
-    const url = `${CONFIG.api.endpoints.sessions}/${encodeURIComponent(userId)}`;
-    
-    return await trackingApi.get<UserSession[]>(url, { params });
+    const response = await axios.get<UserSession[]>(
+      `${API_BASE_URL}/api/tracciamento/sessions/${encodeURIComponent(userId)}`,
+      { params, withCredentials: true }
+    );
+    return response.data;
   } catch (error) {
     console.error("Errore nel recupero delle sessioni:", error);
     throw error;
@@ -102,10 +110,12 @@ export async function fetchSessions(
 export async function fetchSessionDetails(sessionId: string): Promise<SessionDetail[]> {
   try {
     console.log(`Recupero dettagli sessione per ID: ${sessionId}`);
-    const url = `${CONFIG.api.endpoints.sessionDetails}/${encodeURIComponent(sessionId)}`;
-    const result = await trackingApi.get<SessionDetail[]>(url);
-    console.log(`Dettagli sessione ricevuti: ${result.length} elementi`);
-    return result;
+    const response = await axios.get<SessionDetail[]>(
+      `${API_BASE_URL}/api/tracciamento/sessions/details/${encodeURIComponent(sessionId)}`,
+      { withCredentials: true }
+    );
+    console.log(`Dettagli sessione ricevuti: ${response.data.length} elementi`);
+    return response.data;
   } catch (error) {
     console.error("Errore nel recupero dei dettagli della sessione:", error);
     console.error("URL richiesta:", `${CONFIG.api.endpoints.sessionDetails}/${encodeURIComponent(sessionId)}`);
