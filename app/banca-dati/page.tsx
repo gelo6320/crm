@@ -480,6 +480,7 @@ function ClientsTable({ clients, isLoading }: { clients: Client[], isLoading: bo
 }
 
 // Componente tabella audience Facebook
+// Componente tabella audience Facebook
 function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[], isLoading: boolean }) {
   if (isLoading && audiences.length === 0) {
     return (
@@ -497,6 +498,33 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
       </div>
     );
   }
+
+  // Helper function per estrarre informazioni dall'utente
+  const getUserInfo = (audience: any, field: string) => {
+    // Prima controlla se esiste a livello principale
+    if (audience[field] && audience[field] !== "") return audience[field];
+    
+    // Poi cerca nell'ultima conversione se presente
+    if (audience.conversions && audience.conversions.length > 0) {
+      const lastConversion = audience.conversions[audience.conversions.length - 1];
+      if (lastConversion.metadata?.formData?.[field] && lastConversion.metadata.formData[field] !== "") {
+        return lastConversion.metadata.formData[field];
+      }
+    }
+    
+    return null;
+  };
+
+  // Helper per ottenere il nome completo
+  const getFullName = (audience: any) => {
+    const firstName = getUserInfo(audience, 'firstName');
+    const lastName = getUserInfo(audience, 'lastName');
+    
+    if (firstName || lastName) {
+      return `${firstName || ''} ${lastName || ''}`.trim();
+    }
+    return null;
+  };
   
   return (
     <table className="w-full text-sm">
@@ -517,16 +545,16 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
         {audiences.map((audience) => (
           <tr key={audience._id} className="hover:bg-zinc-800/50 transition-colors">
             <td className="px-4 py-2.5">
-              {audience.email || "-"}
+              {getUserInfo(audience, 'email') || "-"}
             </td>
             <td className="px-4 py-2.5">
-              {audience.phone || "-"}
+              {getUserInfo(audience, 'phone') || "-"}
             </td>
             <td className="px-4 py-2.5">
-              {`${audience.firstName || ''} ${audience.lastName || ''}`.trim() || '-'}
+              {getFullName(audience) || "-"}
             </td>
             <td className="px-4 py-2.5">
-              {audience.country || "-"}
+              {getUserInfo(audience, 'country') || audience.country || "-"}
             </td>
             <td className="px-4 py-2.5">
               {audience.source || "-"}
