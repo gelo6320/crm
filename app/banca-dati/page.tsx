@@ -270,7 +270,7 @@ export default function BancaDatiPage() {
               {activeTab === "visits" && visitsPagination.total} 
               {activeTab === "clients" && clientsPagination.total} 
               {activeTab === "audiences" && audiencesPagination.total} 
-              record trovati
+               record trovati
             </p>
           </div>
           
