@@ -120,7 +120,7 @@ export default function RootLayout({
                 
                 {/* Contenuto principale */}
                 <main className="flex-1 bg-zinc-900 overflow-y-auto">
-                  <div className="px-3 py-2 md:p-6 max-w-full">
+                  <div className="px-2 py-2 md:p-4 max-w-full">
                     {children}
                   </div>
                 </main>
