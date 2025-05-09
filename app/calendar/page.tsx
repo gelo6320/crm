@@ -4,12 +4,13 @@
 import { useState, useEffect } from "react";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Menu, 
   X, List, GridIcon, Bookmark, Bell, FileText, Check } from "lucide-react";
-import { fetchAppointments } from "@/lib/api/calendar";
+import { fetchCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from "@/lib/api/calendar";
 import { CalendarEvent } from "@/types";
 import CalendarView from "@/components/calendar/CalendarView";
 import CalendarSidebar from "@/components/calendar/CalendarSidebar";
-import AppointmentModal from "@/components/calendar/EventModal";
+import EventModal from "@/components/calendar/EventModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { toast } from "react-hot-toast";
 
 export default function CalendarPage() {
   const [view, setView] = useState<"month" | "list">("month");
@@ -17,7 +18,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedEvents, setSelectedEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentAppointment, setCurrentAppointment] = useState<CalendarEvent | null>(null);
+  const [currentEvent, setCurrentEvent] = useState<CalendarEvent | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -54,11 +55,12 @@ export default function CalendarPage() {
   const loadEvents = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchAppointments();
+      const data = await fetchCalendarEvents();
       setEvents(data);
       filterEventsForSelectedDate();
     } catch (error) {
       console.error("Error loading events:", error);
+      toast.error("Errore nel caricamento degli eventi");
     } finally {
       setIsLoading(false);
     }
@@ -112,7 +114,7 @@ export default function CalendarPage() {
     setSelectedDate(date);
   };
   
-  const handleNewAppointment = (start?: Date, end?: Date) => {
+  const handleNewEvent = (start?: Date, end?: Date) => {
     const now = new Date();
     let newStart: Date;
     let newEnd: Date;
@@ -130,7 +132,7 @@ export default function CalendarPage() {
       now.setMinutes(roundedMinutes === 60 ? 0 : roundedMinutes);
       now.setHours(roundedMinutes === 60 ? hours + 1 : hours);
       
-      // Create default appointment starting from selected date
+      // Create default event starting from selected date
       newStart = new Date(selectedDate);
       newStart.setHours(now.getHours(), now.getMinutes());
       
@@ -138,58 +140,63 @@ export default function CalendarPage() {
       newEnd.setMinutes(newEnd.getMinutes() + 60);
     }
     
-    const newAppointment: CalendarEvent = {
+    const newEvent: CalendarEvent = {
       id: "",
       title: "",
       start: newStart,
       end: newEnd,
       status: "pending",
+      eventType: "appointment",
       description: ""
     };
     
-    setCurrentAppointment(newAppointment);
+    setCurrentEvent(newEvent);
     setIsEditing(false);
   };
   
-  const handleEditAppointment = (event: CalendarEvent) => {
-    setCurrentAppointment(event);
+  const handleEditEvent = (event: CalendarEvent) => {
+    setCurrentEvent(event);
     setIsEditing(true);
   };
   
-  const handleSaveAppointment = async (event: CalendarEvent) => {
+  const handleSaveEvent = async (event: CalendarEvent) => {
     try {
-      // In a real app, make API call to save the appointment
+      let savedEvent;
+      
       if (isEditing) {
         // Update existing event
-        const updatedEvents = events.map(e => 
-          e.id === event.id ? event : e
-        );
-        setEvents(updatedEvents);
+        savedEvent = await updateCalendarEvent(event.id, event);
+        toast.success("Evento aggiornato con successo");
       } else {
-        // Add new event with a mock id
-        const newEvent = {
-          ...event,
-          id: `appointment-${Date.now()}`
-        };
-        setEvents([...events, newEvent]);
+        // Create new event
+        savedEvent = await createCalendarEvent(event);
+        toast.success("Evento creato con successo");
       }
       
-      setCurrentAppointment(null);
-      filterEventsForSelectedDate();
+      // Reload events to get fresh data
+      await loadEvents();
+      
+      // Close modal
+      setCurrentEvent(null);
     } catch (error) {
-      console.error("Error saving appointment:", error);
+      console.error("Error saving event:", error);
+      toast.error(isEditing ? "Errore nell'aggiornamento dell'evento" : "Errore nella creazione dell'evento");
     }
   };
   
-  const handleDeleteAppointment = async (event: CalendarEvent) => {
+  const handleDeleteEvent = async (event: CalendarEvent) => {
     try {
-      // In a real app, make API call to delete the appointment
-      const filteredEvents = events.filter(e => e.id !== event.id);
-      setEvents(filteredEvents);
-      setCurrentAppointment(null);
-      filterEventsForSelectedDate();
+      await deleteCalendarEvent(event.id);
+      
+      // Reload events after deletion
+      await loadEvents();
+      
+      // Close modal
+      setCurrentEvent(null);
+      toast.success("Evento eliminato con successo");
     } catch (error) {
-      console.error("Error deleting appointment:", error);
+      console.error("Error deleting event:", error);
+      toast.error("Errore nell'eliminazione dell'evento");
     }
   };
   
@@ -284,7 +291,7 @@ export default function CalendarPage() {
             <button
               onClick={() => setView("month")}
               className={`px-3 py-2 text-sm font-medium ${
-                view === "month" ? "bg-primary text-white rounded-lg" : ""
+                view === "month" ? "bg-blue-600 text-white rounded-lg" : ""
               }`}
             >
               Mese
@@ -293,7 +300,7 @@ export default function CalendarPage() {
             <button
               onClick={() => setView("list")}
               className={`px-3 py-2 text-sm font-medium ${
-                view === "list" ? "bg-primary text-white rounded-lg" : ""
+                view === "list" ? "bg-blue-600 text-white rounded-lg" : ""
               }`}
             >
               Lista
@@ -305,11 +312,11 @@ export default function CalendarPage() {
             <div className="bg-zinc-800 rounded-lg flex sm:hidden mr-2">
               <button
                 onClick={toggleSidebar}
-                className={`p-1.5 relative ${selectedEvents.length > 0 ? 'text-primary' : 'text-zinc-400'}`}
+                className={`p-1.5 relative ${selectedEvents.length > 0 ? 'text-blue-500' : 'text-zinc-400'}`}
               >
                 <Menu size={16} />
                 {selectedEvents.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
                     {selectedEvents.length}
                   </span>
                 )}
@@ -317,10 +324,10 @@ export default function CalendarPage() {
             </div>
           )}
           
-          {/* Button nuovo appuntamento */}
+          {/* Button nuovo evento */}
           <button
-            onClick={() => handleNewAppointment()}
-            className="btn btn-primary inline-flex items-center justify-center py-1.5 px-2.5 sm:py-1.5 sm:px-3 text-xs sm:text-sm rounded-full"
+            onClick={() => handleNewEvent()}
+            className="bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center justify-center py-1.5 px-2.5 sm:py-1.5 sm:px-3 text-xs sm:text-sm rounded-full"
           >
             <Plus size={isMobile ? 14 : 18} className="sm:mr-1" />
             <span className="hidden sm:inline">Nuovo</span>
@@ -338,8 +345,8 @@ export default function CalendarPage() {
             selectedDate={selectedDate}
             events={events}
             onSelectDate={handleSelectDate}
-            onSelectEvent={handleEditAppointment}
-            onCreateEvent={handleNewAppointment}
+            onSelectEvent={handleEditEvent}
+            onCreateEvent={handleNewEvent}
           />
         </div>
         
@@ -353,20 +360,20 @@ export default function CalendarPage() {
           <CalendarSidebar
             selectedDate={selectedDate}
             events={selectedEvents}
-            onEditEvent={handleEditAppointment}
-            onDeleteEvent={handleDeleteAppointment}
+            onEditEvent={handleEditEvent}
+            onDeleteEvent={handleDeleteEvent}
             onClose={isMobile ? toggleSidebar : undefined}
           />
         </div>
       </div>
       
-      {currentAppointment && (
-        <AppointmentModal
-          appointment={currentAppointment}
+      {currentEvent && (
+        <EventModal
+          event={currentEvent}
           isEditing={isEditing}
-          onClose={() => setCurrentAppointment(null)}
-          onSave={handleSaveAppointment}
-          onDelete={handleDeleteAppointment}
+          onClose={() => setCurrentEvent(null)}
+          onSave={handleSaveEvent}
+          onDelete={handleDeleteEvent}
           isMobile={isMobile}
         />
       )}
