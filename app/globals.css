@@ -1690,3 +1690,174 @@ header.sticky {
     padding: 0.5rem 0.75rem;
   }
 }
+
+/* CSS ottimizzato per il FunnelBoard con dnd-kit */
+
+/* Stili per il contenitore del funnel board */
+.funnel-board-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Migliora lo scroll su iOS */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent; /* Firefox */
+  padding-bottom: 8px; /* Spazio per la scrollbar */
+  margin-bottom: 20px;
+}
+
+/* Stili per la scrollbar su webkit browsers */
+.funnel-board-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.funnel-board-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+.funnel-board-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.funnel-board-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.funnel-board {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem;
+  min-width: max-content;
+}
+
+/* Stili per le colonne */
+.funnel-column {
+  width: 280px;
+  min-width: 280px;
+  background: rgba(24, 24, 27, 0.6);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 220px);
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.column-fade-transition {
+  opacity: 0.75;
+}
+
+.funnel-header {
+  padding: 0.75rem;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.funnel-body {
+  padding: 0.5rem;
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  border-radius: 0 0 8px 8px;
+  min-height: 200px;
+  max-height: calc(100vh - 270px);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.funnel-body.drag-over {
+  background-color: rgba(255, 107, 0, 0.05);
+  box-shadow: inset 0 0 0 2px rgba(255, 107, 0, 0.2);
+}
+
+.funnel-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.funnel-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.funnel-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.funnel-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Stili per le card */
+.funnel-card {
+  background: #18181b;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-left: 3px solid #71717a;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.2s ease;
+}
+
+.funnel-card.is-overlay {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  transform: scale(1.02);
+  will-change: transform;
+}
+
+.funnel-draggable {
+  touch-action: none; /* Disabilita le azioni di scroll predefinite su touch */
+  cursor: grab;
+}
+
+.funnel-draggable:active {
+  cursor: grabbing;
+}
+
+/* Stile speciale per quando il corpo ha la classe is-dragging (aggiunta durante il drag) */
+body.is-dragging {
+  cursor: grabbing;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+body.is-dragging .funnel-board-container {
+  cursor: grabbing;
+}
+
+/* Media queries per schermi più piccoli */
+@media (max-width: 768px) {
+  .funnel-column {
+    width: 260px;
+    min-width: 260px;
+  }
+  
+  .funnel-card {
+    padding: 10px;
+  }
+}
+
+/* Miglioramenti per la visualizzazione su dispositivi piccoli */
+@media (max-width: 480px) {
+  .funnel-board {
+    gap: 0.75rem;
+    padding: 0.25rem;
+  }
+  
+  .funnel-column {
+    width: 240px;
+    min-width: 240px;
+  }
+  
+  .funnel-header {
+    padding: 0.5rem 0.75rem;
+  }
+}

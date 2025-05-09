@@ -12,22 +12,29 @@ import { updateLeadMetadata } from "@/lib/api/funnel";
 // dnd-kit imports
 import {
   DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
   useSensor,
   useSensors,
   DragOverlay,
   DragStartEvent,
   DragEndEvent,
   DragOverEvent,
-  DragMoveEvent
+  DragMoveEvent,
+  TouchSensor,
+  MouseSensor,
+  KeyboardSensor,
+  closestCorners,
+  MeasuringStrategy,
+  pointerWithin,
+  rectIntersection,
+  defaultDropAnimationSideEffects,
+  DropAnimation,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
+  useSortable,
 } from "@dnd-kit/sortable";
+import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 
 // Utils
 import { formatDate } from "@/lib/utils/date";
@@ -47,6 +54,17 @@ const COLUMNS = [
   { id: "lost", title: "Persi", color: "bg-danger" },
 ];
 
+// Configurazione dell'animazione di drop
+const dropAnimation: DropAnimation = {
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: {
+      active: {
+        opacity: "0.5",
+      },
+    },
+  }),
+};
+
 interface CustomFunnelBoardProps {
   funnelData: FunnelData;
   setFunnelData: React.Dispatch<React.SetStateAction<FunnelData>>;
@@ -54,8 +72,12 @@ interface CustomFunnelBoardProps {
 }
 
 // Main Component
-export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMove }: CustomFunnelBoardProps) {
-  // State for modals and lead operations
+export default function CustomFunnelBoard({
+  funnelData,
+  setFunnelData,
+  onLeadMove,
+}: CustomFunnelBoardProps) {
+  // State per modali e operazioni sulle lead
   const [editingLead, setEditingLead] = useState<FunnelItem | null>(null);
   const [isMoving, setIsMoving] = useState(false);
   const [movingLead, setMovingLead] = useState<{
@@ -63,117 +85,106 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     prevStatus: string;
     newStatus: string;
   } | null>(null);
-  
-  // State for drag and drop
+
+  // State per drag and drop
   const [activeLead, setActiveLead] = useState<FunnelItem | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
-  
-  // Refs for the board and its elements
+
+  // Ref per il contenitore principale
   const boardRef = useRef<HTMLDivElement>(null);
-  // Usiamo due ref separate per i diversi tipi di timer
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const lastClientX = useRef<number | null>(null);
-  
-  // Determine if it's a touch device
+
+  // Rilevamento del dispositivo
   const [isTouchDevice, setIsTouchDevice] = useState(false);
-  
-  // Detect touch device on mount
+
+  // Rileva dispositivo touch al mount
   useEffect(() => {
-    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0);
   }, []);
-  
-  // Initialize sensors for drag and drop - optimized based on device type
+
+  // Configurazione dei sensori per desktop e mobile
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      // Pointer sensor for desktop with short delay
+    useSensor(MouseSensor, {
+      // Configurazione per mouse (desktop)
       activationConstraint: {
-        delay: isTouchDevice ? 180 : 100,
-        tolerance: isTouchDevice ? 8 : 5,
-        // On touch devices, require press and hold before dragging starts
-        // This allows normal scrolling without triggering drag
-        ...( isTouchDevice ? { 
-          pressure: 0.3, // Requires moderate pressure on touch devices
-          pressDelay: 200 // Wait a bit before considering a press valid
-        } : {})
+        distance: 5, // Distanza minima prima di attivare il drag
       },
     }),
     useSensor(TouchSensor, {
-      // Touch sensor with optimized constraints
+      // Configurazione per touch (mobile)
       activationConstraint: {
-        delay: 200,
-        tolerance: 10,
+        delay: 200, // Ritardo per evitare attivazioni accidentali
+        tolerance: 8, // Tolleranza di movimento
       },
     }),
-    useSensor(KeyboardSensor, {})
+    useSensor(KeyboardSensor, {
+      // Supporto per tastiera (accessibilità)
+    })
   );
 
-  // Map database statuses to funnel statuses
+  // Mappa gli stati del database agli stati del funnel
   const mapDatabaseStatusToFunnelStatus = (dbStatus: string): string => {
-    // Reverse mapping from database status to funnel status
+    // Mappatura inversa da stato database a stato funnel
     const reverseBookingStatusMap: Record<string, string> = {
-      'pending': 'new',
-      'confirmed': 'contacted',
-      'completed': 'qualified',
-      'cancelled': 'lost',
-      // These are the same in both directions
-      'opportunity': 'opportunity',
-      'proposal': 'proposal',
-      'customer': 'customer'
+      pending: "new",
+      confirmed: "contacted",
+      completed: "qualified",
+      cancelled: "lost",
+      // Questi sono gli stessi in entrambe le direzioni
+      opportunity: "opportunity",
+      proposal: "proposal",
+      customer: "customer",
     };
 
-    // Return the mapped funnel status or the original if no mapping exists
     return reverseBookingStatusMap[dbStatus] || dbStatus;
   };
 
-  // Initialize funnel data - ensure all columns exist and leads are in correct columns
+  // Inizializza i dati del funnel: assicura che tutte le colonne esistano e le lead siano nelle colonne corrette
   useEffect(() => {
-    // Make sure all columns defined in COLUMNS exist in funnelData and are arrays
     const updatedFunnelData = { ...funnelData };
     let needsUpdate = false;
-    
-    // Check each column and ensure it exists as an array
-    COLUMNS.forEach(column => {
+
+    // Controlla ogni colonna e assicurati che esista come array
+    COLUMNS.forEach((column) => {
       if (
-        !(column.id in updatedFunnelData) || 
+        !(column.id in updatedFunnelData) ||
         !updatedFunnelData[column.id as keyof FunnelData] ||
         !Array.isArray(updatedFunnelData[column.id as keyof FunnelData])
       ) {
-        // Initialize missing column
+        // Inizializza colonna mancante
         updatedFunnelData[column.id as keyof FunnelData] = [];
         needsUpdate = true;
       }
     });
-    
-    // Handle any items with database statuses
-    Object.keys(updatedFunnelData).forEach(columnId => {
+
+    // Gestisci elementi con stati database
+    Object.keys(updatedFunnelData).forEach((columnId) => {
       const column = updatedFunnelData[columnId as keyof FunnelData];
       if (Array.isArray(column)) {
-        // Check each lead in the column
-        column.forEach(lead => {
-          // If the lead's status doesn't match a funnel column, needs mapping
-          if (!COLUMNS.some(col => col.id === lead.status)) {
+        // Controlla ogni lead nella colonna
+        column.forEach((lead) => {
+          // Se lo stato della lead non corrisponde a una colonna del funnel, serve mappatura
+          if (!COLUMNS.some((col) => col.id === lead.status)) {
             const mappedStatus = mapDatabaseStatusToFunnelStatus(lead.status);
-            
-            // Only move the lead if the mapping is different from its current position
+
+            // Sposta la lead solo se la mappatura è diversa dalla sua posizione attuale
             if (mappedStatus !== columnId) {
-              // Create a copy to place in the correct column
+              // Crea una copia da posizionare nella colonna corretta
               const updatedLead = { ...lead };
-              
-              // Remove from current column
+
+              // Rimuovi dalla colonna attuale
               updatedFunnelData[columnId as keyof FunnelData] = updatedFunnelData[
                 columnId as keyof FunnelData
-              ].filter(item => item._id !== lead._id);
-              
-              // Add to mapped column
+              ].filter((item) => item._id !== lead._id);
+
+              // Aggiungi alla colonna mappata
               if (
-                !(mappedStatus in updatedFunnelData) || 
+                !(mappedStatus in updatedFunnelData) ||
                 !updatedFunnelData[mappedStatus as keyof FunnelData] ||
                 !Array.isArray(updatedFunnelData[mappedStatus as keyof FunnelData])
               ) {
                 updatedFunnelData[mappedStatus as keyof FunnelData] = [];
               }
-              
+
               updatedFunnelData[mappedStatus as keyof FunnelData].push(updatedLead);
               needsUpdate = true;
             }
@@ -181,235 +192,129 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         });
       }
     });
-    
-    // Update state if needed
+
+    // Aggiorna lo state se necessario
     if (needsUpdate) {
       setFunnelData(updatedFunnelData);
     }
-  }, []); // Run only on mount to avoid infinite loops
-
-  // Auto-scroll function
-
-  const handleAutoScroll = useCallback((clientX: number) => {
-    if (!boardRef.current) return;
-    
-    const container = boardRef.current;
-    const containerRect = container.getBoundingClientRect();
-    const scrollWidth = container.scrollWidth;
-    const containerWidth = containerRect.width;
-    
-    // Define scroll zones - 20% of container width on each side
-    const scrollZoneSize = Math.min(150, containerWidth * 0.2);
-    const leftScrollZone = containerRect.left + scrollZoneSize;
-    const rightScrollZone = containerRect.right - scrollZoneSize;
-    
-    // Calculate scroll speed based on position in scroll zone (max 20px per frame)
-    let scrollSpeed = 0;
-    
-    if (clientX < leftScrollZone) {
-      // Left scroll zone - calculate distance from edge for dynamic speed
-      const distanceFromEdge = Math.max(0, clientX - containerRect.left);
-      const scrollFactor = 1 - (distanceFromEdge / scrollZoneSize);
-      scrollSpeed = -Math.round(Math.min(20, 8 + (scrollFactor * 12)));
-    } else if (clientX > rightScrollZone) {
-      // Right scroll zone - calculate distance from edge for dynamic speed
-      const distanceFromEdge = Math.max(0, containerRect.right - clientX);
-      const scrollFactor = 1 - (distanceFromEdge / scrollZoneSize);
-      scrollSpeed = Math.round(Math.min(20, 8 + (scrollFactor * 12)));
-    }
-    
-    // If we need to scroll
-    if (scrollSpeed !== 0) {
-      // Check if we can scroll further in this direction
-      if ((scrollSpeed < 0 && container.scrollLeft > 0) || 
-          (scrollSpeed > 0 && container.scrollLeft < scrollWidth - containerWidth)) {
-        
-        // Auto-scroll in the calculated direction and speed
-        container.scrollBy({
-          left: scrollSpeed,
-          behavior: 'auto' // Use instant scroll for smoother animation
-        });
-        
-        // Store the last known client X position
-        lastClientX.current = clientX;
-        
-        // Continue scrolling in the next frame if we're not already
-        if (!animationFrameRef.current) {
-          animationFrameRef.current = requestAnimationFrame(() => {
-            animationFrameRef.current = null;
-            if (lastClientX.current !== null) {
-              handleAutoScroll(lastClientX.current);
-            }
-          });
-        }
-      }
-    } else {
-      // If not in a scroll zone, stop auto-scrolling
-      lastClientX.current = null;
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-    }
   }, []);
 
-  // Clean up auto-scroll on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-    };
-  }, []);
-
-  // Handle drag start
+  // Gestisce l'inizio del trascinamento
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    // Get lead and column from the active element
-    const [leadId, columnId] = active.id.toString().split('||');
-    
-    // Find the lead in the column
+    // Estrai l'ID della lead e della colonna dall'elemento attivo
+    const [leadId, columnId] = active.id.toString().split(":");
+
+    // Trova la lead nella colonna
     const lead = funnelData[columnId as keyof FunnelData]?.find(
-      item => item._id === leadId
+      (item) => item._id === leadId
     );
-    
+
     if (lead) {
       setActiveLead(lead);
       setActiveColumnId(columnId);
-      document.body.classList.add('is-dragging');
-    }
-    
-    // Reset auto-scroll
-    lastClientX.current = null;
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
+      document.body.style.cursor = "grabbing";
+      document.body.classList.add("is-dragging");
     }
   };
 
-  // Handle drag move - for auto-scrolling
+  // Gestisce il movimento durante il trascinamento
   const handleDragMove = (event: DragMoveEvent) => {
-    // Get pointer coordinates safely from the event
-    const clientX = event.delta ? 
-      (document.documentElement.clientWidth / 2) + event.delta.x :
-      0;
-    
-    // If we have a valid clientX, start auto-scrolling
-    if (clientX > 0) {
-      handleAutoScroll(clientX);
-    }
+    // L'autoscroll è gestito automaticamente da dnd-kit
   };
 
-  // Handle drag over
+  // Gestisce il passaggio sopra una colonna
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    
+
     if (!over || !active) return;
-    
-    // Extract lead ID and source column ID from active
-    const [leadId, sourceColumnId] = active.id.toString().split('||');
-    
-    // Get the target column ID
+
+    // Estrai ID della lead e colonna di origine da active
+    const [leadId, sourceColumnId] = active.id.toString().split(":");
+
+    // Ottieni l'ID della colonna di destinazione
     const targetColumnId = over.id.toString();
-    
-    // If the target is the same column or not a valid column, ignore
-    if (targetColumnId === sourceColumnId || !COLUMNS.some(col => col.id === targetColumnId)) {
+
+    // Se il target è la stessa colonna o non è una colonna valida, ignora
+    if (
+      targetColumnId === sourceColumnId ||
+      !COLUMNS.some((col) => col.id === targetColumnId)
+    ) {
       return;
     }
-    
-    // Source column must exist
+
+    // La colonna di origine deve esistere
     if (!sourceColumnId || !funnelData[sourceColumnId as keyof FunnelData]) {
       return;
     }
-    
-    // Find the lead in the source column
+
+    // Trova la lead nella colonna di origine
     const leadIndex = funnelData[sourceColumnId as keyof FunnelData].findIndex(
-      item => item._id === leadId
+      (item) => item._id === leadId
     );
-    
+
     if (leadIndex < 0) return;
-    
-    const lead = funnelData[sourceColumnId as keyof FunnelData][leadIndex];
-    
-    // Update the active lead's current location for visual feedback
+
+    // Aggiorna la posizione attuale della lead per feedback visivo
     setActiveColumnId(targetColumnId);
   };
 
-  // Handle drag end
+  // Gestisce la fine del trascinamento
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    document.body.classList.remove('is-dragging');
-    
-    // Clear auto-scroll
-    lastClientX.current = null;
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-    
+    document.body.style.cursor = "";
+    document.body.classList.remove("is-dragging");
+
     if (!over || !active || !activeLead) {
       setActiveLead(null);
       setActiveColumnId(null);
       return;
     }
-    
-    // Get target column ID
+
+    // Ottieni l'ID della colonna di destinazione
     const targetColumnId = over.id.toString();
-    
-    // Check if it's a valid column
-    if (!COLUMNS.some(col => col.id === targetColumnId)) {
+
+    // Controlla se è una colonna valida
+    if (!COLUMNS.some((col) => col.id === targetColumnId)) {
       setActiveLead(null);
       setActiveColumnId(null);
       return;
     }
-    
-    // Only move if the lead is being moved to a different column
+
+    // Sposta solo se la lead viene spostata in una colonna diversa
     if (activeLead.status !== targetColumnId) {
       handleMoveLead(activeLead, targetColumnId);
     }
-    
+
     setActiveLead(null);
     setActiveColumnId(null);
   };
 
-  // Handle lead movement between columns with error handling
+  // Gestisce lo spostamento di una lead tra colonne con gestione degli errori
   const handleMoveLead = async (lead: FunnelItem, targetStatus: string) => {
     if (!lead || lead.status === targetStatus) return;
 
-    // Map the lead's status from database status to funnel status if needed
+    // Mappa lo stato della lead da stato database a stato funnel se necessario
     const mappedPrevStatus = mapDatabaseStatusToFunnelStatus(lead.status);
-    
-    // Store the previous status (now mapped if needed)
+
+    // Memorizza lo stato precedente (ora mappato se necessario)
     const prevStatus = mappedPrevStatus;
 
-    // Update state to show movement is in progress
+    // Aggiorna lo state per mostrare che lo spostamento è in corso
     setIsMoving(true);
 
     try {
-      // First update the UI immediately for better UX
+      // Prima aggiorna l'UI immediatamente per una migliore UX
       const updatedFunnelData = { ...funnelData };
 
-      // Verify the previous status exists and is an array before filtering
+      // Verifica che lo stato precedente esista e sia un array prima di filtrare
       if (
-        prevStatus && 
-        prevStatus in updatedFunnelData && 
-        updatedFunnelData[prevStatus as keyof FunnelData] && 
+        prevStatus &&
+        prevStatus in updatedFunnelData &&
+        updatedFunnelData[prevStatus as keyof FunnelData] &&
         Array.isArray(updatedFunnelData[prevStatus as keyof FunnelData])
       ) {
-        // Remove lead from the source column
+        // Rimuovi lead dalla colonna di origine
         updatedFunnelData[prevStatus as keyof FunnelData] = updatedFunnelData[
           prevStatus as keyof FunnelData
         ].filter((item) => item._id !== lead._id);
@@ -417,59 +322,59 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         console.warn(`Invalid source status: ${lead.status} (mapped to ${prevStatus})`);
       }
 
-      // Verify the target status exists and is an array before adding to it
+      // Verifica che lo stato di destinazione esista e sia un array prima di aggiungerlo
       if (
-        !(targetStatus in updatedFunnelData) || 
+        !(targetStatus in updatedFunnelData) ||
         !updatedFunnelData[targetStatus as keyof FunnelData] ||
         !Array.isArray(updatedFunnelData[targetStatus as keyof FunnelData])
       ) {
-        // Initialize the target column if it doesn't exist
+        // Inizializza la colonna di destinazione se non esiste
         updatedFunnelData[targetStatus as keyof FunnelData] = [];
       }
 
-      // Update lead status
+      // Aggiorna lo stato della lead
       const updatedLead = { ...lead, status: targetStatus };
 
-      // Add lead to the target column
+      // Aggiungi lead alla colonna di destinazione
       updatedFunnelData[targetStatus as keyof FunnelData] = [
         ...updatedFunnelData[targetStatus as keyof FunnelData],
         updatedLead,
       ];
 
-      // Update state
+      // Aggiorna lo state
       setFunnelData(updatedFunnelData);
 
-      // Show confirmation modal only for moves to "customer" (purchase)
+      // Mostra il modale di conferma solo per gli spostamenti a "customer" (acquisto)
       if (targetStatus === "customer") {
-        // Store the moving lead data for the modal
+        // Memorizza i dati della lead in movimento per il modale
         setMovingLead({
           lead: {
             ...updatedLead,
-            // Ensure leadId is always available
-            leadId: lead.leadId || lead._id
+            // Assicurati che leadId sia sempre disponibile
+            leadId: lead.leadId || lead._id,
           },
           prevStatus: lead.status,
           newStatus: targetStatus,
         });
       } else {
-        // For other statuses, update directly via API
-        await updateLeadDirectly(updatedLead, lead.status, targetStatus); // Use original status for API call
+        // Per altri stati, aggiorna direttamente tramite API
+        await updateLeadDirectly(updatedLead, lead.status, targetStatus);
       }
     } catch (error) {
       console.error("Error during lead move preparation:", error);
       toast("error", "Errore spostamento", "Si è verificato un errore durante lo spostamento del lead");
-      
-      // Safely revert UI state in case of error
+
+      // Ripristina lo stato dell'UI in modo sicuro in caso di errore
       try {
         if (lead) {
-          handleUndoMoveWithLead(lead, targetStatus, lead.status); // Use original status
+          handleUndoMoveWithLead(lead, targetStatus, lead.status); // Usa lo stato originale
         } else if (movingLead) {
           handleUndoMove();
         }
       } catch (undoError) {
         console.error("Failed to undo move:", undoError);
-        // Force refresh as last resort
-        onLeadMove().catch(e => console.error("Failed to refresh funnel data:", e));
+        // Forza aggiornamento come ultima risorsa
+        onLeadMove().catch((e) => console.error("Failed to refresh funnel data:", e));
       }
     } finally {
       if (targetStatus !== "customer") {
@@ -478,161 +383,160 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
 
-  // Function to directly update lead without showing modal
+  // Funzione per aggiornare direttamente una lead senza mostrare il modale
   const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: string) => {
     try {
-      // Use leadId instead of _id for the API call
+      // Usa leadId invece di _id per la chiamata API
       const checkResponse = await axios.get(
         `${API_BASE_URL}/api/leads/${lead.leadId || lead._id}`,
         { withCredentials: true }
       );
-      
-      // Get current status from database
+
+      // Ottieni lo stato attuale dal database
       const currentDbStatus = checkResponse.data?.status;
-      
-      // Determine status mapping only for booking type
+
+      // Determina la mappatura degli stati solo per il tipo booking
       let actualFromStage = fromStage;
       let actualToStage = toStage;
-      
-      if (lead.type === 'booking') {
-        // Map funnel statuses to database statuses for booking type
+
+      if (lead.type === "booking") {
+        // Mappa gli stati del funnel agli stati del database per il tipo booking
         const bookingStatusMap: Record<string, string> = {
-          'new': 'pending',
-          'contacted': 'confirmed', 
-          'qualified': 'completed',
-          'opportunity': 'opportunity',
-          'proposal': 'proposal',
-          'customer': 'customer',
-          'lost': 'cancelled'
+          new: "pending",
+          contacted: "confirmed",
+          qualified: "completed",
+          opportunity: "opportunity",
+          proposal: "proposal",
+          customer: "customer",
+          lost: "cancelled",
         };
-        
-        // If the status in the database is one of the native booking statuses,
-        // use that as the actual fromStage
-        if (['pending', 'confirmed', 'completed', 'cancelled'].includes(currentDbStatus)) {
+
+        // Se lo stato nel database è uno degli stati nativi delle prenotazioni,
+        // usa quello come actualFromStage
+        if (["pending", "confirmed", "completed", "cancelled"].includes(currentDbStatus)) {
           actualFromStage = currentDbStatus;
         }
-        
-        // Map the destination status if needed
+
+        // Mappa lo stato di destinazione se necessario
         if (bookingStatusMap[toStage]) {
           actualToStage = bookingStatusMap[toStage];
         }
       }
-      
-      // API call for actual move
+
+      // Chiamata API per lo spostamento effettivo
       const response = await axios.post(
         `${API_BASE_URL}/api/sales-funnel/move`,
         {
-          leadId: lead.leadId || lead._id, // Use leadId with fallback
+          leadId: lead.leadId || lead._id, // Usa leadId con fallback
           leadType: lead.type,
           fromStage: actualFromStage,
           toStage: actualToStage,
           originalFromStage: fromStage,
-          originalToStage: toStage
+          originalToStage: toStage,
         },
         { withCredentials: true }
       );
-      
-      // If the API call is successful, update funnel data
+
+      // Se la chiamata API è riuscita, aggiorna i dati del funnel
       if (response.data.success) {
-        // Update funnel data via callback
+        // Aggiorna dati funnel tramite callback
         await onLeadMove();
-        
+
         toast("success", "Lead spostato", `Lead spostato con successo in ${toStage}`);
       } else {
         throw new Error(response.data.message || "Errore durante lo spostamento del lead");
       }
     } catch (error) {
       console.error("Error during lead move:", error);
-      
-      // Restore previous state in case of error
+
+      // Ripristina lo stato precedente in caso di errore
       handleUndoMoveWithLead(lead, toStage, fromStage);
-      
-      // Extract error message for user feedback
+
+      // Estrai il messaggio di errore per il feedback all'utente
       let errorMessage = "Si è verificato un errore durante lo spostamento del lead";
       if (axios.isAxiosError(error) && error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      
+
       toast("error", "Errore spostamento", errorMessage);
-      
-      // Update funnel data to ensure consistency
+
+      // Aggiorna i dati del funnel per garantire la coerenza
       await onLeadMove();
     } finally {
       setIsMoving(false);
     }
   };
 
-  // Handle confirming the lead move after showing the modal
+  // Gestisce la conferma dello spostamento della lead dopo aver mostrato il modale
   const handleConfirmMove = async () => {
     if (!movingLead) return;
-    
+
     try {
-      // Always get and use the right ID
+      // Usa sempre l'ID corretto
       const idToUse = movingLead.lead.leadId || movingLead.lead._id;
-      
-      const checkResponse = await axios.get(
-        `${API_BASE_URL}/api/leads/${idToUse}`,
-        { withCredentials: true }
-      );
-      
+
+      const checkResponse = await axios.get(`${API_BASE_URL}/api/leads/${idToUse}`, {
+        withCredentials: true,
+      });
+
       const currentStatus = checkResponse.data?.status || movingLead.prevStatus;
-      
-      // Only proceed if the current status matches our expected fromStage
+
+      // Procedi solo se lo stato attuale corrisponde al nostro fromStage previsto
       if (currentStatus !== movingLead.prevStatus) {
         console.warn(`Status mismatch: expected ${movingLead.prevStatus}, got ${currentStatus}`);
-        
-        // Show notification to user
-        toast("warning", "Stato aggiornato", "Lo stato del lead è stato aggiornato da un altro utente");
-        
-        // Refresh funnel data to sync with server
+
+        // Mostra notifica all'utente
+        toast(
+          "warning",
+          "Stato aggiornato",
+          "Lo stato del lead è stato aggiornato da un altro utente"
+        );
+
+        // Aggiorna i dati del funnel per sincronizzare con il server
         await onLeadMove();
-        
+
         setMovingLead(null);
         setIsMoving(false);
         return;
       }
-      
-      // Call directly to the API to update to "customer" status
+
+      // Chiamata all'API per aggiornare allo stato "customer"
       const response = await axios.post(
         `${API_BASE_URL}/api/sales-funnel/move`,
         {
-          leadId: movingLead.lead.leadId || movingLead.lead._id, // Use leadId with fallback
+          leadId: movingLead.lead.leadId || movingLead.lead._id, // Usa leadId con fallback
           leadType: movingLead.lead.type,
           fromStage: movingLead.prevStatus,
-          toStage: movingLead.newStatus
+          toStage: movingLead.newStatus,
         },
         { withCredentials: true }
       );
-      
+
       if (response.data.success) {
-        // Update funnel data via callback
+        // Aggiorna i dati del funnel tramite callback
         await onLeadMove();
-        
+
         toast("success", "Lead convertito", "Lead convertito in cliente con successo");
       } else {
         throw new Error(response.data.message || "Errore durante la conversione del lead");
       }
     } catch (error) {
       console.error("Error during lead conversion:", error);
-      
-      // Restore previous state in case of error
+
+      // Ripristina lo stato precedente in caso di errore
       if (movingLead) {
-        handleUndoMoveWithLead(
-          movingLead.lead, 
-          movingLead.newStatus, 
-          movingLead.prevStatus
-        );
+        handleUndoMoveWithLead(movingLead.lead, movingLead.newStatus, movingLead.prevStatus);
       }
-      
-      // Extract error message for user feedback
+
+      // Estrai il messaggio di errore per il feedback all'utente
       let errorMessage = "Si è verificato un errore durante la conversione del lead";
       if (axios.isAxiosError(error) && error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      
+
       toast("error", "Errore conversione", errorMessage);
-      
-      // Refresh funnel data to ensure consistency
+
+      // Aggiorna i dati del funnel per garantire la coerenza
       await onLeadMove();
     } finally {
       setMovingLead(null);
@@ -640,250 +544,267 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
     }
   };
 
-  // Handle undoing the lead move if canceled
+  // Gestisce l'annullamento dello spostamento della lead
   const handleUndoMove = () => {
-    // If we have movingLead data, use it to undo the move
+    // Se abbiamo i dati movingLead, usali per annullare lo spostamento
     if (movingLead) {
-      handleUndoMoveWithLead(
-        movingLead.lead, 
-        movingLead.newStatus, 
-        movingLead.prevStatus
-      );
-      
+      handleUndoMoveWithLead(movingLead.lead, movingLead.newStatus, movingLead.prevStatus);
+
       setMovingLead(null);
     } else {
-      // If we don't have movingLead data, refresh the data from the server
+      // Se non abbiamo i dati movingLead, aggiorna i dati dal server
       toast("info", "Aggiornamento dati", "Aggiornamento dei dati del funnel in corso...");
-      
-      onLeadMove().catch(error => {
+
+      onLeadMove().catch((error) => {
         console.error("Error refreshing funnel data:", error);
-        toast("error", "Errore aggiornamento", "Si è verificato un errore durante l'aggiornamento dei dati");
+        toast(
+          "error",
+          "Errore aggiornamento",
+          "Si è verificato un errore durante l'aggiornamento dei dati"
+        );
       });
     }
-    
+
     setIsMoving(false);
   };
-  
-  // Support function for state restoration with status mapping
-  const handleUndoMoveWithLead = (lead: FunnelItem, currentStatus: string, targetStatus: string) => {
+
+  // Funzione di supporto per il ripristino dello stato con mappatura dello stato
+  const handleUndoMoveWithLead = (
+    lead: FunnelItem,
+    currentStatus: string,
+    targetStatus: string
+  ) => {
     try {
       const updatedFunnelData = { ...funnelData };
-      
-      // Map the statuses from database status to funnel status if needed
+
+      // Mappa gli stati da stato database a stato funnel se necessario
       const mappedCurrentStatus = mapDatabaseStatusToFunnelStatus(currentStatus);
       const mappedTargetStatus = mapDatabaseStatusToFunnelStatus(targetStatus);
 
-      // Verify the current status exists before attempting to filter
+      // Verifica che lo stato attuale esista prima di tentare di filtrare
       if (
-        mappedCurrentStatus && 
-        mappedCurrentStatus in updatedFunnelData && 
-        updatedFunnelData[mappedCurrentStatus as keyof FunnelData] && 
+        mappedCurrentStatus &&
+        mappedCurrentStatus in updatedFunnelData &&
+        updatedFunnelData[mappedCurrentStatus as keyof FunnelData] &&
         Array.isArray(updatedFunnelData[mappedCurrentStatus as keyof FunnelData])
       ) {
-        // Remove lead from the current column
+        // Rimuovi lead dalla colonna attuale
         updatedFunnelData[mappedCurrentStatus as keyof FunnelData] = updatedFunnelData[
           mappedCurrentStatus as keyof FunnelData
         ].filter((item) => item._id !== lead._id);
       } else {
-        console.warn(`Invalid current status during undo: ${currentStatus} (mapped to ${mappedCurrentStatus})`);
-        // We'll continue and try to add to the target column
+        console.warn(
+          `Invalid current status during undo: ${currentStatus} (mapped to ${mappedCurrentStatus})`
+        );
+        // Continueremo e cercheremo di aggiungere alla colonna di destinazione
       }
 
-      // Verify the target status exists before adding the lead back
+      // Verifica che lo stato di destinazione esista prima di aggiungere la lead
       if (
-        !(mappedTargetStatus in updatedFunnelData) || 
+        !(mappedTargetStatus in updatedFunnelData) ||
         !updatedFunnelData[mappedTargetStatus as keyof FunnelData] ||
         !Array.isArray(updatedFunnelData[mappedTargetStatus as keyof FunnelData])
       ) {
-        // Initialize the target column if it doesn't exist
+        // Inizializza la colonna di destinazione se non esiste
         updatedFunnelData[mappedTargetStatus as keyof FunnelData] = [];
       }
 
-      // Restore lead to the target column with original status
-      const revertedLead = { ...lead, status: targetStatus }; // Keep the original database status
+      // Ripristina lead nella colonna di destinazione con stato originale
+      const revertedLead = { ...lead, status: targetStatus }; // Mantieni lo stato originale del database
       updatedFunnelData[mappedTargetStatus as keyof FunnelData] = [
         ...updatedFunnelData[mappedTargetStatus as keyof FunnelData],
         revertedLead,
       ];
 
-      // Update state
+      // Aggiorna lo state
       setFunnelData(updatedFunnelData);
     } catch (error) {
       console.error("Error during undo move:", error);
-      toast("error", "Errore ripristino", "Si è verificato un errore durante il ripristino dello stato precedente");
-      
-      // Force refresh data from server as last resort
-      onLeadMove().catch(e => 
-        console.error("Failed to refresh funnel data:", e)
+      toast(
+        "error",
+        "Errore ripristino",
+        "Si è verificato un errore durante il ripristino dello stato precedente"
       );
+
+      // Forza aggiornamento dati dal server come ultima risorsa
+      onLeadMove().catch((e) => console.error("Failed to refresh funnel data:", e));
     }
   };
 
-  // Handle editing a lead's value and service
+  // Gestisce la modifica di valore e servizio di una lead
   const handleEditLead = (lead: FunnelItem) => {
     setEditingLead(lead);
   };
 
-  // Handle saving edits to a lead
+  // Gestisce il salvataggio delle modifiche a una lead
   const handleSaveLeadValue = async (value: number, service: string) => {
     if (!editingLead) return;
-  
+
     try {
-      // Update the lead metadata via API using leadId
+      // Aggiorna i metadati della lead tramite API usando leadId
       await updateLeadMetadata(
-        editingLead.leadId || editingLead._id, // Use leadId with fallback
+        editingLead.leadId || editingLead._id, // Usa leadId con fallback
         editingLead.type,
         value,
         service
       );
 
-      // Update local state for immediate UI update
+      // Aggiorna lo state locale per un aggiornamento immediato dell'UI
       const updatedFunnelData = { ...funnelData };
       const mappedStatus = mapDatabaseStatusToFunnelStatus(editingLead.status);
-      
-      // Find and update the lead in its column
+
+      // Trova e aggiorna la lead nella sua colonna
       if (
-        mappedStatus in updatedFunnelData && 
+        mappedStatus in updatedFunnelData &&
         Array.isArray(updatedFunnelData[mappedStatus as keyof FunnelData])
       ) {
-        updatedFunnelData[mappedStatus as keyof FunnelData] = updatedFunnelData[mappedStatus as keyof FunnelData].map((item) =>
-          item._id === editingLead._id
-            ? { ...item, value, service }
-            : item
-        );
+        updatedFunnelData[mappedStatus as keyof FunnelData] = updatedFunnelData[
+          mappedStatus as keyof FunnelData
+        ].map((item) => (item._id === editingLead._id ? { ...item, value, service } : item));
 
         setFunnelData(updatedFunnelData);
         toast("success", "Lead aggiornato", "Valore e servizio aggiornati con successo");
       } else {
-        // If we can't find the column, refresh the funnel data
+        // Se non riusciamo a trovare la colonna, aggiorna i dati del funnel
         console.warn(`Could not find column ${mappedStatus} for edited lead`);
         await onLeadMove();
         toast("info", "Lead aggiornato", "Dati aggiornati, ricaricamento funnel");
       }
-      
+
       setEditingLead(null);
     } catch (error) {
       console.error("Error updating lead value:", error);
-      toast("error", "Errore aggiornamento", "Si è verificato un errore durante l'aggiornamento dei dati");
+      toast(
+        "error",
+        "Errore aggiornamento",
+        "Si è verificato un errore durante l'aggiornamento dei dati"
+      );
     }
   };
 
-  // Lead card component
-  const LeadCard = React.memo(({ lead, columnId }: { lead: FunnelItem, columnId: string }) => {
+  // Componente Card della Lead
+  const LeadCard = React.memo(
+    ({ lead, isOverlay = false }: { lead: FunnelItem; isOverlay?: boolean }) => {
+      return (
+        <div
+          className={`funnel-card ${isOverlay ? "is-overlay" : ""}`}
+          style={{
+            borderLeftColor: getBorderColor(lead.status),
+            transform: isOverlay && isTouchDevice ? "scale(1.05)" : undefined,
+            opacity: isOverlay ? 0.9 : 1,
+            boxShadow: isOverlay
+              ? "0 10px 25px rgba(0, 0, 0, 0.7)"
+              : "0 2px 4px rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          <div className="flex justify-between items-center mb-1">
+            <div className="font-medium text-sm truncate pr-1">{lead.name}</div>
+            {!isOverlay && (
+              <button
+                className="p-1 rounded-full hover:bg-zinc-700 transition-colors edit-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditLead(lead);
+                }}
+              >
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <div className="text-xs text-zinc-400">
+            <div>{formatDate(lead.createdAt)}</div>
+            {lead.value ? (
+              <div className="text-primary font-medium my-1">€{formatMoney(lead.value)}</div>
+            ) : null}
+            {lead.service ? <div className="italic">{lead.service}</div> : null}
+          </div>
+        </div>
+      );
+    }
+  );
+
+  LeadCard.displayName = "LeadCard";
+
+  // Componente per la card trascinabile
+  const SortableLeadCard = ({ lead, columnId }: { lead: FunnelItem; columnId: string }) => {
+    const { attributes, listeners, setNodeRef, isDragging } = useSortable({
+      id: `${lead._id}:${columnId}`,
+      data: {
+        lead,
+        columnId,
+      },
+    });
+
     return (
-      <div 
-        className="funnel-card"
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className={`funnel-draggable ${isDragging ? "opacity-0" : ""}`}
         style={{
-          borderLeftColor: getBorderColor(lead.status),
-          willChange: 'transform, opacity' // Performance optimization
+          touchAction: "none", // Disabilita le azioni di scroll predefinite su touch
         }}
       >
-        <div className="flex justify-between items-center mb-1">
-          <div className="font-medium text-sm truncate pr-1">
-            {lead.name}
-          </div>
-          <button
-            className="p-1 rounded-full hover:bg-zinc-700 transition-colors edit-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEditLead(lead);
-            }}
-          >
-            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-            </svg>
-          </button>
-        </div>
-        <div className="text-xs text-zinc-400">
-          <div>{formatDate(lead.createdAt)}</div>
-          {lead.value ? <div className="text-primary font-medium my-1">€{formatMoney(lead.value)}</div> : ''}
-          {lead.service ? <div className="italic">{lead.service}</div> : ''}
-        </div>
+        <LeadCard lead={lead} />
       </div>
     );
-  });
-  
-  LeadCard.displayName = 'LeadCard';
+  };
 
-  // Draggable lead card
-  const DraggableLeadCard = React.memo(({ lead, columnId }: { lead: FunnelItem, columnId: string }) => {
-    // Create a composite ID for the lead (lead._id + column)
-    const compositeId = `${lead._id}||${columnId}`;
-    
-    return (
-      <div 
-        className="funnel-draggable"
-        data-lead-id={lead._id}
-        data-column-id={columnId}
-      >
-        <LeadCard lead={lead} columnId={columnId} />
-      </div>
-    );
-  });
-  
-  DraggableLeadCard.displayName = 'DraggableLeadCard';
-
-  // Column component
-  const FunnelColumn = React.memo(({ 
-    id, 
-    title, 
-    color, 
-    leads 
-  }: { 
-    id: string; 
-    title: string; 
-    color: string; 
-    leads: FunnelItem[] 
-  }) => {
-    return (
-      <div className={`funnel-column ${isMoving ? 'column-fade-transition' : ''}`}>
-        <div className={`funnel-header ${color}`}>
-          <h3 className="text-sm font-medium">{title}</h3>
-          <div className="w-5 h-5 rounded-full bg-black/25 flex items-center justify-center text-xs font-medium">
-            {leads.length}
-          </div>
-        </div>
-        
+  // Componente Colonna
+  const FunnelColumn = React.memo(
+    ({ id, title, color, leads }: { id: string; title: string; color: string; leads: FunnelItem[] }) => {
+      return (
         <div
-          className={`funnel-body ${activeColumnId === id ? 'drag-over' : ''}`}
-          data-column-id={id}
+          className={`funnel-column ${isMoving ? "column-fade-transition" : ""}`}
+          id={id}
         >
-          <SortableContext 
-            items={leads.map(lead => `${lead._id}||${id}`)}
-            strategy={verticalListSortingStrategy}
-          >
-            {leads.length > 0 ? (
-              leads.map((lead) => (
-                <DraggableLeadCard 
-                  key={`${lead._id}||${id}`}
-                  lead={lead} 
-                  columnId={id}
-                />
-              ))
-            ) : (
-              <div className="text-center text-zinc-500 text-xs italic py-4">
-                Nessun lead
-              </div>
-            )}
-          </SortableContext>
-        </div>
-      </div>
-    );
-  });
-  
-  FunnelColumn.displayName = 'FunnelColumn';
+          <div className={`funnel-header ${color}`}>
+            <h3 className="text-sm font-medium">{title}</h3>
+            <div className="w-5 h-5 rounded-full bg-black/25 flex items-center justify-center text-xs font-medium">
+              {leads.length}
+            </div>
+          </div>
 
-  // Custom DragOverlay component is no longer needed since we're using the one from dnd-kit
-  // We'll use the official DragOverlay component from dnd-kit directly
+          <div className={`funnel-body ${activeColumnId === id ? "drag-over" : ""}`}>
+            <SortableContext
+              items={leads.map((lead) => `${lead._id}:${id}`)}
+              strategy={verticalListSortingStrategy}
+            >
+              {leads.length > 0 ? (
+                leads.map((lead) => (
+                  <SortableLeadCard key={`${lead._id}:${id}`} lead={lead} columnId={id} />
+                ))
+              ) : (
+                <div className="text-center text-zinc-500 text-xs italic py-4">Nessun lead</div>
+              )}
+            </SortableContext>
+          </div>
+        </div>
+      );
+    }
+  );
+
+  FunnelColumn.displayName = "FunnelColumn";
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={closestCorners}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      autoScroll={{
+        enabled: true,
+        acceleration: 10,
+        interval: 10,
+        threshold: {
+          x: 0.1, // Percentuale della larghezza del viewport che attiva lo scorrimento orizzontale
+          y: 0.2, // Percentuale dell'altezza del viewport che attiva lo scorrimento verticale
+        },
+      }}
     >
       <div
         ref={boardRef}
@@ -903,27 +824,15 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         </div>
       </div>
 
-      {/* Drag overlay - enhanced visualization */}
-      <DragOverlay>
-        {activeLead && (
-          <div 
-            style={{
-              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.7)',
-              width: '250px', // Fixed width for preview
-              borderLeft: `3px solid ${getBorderColor(activeLead.status)}`,
-              background: '#18181b',
-              borderRadius: '6px',
-              transform: isTouchDevice ? 'scale(1.05)' : 'scale(1.02)',
-              opacity: 0.9,
-              cursor: 'grabbing'
-            }}
-          >
-            <LeadCard lead={activeLead} columnId={activeColumnId || ''} />
-          </div>
-        )}
+      {/* Overlay per drag and drop */}
+      <DragOverlay 
+        dropAnimation={dropAnimation}
+        modifiers={[restrictToWindowEdges]}
+      >
+        {activeLead ? <LeadCard lead={activeLead} isOverlay={true} /> : null}
       </DragOverlay>
 
-      {/* Facebook Event Modal for Lead Movement - Only for "customer" status */}
+      {/* Facebook Event Modal per lo spostamento delle Lead - Solo per lo stato "customer" */}
       {movingLead && (
         <FacebookEventModal
           lead={movingLead.lead}
@@ -934,7 +843,7 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
         />
       )}
 
-      {/* Value Editing Modal */}
+      {/* Modale per la modifica del valore */}
       {editingLead && (
         <ValueModal
           lead={editingLead}
@@ -946,20 +855,32 @@ export default function CustomFunnelBoard({ funnelData, setFunnelData, onLeadMov
   );
 }
 
-// Helper function to get border color
+// Funzione di supporto per ottenere il colore del bordo
 function getBorderColor(status: string): string {
   switch (status) {
-    case "new": return "#71717a"; // zinc-500
-    case "contacted": return "#3498db"; // info
-    case "qualified": return "#FF6B00"; // primary
-    case "opportunity": return "#e67e22"; // warning
-    case "proposal": return "#FF8C38"; // primary-hover
-    case "customer": return "#27ae60"; // success
-    case "lost": return "#e74c3c"; // danger
-    case "pending": return "#71717a"; // same as new
-    case "confirmed": return "#3498db"; // same as contacted
-    case "completed": return "#FF6B00"; // same as qualified
-    case "cancelled": return "#e74c3c"; // same as lost
-    default: return "#71717a"; // zinc-500
+    case "new":
+      return "#71717a"; // zinc-500
+    case "contacted":
+      return "#3498db"; // info
+    case "qualified":
+      return "#FF6B00"; // primary
+    case "opportunity":
+      return "#e67e22"; // warning
+    case "proposal":
+      return "#FF8C38"; // primary-hover
+    case "customer":
+      return "#27ae60"; // success
+    case "lost":
+      return "#e74c3c"; // danger
+    case "pending":
+      return "#71717a"; // same as new
+    case "confirmed":
+      return "#3498db"; // same as contacted
+    case "completed":
+      return "#FF6B00"; // same as qualified
+    case "cancelled":
+      return "#e74c3c"; // same as lost
+    default:
+      return "#71717a"; // zinc-500
   }
 }
