@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Facebook, Info, AlertTriangle } from "lucide-react";
+import { X, Facebook, Info, AlertTriangle, DollarSign, CreditCard } from "lucide-react";
 import { FunnelItem, FunnelOperationResult } from "@/types";
 import { updateLeadStage, getLeadFullData } from "@/lib/api/funnel";
 import { toast } from "@/components/ui/toaster";
@@ -27,6 +27,9 @@ export default function FacebookEventModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasConsent, setHasConsent] = useState<boolean | null>(null);
   const [isCheckingConsent, setIsCheckingConsent] = useState(true);
+  const [needsValue, setNeedsValue] = useState(false);
+  const [leadValue, setLeadValue] = useState<number>(lead.value ?? 0);
+  const [leadService, setLeadService] = useState<string>(lead.service || "");
   
   // Verifica del consenso quando il modale si apre
   useEffect(() => {
@@ -38,6 +41,11 @@ export default function FacebookEventModal({
         
         // Verifica se il lead ha dato il consenso per le terze parti
         setHasConsent(leadData.consent?.thirdParty === true);
+
+        // Controlla se il lead ha un valore
+        if (lead.value === undefined || lead.value === null || lead.value <= 0) {
+          setNeedsValue(true);
+        }
       } catch (error) {
         console.error("Errore nel recupero dei dati del consenso:", error);
         setHasConsent(false);
@@ -47,7 +55,7 @@ export default function FacebookEventModal({
     };
     
     checkConsent();
-  }, [lead._id, lead.leadId]);
+  }, [lead._id, lead.leadId, lead.value]);
   
   // Mappa lo stato a un evento Facebook appropriato
   useEffect(() => {
@@ -85,11 +93,11 @@ export default function FacebookEventModal({
         sendToFacebook ? {
           eventName: eventName,
           eventMetadata: {
-            value: lead.value,
-            service: lead.service
+            value: leadValue,
+            service: leadService
           }
         } : undefined
-      ) as FunnelOperationResult; // Aggiungi questo cast
+      ) as FunnelOperationResult;
       
       if (result.success) {
         if (result.consentError && sendToFacebook) {
@@ -124,63 +132,106 @@ export default function FacebookEventModal({
   };
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <div
         className="absolute inset-0"
         onClick={onClose}
+        aria-hidden="true"
       ></div>
       
-      <div className="bg-zinc-800 rounded-lg shadow-xl w-full max-w-md mx-4 z-10 animate-scale-in">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700">
-          <h3 className="text-base font-medium">Invio evento a Facebook</h3>
+      <div className="bg-zinc-800 rounded-xl shadow-xl w-full max-w-md z-10 animate-in fade-in duration-200 scale-95 to:scale-100 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-700">
+          <h3 className="text-base sm:text-lg font-semibold text-white">Cliente acquisito</h3>
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-white"
+            className="text-zinc-400 hover:text-white p-1.5 rounded-full hover:bg-zinc-700/50 transition-colors"
+            aria-label="Chiudi"
           >
             <X size={18} />
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-4">
-          <div className="flex items-start p-3 mb-4 bg-info/10 rounded border border-info/20 text-info">
-            <Info size={18} className="mr-2 shrink-0 mt-0.5" />
+        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+          <div className="flex items-start p-4 rounded-lg bg-info/10 border border-info/20 text-info">
+            <Info size={20} className="mr-3 shrink-0 mt-0.5" />
             <div className="text-sm">
-              Il lead <strong>{lead.name}</strong> è stato spostato da <strong>{previousStatus}</strong> a <strong>{lead.status}</strong>. 
-              {lead.status === "customer" ? (
-                <>
-                  <br /><br />
-                  <strong>Cliente acquisito!</strong> 
-                   Vuoi inviare l'evento di acquisto alla Conversion API di Facebook?
-                </>
-              ) : (
-                <>
-                  <br /><br />
-                  Vuoi inviare questo cambiamento alla Conversion API di Facebook?
-                </>
-              )}
+              <p>
+                Il lead <span className="font-semibold">{lead.name}</span> è stato spostato da <span className="font-semibold">{previousStatus}</span> a <span className="font-semibold">{lead.status}</span>.
+              </p>
+              <p className="mt-2 font-medium">
+                Cliente acquisito! Vuoi inviare l'evento di acquisto alla Conversion API di Facebook?
+              </p>
             </div>
           </div>
           
           {isCheckingConsent ? (
-            <div className="flex items-center justify-center py-4">
-              <div className="animate-spin mr-2 h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
-              <span className="text-sm">Verifica del consenso in corso...</span>
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-spin mr-3 h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
+              <span className="text-sm text-zinc-300">Verifica del consenso in corso...</span>
             </div>
           ) : !hasConsent && (
-            <div className="flex items-start p-3 mb-4 bg-danger/10 rounded border border-danger/20 text-danger">
-              <AlertTriangle size={18} className="mr-2 shrink-0 mt-0.5" />
+            <div className="flex items-start p-4 rounded-lg bg-danger/10 border border-danger/20 text-danger">
+              <AlertTriangle size={20} className="mr-3 shrink-0 mt-0.5" />
               <div className="text-sm">
-                <strong>Consenso per terze parti mancante!</strong> 
-                <br />
-                Questo lead non ha fornito il consenso per la condivisione dei dati con terze parti.
-                Puoi comunque spostare il lead ma l'evento non sarà inviato a Facebook.
+                <p className="font-semibold mb-1">Consenso per terze parti mancante!</p>
+                <p>Questo lead non ha fornito il consenso per la condivisione dei dati con terze parti.</p>
+                <p className="mt-1">Puoi comunque spostare il lead ma l'evento non sarà inviato a Facebook.</p>
               </div>
             </div>
           )}
           
-          <div className="space-y-4">
+          <div className="space-y-5">
+            {needsValue && (
+              <div className="space-y-4 p-4 rounded-lg bg-zinc-700/30 border border-zinc-600/50">
+                <div className="font-medium text-zinc-200 flex items-center">
+                  <DollarSign size={18} className="mr-2 text-primary" />
+                  Aggiungi informazioni di vendita
+                </div>
+                
+                <div>
+                  <label htmlFor="leadValue" className="block text-sm font-medium mb-1.5 text-zinc-300">
+                    Valore della vendita (€)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400">
+                      €
+                    </span>
+                    <input
+                      type="number"
+                      id="leadValue"
+                      value={leadValue}
+                      onChange={(e) => setLeadValue(Number(e.target.value))}
+                      className="w-full bg-zinc-900 border border-zinc-600 rounded-md py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label htmlFor="leadService" className="block text-sm font-medium mb-1.5 text-zinc-300">
+                    Servizio acquistato
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-400">
+                      <CreditCard size={16} />
+                    </span>
+                    <input
+                      type="text"
+                      id="leadService"
+                      value={leadService}
+                      onChange={(e) => setLeadService(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-600 rounded-md py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                      placeholder="Descrivi il servizio venduto"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div>
-              <label htmlFor="eventName" className="block text-sm font-medium mb-1">
+              <label htmlFor="eventName" className="block text-sm font-medium mb-1.5 text-zinc-300">
                 Nome evento Facebook
               </label>
               <input
@@ -188,7 +239,7 @@ export default function FacebookEventModal({
                 id="eventName"
                 value={eventName}
                 onChange={(e) => setEventName(e.target.value)}
-                className="input w-full"
+                className="w-full bg-zinc-900 border border-zinc-600 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 required
                 readOnly={lead.status === "customer"}
               />
@@ -199,53 +250,57 @@ export default function FacebookEventModal({
               )}
             </div>
             
-            <div className="flex items-center space-x-2 mb-2">
+            <div className="flex items-center space-x-2 mt-3">
               <input
                 type="checkbox"
                 id="sendToFacebook"
                 checked={sendToFacebook}
                 onChange={(e) => setSendToFacebook(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-primary focus:ring-primary"
+                className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-primary focus:ring-primary"
                 disabled={!hasConsent}
               />
-              <label htmlFor="sendToFacebook" className={`text-sm ${!hasConsent ? 'text-zinc-500' : ''}`}>
+              <label htmlFor="sendToFacebook" className={`text-sm ${!hasConsent ? 'text-zinc-500' : 'text-zinc-300'}`}>
                 Invia evento a Facebook
                 {!hasConsent && sendToFacebook && " (richiede consenso terze parti)"}
               </label>
             </div>
             
-            {lead.value && (
-              <div className="flex items-center justify-between py-2 px-3 bg-zinc-900 rounded">
-                <span className="text-sm text-zinc-400">Valore:</span>
-                <span className="text-sm font-medium">€{lead.value.toLocaleString('it-IT')}</span>
-              </div>
-            )}
-            
-            {lead.service && (
-              <div className="flex items-center justify-between py-2 px-3 bg-zinc-900 rounded">
-                <span className="text-sm text-zinc-400">Servizio:</span>
-                <span className="text-sm font-medium">{lead.service}</span>
+            {!needsValue && (
+              <div className="space-y-2 mt-4">
+                {(lead.value !== undefined && lead.value !== null && lead.value > 0) && (
+                  <div className="flex items-center justify-between py-2.5 px-4 bg-zinc-900/70 rounded-md border border-zinc-700/50">
+                    <span className="text-sm text-zinc-400">Valore:</span>
+                    <span className="text-sm font-medium text-primary">€{lead.value.toLocaleString('it-IT')}</span>
+                  </div>
+                )}
+                
+                {lead.service && (
+                  <div className="flex items-center justify-between py-2.5 px-4 bg-zinc-900/70 rounded-md border border-zinc-700/50">
+                    <span className="text-sm text-zinc-400">Servizio:</span>
+                    <span className="text-sm font-medium">{lead.service}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
           
-          <div className="flex justify-between space-x-2 mt-6">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-4 mt-4 border-t border-zinc-700/50">
             <button
               type="button"
               onClick={onUndo}
-              className="btn btn-outline"
+              className="w-full sm:w-auto py-2.5 px-4 border border-zinc-600 rounded-md text-zinc-300 hover:bg-zinc-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-500 focus:ring-offset-zinc-800"
             >
               Annulla operazione
             </button>
             
             <button
               type="submit"
-              className="btn btn-primary flex items-center"
+              className="w-full sm:w-auto py-2.5 px-5 bg-primary rounded-md text-white hover:bg-primary-hover transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-zinc-800 flex items-center justify-center"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
