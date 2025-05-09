@@ -30,6 +30,7 @@ export default function FacebookEventModal({
   const [needsValue, setNeedsValue] = useState(false);
   const [leadValue, setLeadValue] = useState<number>(lead.value ?? 0);
   const [leadService, setLeadService] = useState<string>(lead.service || "");
+  const [error, setError] = useState<string | null>(null);
   
   // Verifica del consenso quando il modale si apre
   useEffect(() => {
@@ -82,6 +83,7 @@ export default function FacebookEventModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
     
     try {
       // Chiamata API per confermare lo spostamento e inviare l'evento a Facebook
@@ -100,6 +102,16 @@ export default function FacebookEventModal({
       ) as FunnelOperationResult;
       
       if (result.success) {
+        // Verifica se c'è un errore Facebook per interrompere il processo
+        if (sendToFacebook && result.facebookResult && !result.facebookResult.success) {
+          // Mostra l'errore e non procede con lo spostamento
+          const errorMessage = result.facebookResult.error || "Errore sconosciuto nell'invio dell'evento a Facebook";
+          setError(`Errore nell'invio dell'evento a Facebook: ${errorMessage}`);
+          onUndo(); // Annulla l'operazione di spostamento
+          setIsSubmitting(false);
+          return; // Interrompe il flusso qui
+        }
+        
         if (result.consentError && sendToFacebook) {
           toast("warning", "Lead spostato con limitazioni", 
             "Lead spostato ma l'evento non è stato inviato a Facebook: consenso per terze parti mancante"
@@ -118,16 +130,21 @@ export default function FacebookEventModal({
         }
         
         onSave();
+        onClose();
       } else {
-        throw new Error(result.message || "Errore sconosciuto");
+        // Gestione errore generale dell'operazione
+        const errorMsg = result.message || "Errore sconosciuto durante l'operazione";
+        setError(errorMsg);
+        onUndo(); // Annulla l'operazione di spostamento
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during lead move:", error);
+      const errorMsg = error.message || "Si è verificato un errore durante lo spostamento";
+      setError(errorMsg);
       toast("error", "Errore durante lo spostamento", "Si è verificato un errore, l'operazione verrà annullata");
       onUndo();
     } finally {
       setIsSubmitting(false);
-      onClose();
     }
   };
   
@@ -176,6 +193,17 @@ export default function FacebookEventModal({
                 <p className="font-semibold mb-1">Consenso per terze parti mancante!</p>
                 <p>Questo lead non ha fornito il consenso per la condivisione dei dati con terze parti.</p>
                 <p className="mt-1">Puoi comunque spostare il lead ma l'evento non sarà inviato a Facebook.</p>
+              </div>
+            </div>
+          )}
+          
+          {error && (
+            <div className="flex items-start p-4 rounded-lg bg-danger/10 border border-danger/50 text-danger">
+              <AlertTriangle size={20} className="mr-3 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-semibold mb-1">Errore durante l'operazione</p>
+                <p>{error}</p>
+                <p className="mt-1 text-xs">L'operazione di spostamento è stata annullata. Nessun cliente è stato creato.</p>
               </div>
             </div>
           )}
