@@ -138,6 +138,14 @@
   }
 }
 
+* {
+  touch-action: pan-y;
+}
+
+html, body {
+  overscroll-behavior-y: none;
+}
+
 /* Aggiunte da inserire nel file globals.css */
 
 /* Animazioni fluide */
