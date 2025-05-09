@@ -454,7 +454,7 @@ export default function Dashboard() {
           <div className="h-20 w-px bg-zinc-700 hidden md:block"></div>
           
           {/* Conversion funnel */}
-          <div className="flex-1 flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex-1 flex flex-row items-center gap-4">
             <motion.div 
               whileHover={{ scale: 1.02 }}
               className="rounded-xl bg-zinc-800/70 p-4 text-center flex-1 w-full"
