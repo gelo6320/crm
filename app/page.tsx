@@ -422,7 +422,7 @@ export default function Dashboard() {
       </div>
       
       {/* Notifications panel (moved to top) */}
-      <div className="w-full px-4 sm:px-0">
+      <div className="w-full md:px-4">
         <NotificationsPanel 
           notifications={notifications} 
           viewedCount={viewedCount}
@@ -432,7 +432,7 @@ export default function Dashboard() {
       </div>
       
       {/* Conversion Overview */}
-      <AnimatedCard className="p-4 sm:p-6 mx-4 sm:mx-0" delay={1}>
+      <AnimatedCard className="p-4 sm:p-6 md:mx-4" delay={1}>
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col items-center text-center md:text-left md:items-start">
             <div className="flex items-center gap-2 mb-2">
