@@ -490,7 +490,7 @@ export default function Dashboard() {
       </AnimatedCard>
       
       {/* Weekly trends */}
-      <AnimatedCard className="p-4 sm:p-6 mx-4 sm:mx-0" delay={2}>
+      <AnimatedCard className="p-4 sm:p-6 md:mx-4" delay={2}>
         <div className="flex items-center gap-2 mb-4">
           <div className="p-2 rounded-full bg-blue-500/10">
             <BarChart size={18} className="text-blue-400" />
@@ -536,7 +536,7 @@ export default function Dashboard() {
       </AnimatedCard>
       
       {/* Recent activity */}
-      <AnimatedCard className="overflow-hidden mx-4 sm:mx-0" delay={5}>
+      <AnimatedCard className="overflow-hidden md:mx-4" delay={5}>
         <div className="flex items-center justify-between p-4 border-b border-zinc-700/50 bg-gradient-to-r from-zinc-800 to-zinc-800/50">
           <h2 className="text-base font-semibold flex items-center">
             <Clock size={18} className="mr-2 text-primary" />
