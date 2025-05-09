@@ -112,26 +112,30 @@ export default function MonthView({
             <div
               key={index}
               className={`
-                day-cell border-r border-b border-zinc-700 p-1 overflow-hidden
-                ${!day.isCurrentMonth ? "opacity-30" : ""}
-                ${day.isToday ? "bg-primary/5" : ""}
-                ${day.isSelected ? "bg-primary/10" : ""}
+                border-r border-b border-zinc-700 p-1.5 overflow-hidden cursor-pointer hover:bg-zinc-800/40
+                ${!day.isCurrentMonth ? "opacity-40" : ""}
+                ${day.isToday ? "bg-blue-500/5" : ""}
+                ${day.isSelected ? "bg-blue-500/10" : ""}
               `}
               onClick={() => onSelectDate(day.date)}
             >
               <div className={`
-                text-xs font-medium mb-1 p-0.5 rounded-full w-5 h-5 flex items-center justify-center
-                ${day.isToday ? "bg-primary text-white" : ""}
+                text-xs mb-1.5 p-0.5 rounded-full w-6 h-6 flex items-center justify-center
+                ${day.isToday ? "bg-blue-500 text-white" : "font-medium"}
+                ${day.isSelected && !day.isToday ? "border border-blue-500 text-blue-500" : ""}
               `}>
                 {day.date.getDate()}
               </div>
               
-              <div className="space-y-1 overflow-hidden max-h-[calc(100%-20px)]">
+              <div className="space-y-1 overflow-hidden max-h-[calc(100%-24px)]">
                 {dayEvents.slice(0, 3).map(event => (
                   <div
                     key={event.id}
-                    className="calendar-event overflow-hidden text-ellipsis"
-                    style={{ backgroundColor: getEventColor(event.status) }}
+                    className="text-xs px-1.5 py-1 rounded truncate text-white"
+                    style={{ 
+                      backgroundColor: getEventColor(event.status, event.eventType),
+                      opacity: event.status === 'cancelled' ? 0.5 : 1
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       onSelectEvent(event);
@@ -142,7 +146,7 @@ export default function MonthView({
                 ))}
                 
                 {dayEvents.length > 3 && (
-                  <div className="text-xs text-zinc-400 px-1">
+                  <div className="text-xs text-zinc-400 px-1 mt-1">
                     +{dayEvents.length - 3} altri
                   </div>
                 )}

@@ -1,6 +1,6 @@
 // components/calendar/CalendarSidebar.tsx
 import { useState } from "react";
-import { Trash2, Edit2, X } from "lucide-react";
+import { Trash2, Edit2, X, Clock, MapPin } from "lucide-react";
 import { CalendarEvent } from "@/types";
 import { formatTime } from "@/lib/utils/date";
 import { getEventColor } from "@/lib/utils/calendar";
@@ -39,7 +39,7 @@ export default function CalendarSidebar({
   
   return (
     <div className="h-full flex flex-col">
-      <div className="px-3 py-3 bg-zinc-900 flex justify-between items-center">
+      <div className="px-4 py-3 bg-zinc-900 flex justify-between items-center">
         <h3 className="text-sm font-medium capitalize">
           {formatSelectedDate(selectedDate)}
         </h3>
@@ -55,28 +55,39 @@ export default function CalendarSidebar({
         )}
       </div>
       
-      <div className="flex-1 overflow-y-auto px-3 py-2">
+      <div className="flex-1 overflow-y-auto px-4 py-3">
         {sortedEvents.length === 0 ? (
           <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
-            Nessun appuntamento in questa data
+            Nessun evento in questa data
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {sortedEvents.map(event => (
               <div 
                 key={event.id}
                 className={`
-                  p-3 rounded-lg border-l-4 bg-zinc-800
-                  hover:bg-zinc-700 active:bg-zinc-700 transition-colors relative
+                  p-3 rounded-lg border-l-4 bg-zinc-800/80
+                  hover:bg-zinc-700/90 transition-colors relative
                   group animate-fade-in
                 `}
                 style={{ borderLeftColor: getEventColor(event.status, event.eventType) }}
               >
-                <div className="text-xs text-zinc-400 mb-1.5">
+                <div className="text-xs text-zinc-400 mb-1.5 flex items-center">
+                  <Clock size={12} className="mr-1" />
                   {formatTime(new Date(event.start))} - {formatTime(new Date(event.end))}
                 </div>
                 
                 <div className="font-medium mb-1 pr-16">{event.title}</div>
+                
+                {event.location && (
+                  <div className="text-xs text-zinc-400 mb-1.5 flex items-center">
+                    <MapPin size={12} className="mr-1" />
+                    {event.location === 'office' ? 'Ufficio' : 
+                     event.location === 'client' ? 'Cliente' :
+                     event.location === 'remote' ? 'Remoto' : 
+                     event.location === 'site' ? 'Cantiere' : event.location}
+                  </div>
+                )}
                 
                 {event.description && (
                   <div className="text-xs text-zinc-400 line-clamp-2">
@@ -85,7 +96,9 @@ export default function CalendarSidebar({
                 )}
                 
                 <div className={`
-                  ${isMobile ? 'flex mt-3 pt-2 border-t border-zinc-700' : 'absolute top-3 right-3 space-x-1 opacity-0 group-hover:opacity-100 transition-opacity'}
+                  ${isMobile 
+                    ? 'flex mt-3 pt-2 border-t border-zinc-700' 
+                    : 'absolute top-3 right-3 space-x-1 opacity-0 group-hover:opacity-100 transition-opacity'}
                 `}>
                   <button
                     onClick={(e) => {
@@ -107,7 +120,7 @@ export default function CalendarSidebar({
                       onDeleteEvent(event);
                     }}
                     className={`
-                      p-1.5 rounded hover:bg-zinc-700 text-zinc-400 hover:text-danger
+                      p-1.5 rounded hover:bg-zinc-700 text-zinc-400 hover:text-red-500
                       ${isMobile ? 'flex-1 flex items-center justify-center' : ''}
                       ${isMobile ? 'ml-2' : ''}
                     `}
@@ -122,7 +135,7 @@ export default function CalendarSidebar({
         )}
       </div>
       
-      <div className="p-3 border-t border-zinc-700 text-xs text-zinc-400">
+      <div className="p-4 border-t border-zinc-700 text-xs text-zinc-400">
         <h4 className="font-medium mb-2">Legenda</h4>
         <div className="grid grid-cols-2 gap-2">
           <div className="flex items-center">

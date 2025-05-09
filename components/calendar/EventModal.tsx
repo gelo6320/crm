@@ -1,41 +1,40 @@
-// components/calendar/AppointmentModal.tsx
+// components/calendar/EventModal.tsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Bookmark, FileText, Clock, MapPin, User, Trash2, Check } from "lucide-react";
+import { X, Bookmark, Clock, MapPin, Trash2, Check } from "lucide-react";
 import { CalendarEvent } from "@/types";
 
-interface AppointmentModalProps {
-  appointment: CalendarEvent;
+interface EventModalProps {
+  event: CalendarEvent;
   isEditing: boolean;
   onClose: () => void;
-  onSave: (appointment: CalendarEvent) => void;
-  onDelete: (appointment: CalendarEvent) => void;
+  onSave: (event: CalendarEvent) => void;
+  onDelete: (event: CalendarEvent) => void;
   isMobile?: boolean;
 }
 
-export default function AppointmentModal({
-  appointment,
+export default function EventModal({
+  event,
   isEditing,
   onClose,
   onSave,
   onDelete,
   isMobile = false
-}: AppointmentModalProps) {
-  const [title, setTitle] = useState(appointment.title);
+}: EventModalProps) {
+  const [title, setTitle] = useState(event.title || "");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [duration, setDuration] = useState("60");
-  const [status, setStatus] = useState(appointment.status);
-  const [eventType, setEventType] = useState(appointment.eventType || "appointment");
-  const [location, setLocation] = useState(appointment.location || "");
-  const [clientId, setClientId] = useState(appointment.clientId || "");
-  const [description, setDescription] = useState(appointment.description || "");
+  const [status, setStatus] = useState(event.status || "pending");
+  const [eventType, setEventType] = useState(event.eventType || "appointment");
+  const [location, setLocation] = useState(event.location || "");
+  const [description, setDescription] = useState(event.description || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // On mount, set the date and time
   useEffect(() => {
-    const start = new Date(appointment.start);
+    const start = new Date(event.start || new Date());
     
     // Format date for input
     const dateStr = start.toISOString().split('T')[0];
@@ -47,10 +46,12 @@ export default function AppointmentModal({
     setTime(`${hours}:${minutes}`);
     
     // Calculate duration in minutes
-    const end = new Date(appointment.end);
-    const durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
-    setDuration(durationMinutes.toString());
-  }, [appointment]);
+    if (event.end) {
+      const end = new Date(event.end);
+      const durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+      setDuration(durationMinutes.toString());
+    }
+  }, [event]);
   
   // Close modal on escape key
   useEffect(() => {
@@ -68,7 +69,6 @@ export default function AppointmentModal({
     e.preventDefault();
     
     if (!title || !date || !time) {
-      // Show error
       return;
     }
     
@@ -83,25 +83,24 @@ export default function AppointmentModal({
     const end = new Date(start);
     end.setMinutes(start.getMinutes() + parseInt(duration || "60"));
     
-    // Create appointment object
-    const updatedAppointment: CalendarEvent = {
-      ...appointment,
+    // Create event object
+    const updatedEvent: CalendarEvent = {
+      ...event,
       title,
       start,
       end,
       status,
       eventType,
       location,
-      clientId,
       description,
     };
     
-    onSave(updatedAppointment);
+    onSave(updatedEvent);
   };
   
   const handleDelete = () => {
     if (confirm("Sei sicuro di voler eliminare questo elemento?")) {
-      onDelete(appointment);
+      onDelete(event);
     }
   };
   
@@ -112,51 +111,51 @@ export default function AppointmentModal({
         onClick={onClose}
       ></div>
       
-      <div className="bg-zinc-800 rounded-lg shadow-xl w-full max-w-md z-10 animate-scale-in">
-        <div className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b border-zinc-700">
-          <h3 className="text-sm sm:text-base font-medium">
-            {isEditing ? "Modifica Elemento" : "Nuovo Elemento"}
+      <div className="bg-zinc-800 rounded-lg shadow-xl w-full max-w-md z-10 animate-fade-in">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700">
+          <h3 className="text-base font-medium">
+            {isEditing ? "Modifica Evento" : "Nuovo Evento"}
           </h3>
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-white p-1"
+            className="text-zinc-400 hover:text-white p-2 rounded-full hover:bg-zinc-700"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* Tipo di evento */}
-          <div className="grid grid-cols-2 gap-1 bg-zinc-900 rounded-lg p-1 mb-2">
+          <div className="grid grid-cols-2 gap-1 bg-zinc-900 rounded-lg p-1">
             <button
               type="button"
-              className={`flex items-center justify-center py-1.5 px-2 rounded text-xs sm:text-sm transition-colors ${
+              className={`flex items-center justify-center py-2 px-3 rounded text-sm transition-colors ${
                 eventType === 'appointment' 
-                  ? 'bg-primary text-white' 
+                  ? 'bg-blue-600 text-white' 
                   : 'text-zinc-400 hover:bg-zinc-800'
               }`}
               onClick={() => setEventType('appointment')}
             >
-              <Bookmark size={isMobile ? 14 : 16} className="mr-1 sm:mr-1.5" />
+              <Bookmark size={18} className="mr-2" />
               Appuntamento
             </button>
             
             <button
               type="button"
-              className={`flex items-center justify-center py-1.5 px-2 rounded text-xs sm:text-sm transition-colors ${
+              className={`flex items-center justify-center py-2 px-3 rounded text-sm transition-colors ${
                 eventType === 'reminder' 
-                  ? 'bg-primary text-white' 
+                  ? 'bg-purple-600 text-white' 
                   : 'text-zinc-400 hover:bg-zinc-800'
               }`}
               onClick={() => setEventType('reminder')}
             >
-              <Clock size={isMobile ? 14 : 16} className="mr-1 sm:mr-1.5" />
+              <Clock size={18} className="mr-2" />
               Promemoria
             </button>
           </div>
           
           <div>
-            <label htmlFor="title" className="block text-xs sm:text-sm font-medium mb-1">
+            <label htmlFor="title" className="block text-sm font-medium mb-1">
               Titolo
             </label>
             <input
@@ -164,15 +163,15 @@ export default function AppointmentModal({
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="input w-full py-1.5 sm:py-2 text-sm"
+              className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder={eventType === 'appointment' ? "Titolo appuntamento" : "Titolo promemoria"}
               required
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="date" className="block text-xs sm:text-sm font-medium mb-1">
+              <label htmlFor="date" className="block text-sm font-medium mb-1">
                 Data
               </label>
               <input
@@ -180,12 +179,12 @@ export default function AppointmentModal({
                 id="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="input w-full py-1.5 sm:py-2 text-sm"
+                className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
             <div>
-              <label htmlFor="time" className="block text-xs sm:text-sm font-medium mb-1">
+              <label htmlFor="time" className="block text-sm font-medium mb-1">
                 Ora
               </label>
               <input
@@ -193,23 +192,23 @@ export default function AppointmentModal({
                 id="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="input w-full py-1.5 sm:py-2 text-sm"
+                className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             {eventType === 'appointment' && (
               <div>
-                <label htmlFor="duration" className="block text-xs sm:text-sm font-medium mb-1">
+                <label htmlFor="duration" className="block text-sm font-medium mb-1">
                   Durata
                 </label>
                 <select
                   id="duration"
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
-                  className="input w-full py-1.5 sm:py-2 text-sm"
+                  className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="15">15 minuti</option>
                   <option value="30">30 minuti</option>
@@ -217,20 +216,19 @@ export default function AppointmentModal({
                   <option value="90">1 ora e 30 min</option>
                   <option value="120">2 ore</option>
                   <option value="180">3 ore</option>
-                  <option value="240">4 ore</option>
                 </select>
               </div>
             )}
             
             <div className={eventType === 'appointment' ? '' : 'col-span-2'}>
-              <label htmlFor="status" className="block text-xs sm:text-sm font-medium mb-1">
+              <label htmlFor="status" className="block text-sm font-medium mb-1">
                 Stato
               </label>
               <select
                 id="status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
-                className="input w-full py-1.5 sm:py-2 text-sm"
+                className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="pending">In attesa</option>
                 <option value="confirmed">Confermato</option>
@@ -241,52 +239,30 @@ export default function AppointmentModal({
           </div>
           
           {eventType === 'appointment' && (
-            <>
-              <div>
-                <label htmlFor="location" className="block text-xs sm:text-sm font-medium mb-1">
-                  Luogo
-                </label>
-                <div className="relative">
-                  <select
-                    id="location"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="input w-full pl-8 py-1.5 sm:py-2 text-sm"
-                  >
-                    <option value="">Seleziona</option>
-                    <option value="office">Ufficio</option>
-                    <option value="client">Cliente</option>
-                    <option value="remote">Remoto</option>
-                    <option value="site">Cantiere</option>
-                  </select>
-                  <MapPin size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-zinc-400" />
-                </div>
+            <div>
+              <label htmlFor="location" className="block text-sm font-medium mb-1">
+                Luogo
+              </label>
+              <div className="relative">
+                <select
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full bg-zinc-700 border border-zinc-600 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Seleziona</option>
+                  <option value="office">Ufficio</option>
+                  <option value="client">Cliente</option>
+                  <option value="remote">Remoto</option>
+                  <option value="site">Cantiere</option>
+                </select>
+                <MapPin size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400" />
               </div>
-              
-              <div>
-                <label htmlFor="clientId" className="block text-xs sm:text-sm font-medium mb-1">
-                  Cliente
-                </label>
-                <div className="relative">
-                  <select
-                    id="clientId"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    className="input w-full pl-8 py-1.5 sm:py-2 text-sm"
-                  >
-                    <option value="">Seleziona un cliente</option>
-                    <option value="1">Mario Rossi</option>
-                    <option value="2">Giuseppe Bianchi</option>
-                    <option value="3">Anna Verdi</option>
-                  </select>
-                  <User size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-zinc-400" />
-                </div>
-              </div>
-            </>
+            </div>
           )}
           
           <div>
-            <label htmlFor="description" className="block text-xs sm:text-sm font-medium mb-1">
+            <label htmlFor="description" className="block text-sm font-medium mb-1">
               {eventType === 'appointment' ? 'Note' : 'Descrizione'}
             </label>
             <textarea
@@ -294,32 +270,32 @@ export default function AppointmentModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="input w-full py-1.5 sm:py-2 text-sm"
+              className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder={eventType === 'appointment' ? "Inserisci dettagli aggiuntivi..." : "Descrivi il promemoria..."}
             ></textarea>
           </div>
         </form>
         
-        <div className="flex justify-between items-center px-3 py-2 sm:px-4 sm:py-3 border-t border-zinc-700 bg-zinc-900/30">
+        <div className="flex justify-between items-center px-4 py-3 border-t border-zinc-700 bg-zinc-900/30">
           <div>
             {isEditing && (
               <button
                 type="button"
                 onClick={handleDelete}
-                className="inline-flex items-center justify-center btn btn-outline border-danger text-danger hover:bg-danger/10 text-xs sm:text-sm py-1 sm:py-1.5 px-2 sm:px-3"
+                className="inline-flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors"
                 title="Elimina"
               >
-                <Trash2 size={isMobile ? 14 : 16} className={isMobile ? '' : 'mr-1'} />
-                <span className={isMobile ? 'sr-only' : ''}>Elimina</span>
+                <Trash2 size={18} className="mr-1.5" />
+                Elimina
               </button>
             )}
           </div>
           
-          <div className="flex space-x-2">
+          <div className="flex space-x-3">
             <button
               type="button"
               onClick={onClose}
-              className="btn btn-outline text-xs sm:text-sm py-1 sm:py-1.5 px-2 sm:px-3"
+              className="px-4 py-2 rounded-md text-sm font-medium bg-zinc-700 hover:bg-zinc-600 transition-colors"
             >
               Annulla
             </button>
@@ -327,11 +303,11 @@ export default function AppointmentModal({
               type="submit"
               onClick={handleSubmit}
               disabled={isSubmitting || !title || !date || !time}
-              className="btn btn-primary inline-flex items-center justify-center text-xs sm:text-sm py-1 sm:py-1.5 px-2 sm:px-3"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting ? (
                 <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-3 w-3 sm:h-4 sm:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
@@ -339,7 +315,7 @@ export default function AppointmentModal({
                 </span>
               ) : (
                 <>
-                  <Check size={isMobile ? 14 : 16} className="mr-1" />
+                  <Check size={18} className="mr-1.5" />
                   {isEditing ? "Aggiorna" : "Salva"}
                 </>
               )}

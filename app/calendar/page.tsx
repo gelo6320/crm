@@ -8,7 +8,7 @@ import { fetchAppointments } from "@/lib/api/calendar";
 import { CalendarEvent } from "@/types";
 import CalendarView from "@/components/calendar/CalendarView";
 import CalendarSidebar from "@/components/calendar/CalendarSidebar";
-import AppointmentModal from "@/components/calendar/AppointmentModal";
+import AppointmentModal from "@/components/calendar/EventModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 export default function CalendarPage() {
