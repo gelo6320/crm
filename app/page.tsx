@@ -406,43 +406,33 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="max-w-full px-4 sm:px-6 py-6 space-y-6">
-      {/* Header with title and actions */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-3"
+    <div className="max-w-full px-0 sm:px-4 py-4 space-y-4 sm:space-y-6">
+      {/* Header with refresh button only */}
+      <div className="flex justify-end px-4 sm:px-0">
+        <motion.button 
+          onClick={loadData}
+          className="btn flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700 hover:border-primary hover:bg-primary/10 text-sm"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          title="Aggiorna dati"
         >
-          <div className="p-2 rounded-xl bg-emerald-900/20 text-emerald-400">
-            <LayoutDashboard size={24} />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold">Dashboard</h1>
-            <p className="text-zinc-400 text-sm">Panoramica contatti e conversioni</p>
-          </div>
-        </motion.div>
-        
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2 self-end sm:self-center"
-        >
-          <motion.button 
-            onClick={loadData}
-            className="btn flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700 hover:border-primary hover:bg-primary/10 text-sm"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            title="Aggiorna dati"
-          >
-            <RefreshCw size={16} />
-            Aggiorna
-          </motion.button>
-        </motion.div>
+          <RefreshCw size={16} />
+          Aggiorna
+        </motion.button>
+      </div>
+      
+      {/* Notifications panel (moved to top) */}
+      <div className="w-full px-4 sm:px-0">
+        <NotificationsPanel 
+          notifications={notifications} 
+          viewedCount={viewedCount}
+          onViewContact={handleViewContact}
+          onViewAll={handleViewAllContacts}
+        />
       </div>
       
       {/* Conversion Overview */}
-      <AnimatedCard className="p-6" delay={1}>
+      <AnimatedCard className="p-4 sm:p-6 mx-4 sm:mx-0" delay={1}>
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col items-center text-center md:text-left md:items-start">
             <div className="flex items-center gap-2 mb-2">
@@ -500,7 +490,7 @@ export default function Dashboard() {
       </AnimatedCard>
       
       {/* Weekly trends */}
-      <AnimatedCard className="p-6" delay={2}>
+      <AnimatedCard className="p-4 sm:p-6 mx-4 sm:mx-0" delay={2}>
         <div className="flex items-center gap-2 mb-4">
           <div className="p-2 rounded-full bg-blue-500/10">
             <BarChart size={18} className="text-blue-400" />
@@ -545,173 +535,57 @@ export default function Dashboard() {
         </div>
       </AnimatedCard>
       
-      {/* Main dashboard grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column - Notifications panel */}
-        <div className="lg:col-span-1 h-full">
-          <NotificationsPanel 
-            notifications={notifications} 
-            viewedCount={viewedCount}
-            onViewContact={handleViewContact}
-            onViewAll={handleViewAllContacts}
-          />
+      {/* Recent activity */}
+      <AnimatedCard className="overflow-hidden mx-4 sm:mx-0" delay={5}>
+        <div className="flex items-center justify-between p-4 border-b border-zinc-700/50 bg-gradient-to-r from-zinc-800 to-zinc-800/50">
+          <h2 className="text-base font-semibold flex items-center">
+            <Clock size={18} className="mr-2 text-primary" />
+            Attività recenti
+          </h2>
+          <Link href="/events" passHref>
+            <motion.div 
+              className="p-2 rounded-lg hover:bg-zinc-700/30 transition-all"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ChevronRight size={18} />
+            </motion.div>
+          </Link>
         </div>
         
-        {/* Right column - Stats and Quick Links */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Quick stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard 
-              title="Prenotazioni" 
-              value={stats.bookings.total}
-              icon={Bookmark}
-              trend={stats.bookings.trend}
-              bgColor="bg-emerald-900/10"
-              iconColor="text-emerald-400"
-              delay={4}
-            />
-            
-            <StatCard 
-              title="Form" 
-              value={stats.forms.total}
-              icon={FileText}
-              trend={stats.forms.trend}
-              bgColor="bg-primary/10"
-              iconColor="text-primary"
-              delay={5}
-            />
-            
-            <StatCard 
-              title="Facebook" 
-              value={stats.facebook.total}
-              icon={Facebook}
-              trend={stats.facebook.trend}
-              bgColor="bg-blue-900/10"
-              iconColor="text-blue-400"
-              delay={6}
-            />
-          </div>
-          
-          {/* Quick links */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Link href="/forms" passHref>
-              <motion.div 
-                className="bg-zinc-800/80 hover:bg-zinc-700/30 border border-zinc-700/50 hover:border-primary/50 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all"
-                whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.05)" }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="bg-primary/10 p-2 rounded-lg">
-                  <FileText size={18} className="text-primary" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium">Form</div>
-                  <div className="text-xs text-zinc-400">{stats.forms.total} contatti</div>
-                </div>
-              </motion.div>
-            </Link>
-            
-            <Link href="/bookings" passHref>
-              <motion.div 
-                className="bg-zinc-800/80 hover:bg-zinc-700/30 border border-zinc-700/50 hover:border-emerald-500/50 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all"
-                whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.05)" }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="bg-emerald-500/10 p-2 rounded-lg">
-                  <Bookmark size={18} className="text-emerald-400" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium">Prenotazioni</div>
-                  <div className="text-xs text-zinc-400">{stats.bookings.total} contatti</div>
-                </div>
-              </motion.div>
-            </Link>
-            
-            <Link href="/facebook-leads" passHref>
-              <motion.div 
-                className="bg-zinc-800/80 hover:bg-zinc-700/30 border border-zinc-700/50 hover:border-blue-500/50 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all"
-                whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.05)" }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="bg-blue-500/10 p-2 rounded-lg">
-                  <Facebook size={18} className="text-blue-500" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium">Facebook</div>
-                  <div className="text-xs text-zinc-400">{stats.facebook.total} contatti</div>
-                </div>
-              </motion.div>
-            </Link>
-            
-            <Link href="/calendar" passHref>
-              <motion.div 
-                className="bg-zinc-800/80 hover:bg-zinc-700/30 border border-zinc-700/50 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all"
-                whileHover={{ y: -5, backgroundColor: "rgba(255,255,255,0.05)" }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="bg-zinc-700/50 p-2 rounded-lg">
-                  <Calendar size={18} className="text-zinc-300" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium">Calendario</div>
-                  <div className="text-xs text-zinc-400">Visualizza</div>
-                </div>
-              </motion.div>
-            </Link>
-          </div>
-          
-          {/* Recent activity */}
-          <AnimatedCard className="overflow-hidden" delay={7}>
-            <div className="flex items-center justify-between p-4 border-b border-zinc-700/50 bg-gradient-to-r from-zinc-800 to-zinc-800/50">
-              <h2 className="text-base font-semibold flex items-center">
-                <Clock size={18} className="mr-2 text-primary" />
-                Attività recenti
-              </h2>
-              <Link href="/events" passHref>
+        <div className="p-4">
+          {recentEvents.length > 0 ? (
+            <div className="space-y-3">
+              {recentEvents.slice(0, 5).map((event, index) => (
                 <motion.div 
-                  className="p-2 rounded-lg hover:bg-zinc-700/30 transition-all"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
+                  key={event._id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  className="flex items-center justify-between rounded-lg hover:bg-zinc-800/50 p-3 transition-all"
+                  whileHover={{ backgroundColor: "rgba(255,255,255,0.03)" }}
                 >
-                  <ChevronRight size={18} />
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${event.success ? 'bg-emerald-400' : 'bg-red-400'}`}></div>
+                    <div>
+                      <div className="font-medium text-sm">{event.eventName}</div>
+                      <div className="text-xs text-zinc-400">{event.leadType === 'form' ? 'Form contatto' : 'Prenotazione'}</div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-zinc-500 bg-zinc-800/80 px-2 py-1 rounded-full">
+                    {formatDate(event.createdAt)}
+                  </div>
                 </motion.div>
-              </Link>
+              ))}
             </div>
-            
-            <div className="p-4">
-              {recentEvents.length > 0 ? (
-                <div className="space-y-3">
-                  {recentEvents.slice(0, 5).map((event, index) => (
-                    <motion.div 
-                      key={event._id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="flex items-center justify-between rounded-lg hover:bg-zinc-800/50 p-3 transition-all"
-                      whileHover={{ backgroundColor: "rgba(255,255,255,0.03)" }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${event.success ? 'bg-emerald-400' : 'bg-red-400'}`}></div>
-                        <div>
-                          <div className="font-medium text-sm">{event.eventName}</div>
-                          <div className="text-xs text-zinc-400">{event.leadType === 'form' ? 'Form contatto' : 'Prenotazione'}</div>
-                        </div>
-                      </div>
-                      <div className="text-xs text-zinc-500 bg-zinc-800/80 px-2 py-1 rounded-full">
-                        {formatDate(event.createdAt)}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-8 text-center text-zinc-500">
-                  <Clock size={24} className="mx-auto mb-3 text-zinc-600" />
-                  <p className="text-sm">Nessuna attività recente</p>
-                </div>
-              )}
+          ) : (
+            <div className="p-8 text-center text-zinc-500">
+              <Clock size={24} className="mx-auto mb-3 text-zinc-600" />
+              <p className="text-sm">Nessuna attività recente</p>
             </div>
-          </AnimatedCard>
+          )}
         </div>
-      </div>
+      </AnimatedCard>
     </div>
   );
 }
