@@ -1,0 +1,155 @@
+/* dnd-kit-funnel.css */
+.funnel-board-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+    overscroll-behavior-x: none;
+    will-change: scroll-position;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .funnel-board-container::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  .funnel-board-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+  }
+  
+  .funnel-board-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+  }
+  
+  .funnel-board {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    min-width: max-content;
+    will-change: transform;
+    contain: layout style;
+  }
+  
+  .funnel-column {
+    width: 270px;
+    min-width: 270px;
+    background: rgba(24, 24, 27, 0.6);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 220px);
+    transition: opacity 0.2s ease, transform 0.15s ease;
+    transform: translateZ(0);
+  }
+  
+  .column-fade-transition {
+    opacity: 0.75;
+  }
+  
+  .funnel-header {
+    padding: 0.75rem;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  
+  .funnel-body {
+    padding: 0.5rem;
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    border-radius: 0 0 8px 8px;
+    min-height: 200px;
+    max-height: calc(100vh - 270px);
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    overscroll-behavior: none;
+  }
+  
+  .funnel-body.drag-over {
+    background-color: rgba(255, 107, 0, 0.05);
+    box-shadow: inset 0 0 0 2px rgba(255, 107, 0, 0.2);
+  }
+  
+  .funnel-body::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .funnel-body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .funnel-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  .funnel-card {
+    background: #18181b;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+    border-left: 3px solid #71717a;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.2s ease;
+    will-change: transform, opacity;
+  }
+  
+  .funnel-card.is-overlay {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    transform: scale(1.02);
+    z-index: 1000;
+    pointer-events: none;
+  }
+  
+  .funnel-draggable {
+    touch-action: none;
+    cursor: grab;
+  }
+  
+  body.is-dragging {
+    cursor: grabbing !important;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+  
+  @media (max-width: 768px) {
+    .funnel-column {
+      width: 250px;
+      min-width: 250px;
+    }
+    
+    .funnel-card {
+      padding: 10px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .funnel-column {
+      width: 230px;
+      min-width: 230px;
+    }
+    
+    .funnel-header {
+      padding: 8px 10px;
+    }
+    
+    .funnel-card {
+      padding: 8px;
+      margin-bottom: 6px;
+    }
+  }
