@@ -1047,3 +1047,56 @@ header.sticky {
     scroll-padding-bottom: 5rem;
   }
 }
+
+/* Aggiungi questo al tuo file globals.css */
+
+/* 1. Imposta dimensione font minima di 16px per tutti gli input */
+input, 
+textarea, 
+select {
+  font-size: 16px !important;  /* Minimo 16px previene zoom automatico su iOS */
+  max-height: none !important;  /* Previene comportamenti strani di altezza su alcuni dispositivi */
+}
+
+/* 2. Disabilita pinch zoom e doppio tap */
+* {
+  touch-action: manipulation;  /* Previene gesti di zoom conservando scroll/pan */
+}
+
+/* 3. Proprietà specifiche per iOS */
+@media screen and (-webkit-min-device-pixel-ratio: 0) { 
+  select:focus,
+  textarea:focus,
+  input:focus {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100%;  /* Previene aggiustamento testo */
+  }
+}
+
+/* 4. Previene zoom su focus per dispositivi mobili */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Fix per comportamento zoom su Samsung browser */
+  input:not([type="checkbox"]):not([type="radio"]) {
+    transform: scale(1);  /* Trucco per forzare il rendering corretto */
+  }
+}
+
+/* 5. Fix specifico per iOS */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea {
+    -webkit-appearance: none;  /* Rimuove lo stile nativo iOS che può causare zoom */
+    border-radius: 0;  /* Previene arrotondamenti che possono creare inconsistenze */
+  }
+}
+
+/* 6. Previene cambio automatico di scale su orientamento */
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
