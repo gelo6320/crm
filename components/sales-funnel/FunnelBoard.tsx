@@ -781,7 +781,7 @@ export default function CustomFunnelBoard({
 
       {/* Overlay per drag and drop */}
       <DragOverlay 
-        adjustScale={true} 
+        adjustScale={false} 
         dropAnimation={dropAnimation}
         zIndex={999}
       >
