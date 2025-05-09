@@ -86,6 +86,18 @@ export default function FacebookEventModal({
     setError(null);
     
     try {
+      console.log("Tentativo di invio evento Facebook:", {
+        leadId: lead.leadId || lead._id,
+        leadType: lead.type,
+        fromStage: previousStatus,
+        toStage: lead.status,
+        eventData: sendToFacebook ? {
+          eventName,
+          value: leadValue,
+          service: leadService
+        } : "nessun evento"
+      });
+      
       // Chiamata API per confermare lo spostamento e inviare l'evento a Facebook
       const result = await updateLeadStage(
         lead.leadId || lead._id,
@@ -101,9 +113,24 @@ export default function FacebookEventModal({
         } : undefined
       ) as FunnelOperationResult;
       
+      // Log del risultato
+      console.log("Risultato operazione:", {
+        success: result.success,
+        facebookResult: result.facebookResult,
+        clientResult: result.clientResult,
+        consentError: result.consentError
+      });
+      
       if (result.success) {
         // Verifica se c'è un errore Facebook per interrompere il processo
         if (sendToFacebook && result.facebookResult && !result.facebookResult.success) {
+          // Log dettagliato dell'errore
+          console.error("Errore nell'invio dell'evento Facebook:", {
+            error: result.facebookResult.error,
+            details: result.facebookResult.details,
+            leadId: lead.leadId || lead._id
+          });
+          
           // Mostra l'errore e non procede con lo spostamento
           const errorMessage = result.facebookResult.error || "Errore sconosciuto nell'invio dell'evento a Facebook";
           setError(`Errore nell'invio dell'evento a Facebook: ${errorMessage}`);
@@ -113,10 +140,26 @@ export default function FacebookEventModal({
         }
         
         if (result.consentError && sendToFacebook) {
+          console.warn("Evento Facebook non inviato: consenso mancante", {
+            leadId: lead.leadId || lead._id,
+            eventName,
+            consentError: result.consentError
+          });
+          
           toast("warning", "Lead spostato con limitazioni", 
             "Lead spostato ma l'evento non è stato inviato a Facebook: consenso per terze parti mancante"
           );
         } else {
+          // Se l'evento è stato inviato con successo, logga la risposta
+          if (sendToFacebook && result.facebookResult && result.facebookResult.success) {
+            console.log("Evento Facebook inviato con successo:", {
+              eventName,
+              eventId: result.facebookResult.eventId,
+              leadId: lead.leadId || lead._id,
+              response: (result.facebookResult as any).response
+            });
+          }
+          
           toast("success", "Lead spostato con successo", 
             sendToFacebook 
               ? `Evento "${eventName}" inviato a Facebook` 
@@ -126,6 +169,11 @@ export default function FacebookEventModal({
         
         // Se è stata creata una scheda cliente, mostra un toast aggiuntivo
         if (result.clientResult?.success) {
+          console.log("Cliente creato con successo:", {
+            leadId: lead.leadId || lead._id,
+            clientId: result.clientResult.clientId
+          });
+          
           toast("success", "Cliente creato", "La scheda cliente è stata creata con successo");
         }
         
@@ -134,11 +182,21 @@ export default function FacebookEventModal({
       } else {
         // Gestione errore generale dell'operazione
         const errorMsg = result.message || "Errore sconosciuto durante l'operazione";
+        console.error("Errore nell'operazione:", {
+          message: errorMsg,
+          leadId: lead.leadId || lead._id,
+          result
+        });
+        
         setError(errorMsg);
         onUndo(); // Annulla l'operazione di spostamento
       }
     } catch (error: any) {
-      console.error("Error during lead move:", error);
+      console.error("Errore critico durante l'operazione:", {
+        message: error.message,
+        leadId: lead.leadId || lead._id,
+        stack: error.stack
+      });
       const errorMsg = error.message || "Si è verificato un errore durante lo spostamento";
       setError(errorMsg);
       toast("error", "Errore durante lo spostamento", "Si è verificato un errore, l'operazione verrà annullata");
