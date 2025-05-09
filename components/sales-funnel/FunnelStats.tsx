@@ -9,74 +9,109 @@ interface FunnelStatsProps {
   stats: FunnelStatsType;
 }
 
-interface StatCardProps {
+interface StatItemProps {
   title: string;
   value: string | number;
   icon: ReactElement;
   trend?: number;
-  color?: string;
+  isLast?: boolean;
 }
 
-// Componente StatsCard migliorato con TypeScript corretto
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, trend, color = "bg-zinc-800" }) => (
-  <div className={`${color} rounded-lg p-3 transition-all duration-300 hover:shadow-lg hover:translate-y-[-2px]`}>
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-xs font-medium text-zinc-400 mb-1">{title}</p>
-        <p className="text-xl font-bold">{value}</p>
+// Componente stat item modernizzato e più compatto
+const StatItem: React.FC<StatItemProps> = ({ title, value, icon, trend, isLast = false }) => (
+  <div className={`flex-1 flex items-center py-2 px-3 ${!isLast ? "border-r border-zinc-700/50 pr-4 md:pr-6" : ""}`}>
+    <div className="bg-black/20 p-1.5 rounded-lg mr-3">
+      {icon}
+    </div>
+    <div>
+      <p className="text-xs font-medium text-zinc-400 mb-0.5">{title}</p>
+      <div className="flex items-center">
+        <p className="text-sm md:text-base font-bold mr-2">{value}</p>
         {trend !== undefined && (
-          <div className="flex items-center mt-1 text-xs">
-            <span className={trend > 0 ? "text-green-500" : "text-red-500"}>
-              {trend > 0 ? "+" : ""}{trend}%
-            </span>
-          </div>
+          <span className={`text-xs ${trend > 0 ? "text-green-500" : "text-red-500"}`}>
+            {trend > 0 ? "↑" : "↓"} {Math.abs(trend)}%
+          </span>
         )}
-      </div>
-      <div className="bg-black/20 p-2 rounded-lg">
-        {icon}
       </div>
     </div>
   </div>
 );
 
-export default function FunnelStats({ stats }: FunnelStatsProps) {
-  // Formato della valuta
-  const formatMoney = (value: number): string => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 0
-    }).format(value);
-  };
+// Funzione per formattare la valuta
+const formatMoney = (value: number): string => {
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0
+  }).format(value);
+};
 
+export default function FunnelStats({ stats }: FunnelStatsProps) {
   return (
-    <div className="bg-zinc-900/50 rounded-xl p-4 shadow-md mb-6 animate-slide-up">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard 
+    <div className="bg-zinc-800/80 backdrop-blur-sm rounded-lg shadow-md mb-5 transition-all duration-300 overflow-hidden">
+      {/* Desktop View (orizzontale) */}
+      <div className="hidden md:flex">
+        <StatItem 
           title="Tasso Conversione" 
           value={`${stats.conversionRate}%`}
-          icon={<TrendingUp size={24} className="text-primary" />}
+          icon={<TrendingUp size={18} strokeWidth={2} className="text-primary" />}
           trend={2.5}
         />
         
-        <StatCard 
+        <StatItem 
           title="Lead Totali" 
           value={stats.totalLeads}
-          icon={<Users size={24} className="text-blue-400" />}
+          icon={<Users size={18} strokeWidth={2} className="text-blue-400" />}
         />
         
-        <StatCard 
+        <StatItem 
           title="Valore Potenziale" 
           value={formatMoney(stats.potentialValue)}
-          icon={<DollarSign size={24} className="text-amber-400" />}
+          icon={<DollarSign size={18} strokeWidth={2} className="text-amber-400" />}
         />
         
-        <StatCard 
+        <StatItem 
           title="Valore Realizzato" 
           value={formatMoney(stats.realizedValue)}
-          icon={<Award size={24} className="text-green-500" />}
+          icon={<Award size={18} strokeWidth={2} className="text-green-500" />}
           trend={5.8}
+          isLast={true}
         />
+      </div>
+      
+      {/* Mobile View (2x2 grid) */}
+      <div className="md:hidden">
+        <div className="flex">
+          <StatItem 
+            title="Tasso Conversione" 
+            value={`${stats.conversionRate}%`}
+            icon={<TrendingUp size={18} strokeWidth={2} className="text-primary" />}
+            trend={2.5}
+          />
+          
+          <StatItem 
+            title="Lead Totali" 
+            value={stats.totalLeads}
+            icon={<Users size={18} strokeWidth={2} className="text-blue-400" />}
+            isLast={true}
+          />
+        </div>
+        
+        <div className="flex border-t border-zinc-700/50">
+          <StatItem 
+            title="Val. Potenziale" 
+            value={formatMoney(stats.potentialValue)}
+            icon={<DollarSign size={18} strokeWidth={2} className="text-amber-400" />}
+          />
+          
+          <StatItem 
+            title="Val. Realizzato" 
+            value={formatMoney(stats.realizedValue)}
+            icon={<Award size={18} strokeWidth={2} className="text-green-500" />}
+            trend={5.8}
+            isLast={true}
+          />
+        </div>
       </div>
     </div>
   );
