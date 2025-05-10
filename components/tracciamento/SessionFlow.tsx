@@ -1,4 +1,4 @@
-// SessionFlow.tsx - Versione ottimizzata per mobile e design migliorato
+// SessionFlow.tsx
 
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import ReactFlow, {
@@ -49,8 +49,6 @@ export default function SessionFlow({
   onBack,
   isLoading
 }: SessionFlowProps) {
-  console.log("SessionFlow: Rendering con", sessionDetails?.length || 0, "dettagli");
-  
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -568,22 +566,22 @@ export default function SessionFlow({
   
   return (
     <div className="flex flex-col h-full bg-zinc-900">
-      {/* Header */}
+      {/* Header - CORREZIONE: Breadcrumb che non straborda */}
       <div className="flex items-center justify-between px-3 md:px-4 py-2 md:py-3 border-b border-zinc-700 bg-zinc-800">
-        <div className="flex items-center space-x-2 md:space-x-3">
+        <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-zinc-700 rounded transition-colors"
+            className="p-2 hover:bg-zinc-700 rounded transition-colors flex-shrink-0"
             aria-label="Torna indietro"
           >
             <ChevronLeft size={20} className="text-zinc-400" />
           </button>
-          <h2 className="text-sm md:text-base font-medium text-white">Percorso Navigazione</h2>
+          <h2 className="text-sm md:text-base font-medium text-white truncate">Percorso Navigazione</h2>
         </div>
         
         <button
           onClick={onBack}
-          className="hidden md:flex items-center space-x-2 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded transition-colors text-sm"
+          className="hidden md:flex items-center space-x-2 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded transition-colors text-sm flex-shrink-0"
         >
           <ArrowLeft size={14} />
           <span>Indietro</span>
@@ -646,7 +644,7 @@ export default function SessionFlow({
         </div>
       </div>
       
-      {/* Flow Container */}
+      {/* Flow Container - CORREZIONE: Garantisce il rendering del flow */}
       {sessionDetails.length === 0 || noData ? (
         <div className="flex-1 flex items-center justify-center p-8 text-center text-zinc-500">
           <div>
@@ -663,7 +661,7 @@ export default function SessionFlow({
           </div>
         </div>
       ) : (
-        <div className="flex-1 relative" ref={flowWrapper}>
+        <div className="flex-1 w-full h-full min-h-0 overflow-hidden" style={{ contain: 'layout style size' }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -676,13 +674,15 @@ export default function SessionFlow({
             attributionPosition="bottom-right"
             onInit={(instance) => {
               reactFlowInstance.current = instance;
+              console.log('ReactFlow initialized');
               setTimeout(() => {
+                console.log('Executing fitView');
                 if (instance && typeof instance.fitView === 'function') {
                   instance.fitView({ padding: 0.2 });
                 }
               }, 300);
             }}
-            style={{ width: '100%', height: '100%' }}
+            className="w-full h-full"
             proOptions={{ hideAttribution: true }}
           >
             <Background color="#27272a" gap={16} size={1} />
