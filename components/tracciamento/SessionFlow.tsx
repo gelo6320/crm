@@ -1,5 +1,4 @@
-// Modifica da fare nel file SessionFlow.tsx
-// Versione ottimizzata per mobile con miglioramenti di layout e interazione
+// SessionFlow.tsx - Versione ottimizzata per mobile e design migliorato
 
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import ReactFlow, {
@@ -21,7 +20,7 @@ import 'reactflow/dist/style.css';
 import { SessionDetail, UserSession } from '@/types/tracciamento';
 import { formatDateTime } from '@/lib/utils/date';
 import { formatTime } from '@/lib/utils/format';
-import { ArrowLeft, ZoomIn, ZoomOut, MousePointer, Info, AlertCircle, Eye, ArrowRight, X, MapPin } from 'lucide-react';
+import { ArrowLeft, ZoomIn, ZoomOut, MousePointer, Info, AlertCircle, Eye, ArrowRight, ChevronLeft } from 'lucide-react';
 
 // Importa i tipi di nodi personalizzati
 import PageNode from './flow-nodes/PageNode';
@@ -57,21 +56,8 @@ export default function SessionFlow({
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [noData, setNoData] = useState(false);
-  const [isLegendVisible, setIsLegendVisible] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const flowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useRef<any>(null);
-  
-  // Rileva se siamo su dispositivo mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
   
   // Preprocessa i dati della sessione per creare nodi e bordi
   useEffect(() => {
@@ -200,15 +186,6 @@ export default function SessionFlow({
         nodeBorder = '1px solid #27ae60';
       }
       
-      // Adatta la posizione dei nodi per mobile
-      const xPosition = isMobile 
-        ? 20 + (index % 2) * (window.innerWidth - 180) / 2  // Spazio più ridotto per mobile
-        : 250 * (index % 2);
-      
-      const yPosition = isMobile
-        ? 100 * index  // Meno spazio verticale su mobile
-        : 120 * index;
-      
       // Crea il nodo
       const node: Node = {
         id: detail.id,
@@ -217,17 +194,15 @@ export default function SessionFlow({
           detail,
           label: getNodeLabel(detail)
         },
-        position: { x: xPosition, y: yPosition },
+        position: { x: 250 * (index % 2), y: 120 * index },
         style: {
           border: nodeBorder,
           borderRadius: '5px',
           backgroundColor: nodeBackground,
           color: nodeTextColor,
           fontWeight: 500,
-          padding: isMobile ? '6px' : '8px',  // Padding ridotto su mobile
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          fontSize: isMobile ? '12px' : '14px',  // Font più piccolo su mobile
-          width: isMobile ? '140px' : '180px',  // Larghezza ridotta su mobile
+          padding: '8px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
         },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
@@ -262,11 +237,7 @@ export default function SessionFlow({
             timeDiff: timeBetween
           },
           label: timeBetween,
-          labelStyle: { 
-            fill: '#94a3b8', 
-            fontWeight: 500,
-            fontSize: isMobile ? '10px' : '12px', // Font più piccolo per label su mobile
-          },
+          labelStyle: { fill: '#94a3b8', fontWeight: 500 },
           labelBgStyle: { fill: '#1e293b', fillOpacity: 0.7 },
         };
         
@@ -281,10 +252,10 @@ export default function SessionFlow({
     // Usa un timeout per dare tempo a ReactFlow di renderizzare i nodi prima di centrarli
     setTimeout(() => {
       if (reactFlowInstance.current) {
-        reactFlowInstance.current.fitView({ padding: isMobile ? 0.1 : 0.2 });
+        reactFlowInstance.current.fitView({ padding: 0.2 });
       }
     }, 100);
-  }, [sessionDetails, isLoading, setNodes, setEdges, isMobile]);
+  }, [sessionDetails, isLoading, setNodes, setEdges]);
   
   const getNodeLabel = (detail: SessionDetail) => {
     const defaultLabel = "Evento non specificato";
@@ -306,56 +277,45 @@ export default function SessionFlow({
         case 'page_view':
           if (detail.data?.url) {
             const pageTitle = detail.data.title || new URL(detail.data.url).pathname;
-            const truncatedTitle = isMobile && pageTitle.length > 30 
-              ? pageTitle.substring(0, 27) + '...'
-              : pageTitle;
-            return `Pagina\n${truncatedTitle}`;
+            return `Visualizzazione Pagina\n${pageTitle}`;
           }
-          return `Pagina\n${detail.data?.title || 'sconosciuta'}`;
+          return `Visualizzazione Pagina\n${detail.data?.title || 'Pagina sconosciuta'}`;
         
         // ===== CLICK DIRETTI =====
         case 'click':
           // Verifica la struttura dei dati del click
           if (detail.data?.tagName) {
-            const text = detail.data.text || 'elemento';
-            const truncatedText = isMobile && text.length > 20 
-              ? text.substring(0, 17) + '...'
-              : text;
-            return `Click ${detail.data.tagName}\n${truncatedText}`;
+            return `Click su ${detail.data.tagName}\n${detail.data.text || 'elemento'}`;
           } else if (detail.data?.formId) {
-            return `Click Campo\n${detail.data.element || 'campo'}`;
+            return `Click su Campo Form\n${detail.data.element || 'campo'}`;
           } else if (detail.data?.selector && detail.data.selector.includes('form')) {
-            return `Click Form\n${detail.data.element || 'elemento'}`;
+            return `Click su Form\n${detail.data.element || 'elemento'}`;
           } else if (detail.data?.isNavigation) {
-            return `Click Nav\n${detail.data.element || 'link'}`;
+            return `Click Navigazione\n${detail.data.element || 'link'}`;
           } else if (detail.data?.text) {
-            const text = detail.data.text;
-            const truncatedText = isMobile && text.length > 20 
-              ? text.substring(0, 17) + '...'
-              : text;
-            return `Click\n${truncatedText}`;
+            return `Click su Elemento\n${detail.data.text}`;
           }
-          return `Click\n${detail.data?.element || 'elemento'}`;
+          return `Click su Elemento\n${detail.data?.element || 'elemento'}`;
         
         // ===== SCROLL DIRETTI =====
         case 'scroll':
-          const direction = detail.data?.direction === 'up' ? '↑' : '↓';
-          return `Scroll ${direction}\n${detail.data?.depth || detail.data?.percent || '?'}%`;
+          const direction = detail.data?.direction === 'up' ? 'verso l\'alto' : 'verso il basso';
+          return `Navigazione: Scroll ${direction}\nProfondità: ${detail.data?.depth || detail.data?.percent || '?'}%`;
         
         // ===== TEMPO SULLA PAGINA DIRETTI =====
         case 'time_on_page':
-          return `Tempo Pagina\n${formatTime(detail.data?.duration || detail.data?.seconds || 0)}`;
+          return `Navigazione: Tempo sulla Pagina\nDurata: ${formatTime(detail.data?.duration || detail.data?.seconds || 0)}`;
           
         // ===== EXIT INTENT DIRETTI =====
         case 'exit_intent':
-          return `Exit Intent\nIn uscita`;
+          return `Navigazione: Exit Intent\nUtente in uscita`;
         
         // ===== FORM SUBMIT DIRETTI =====
         case 'form_submit':
           if (detail.data?.formId) {
-            return `Form\n${detail.data.formId}`;
+            return `Invio Form\n${detail.data.formId}`;
           }
-          return `Form\n${detail.data?.page || 'pagina'}`;
+          return `Invio Form\n${detail.data?.page || 'pagina'}`;
         
         // ===== EVENTI GENERICI =====
         case 'event':
@@ -363,15 +323,12 @@ export default function SessionFlow({
           if (detail.data?.name === 'generic_click' || (detail.data?.tagName && detail.data?.text)) {
             const tagName = detail.data?.tagName || 'elemento';
             const text = detail.data?.text || '';
-            const truncatedText = isMobile && text.length > 20 
-              ? text.substring(0, 17) + '...'
-              : text;
-            return `Click ${tagName}\n${truncatedText}`;
+            return `Click su ${tagName}\n${text}`;
           }
           
           // ----- EMAIL COMPILATA -----
           if (detail.data?.fieldName === 'email') {
-            return `Email\n${detail.data.form || 'Form'}`;
+            return `Campo Email Compilato\n${detail.data.form || 'Form'}`;
           }
           
           // ----- CONVERSIONI -----
@@ -390,11 +347,7 @@ export default function SessionFlow({
                                      : detail.data.value)
                                   : detail.data?.value;
             
-            const truncatedType = isMobile && conversionType.length > 15 
-              ? conversionType.substring(0, 12) + '...'
-              : conversionType;
-            
-            return `Conversione\n${truncatedType}${value ? ` (${value})` : ''}`;
+            return `Conversione\n${conversionType}${value ? ` (${value})` : ''}`;
           }
           
           // ----- LEAD ACQUISITION -----
@@ -407,17 +360,13 @@ export default function SessionFlow({
               leadInfo = `${detail.data.firstName} ${detail.data.lastName || ''}`;
             } else if (detail.data?.email) {
               leadInfo = detail.data.email.includes('consent_not_granted') 
-                      ? 'Anonimo' 
-                      : 'Email';
+                      ? 'Dati anonimi' 
+                      : 'Email raccolto';
             } else {
-              leadInfo = 'Lead';
+              leadInfo = 'Lead acquisito';
             }
             
-            const truncatedInfo = isMobile && leadInfo.length > 20 
-              ? leadInfo.substring(0, 17) + '...'
-              : leadInfo;
-            
-            return `Lead\n${truncatedInfo}`;
+            return `Acquisizione Lead\n${leadInfo}`;
           }
           
           // ----- EVENTI DI NAVIGAZIONE -----
@@ -436,10 +385,10 @@ export default function SessionFlow({
                         '?';
             
             if (detail.data?.name === 'scroll_bottom') {
-              return `Scroll Fine\n100%`;
+              return `Navigazione: Fine Pagina\nScroll 100%`;
             }
             
-            return `Scroll\n${depth}%`;
+            return `Navigazione: Scroll\nProfondità: ${depth}%`;
           }
           
           // Tempo sulla pagina
@@ -453,7 +402,7 @@ export default function SessionFlow({
                           detail.data?.data?.seconds || 
                           0;
             
-            return `Tempo\n${seconds}s`;
+            return `Navigazione: Tempo Pagina\nDurata: ${seconds}s`;
           }
           
           // Visibilità pagina
@@ -461,7 +410,7 @@ export default function SessionFlow({
             const isVisible = detail.data?.visible || 
                             (detail.data?.data?.visible);
             
-            return `Visibilità\n${isVisible ? 'Visibile' : 'Nascosta'}`;
+            return `Navigazione: Visibilità\n${isVisible ? 'Pagina visibile' : 'Pagina nascosta'}`;
           }
           
           // Fine sessione
@@ -474,12 +423,12 @@ export default function SessionFlow({
                             detail.data?.data?.pageViews || 
                             1;
             
-            return `Fine Sessione\n${pageViews}p ${totalTime}s`;
+            return `Navigazione: Fine Sessione\nPagine: ${pageViews}, Tempo: ${totalTime}s`;
           }
           
           // Exit intent
           if (detail.data?.name && detail.data.name.includes('exit_intent')) {
-            return `Exit Intent\nIn uscita`;
+            return `Navigazione: Exit Intent\nUtente in uscita`;
           }
           
           // ----- EVENTI MEDIA -----
@@ -489,22 +438,22 @@ export default function SessionFlow({
                  detail.data.name.includes('audio')))) {
             
             let mediaType = 'Media';
-            let action = 'Play';
+            let action = 'Interazione';
             
             if (detail.data?.name) {
               if (detail.data.name.includes('video')) mediaType = 'Video';
               if (detail.data.name.includes('audio')) mediaType = 'Audio';
-              if (detail.data.name.includes('start')) action = 'Start';
-              if (detail.data.name.includes('progress')) action = 'Progress';
-              if (detail.data.name.includes('complete')) action = 'Complete';
-              if (detail.data.name.includes('pause')) action = 'Pause';
+              if (detail.data.name.includes('start')) action = 'Avvio';
+              if (detail.data.name.includes('progress')) action = 'Progresso';
+              if (detail.data.name.includes('complete')) action = 'Completato';
+              if (detail.data.name.includes('pause')) action = 'Pausa';
             }
             
             const progress = detail.data?.progress || 
                            detail.data?.data?.progress || 
                            '?';
             
-            return `${mediaType}\n${action} ${progress}%`;
+            return `${mediaType}: ${action}\nProgresso: ${progress}%`;
           }
           
           // ----- EVENTI FUNNEL -----
@@ -517,34 +466,20 @@ export default function SessionFlow({
                          detail.data?.data?.toStep || 
                          '?';
             
-            const truncatedName = isMobile && funnelName.length > 15 
-              ? funnelName.substring(0, 12) + '...'
-              : funnelName;
-            
-            return `Funnel\n${truncatedName} → ${toStep}`;
+            return `Funnel: Passaggio\n${funnelName} → Step ${toStep}`;
           }
           
           // ----- ALTRI EVENTI CON NOME -----
           if (detail.data?.name) {
-            const name = detail.data.name;
-            const truncatedName = isMobile && name.length > 20 
-              ? name.substring(0, 17) + '...'
-              : name;
-            
             if (detail.data?.category) {
-              return `${truncatedName}\n${detail.data.category}`;
+              return `Evento: ${detail.data.name}\n${detail.data.category}`;
             }
-            return `Evento\n${truncatedName}`;
+            return `Evento\n${detail.data.name}`;
           } else if (detail.data?.eventName) {
-            const eventName = detail.data.eventName;
-            const truncatedName = isMobile && eventName.length > 20 
-              ? eventName.substring(0, 17) + '...'
-              : eventName;
-            
             if (detail.data?.category) {
-              return `${truncatedName}\n${detail.data.category}`;
+              return `Evento: ${detail.data.eventName}\n${detail.data.category}`;
             }
-            return `Evento\n${truncatedName}`;
+            return `Evento\n${detail.data.eventName}`;
           }
           
           // Fallback
@@ -553,17 +488,9 @@ export default function SessionFlow({
         // ===== FALLBACK PER ALTRI TIPI =====
         default:
           if (detail.data?.name) {
-            const name = detail.data.name;
-            const truncatedName = isMobile && name.length > 20 
-              ? name.substring(0, 17) + '...'
-              : name;
-            return `${detail.type}\n${truncatedName}`;
+            return `${detail.type}\n${detail.data.name}`;
           } else if (detail.data?.eventName) {
-            const eventName = detail.data.eventName;
-            const truncatedName = isMobile && eventName.length > 20 
-              ? eventName.substring(0, 17) + '...'
-              : eventName;
-            return `${detail.type}\n${truncatedName}`;
+            return `${detail.type}\n${detail.data.eventName}`;
           }
           return detail.type;
       }
@@ -611,15 +538,7 @@ export default function SessionFlow({
   // Gestisci il click sui nodi
   const onNodeClick: NodeMouseHandler = useCallback((event, node) => {
     setSelectedNode(node);
-    if (isMobile) {
-      // Su mobile, centra il nodo selezionato
-      reactFlowInstance.current?.zoomTo(1);
-      reactFlowInstance.current?.fitBounds(
-        { x: node.position.x - 50, y: node.position.y - 50, width: 200, height: 100 },
-        { duration: 300 }
-      );
-    }
-  }, [isMobile]);
+  }, []);
   
   // Gestisci lo zoom
   const handleZoomIn = () => {
@@ -640,275 +559,249 @@ export default function SessionFlow({
   
   if (isLoading) {
     return (
-      <div className="p-8 text-center text-zinc-500">
+      <div className="p-8 text-center text-zinc-400">
         <div className="animate-spin h-8 w-8 border-t-2 border-primary mx-auto mb-4"></div>
-        <p>Caricamento dettagli della sessione in corso...</p>
+        <p>Caricamento dettagli della sessione...</p>
       </div>
     );
   }
   
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-2 sm:px-4 py-2 sm:py-3 border-b border-zinc-700 bg-zinc-900/50">
-        <h2 className="text-sm sm:text-base font-medium">
-          {isMobile ? 'Percorso' : 'Percorso di Navigazione'}
-        </h2>
+    <div className="flex flex-col h-full bg-zinc-900">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 md:px-4 py-2 md:py-3 border-b border-zinc-700 bg-zinc-800">
+        <div className="flex items-center space-x-2 md:space-x-3">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-zinc-700 rounded transition-colors"
+            aria-label="Torna indietro"
+          >
+            <ChevronLeft size={20} className="text-zinc-400" />
+          </button>
+          <h2 className="text-sm md:text-base font-medium text-white">Percorso Navigazione</h2>
+        </div>
+        
         <button
           onClick={onBack}
-          className="btn btn-outline flex items-center space-x-1 py-1 px-2 text-xs sm:text-sm"
+          className="hidden md:flex items-center space-x-2 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded transition-colors text-sm"
         >
           <ArrowLeft size={14} />
-          <span className="hidden sm:inline">Indietro</span>
-          <span className="sm:hidden">Indietro</span>
+          <span>Indietro</span>
         </button>
       </div>
       
-      {/* Riepilogo sessione ottimizzato per mobile */}
-      <div className="p-2 sm:p-4 border-b border-zinc-700 bg-zinc-800/30">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4">
-          <div>
-            <h3 className="font-medium text-sm sm:text-base">
-              {isMobile 
-                ? `${new Date(session.startTime).toLocaleDateString('it-IT')}` 
-                : `Sessione del ${new Date(session.startTime).toLocaleDateString('it-IT')}`
-              }
-            </h3>
-            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-              {new Date(session.startTime).toLocaleTimeString('it-IT')}
-              {session.endTime && !isMobile && ` - ${new Date(session.endTime).toLocaleTimeString('it-IT')}`}
-            </p>
+      {/* Session Summary */}
+      <div className="px-3 md:px-4 py-3 border-b border-zinc-700 bg-zinc-800/50">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div className="col-span-2">
+            <div className="text-sm font-medium text-white">
+              {new Date(session.startTime).toLocaleDateString('it-IT', { 
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+              })}
+            </div>
+            <div className="text-xs text-zinc-400">
+              {new Date(session.startTime).toLocaleTimeString('it-IT', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
+              {session.endTime && (
+                <span> - {new Date(session.endTime).toLocaleTimeString('it-IT', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}</span>
+              )}
+            </div>
           </div>
-          <div className="grid grid-cols-3 gap-1 sm:gap-2">
-            <div className="text-center p-1 sm:p-2 bg-zinc-900 rounded">
-              <div className="text-xs text-zinc-400">Durata</div>
-              <div className="text-sm sm:text-lg font-medium text-primary">
-                {formatTime(session.duration)} min
-              </div>
+          
+          <div className="text-center p-2 bg-zinc-900/50 rounded">
+            <div className="text-xs text-zinc-400">Durata</div>
+            <div className="text-sm font-medium text-orange-400">
+              {formatTime(session.duration)} min
             </div>
-            <div className="text-center p-1 sm:p-2 bg-zinc-900 rounded">
-              <div className="text-xs text-zinc-400">Int.</div>
-              <div className="text-sm sm:text-lg font-medium text-info">
-                {session.interactionsCount}
-              </div>
+          </div>
+          
+          <div className="text-center p-2 bg-zinc-900/50 rounded">
+            <div className="text-xs text-zinc-400">Interazioni</div>
+            <div className="text-sm font-medium text-blue-400">
+              {session.interactionsCount}
             </div>
-            <div className="text-center p-1 sm:p-2 bg-zinc-900 rounded">
-              <div className="text-xs text-zinc-400">Pagine</div>
-              <div className="text-sm sm:text-lg font-medium text-success">
-                {session.pagesViewed}
-              </div>
+          </div>
+          
+          <div className="text-center p-2 bg-zinc-900/50 rounded">
+            <div className="text-xs text-zinc-400">Pagine</div>
+            <div className="text-sm font-medium text-green-400">
+              {session.pagesViewed}
+            </div>
+          </div>
+          
+          <div className="text-center p-2 bg-zinc-900/50 rounded">
+            <div className="text-xs text-zinc-400">Eventi</div>
+            <div className="text-sm font-medium text-purple-400">
+              {sessionDetails.length}
             </div>
           </div>
         </div>
       </div>
       
+      {/* Flow Container */}
       {sessionDetails.length === 0 || noData ? (
-        <div className="p-4 sm:p-8 text-center text-zinc-500">
-          <p className="mb-2 text-sm sm:text-base">
-            Nessun dettaglio disponibile per questa sessione.
-          </p>
-          <p className="text-xs sm:text-sm">
-            Non sono state registrate interazioni o visualizzazioni di pagina sufficienti.
-          </p>
-          <button
-            onClick={onBack}
-            className="mt-4 btn btn-outline flex items-center mx-auto space-x-1 py-1 px-3 text-xs sm:text-sm"
-          >
-            <ArrowLeft size={14} />
-            <span>Torna alle sessioni</span>
-          </button>
+        <div className="flex-1 flex items-center justify-center p-8 text-center text-zinc-500">
+          <div>
+            <p className="mb-4">Nessun dettaglio disponibile per visualizzare il flow.</p>
+            <p className="text-sm text-zinc-600 mb-6">
+              Almeno 2 eventi sono necessari per generare il percorso di navigazione.
+            </p>
+            <button
+              onClick={onBack}
+              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded transition-colors text-sm"
+            >
+              Torna alle sessioni
+            </button>
+          </div>
         </div>
       ) : (
-          <div className="flow-wrapper relative" ref={flowWrapper}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={onNodeClick}
-              nodeTypes={nodeTypes}
-              fitView
-              attributionPosition="bottom-right"
-              onInit={(instance) => {
-                reactFlowInstance.current = instance;
-                console.log("ReactFlow inizializzato");
-                // Importante: usa setTimeout per dare tempo al componente di renderizzare
-                setTimeout(() => {
-                  console.log("Esecuzione fitView");
-                  if (instance && typeof instance.fitView === 'function') {
-                    instance.fitView({ padding: isMobile ? 0.1 : 0.2 });
-                  }
-                }, 300);
+        <div className="flex-1 relative" ref={flowWrapper}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            nodeTypes={nodeTypes}
+            fitView
+            attributionPosition="bottom-right"
+            onInit={(instance) => {
+              reactFlowInstance.current = instance;
+              setTimeout(() => {
+                if (instance && typeof instance.fitView === 'function') {
+                  instance.fitView({ padding: 0.2 });
+                }
+              }, 300);
+            }}
+            style={{ width: '100%', height: '100%' }}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background color="#27272a" gap={16} size={1} />
+            <Controls 
+              showInteractive={false}
+              className="bg-zinc-800 border-zinc-700"
+            />
+            <MiniMap 
+              nodeColor={(node) => {
+                switch (node.type) {
+                  case 'pageNode': return '#FF6B00';
+                  case 'eventNode': return '#e74c3c';
+                  case 'navigationNode': return '#2ecc71';
+                  default: return '#3498db';
+                }
               }}
-              style={{ width: '100%', height: '100%' }}
-              proOptions={{ hideAttribution: true }}
-              nodeOrigin={[0.5, 0.5]}
-              panOnScroll={true}
-              panOnDrag={true}
-              minZoom={0.3}
-              maxZoom={2}
-            >
-              <Background color="#64748b" gap={16} size={1} />
-              
-              {/* Controls ottimizzati per mobile */}
-              <Controls 
-                showInteractive={false}
-                style={{
-                  left: isMobile ? '10px' : 'auto',
-                  right: isMobile ? 'auto' : '10px',
-                  bottom: isMobile ? '50px' : '10px',
-                }}
-              />
-              
-              {/* Minimap adattata per mobile */}
-              {!isMobile && (
-                <MiniMap 
-                  nodeColor={(node) => {
-                    switch (node.type) {
-                      case 'pageNode':
-                        return '#FF6B00';
-                      case 'eventNode':
-                        return '#e74c3c';
-                      case 'navigationNode':
-                        return '#2ecc71';
-                      default:
-                        return '#3498db';
-                    }
-                  }}
-                  maskColor="rgba(0, 0, 0, 0.5)"
-                  style={{ width: 100, height: 80 }}
-                />
-              )}
+              position="bottom-right"
+              maskColor="rgba(0, 0, 0, 0.7)"
+              className="!bg-zinc-800 !border-zinc-700"
+            />
             
-            {/* Panel dello zoom per mobile */}
-            <Panel position="top-right" className="space-x-1 sm:space-x-2">
+            {/* Controls Panel */}
+            <Panel position="top-right" className="space-x-2">
               <button 
                 onClick={handleZoomIn}
-                className="p-1 sm:p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
+                className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors border border-zinc-700"
                 title="Zoom in"
               >
-                <ZoomIn size={isMobile ? 14 : 16} />
+                <ZoomIn size={16} className="text-zinc-300" />
               </button>
               <button 
                 onClick={handleZoomOut}
-                className="p-1 sm:p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
+                className="p-2 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors border border-zinc-700"
                 title="Zoom out"
               >
-                <ZoomOut size={isMobile ? 14 : 16} />
+                <ZoomOut size={16} className="text-zinc-300" />
               </button>
             </Panel>
             
-            {/* Legenda mobile-friendly */}
-            <Panel position="bottom-left">
-              {isMobile ? (
-                <button
-                  onClick={() => setIsLegendVisible(!isLegendVisible)}
-                  className="p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
-                  title="Mostra/Nascondi legenda"
-                >
-                  <MapPin size={16} />
-                </button>
-              ) : (
-                <div className="bg-zinc-800 p-2 rounded border border-zinc-700">
-                  <div className="text-xs mb-2">Legenda:</div>
-                  <div className="grid grid-cols-1 gap-1">
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-primary mr-2"></div>
-                      <span className="text-xs">Visualizzazione</span>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-info mr-2"></div>
-                      <span className="text-xs">Interazione</span>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-success mr-2"></div>
-                      <span className="text-xs">Navigazione</span>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-danger mr-2"></div>
-                      <span className="text-xs">Conversione</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </Panel>
-            
-            {/* Overlay legenda mobile */}
-            {isMobile && isLegendVisible && (
-              <div className="absolute top-4 left-4 right-4 bg-zinc-800 p-3 rounded border border-zinc-700 z-10">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="text-xs font-medium">Legenda:</div>
-                  <button 
-                    onClick={() => setIsLegendVisible(false)}
-                    className="p-1"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
+            {/* Legend */}
+            <Panel position="bottom-left" className="hidden md:block">
+              <div className="bg-zinc-800/90 backdrop-blur-sm p-3 rounded border border-zinc-700">
+                <div className="text-xs font-medium text-zinc-300 mb-2">Legenda</div>
+                <div className="space-y-1">
                   <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-primary mr-2"></div>
-                    <span className="text-xs">Visualizzazione</span>
+                    <div className="w-3 h-3 rounded-full bg-orange-500 mr-2"></div>
+                    <span className="text-xs text-zinc-400">Pagina</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-info mr-2"></div>
-                    <span className="text-xs">Interazione</span>
+                    <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                    <span className="text-xs text-zinc-400">Azione</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-success mr-2"></div>
-                    <span className="text-xs">Navigazione</span>
+                    <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                    <span className="text-xs text-zinc-400">Navigazione</span>
                   </div>
                   <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-danger mr-2"></div>
-                    <span className="text-xs">Conversione</span>
+                    <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                    <span className="text-xs text-zinc-400">Conversione</span>
                   </div>
                 </div>
               </div>
-            )}
+            </Panel>
           </ReactFlow>
         </div>
       )}
       
-      {/* Dettaglio nodo selezionato ottimizzato per mobile */}
+      {/* Node Details Panel */}
       {selectedNode && (
-        <div className="p-2 sm:p-4 border-t border-zinc-700 bg-zinc-900/50 overflow-y-auto max-h-[40vh] sm:max-h-none">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-medium flex items-center text-sm sm:text-base">
+        <div className="border-t border-zinc-700 bg-zinc-800 p-3 md:p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center">
               {selectedNode.type === 'pageNode' ? (
-                <Eye size={isMobile ? 14 : 16} className="text-primary mr-2" />
+                <Eye size={16} className="text-orange-500 mr-2" />
               ) : selectedNode.type === 'eventNode' ? (
-                <AlertCircle size={isMobile ? 14 : 16} className="text-danger mr-2" />
+                <AlertCircle size={16} className="text-red-500 mr-2" />
+              ) : selectedNode.type === 'navigationNode' ? (
+                <ArrowRight size={16} className="text-green-500 mr-2" />
               ) : (
-                <MousePointer size={isMobile ? 14 : 16} className="text-info mr-2" />
+                <MousePointer size={16} className="text-blue-500 mr-2" />
               )}
-              {selectedNode.data.detail.type === 'page_view' ? 'Visualizzazione' : 
-               selectedNode.data.detail.type === 'event' ? 'Conversione' : 
-               'Interazione'}
-            </h3>
+              <h3 className="font-medium text-white text-sm md:text-base">
+                {selectedNode.type === 'pageNode' ? 'Visualizzazione Pagina' : 
+                 selectedNode.type === 'eventNode' ? 'Evento di Conversione' :
+                 selectedNode.type === 'navigationNode' ? 'Navigazione' :
+                 'Interazione'}
+              </h3>
+            </div>
             <div className="text-xs text-zinc-400">
               {formatDateTime(selectedNode.data.detail.timestamp)}
             </div>
+            <button
+              onClick={() => setSelectedNode(null)}
+              className="md:hidden p-1 hover:bg-zinc-700 rounded"
+            >
+              <ArrowLeft size={16} className="text-zinc-400" />
+            </button>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 bg-zinc-800 p-2 sm:p-3 rounded text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-zinc-900/50 p-3 rounded border border-zinc-700">
             {selectedNode.data.detail.type === 'page_view' && (
               <>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Titolo</div>
-                  <div className="text-sm">{selectedNode.data.detail.data?.title || 'Senza titolo'}</div>
+                  <div className="text-sm text-white truncate">
+                    {selectedNode.data.detail.data?.title || 'Senza titolo'}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">URL</div>
-                  <div className="text-sm truncate" title={selectedNode.data.detail.data?.url}>
+                  <div className="text-sm text-white truncate" title={selectedNode.data.detail.data?.url}>
                     {selectedNode.data.detail.data?.url || 'N/D'}
                   </div>
                 </div>
                 {selectedNode.data.detail.data?.referrer && (
-                  <div className="sm:col-span-2">
-                    <div className="text-xs text-zinc-400 mb-1">Referrer</div>
-                    <div className="text-sm flex items-center">
-                      <ArrowRight size={14} className="text-zinc-500 mr-1" />
-                      <span className="truncate">{selectedNode.data.detail.data.referrer}</span>
+                  <div className="md:col-span-2">
+                    <div className="text-xs text-zinc-400 mb-1">Provenienza</div>
+                    <div className="text-sm text-white truncate">
+                      {selectedNode.data.detail.data.referrer}
                     </div>
                   </div>
                 )}
@@ -919,20 +812,20 @@ export default function SessionFlow({
               <>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Elemento</div>
-                  <div className="text-sm">
+                  <div className="text-sm text-white">
                     {selectedNode.data.detail.data?.element || 'Non identificato'}
                   </div>
                 </div>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Testo</div>
-                  <div className="text-sm">
+                  <div className="text-sm text-white">
                     {selectedNode.data.detail.data?.text || 'Nessun testo'}
                   </div>
                 </div>
                 {selectedNode.data.detail.data?.selector && (
-                  <div className="sm:col-span-2">
-                    <div className="text-xs text-zinc-400 mb-1">Selettore CSS</div>
-                    <div className="text-xs bg-zinc-900 p-1 rounded font-mono overflow-x-auto">
+                  <div className="md:col-span-2">
+                    <div className="text-xs text-zinc-400 mb-1">Selettore</div>
+                    <div className="text-sm font-mono bg-zinc-900 p-2 rounded text-green-400 overflow-x-auto">
                       {selectedNode.data.detail.data.selector}
                     </div>
                   </div>
@@ -944,25 +837,14 @@ export default function SessionFlow({
               <>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Direzione</div>
-                  <div className="text-sm">{selectedNode.data.detail.data?.direction || 'Non specificata'}</div>
+                  <div className="text-sm text-white">
+                    {selectedNode.data.detail.data?.direction || 'Non specificata'}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Profondità</div>
-                  <div className="text-sm">{selectedNode.data.detail.data?.depth || '0'}%</div>
-                </div>
-              </>
-            )}
-            
-            {selectedNode.data.detail.type === 'form_submit' && (
-              <>
-                <div>
-                  <div className="text-xs text-zinc-400 mb-1">Form ID</div>
-                  <div className="text-sm">{selectedNode.data.detail.data?.formId || 'Non specificato'}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-zinc-400 mb-1">Pagina</div>
-                  <div className="text-sm truncate">
-                    {selectedNode.data.detail.data?.page || window.location.pathname}
+                  <div className="text-sm text-white">
+                    {selectedNode.data.detail.data?.depth || '0'}%
                   </div>
                 </div>
               </>
@@ -972,18 +854,24 @@ export default function SessionFlow({
               <>
                 <div>
                   <div className="text-xs text-zinc-400 mb-1">Nome evento</div>
-                  <div className="text-sm">{selectedNode.data.detail.data?.name || 'Senza nome'}</div>
+                  <div className="text-sm text-white">
+                    {selectedNode.data.detail.data?.name || 'Senza nome'}
+                  </div>
                 </div>
                 {selectedNode.data.detail.data?.value && (
                   <div>
                     <div className="text-xs text-zinc-400 mb-1">Valore</div>
-                    <div className="text-sm">{selectedNode.data.detail.data.value}</div>
+                    <div className="text-sm text-white">
+                      {selectedNode.data.detail.data.value}
+                    </div>
                   </div>
                 )}
                 {selectedNode.data.detail.data?.category && (
                   <div>
                     <div className="text-xs text-zinc-400 mb-1">Categoria</div>
-                    <div className="text-sm">{selectedNode.data.detail.data.category}</div>
+                    <div className="text-sm text-white">
+                      {selectedNode.data.detail.data.category}
+                    </div>
                   </div>
                 )}
               </>

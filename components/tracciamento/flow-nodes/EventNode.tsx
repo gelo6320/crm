@@ -1,6 +1,6 @@
-// components/tracciamento/flow-nodes/EventNode.tsx
+// components/tracciamento/flow-nodes/EventNode.tsx - Ottimizzato
 import { Handle, Position } from 'reactflow';
-import { AlertCircle, Mail, User, Phone, MessageSquare, Tag, DollarSign, Calendar } from 'lucide-react';
+import { AlertCircle, User, DollarSign, Calendar } from 'lucide-react';
 
 interface EventNodeProps {
   data: {
@@ -15,187 +15,135 @@ interface EventNodeProps {
 }
 
 export default function EventNode({ data, isConnectable }: EventNodeProps) {
-  // Ottieni l'etichetta specifica per il tipo di evento di conversione
-  const getEventTypeLabel = () => {
-    // Verifica il tipo di conversione
-    
-    // Conversione standard
-    if (data.detail.data?.conversionType) {
-      return `Conversione: ${data.detail.data.conversionType}`;
-    }
-    
-    // Converisione nel campo name
-    if (data.detail.data?.name && data.detail.data.name.includes('conversion_')) {
-      const conversionType = data.detail.data.name.replace('conversion_', '');
-      return `Conversione: ${conversionType}`;
-    }
-    
+  // Determina il tipo di evento
+  const getEventType = () => {
     // Lead acquisition
     if ((data.detail.data?.name && data.detail.data.name.includes('lead_acquisition')) || 
-        (data.detail.data?.formType)) {
-      return 'Acquisizione Lead';
+        data.detail.data?.formType) {
+      return 'lead';
     }
     
-    // Conversione generica
-    if (data.detail.data?.category === 'conversion') {
-      return 'Conversione';
+    // Conversione
+    if (data.detail.data?.conversionType || 
+        (data.detail.data?.name && data.detail.data.name.includes('conversion')) ||
+        data.detail.data?.category === 'conversion') {
+      return 'conversion';
     }
     
-    return 'Evento di Conversione';
+    return 'event';
+  };
+  
+  const eventType = getEventType();
+  
+  const getEventTypeLabel = () => {
+    switch (eventType) {
+      case 'lead': return 'Lead';
+      case 'conversion': return 'Conversione';
+      default: return 'Evento';
+    }
+  };
+  
+  const getEventIcon = () => {
+    switch (eventType) {
+      case 'lead': 
+        return <User size={14} className="text-red-500 flex-shrink-0" />;
+      case 'conversion': 
+        return <DollarSign size={14} className="text-red-500 flex-shrink-0" />;
+      default: 
+        return <AlertCircle size={14} className="text-red-500 flex-shrink-0" />;
+    }
   };
   
   // Ottieni l'etichetta principale (seconda riga del label)
   const mainLabel = data.label.split('\n')[1] || data.label;
   
-  // Determina il tipo specifico di evento per la visualizzazione corretta
-  const isLeadAcquisition = 
-    (data.detail.data?.name && data.detail.data.name.includes('lead_acquisition')) || 
-    data.detail.data?.formType;
-    
-  const isConversion = 
-    data.detail.data?.conversionType || 
-    (data.detail.data?.name && data.detail.data.name.includes('conversion')) ||
-    data.detail.data?.category === 'conversion';
-  
-  // Ottieni la data formattata
-  const getFormattedTime = () => {
+  // Ottieni il tempo formattato
+  const getFormattedTime = (): string => {
     try {
       const date = new Date(data.detail.timestamp);
       return date.toLocaleTimeString('it-IT', {
         hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        minute: '2-digit'
       });
     } catch (e) {
       return '';
     }
   };
   
+  // Ottieni i dettagli più importanti
+  const getEventDetails = () => {
+    if (eventType === 'lead') {
+      // Nome per lead
+      if (data.detail.data?.firstName) {
+        return `${data.detail.data.firstName} ${data.detail.data.lastName || ''}`.trim();
+      }
+      // Email per lead
+      if (data.detail.data?.email && !data.detail.data.email.includes('consent_not_granted')) {
+        return data.detail.data.email.includes('fad327ee') ? 'Email criptata' : 'Email acquisita';
+      }
+      // Tipo di form
+      if (data.detail.data?.formType) {
+        return data.detail.data.formType;
+      }
+      return null;
+    }
+    
+    if (eventType === 'conversion') {
+      // Valore della conversione
+      const value = data.detail.data?.value;
+      if (value !== undefined) {
+        if (typeof value === 'object' && value !== null && '$numberInt' in value) {
+          return `€${(value as any).$numberInt}`;
+        }
+        return `€${value}`;
+      }
+      // Tipo di conversione
+      if (data.detail.data?.conversionType) {
+        return data.detail.data.conversionType;
+      }
+      return null;
+    }
+    
+    // Altri eventi
+    return data.detail.data?.category || null;
+  };
+  
+  const eventDetails = getEventDetails();
+  
   return (
-    <div className="p-3 rounded-md min-w-[200px] bg-danger/20 border border-danger text-white">
+    <div className="relative bg-red-500/20 border border-red-500 rounded-lg overflow-hidden min-w-[180px] max-w-[240px]">
       <Handle
         type="target"
         position={Position.Left}
         isConnectable={isConnectable}
-        className="w-2 h-2 bg-danger"
+        className="w-2 h-2 !bg-red-500 !border-red-500"
       />
       
-      <div className="flex items-center mb-1">
-        <AlertCircle size={14} className="mr-2 text-danger" />
+      {/* Header */}
+      <div className="flex items-center gap-2 p-2 bg-red-500/10">
+        {getEventIcon()}
         <span className="text-xs font-medium text-white">{getEventTypeLabel()}</span>
+        <span className="text-xs text-zinc-400 ml-auto">{getFormattedTime()}</span>
       </div>
       
-      <div className="font-medium text-sm truncate text-white" title={mainLabel}>
-        {mainLabel}
-      </div>
-      
-      {/* Mostra la categoria se disponibile */}
-      {data.detail.data?.category && (
-        <div className="text-xs text-white mt-1 truncate flex items-center">
-          <Tag size={12} className="mr-1" />
-          <span>Categoria: {data.detail.data.category}</span>
+      {/* Content */}
+      <div className="p-3">
+        <div className="font-medium text-sm text-white mb-1 line-clamp-2 break-words" title={mainLabel}>
+          {mainLabel}
         </div>
-      )}
-      
-      {/* Visualizzazione per tutti i tipi di conversione */}
-      {isConversion && !isLeadAcquisition && (
-        <>
-          {/* ConversionType */}
-          {data.detail.data?.conversionType && (
-            <div className="text-xs text-white mt-1 truncate flex items-center">
-              <Tag size={12} className="mr-1" />
-              <span>Tipo: {data.detail.data.conversionType}</span>
-            </div>
-          )}
-          
-          {/* Valore della conversione */}
-          {(data.detail.data?.value !== undefined) && (
-            <div className="text-xs text-white mt-1 truncate flex items-center">
-              <DollarSign size={12} className="mr-1" />
-              <span>Valore: {typeof data.detail.data.value === 'object' && data.detail.data.value !== null
-                ? ('$numberInt' in data.detail.data.value 
-                   ? (data.detail.data.value as any).$numberInt 
-                   : data.detail.data.value)
-                : data.detail.data.value}</span>
-            </div>
-          )}
-        </>
-      )}
-      
-      {/* Visualizzazione specifica per lead acquisition */}
-      {isLeadAcquisition && (
-        <>
-          {/* Tipo di form */}
-          {data.detail.data?.formType && (
-            <div className="text-xs text-white mt-1 truncate flex items-center">
-              <Tag size={12} className="mr-1" />
-              <span>Form: {data.detail.data.formType}</span>
-            </div>
-          )}
-          
-          {/* Dati utente - nome */}
-          {data.detail.data?.firstName && (
-            <div className="text-xs text-white mt-1 flex items-center">
-              <User size={12} className="mr-1" />
-              <span className="truncate">
-                {data.detail.data.firstName} {data.detail.data.lastName || ''}
-              </span>
-            </div>
-          )}
-          
-          {/* Dati utente - email */}
-          {data.detail.data?.email && (
-            <div className="text-xs text-white mt-1 flex items-center">
-              <Mail size={12} className="mr-1" />
-              <span className="truncate">
-                {typeof data.detail.data.email === 'string' && 
-                 data.detail.data.email.includes('fad327ee') 
-                  ? 'Email criptata' 
-                  : data.detail.data.email}
-              </span>
-            </div>
-          )}
-          
-          {/* Dati utente - telefono */}
-          {data.detail.data?.phone && (
-            <div className="text-xs text-white mt-1 flex items-center">
-              <Phone size={12} className="mr-1" />
-              <span className="truncate">{data.detail.data.phone}</span>
-            </div>
-          )}
-          
-          {/* Messaggio dal formData */}
-          {data.detail.data?.formData?.message && (
-            <div className="text-xs text-white mt-1 flex items-center">
-              <MessageSquare size={12} className="mr-1" />
-              <span className="truncate">
-                {data.detail.data.formData.message.length > 15 
-                  ? 'Messaggio presente' 
-                  : data.detail.data.formData.message}
-              </span>
-            </div>
-          )}
-          
-          {/* Consenso marketing */}
-          {data.detail.data?.adOptimizationConsent && (
-            <div className="text-xs text-white mt-1 truncate">
-              Consenso: {data.detail.data.adOptimizationConsent}
-            </div>
-          )}
-        </>
-      )}
-      
-      {/* Timestamp */}
-      <div className="text-xs text-zinc-400 mt-1 flex items-center">
-        <Calendar size={12} className="mr-1 text-zinc-500" />
-        <span>{getFormattedTime()}</span>
+        
+        {eventDetails && (
+          <div className="text-xs text-zinc-400 truncate" title={eventDetails}>
+            {eventDetails}
+          </div>
+        )}
       </div>
       
       <Handle
         type="source"
         position={Position.Right}
         isConnectable={isConnectable}
-        className="w-2 h-2 bg-danger"
+        className="w-2 h-2 !bg-red-500 !border-red-500"
       />
     </div>
   );
