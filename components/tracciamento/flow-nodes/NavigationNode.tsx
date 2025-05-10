@@ -1,6 +1,6 @@
-// components/tracciamento/flow-nodes/NavigationNode.tsx - Ottimizzato
+// components/tracciamento/flow-nodes/NavigationNode.tsx
 import { Handle, Position } from 'reactflow';
-import { ArrowUp, Clock, Eye, XCircle, Timer, Calendar } from 'lucide-react';
+import { ArrowUp, Clock, MousePointer, Eye, XCircle, Timer, Percent } from 'lucide-react';
 import { formatTime } from '@/lib/utils/format';
 
 interface NavigationNodeProps {
@@ -9,7 +9,6 @@ interface NavigationNodeProps {
     detail: {
       type: string;
       data: Record<string, any>;
-      timestamp: string;
     }
   };
   isConnectable: boolean;
@@ -18,12 +17,14 @@ interface NavigationNodeProps {
 export default function NavigationNode({ data, isConnectable }: NavigationNodeProps) {
   // Determina il tipo di evento di navigazione
   const getNavigationType = () => {
+    // Per eventi direttamente identificati come scroll, time_on_page, exit_intent
     if (data.detail.type === 'scroll' || 
         data.detail.type === 'time_on_page' || 
         data.detail.type === 'exit_intent') {
       return data.detail.type;
     }
     
+    // Per eventi con name che indica il tipo
     if (data.detail.data?.name) {
       if (data.detail.data.name.includes('scroll')) return 'scroll';
       if (data.detail.data.name.includes('time_on_page')) return 'time_on_page';
@@ -32,6 +33,7 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
       if (data.detail.data.name === 'session_end') return 'session_end';
     }
     
+    // Per eventi con proprietà specifiche
     if (data.detail.data?.depth !== undefined || 
         data.detail.data?.totalScrollDistance !== undefined ||
         data.detail.data?.percent !== undefined) {
@@ -47,129 +49,170 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
       return 'page_visibility';
     }
     
+    // Fallback
     return 'generic_navigation';
   };
 
   const navigationType = getNavigationType();
 
+  // Ottieni l'icona appropriata in base al tipo di navigazione
   const getNavigationIcon = () => {
     switch (navigationType) {
       case 'scroll':
-        return <ArrowUp size={14} className="text-green-500 flex-shrink-0" />;
+        return <ArrowUp size={14} className="mr-2 text-success" />;
       case 'time_on_page':
-        return <Clock size={14} className="text-green-500 flex-shrink-0" />;
+        return <Clock size={14} className="mr-2 text-success" />;
       case 'exit_intent':
-        return <XCircle size={14} className="text-green-500 flex-shrink-0" />;
+        return <XCircle size={14} className="mr-2 text-success" />;
       case 'page_visibility':
-        return <Eye size={14} className="text-green-500 flex-shrink-0" />;
+        return <Eye size={14} className="mr-2 text-success" />;
       case 'session_end':
-        return <Timer size={14} className="text-green-500 flex-shrink-0" />;
+        return <Timer size={14} className="mr-2 text-success" />;
       default:
-        return <ArrowUp size={14} className="text-green-500 flex-shrink-0" />;
+        return <MousePointer size={14} className="mr-2 text-success" />;
     }
   };
 
+  // Ottieni l'etichetta appropriata in base al tipo di navigazione
   const getNavigationTypeLabel = () => {
     switch (navigationType) {
-      case 'scroll': return 'Scroll';
-      case 'time_on_page': return 'Tempo';
-      case 'exit_intent': return 'Exit';
-      case 'page_visibility': return 'Visibilità';
-      case 'session_end': return 'Fine';
-      default: return 'Navigazione';
+      case 'scroll':
+        return 'Scroll Pagina';
+      case 'time_on_page':
+        return 'Tempo sulla Pagina';
+      case 'exit_intent':
+        return 'Exit Intent';
+      case 'page_visibility':
+        return 'Visibilità Pagina';
+      case 'session_end':
+        return 'Fine Sessione';
+      default:
+        return 'Navigazione';
     }
   };
   
   // Ottieni l'etichetta principale (seconda riga del label)
   const mainLabel = data.label.split('\n')[1] || data.label;
-  
-  // Ottieni il tempo formattato
-  const getFormattedTime = (): string => {
-    try {
-      const date = new Date(data.detail.timestamp);
-      return date.toLocaleTimeString('it-IT', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (e) {
-      return '';
+
+  // Estrai i dati specifici del tipo di navigazione
+  const getNavigationData = () => {
+    const details = [];
+    
+    // Dati di scroll
+    if (navigationType === 'scroll') {
+      const depth = data.detail.data?.depth || 
+                   data.detail.data?.percent || 
+                   (data.detail.data?.data?.depth) || 
+                   (data.detail.data?.data?.percent);
+      
+      if (depth !== undefined) {
+        details.push(
+          <div key="depth" className="text-xs text-white mt-1 flex items-center">
+            <Percent size={12} className="mr-1" />
+            <span>Profondità: {depth}%</span>
+          </div>
+        );
+      }
+      
+      const totalDistance = data.detail.data?.totalScrollDistance || 
+                           (data.detail.data?.data?.totalScrollDistance);
+                           
+      if (totalDistance !== undefined) {
+        details.push(
+          <div key="distance" className="text-xs text-white mt-1">
+            Distanza: {totalDistance}px
+          </div>
+        );
+      }
     }
-  };
-  
-  // Ottieni i dettagli più importanti
-  const getNavigationDetails = () => {
-    switch (navigationType) {
-      case 'scroll': {
-        const depth = data.detail.data?.depth || 
-                      data.detail.data?.percent || 
-                      (data.detail.data?.data?.depth) || 
-                      (data.detail.data?.data?.percent);
-        return depth ? `${depth}%` : null;
+    
+    // Dati di tempo sulla pagina
+    else if (navigationType === 'time_on_page') {
+      const seconds = data.detail.data?.timeOnPage || 
+                     data.detail.data?.seconds || 
+                     data.detail.data?.duration ||
+                     (data.detail.data?.data?.timeOnPage) || 
+                     (data.detail.data?.data?.seconds);
+                     
+      if (seconds !== undefined) {
+        details.push(
+          <div key="duration" className="text-xs text-white mt-1 flex items-center">
+            <Clock size={12} className="mr-1" />
+            <span>Durata: {formatTime(seconds)}</span>
+          </div>
+        );
       }
-      
-      case 'time_on_page': {
-        const seconds = data.detail.data?.timeOnPage || 
-                       data.detail.data?.seconds || 
-                       data.detail.data?.duration ||
-                       (data.detail.data?.data?.timeOnPage) || 
-                       (data.detail.data?.data?.seconds);
-        return seconds ? formatTime(seconds) : null;
-      }
-      
-      case 'page_visibility': {
-        const isVisible = data.detail.data?.visible !== undefined ? 
-                         data.detail.data.visible : 
-                         (data.detail.data?.data?.visible);
-        return isVisible !== undefined ? (isVisible ? 'Visibile' : 'Nascosta') : null;
-      }
-      
-      case 'session_end': {
-        const pageViews = data.detail.data?.pageViews || 
-                         (data.detail.data?.data?.pageViews);
-        return pageViews ? `${pageViews} pagine` : null;
-      }
-      
-      default:
-        return null;
     }
+    
+    // Dati di visibilità pagina
+    else if (navigationType === 'page_visibility') {
+      const isVisible = data.detail.data?.visible !== undefined ? 
+                      data.detail.data.visible : 
+                      (data.detail.data?.data?.visible);
+                      
+      if (isVisible !== undefined) {
+        details.push(
+          <div key="visibility" className="text-xs text-white mt-1">
+            Stato: {isVisible ? 'Pagina visibile' : 'Pagina nascosta'}
+          </div>
+        );
+      }
+    }
+    
+    // Dati di fine sessione
+    else if (navigationType === 'session_end') {
+      const pageViews = data.detail.data?.pageViews || 
+                       (data.detail.data?.data?.pageViews);
+                       
+      const totalTime = data.detail.data?.totalTimeOnPage || 
+                       (data.detail.data?.data?.totalTimeOnPage);
+                       
+      if (pageViews !== undefined) {
+        details.push(
+          <div key="pageviews" className="text-xs text-white mt-1">
+            Pagine viste: {pageViews}
+          </div>
+        );
+      }
+      
+      if (totalTime !== undefined) {
+        details.push(
+          <div key="totaltime" className="text-xs text-white mt-1">
+            Tempo totale: {formatTime(totalTime)}
+          </div>
+        );
+      }
+    }
+    
+    return details;
   };
-  
-  const navigationDetails = getNavigationDetails();
 
   return (
-    <div className="relative bg-green-500/20 border border-green-500 rounded-lg overflow-hidden min-w-[180px] max-w-[240px]">
+    <div className="p-3 rounded-md min-w-[200px] bg-success/20 border border-success text-white">
       <Handle
         type="target"
         position={Position.Left}
         isConnectable={isConnectable}
-        className="w-2 h-2 !bg-green-500 !border-green-500"
+        className="w-2 h-2 bg-success"
       />
       
-      {/* Header */}
-      <div className="flex items-center gap-2 p-2 bg-green-500/10">
+      <div className="flex items-center mb-1">
         {getNavigationIcon()}
         <span className="text-xs font-medium text-white">{getNavigationTypeLabel()}</span>
-        <span className="text-xs text-zinc-400 ml-auto">{getFormattedTime()}</span>
       </div>
       
-      {/* Content */}
-      <div className="p-3">
-        <div className="font-medium text-sm text-white mb-1 line-clamp-2 break-words" title={mainLabel}>
-          {mainLabel}
-        </div>
-        
-        {navigationDetails && (
-          <div className="text-xs text-zinc-400 truncate" title={navigationDetails}>
-            {navigationDetails}
-          </div>
-        )}
+      <div className="font-medium text-sm truncate text-white" title={mainLabel}>
+        {mainLabel}
       </div>
+      
+      {/* Dati specifici per tipo di navigazione */}
+      {getNavigationData()}
       
       <Handle
         type="source"
         position={Position.Right}
         isConnectable={isConnectable}
-        className="w-2 h-2 !bg-green-500 !border-green-500"
+        className="w-2 h-2 bg-success"
       />
     </div>
   );
