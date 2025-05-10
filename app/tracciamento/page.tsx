@@ -263,7 +263,7 @@ export default function TracciamentoPage() {
       
       {/* Breadcrumb di navigazione */}
       {(selectedLandingPage || selectedUser || selectedSession) && (
-        <div className="flex items-center text-xs text-zinc-400 space-x-1 py-2">
+        <div className="flex flex-wrap items-center text-xs text-zinc-400 gap-1 py-2">
           <button 
             onClick={() => {
               setSelectedLandingPage(null);
@@ -297,9 +297,9 @@ export default function TracciamentoPage() {
               <ChevronRight size={12} />
               <button 
                 onClick={() => setSelectedSession(null)}
-                className="hover:text-primary transition-colors"
+                className="hover:text-primary transition-colors max-w-[150px] truncate"
               >
-                {selectedUser.fingerprint}
+                fingerprintID
               </button>
             </>
           )}
