@@ -168,7 +168,14 @@ export default function TracciamentoPage() {
 
   // Gestione cambio intervallo di tempo
   const handleTimeRangeChange = (range: string) => {
+    // Mantieni il valore esatto selezionato dall'utente
+    console.log(`Cambiando timeRange a: ${range}`);
     setTimeRange(range);
+    
+    // Se necessario, forza un refresh immediato con il nuovo valore
+    setTimeout(() => {
+      loadLandingPages();
+    }, 100);
   };
 
   // Gestione refresh

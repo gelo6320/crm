@@ -15,13 +15,13 @@ export async function fetchLandingPages(
     // Costruisci i parametri di query
     const params: Record<string, string> = {};
     
-    if (timeRange && timeRange !== 'all') {
-      params.timeRange = timeRange;
-    }
+    params.timeRange = timeRange;
     
     if (search) {
       params.search = search;
     }
+    
+    console.log(`Richiesta landing pages con timeRange: ${timeRange}`);
     
     // Chiama l'API per ottenere statistiche
     const response = await axios.get<any>(
