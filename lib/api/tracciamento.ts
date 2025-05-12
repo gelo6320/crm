@@ -6,11 +6,7 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
-/**
- * Recupera l'elenco delle landing page con dati di tracciamento
- * @param timeRange - Intervallo di tempo ('24h', '7d', '30d', 'all')
- * @param search - Query di ricerca opzionale
- */
+// Updated fetchLandingPages function
 export async function fetchLandingPages(
   timeRange: string = '7d',
   search?: string
@@ -27,12 +23,29 @@ export async function fetchLandingPages(
       params.search = search;
     }
     
-    // Chiama l'API usando il client specifico per il tracciamento
-    const response = await axios.get<LandingPage[]>(
-      `${API_BASE_URL}/api/tracciamento/landing-pages`,
+    // Chiama l'API per ottenere statistiche
+    const response = await axios.get<any>(
+      `${API_BASE_URL}/api/tracciamento/landing-pages-stats`,
       { params, withCredentials: true }
     );
-    return response.data;
+    
+    if (!response.data || !Array.isArray(response.data)) {
+      console.error("Formato di risposta non valido:", response.data);
+      return [];
+    }
+    
+    // Trasforma i dati delle statistiche in LandingPage[]
+    const landingPages: LandingPage[] = response.data.map(page => ({
+      id: Buffer.from(page.url).toString('base64'),
+      url: page.url,
+      title: page.title || page.url,
+      totalVisits: page.totalVisits || 0,
+      uniqueUsers: page.uniqueUsers || 0, 
+      conversionRate: page.conversionRate || 0,
+      lastAccess: new Date(page.lastAccess || Date.now()).toISOString() // Convert to ISO string
+    }));
+    
+    return landingPages;
   } catch (error) {
     console.error("Errore nel recupero delle landing page:", error);
     throw error;
