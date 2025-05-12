@@ -10,8 +10,8 @@ import {
   RefreshCw,
   Monitor,
   MousePointer,
-  Share2,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Calendar
 } from "lucide-react";
 import { 
   LineChart, 
@@ -122,82 +122,30 @@ const SOURCE_COLORS: Record<string, string> = {
 
 const AdvancedStatistics: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
-  const [allStatistics, setAllStatistics] = useState<StatisticsData[]>([]);
-  const [filteredStatistics, setFilteredStatistics] = useState<StatisticsData[]>([]);
+  const [statistics, setStatistics] = useState<StatisticsData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<string>('7d');
 
   // Function to fetch statistics data directly from the server
-  const fetchStatistics = async (): Promise<StatisticsData[]> => {
-    try {
-      // Direct API call to the backend service - always request all data
-      const response = await axios.get(`${API_BASE_URL}/api/tracciamento/statistics`, {
-        // Qui rimuoviamo il timeRange o lo impostiamo esplicitamente ad 'all'
-        params: { timeRange: 'all' },
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      // Log di debug per verificare che arrivino i dati
-      console.log(`Ricevuti ${response.data?.length || 0} record statistici dal server`);
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching statistics:', error);
-      throw error;
-    }
-  };
-
-  // Funzione per filtrare i dati in base al timeRange
-  const filterStatisticsByTimeRange = (data: StatisticsData[], range: string): StatisticsData[] => {
-    if (range === 'all' || !data.length) {
-      return data;
-    }
-
-    const now = new Date();
-    let cutoffDate: Date;
-
-    switch(range) {
-      case '24h':
-        cutoffDate = new Date(now);
-        cutoffDate.setDate(now.getDate() - 1);
-        break;
-      case '7d':
-        cutoffDate = new Date(now);
-        cutoffDate.setDate(now.getDate() - 7);
-        break;
-      case '30d':
-        cutoffDate = new Date(now);
-        cutoffDate.setDate(now.getDate() - 30);
-        break;
-      default:
-        return data;
-    }
-
-    return data.filter(stat => {
-      const statDate = new Date(stat.date);
-      return statDate >= cutoffDate;
-    });
-  };
-
-  const loadStatistics = async (): Promise<void> => {
+  const fetchStatistics = async (): Promise<void> => {
     if (!isExpanded) return;
     
     setIsLoading(true);
     setError(null);
     
     try {
-      const data = await fetchStatistics();
-      setAllStatistics(data);
+      // Now we pass the timeRange directly to the API for server-side filtering
+      const response = await axios.get(`${API_BASE_URL}/api/tracciamento/statistics`, {
+        params: { timeRange },
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
-      // Applica il filtro attuale
-      const filtered = filterStatisticsByTimeRange(data, timeRange);
-      setFilteredStatistics(filtered);
-      
-      console.log(`Filtrati ${filtered.length} record su ${data.length} totali`);
+      console.log(`Ricevuti ${response.data?.length || 0} record statistici dal server per il periodo ${timeRange}`);
+      setStatistics(response.data || []);
     } catch (err) {
       setError('Impossibile caricare le statistiche');
       console.error(err);
@@ -207,24 +155,16 @@ const AdvancedStatistics: React.FC = () => {
   };
 
   useEffect(() => {
-    loadStatistics();
-  }, [isExpanded]);
+    fetchStatistics();
+  }, [isExpanded, timeRange]); // Reload whenever timeRange changes or panel expands
 
-  // Applica il filtro quando cambia il timeRange (senza ricaricare dal server)
-  useEffect(() => {
-    if (allStatistics.length > 0) {
-      const filtered = filterStatisticsByTimeRange(allStatistics, timeRange);
-      setFilteredStatistics(filtered);
-    }
-  }, [timeRange, allStatistics]);
-
-  // Calcola statistiche aggregate se ci sono più giorni di dati
+  // Calcola statistiche aggregate
   const getAggregatedStats = (): AggregatedStats | null => {
-    if (!filteredStatistics || filteredStatistics.length === 0) {
+    if (!statistics || statistics.length === 0) {
       return null;
     }
 
-    return filteredStatistics.reduce((agg: Partial<AggregatedStats>, stat) => {
+    return statistics.reduce((agg: Partial<AggregatedStats>, stat) => {
       return {
         totalVisits: (agg.totalVisits || 0) + stat.totalVisits,
         uniqueVisitors: (agg.uniqueVisitors || 0) + stat.uniqueVisitors,
@@ -245,10 +185,10 @@ const AdvancedStatistics: React.FC = () => {
   
   // Prepara i dati per il grafico a torta delle sorgenti
   const prepareSourcesData = (): ChartDataItem[] => {
-    if (!filteredStatistics || filteredStatistics.length === 0) return [];
+    if (!statistics || statistics.length === 0) return [];
     
     // Combiniamo i dati di tutte le date
-    const combinedSources = filteredStatistics.reduce((acc: Record<string, number>, stat) => {
+    const combinedSources = statistics.reduce((acc: Record<string, number>, stat) => {
       if (!stat.sources) return acc;
       
       Object.entries(stat.sources).forEach(([source, count]) => {
@@ -267,10 +207,10 @@ const AdvancedStatistics: React.FC = () => {
   
   // Prepara i dati per il grafico Mobile vs Desktop
   const prepareMobileDesktopData = (): ChartDataItem[] => {
-    if (!filteredStatistics || filteredStatistics.length === 0) return [];
+    if (!statistics || statistics.length === 0) return [];
     
     // Combiniamo i dati di tutte le date
-    const combined = filteredStatistics.reduce((acc: { mobile: number, desktop: number }, stat) => {
+    const combined = statistics.reduce((acc: { mobile: number, desktop: number }, stat) => {
       if (!stat.mobileVsDesktop) return acc;
       
       acc.mobile = (acc.mobile || 0) + (stat.mobileVsDesktop.mobile || 0);
@@ -288,10 +228,10 @@ const AdvancedStatistics: React.FC = () => {
   
   // Prepara i dati per il grafico conversioni per sorgente
   const prepareConversionsBySourceData = (): ChartDataItem[] => {
-    if (!filteredStatistics || filteredStatistics.length === 0) return [];
+    if (!statistics || statistics.length === 0) return [];
     
     // Combiniamo i dati di tutte le date
-    const combinedConversions = filteredStatistics.reduce((acc: Record<string, number>, stat) => {
+    const combinedConversions = statistics.reduce((acc: Record<string, number>, stat) => {
       if (!stat.conversions || !stat.conversions.bySource) return acc;
       
       Object.entries(stat.conversions.bySource).forEach(([source, count]) => {
@@ -310,10 +250,10 @@ const AdvancedStatistics: React.FC = () => {
   
   // Prepara i dati per il grafico del tempo per sorgente
   const prepareTimeBySourceData = (): TimeSourceChartItem[] => {
-    if (!filteredStatistics || filteredStatistics.length === 0) return [];
+    if (!statistics || statistics.length === 0) return [];
     
     // Combiniamo i dati di tutte le date
-    const combinedTimeBySource = filteredStatistics.reduce((acc: Record<string, { totalTime: number, pageViews: number }>, stat) => {
+    const combinedTimeBySource = statistics.reduce((acc: Record<string, { totalTime: number, pageViews: number }>, stat) => {
       if (!stat.timeBySource) return acc;
       
       Object.entries(stat.timeBySource).forEach(([source, data]) => {
@@ -342,15 +282,18 @@ const AdvancedStatistics: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Renderizza un loader quando stiamo caricando i dati
+  // UI per stato di caricamento
   if (isExpanded && isLoading) {
     return (
-      <div className="card p-4 mt-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium">Statistiche Avanzate</h3>
-          <ChevronUp size={20} />
+      <div className="bg-zinc-900 rounded-lg shadow-md mt-6 overflow-hidden">
+        <div className="flex items-center justify-between p-4 bg-zinc-800">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="text-primary w-5 h-5" />
+            <h3 className="text-lg font-medium">Statistiche Avanzate</h3>
+          </div>
+          <ChevronUp className="w-5 h-5" />
         </div>
-        <div className="flex justify-center items-center h-64">
+        <div className="flex justify-center items-center h-64 p-4">
           <LoadingSpinner />
         </div>
       </div>
@@ -358,50 +301,51 @@ const AdvancedStatistics: React.FC = () => {
   }
 
   return (
-    <div className="card mt-6 overflow-hidden transition-all duration-300">
+    <div className="bg-zinc-900 rounded-lg shadow-md mt-6 overflow-hidden transition-all duration-300">
       {/* Header sempre visibile */}
       <div 
-        className="p-4 cursor-pointer hover:bg-zinc-800 transition-colors flex items-center justify-between"
+        className="p-4 cursor-pointer hover:bg-zinc-800 transition-colors flex items-center justify-between bg-zinc-800/80"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2">
-          <BarChart3 size={20} className="text-primary" />
+          <BarChart3 className="text-primary w-5 h-5" />
           <h3 className="text-lg font-medium">Statistiche Avanzate</h3>
         </div>
         
         <div className="flex items-center gap-2">
           {!isExpanded && aggregatedStats && (
             <div className="flex items-center gap-4 text-sm text-zinc-400">
-              <div className="flex items-center gap-1">
-                <Users size={16} />
+              <div className="flex items-center gap-1 hidden md:flex">
+                <Users className="w-4 h-4" />
                 <span>{aggregatedStats.totalVisits || 0} visite</span>
               </div>
               <div className="flex items-center gap-1">
-                <MousePointer size={16} />
+                <MousePointer className="w-4 h-4" />
                 <span>{aggregatedStats.buttonClicks?.total || 0} click</span>
               </div>
               <div className="flex items-center gap-1">
-                <ArrowRightLeft size={16} />
+                <ArrowRightLeft className="w-4 h-4" />
                 <span>{aggregatedStats.conversions?.total || 0} conv.</span>
               </div>
             </div>
           )}
           
-          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </div>
       </div>
       
       {/* Contenuto espandibile */}
-      {isExpanded && !isLoading && (
-        <div className="p-4 border-t border-zinc-800">
+      {isExpanded && (
+        <div className="p-4 md:p-6">
           {/* Selettore intervallo di tempo */}
-          <div className="mb-6 flex items-center justify-end">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-zinc-400">Periodo:</label>
+          <div className="mb-6 flex items-center justify-between">
+            <h4 className="text-lg font-medium text-white">Dashboard Analytics</h4>
+            <div className="flex items-center gap-2 bg-zinc-800 rounded-lg p-1">
+              <Calendar className="w-4 h-4 text-zinc-400 ml-2" />
               <select 
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
-                className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 text-sm"
+                className="bg-transparent border-none text-sm focus:ring-0 focus:outline-none"
               >
                 <option value="24h">Ultime 24 ore</option>
                 <option value="7d">Ultimi 7 giorni</option>
@@ -417,48 +361,45 @@ const AdvancedStatistics: React.FC = () => {
             </div>
           )}
           
-          {filteredStatistics.length === 0 && !isLoading && !error ? (
-            <div className="text-center py-8 text-zinc-400">
+          {statistics.length === 0 && !isLoading && !error ? (
+            <div className="text-center py-8 text-zinc-400 bg-zinc-800/50 rounded-lg">
               <p>Nessun dato statistico disponibile</p>
               <button 
-                className="btn btn-outline mt-4"
-                onClick={loadStatistics}
+                className="mt-4 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-md transition-colors text-sm flex items-center justify-center mx-auto"
+                onClick={fetchStatistics}
               >
-                <RefreshCw size={16} className="mr-2" />
+                <RefreshCw className="w-4 h-4 mr-2" />
                 Ricarica Statistiche
               </button>
             </div>
           ) : (
             <>
-              {/* Grafici principali in grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Card metriche principali */}
-                <div className="bg-zinc-800/50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium mb-4 text-zinc-300">Metriche Principali</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-zinc-800 p-3 rounded-md">
-                      <div className="text-zinc-400 text-xs mb-1">Visite Totali</div>
-                      <div className="text-xl font-semibold">{aggregatedStats?.totalVisits || 0}</div>
-                    </div>
-                    <div className="bg-zinc-800 p-3 rounded-md">
-                      <div className="text-zinc-400 text-xs mb-1">Conversioni</div>
-                      <div className="text-xl font-semibold">{aggregatedStats?.conversions?.total || 0}</div>
-                    </div>
-                    <div className="bg-zinc-800 p-3 rounded-md">
-                      <div className="text-zinc-400 text-xs mb-1">Tempo medio</div>
-                      <div className="text-xl font-semibold">{formatTime(aggregatedStats?.avgTimeOnSite || 0)}</div>
-                    </div>
-                    <div className="bg-zinc-800 p-3 rounded-md">
-                      <div className="text-zinc-400 text-xs mb-1">Bounce Rate</div>
-                      <div className="text-xl font-semibold">{aggregatedStats?.bounceRate || 0}%</div>
-                    </div>
-                  </div>
+              {/* Metriche principali */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-zinc-800 rounded-lg p-4 flex flex-col hover:bg-zinc-700/50 transition-colors">
+                  <span className="text-zinc-400 text-xs mb-1">Visite Totali</span>
+                  <span className="text-2xl font-semibold">{aggregatedStats?.totalVisits || 0}</span>
                 </div>
-                
+                <div className="bg-zinc-800 rounded-lg p-4 flex flex-col hover:bg-zinc-700/50 transition-colors">
+                  <span className="text-zinc-400 text-xs mb-1">Conversioni</span>
+                  <span className="text-2xl font-semibold">{aggregatedStats?.conversions?.total || 0}</span>
+                </div>
+                <div className="bg-zinc-800 rounded-lg p-4 flex flex-col hover:bg-zinc-700/50 transition-colors">
+                  <span className="text-zinc-400 text-xs mb-1">Tempo medio</span>
+                  <span className="text-2xl font-semibold">{formatTime(aggregatedStats?.avgTimeOnSite || 0)}</span>
+                </div>
+                <div className="bg-zinc-800 rounded-lg p-4 flex flex-col hover:bg-zinc-700/50 transition-colors">
+                  <span className="text-zinc-400 text-xs mb-1">Bounce Rate</span>
+                  <span className="text-2xl font-semibold">{aggregatedStats?.bounceRate || 0}%</span>
+                </div>
+              </div>
+              
+              {/* Grafici in grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {/* Grafico Sorgenti */}
-                <div className="bg-zinc-800/50 p-4 rounded-lg">
+                <div className="bg-zinc-800 rounded-lg p-4 hover:bg-zinc-700/50 transition-colors">
                   <h4 className="text-sm font-medium mb-2 text-zinc-300">Sorgenti di Traffico</h4>
-                  <div className="h-52">
+                  <div className="h-52 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -487,9 +428,9 @@ const AdvancedStatistics: React.FC = () => {
                 </div>
                 
                 {/* Grafico Mobile vs Desktop */}
-                <div className="bg-zinc-800/50 p-4 rounded-lg">
+                <div className="bg-zinc-800 rounded-lg p-4 hover:bg-zinc-700/50 transition-colors">
                   <h4 className="text-sm font-medium mb-2 text-zinc-300">Mobile vs Desktop</h4>
-                  <div className="h-52">
+                  <div className="h-52 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -511,32 +452,32 @@ const AdvancedStatistics: React.FC = () => {
                     </ResponsiveContainer>
                   </div>
                 </div>
-                
-                {/* Grafico Tempo per Sorgente */}
-                <div className="bg-zinc-800/50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium mb-2 text-zinc-300">Tempo Medio per Sorgente</h4>
-                  <div className="h-52">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={prepareTimeBySourceData()}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#444" />
-                        <XAxis dataKey="name" tick={{ fill: '#9CA3AF' }} />
-                        <YAxis tick={{ fill: '#9CA3AF' }} unit="s" />
-                        <Tooltip 
-                          formatter={(value) => [`${formatTime(value as number)}`, 'Tempo Medio']}
-                          contentStyle={{ backgroundColor: '#27272A', borderColor: '#3F3F46' }}
-                          itemStyle={{ color: '#E4E4E7' }}
-                        />
-                        <Bar dataKey="avgTime" fill="#FF6B00" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+              </div>
+              
+              {/* Grafico tempo per sorgente */}
+              <div className="bg-zinc-800 rounded-lg p-4 mb-6 hover:bg-zinc-700/50 transition-colors">
+                <h4 className="text-sm font-medium mb-2 text-zinc-300">Tempo Medio per Sorgente (secondi)</h4>
+                <div className="h-52 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={prepareTimeBySourceData()}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#444" />
+                      <XAxis dataKey="name" tick={{ fill: '#9CA3AF' }} />
+                      <YAxis tick={{ fill: '#9CA3AF' }} unit="s" />
+                      <Tooltip 
+                        formatter={(value) => [`${formatTime(value as number)}`, 'Tempo Medio']}
+                        contentStyle={{ backgroundColor: '#27272A', borderColor: '#3F3F46' }}
+                        itemStyle={{ color: '#E4E4E7' }}
+                      />
+                      <Bar dataKey="avgTime" fill="#FF6B00" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
               
-              {/* Altri dettagli */}
-              <div className="mt-6 bg-zinc-800/50 p-4 rounded-lg">
-                <h4 className="text-sm font-medium mb-4 text-zinc-300">Conversioni per Sorgente</h4>
-                <div className="h-64">
+              {/* Grafico conversioni per sorgente */}
+              <div className="bg-zinc-800 rounded-lg p-4 mb-6 hover:bg-zinc-700/50 transition-colors">
+                <h4 className="text-sm font-medium mb-2 text-zinc-300">Conversioni per Sorgente</h4>
+                <div className="h-52 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={prepareConversionsBySourceData()}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#444" />
@@ -560,21 +501,21 @@ const AdvancedStatistics: React.FC = () => {
                 </div>
               </div>
               
-              {/* Informazioni sul dataset */}
-              <div className="mt-6 text-center text-xs text-zinc-500">
-                <p>Dati visualizzati: {filteredStatistics.length} di {allStatistics.length} record totali</p>
-              </div>
-              
-              {/* Pulsante per aggiornare i dati */}
+              {/* Aggiornamento */}
               <div className="mt-6 text-center">
                 <button 
-                  className="btn btn-outline"
-                  onClick={loadStatistics}
+                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors text-sm flex items-center justify-center mx-auto"
+                  onClick={fetchStatistics}
                   disabled={isLoading}
                 >
-                  <RefreshCw size={16} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                   {isLoading ? 'Caricamento...' : 'Aggiorna Statistiche'}
                 </button>
+                <p className="mt-2 text-xs text-zinc-500">
+                  {statistics.length} record statistici per {timeRange === '24h' ? 'le ultime 24 ore' : 
+                    timeRange === '7d' ? 'gli ultimi 7 giorni' : 
+                    timeRange === '30d' ? 'gli ultimi 30 giorni' : 'tutto il periodo'}
+                </p>
               </div>
             </>
           )}
