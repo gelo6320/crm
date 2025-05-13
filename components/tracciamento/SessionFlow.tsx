@@ -82,15 +82,12 @@ export default function SessionFlow({
       setNoData(false);
     }
     
-    // Crea i nodi
+    // Crea i nodi e bordi direttamente dai dati di UserPath
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
     
     // Log per debug
     console.log("Elaborazione di", sessionDetails.length, "dettagli sessione");
-    sessionDetails.forEach((detail, index) => {
-      console.log(`Dettaglio ${index}:`, detail);
-    });
     
     sessionDetails.forEach((detail, index) => {
       let nodeType = 'actionNode';
@@ -98,91 +95,26 @@ export default function SessionFlow({
       let nodeBorder = '1px solid #1e6091';
       let nodeTextColor = 'white';
     
-      // Debug: log completo di ogni dettaglio
-      console.log(`Processamento nodo ${index}:`, {
-        type: detail.type,
-        eventName: detail.data?.name || detail.data?.eventName,
-        category: detail.data?.category
-      });
-    
       // Determina il tipo di nodo in base al tipo di evento
       if (detail.type === 'page_view') {
         nodeType = 'pageNode';
         nodeBackground = '#FF6B00'; // Primario
         nodeBorder = '1px solid #d05600';
-      } 
-      // Eventi di conversione - verifica tutte le possibili strutture
-      else if (
-        // Conversioni standard
-        (detail.type === 'event' && detail.data?.category === 'conversion') || 
-        // Conversioni specifiche
-        (detail.type === 'event' && detail.data?.conversionType) ||
-        // Nome dell'evento contiene "conversion"
-        (detail.type === 'event' && detail.data?.name && 
-          (detail.data.name.includes('conversion') || detail.data.name.includes('lead_acquisition'))) ||
-        // Nome dell'evento in eventName contiene "conversion"
-        (detail.type === 'event' && detail.data?.eventName && 
-          (detail.data.eventName.includes('conversion') || detail.data.eventName.includes('lead_acquisition')))
-      ) {
+      } else if (detail.type === 'event' && 
+                (detail.data?.category === 'conversion' || 
+                 detail.data?.conversionType ||
+                 (detail.data?.name && detail.data.name.includes('conversion')))) {
         nodeType = 'eventNode';
         nodeBackground = '#e74c3c'; // Rosso per eventi di conversione
         nodeBorder = '1px solid #c0392b';
-      }
-      // Eventi di click - verifica tutte le possibili strutture 
-      else if (
-        // Click diretti come tipo
-        detail.type === 'click' ||
-        // Generic click come evento
-        (detail.type === 'event' && detail.data?.name === 'generic_click') ||
-        // Eventi con tagName (probable click)
-        (detail.type === 'event' && detail.data?.tagName) ||
-        // Eventi con campo email compilato
-        (detail.type === 'event' && detail.data?.fieldName === 'email')
-      ) {
+      } else if (detail.type === 'click' || 
+                (detail.type === 'event' && detail.data?.name === 'generic_click')) {
         nodeType = 'actionNode';
         nodeBackground = '#3498db'; // Blu per click
         nodeBorder = '1px solid #1e6091';
-      }
-      // Eventi media
-      else if (
-        (detail.type === 'event' && detail.data?.category === 'media') ||
-        (detail.type === 'event' && detail.data?.name && 
-          (detail.data.name.includes('video') || detail.data.name.includes('audio')))
-      ) {
-        nodeType = 'actionNode';
-        nodeBackground = '#9b59b6'; // Viola per media
-        nodeBorder = '1px solid #8e44ad';
-      }
-      // Eventi di form
-      else if (
-        detail.type === 'form_submit' ||
-        (detail.type === 'event' && detail.data?.category === 'form') ||
-        (detail.type === 'event' && detail.data?.name && detail.data.name.includes('form'))
-      ) {
-        nodeType = 'actionNode';
-        nodeBackground = '#f39c12'; // Arancione per form
-        nodeBorder = '1px solid #d35400';
-      }
-      // Gli eventi di navigazione
-      else if (
-        detail.type === 'scroll' || 
-        detail.type === 'time_on_page' || 
-        detail.type === 'exit_intent' ||
-        (detail.type === 'event' && detail.data?.category === 'navigation') ||
-        (detail.type === 'event' && detail.data?.name && 
-          (detail.data.name.includes('exit_intent') || 
-           detail.data.name.includes('scroll') || 
-           detail.data.name.includes('navigation') ||
-           detail.data.name.includes('page_visibility') ||
-           detail.data.name.includes('session_end'))) ||
-        // Verifica di proprietà specifiche di navigazione
-        (detail.type === 'event' && 
-          (detail.data?.depth !== undefined || 
-           detail.data?.totalScrollDistance !== undefined || 
-           detail.data?.timeOnPage !== undefined || 
-           detail.data?.seconds !== undefined ||
-           detail.data?.visible !== undefined))
-      ) {
+      } else if (detail.type === 'scroll' || 
+                detail.type === 'time_on_page' || 
+                (detail.type === 'event' && detail.data?.category === 'navigation')) {
         nodeType = 'navigationNode';
         nodeBackground = '#2ecc71'; // Verde per eventi di navigazione
         nodeBorder = '1px solid #27ae60';
@@ -219,7 +151,6 @@ export default function SessionFlow({
           new Date(detail.timestamp)
         );
         
-        // Assicurati che l'etichetta mostri correttamente secondi vs minuti
         const edge: Edge = {
           id: `edge-${sessionDetails[index - 1].id}-${detail.id}`,
           source: sessionDetails[index - 1].id,
@@ -230,10 +161,10 @@ export default function SessionFlow({
             type: MarkerType.ArrowClosed,
             width: 15,
             height: 15,
-            color: '#64748b', // Slate-500
+            color: '#64748b',
           },
           style: {
-            stroke: '#64748b', // Slate-500
+            stroke: '#64748b',
           },
           data: {
             timeDiff: timeBetween
@@ -251,7 +182,6 @@ export default function SessionFlow({
     setNodes(newNodes);
     setEdges(newEdges);
     
-    // Usa un timeout per dare tempo a ReactFlow di renderizzare i nodi prima di centrarli
     setTimeout(() => {
       if (reactFlowInstance.current) {
         reactFlowInstance.current.fitView({ padding: 0.2 });
