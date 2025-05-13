@@ -100,27 +100,45 @@ export default function SessionFlow({
         nodeType = 'pageNode';
         nodeBackground = '#FF6B00'; // Primario
         nodeBorder = '1px solid #d05600';
-      } else if (detail.type === 'event' && 
-                (detail.data?.category === 'conversion' || 
-                 detail.data?.conversionType ||
-                 (detail.data?.name && detail.data.name.includes('conversion')))) {
+      } 
+      // Check for conversion events
+      else if (detail.type === 'conversion' || 
+               detail.type === 'event' && 
+               (detail.data?.category === 'conversion' || 
+                detail.data?.conversionType ||
+                (detail.data?.name && detail.data.name.includes('conversion')))) {
         nodeType = 'eventNode';
         nodeBackground = '#e74c3c'; // Rosso per eventi di conversione
         nodeBorder = '1px solid #c0392b';
-      } else if (detail.type === 'click' || 
-                (detail.type === 'event' && detail.data?.name === 'generic_click')) {
+      } 
+      // Check for click events
+      else if (detail.type === 'click' || 
+               (detail.type === 'event' && detail.data?.name === 'generic_click')) {
         nodeType = 'actionNode';
         nodeBackground = '#3498db'; // Blu per click
         nodeBorder = '1px solid #1e6091';
-      } else if (detail.type === 'scroll' || 
-                detail.type === 'time_on_page' || 
-                (detail.type === 'event' && detail.data?.category === 'navigation')) {
+      } 
+      // Check for navigation events - EXPANDED CONDITIONS HERE
+      else if (detail.type === 'scroll' || 
+               detail.type === 'time_on_page' || 
+               detail.type === 'page_visibility' ||
+               (detail.type === 'event' && (
+                 detail.data?.category === 'navigation' ||
+                 // Check for specific event names
+                 detail.data?.name === 'page_visibility' ||
+                 detail.data?.name === 'time_on_page' ||
+                 detail.data?.name === 'scroll' ||
+                 detail.data?.name === 'scroll_depth' ||
+                 // Additional check for time/visibility events
+                 detail.data?.isVisible !== undefined ||
+                 detail.data?.timeOnPage !== undefined
+               ))) {
         nodeType = 'navigationNode';
         nodeBackground = '#2ecc71'; // Verde per eventi di navigazione
         nodeBorder = '1px solid #27ae60';
       }
       
-      // Crea il nodo
+      // Create the node
       const node: Node = {
         id: detail.id,
         type: nodeType,
