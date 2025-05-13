@@ -207,6 +207,24 @@ const AdvancedStatistics: React.FC = () => {
     }));
   };
   
+  // Rileva se il dispositivo è mobile (larghezza schermo < 768px)
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Controlla all'inizio
+    checkIfMobile();
+    
+    // Controlla quando la finestra viene ridimensionata
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+  
   // Prepara i dati per il grafico Mobile vs Desktop
   const prepareMobileDesktopData = (): ChartDataItem[] => {
     if (!statistics || statistics.length === 0) return [];
