@@ -637,6 +637,6 @@ const AdvancedStatistics: React.FC = () => {
       )}
     </div>
   );
-};
+}; 
 
 export default AdvancedStatistics;
