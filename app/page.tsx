@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 // Types
 interface Contact {
   _id: string;
+  leadId: string;
   name: string;
   email: string;
   source: string;
@@ -330,7 +331,6 @@ export default function Dashboard() {
     }
   };
   
-  // Marks a single contact as viewed and navigates to the corresponding page
   const handleViewContact = async (contact: Contact): Promise<void> => {
     try {
       // Mark as viewed in the backend
@@ -344,20 +344,11 @@ export default function Dashboard() {
       // Update the count
       setViewedCount(prev => Math.max(0, prev - 1));
       
-      // Navigate to the appropriate page based on contact type
-      switch (contact.type) {
-        case 'form':
-          router.push(`/forms?id=${contact._id}`);
-          break;
-        case 'booking':
-          router.push(`/bookings?id=${contact._id}`);
-          break;
-        case 'facebook':
-          router.push(`/facebook-leads?id=${contact._id}`);
-          break;
-        default:
-          router.push('/contacts');
-      }
+      // Reindirizza alla pagina contatti con entrambi gli ID per massima compatibilità
+      // Uso leadId come principale se disponibile, altrimenti uso _id come fallback
+      const idToUse = contact.leadId || contact._id;
+      router.push(`/contacts?id=${idToUse}`);
+      
     } catch (error) {
       console.error("Error marking contact as viewed:", error);
     }

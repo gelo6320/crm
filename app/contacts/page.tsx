@@ -262,6 +262,89 @@ export default function ContactsPage() {
     setIsFilterDropdownOpen(!isFilterDropdownOpen);
     setActiveFilterType(type);
   };
+
+  useEffect(() => {
+    if (!isLoading && contacts.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const contactId = params.get('id');
+      
+      if (contactId) {
+        // Cerca il contatto confrontando sia con _id che con leadId
+        const targetContact = contacts.find(contact => 
+          contact._id === contactId || contact.leadId === contactId
+        );
+        
+        if (targetContact) {
+          // Apri il popup con i dettagli del contatto
+          setSelectedContact(targetContact);
+          
+          // Rimuovi il parametro dall'URL
+          if (window.history.replaceState) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('id');
+            window.history.replaceState({}, document.title, url.toString());
+          }
+        } else {
+          // Se il contatto non è nella pagina corrente
+          toast("info", "Ricerca contatto", "Sto cercando il contatto richiesto...");
+          
+          // Resetta i filtri
+          setSourceFilter("");
+          setSelectedStatus("");
+          setSearchQuery(""); // Non usare l'ID come termine di ricerca, potrebbe essere troppo specifico
+          
+          // Carica i dati con un flag specifico per cercare il contatto per ID
+          const fetchContactById = async () => {
+            try {
+              // Costruisci una query specifica per ottenere il lead
+              const queryParams = new URLSearchParams();
+              queryParams.append('leadId', contactId); // Prova con leadId
+              
+              const response = await fetch(`${API_BASE_URL}/api/leads?${queryParams.toString()}`, {
+                credentials: 'include'
+              });
+              
+              const result = await response.json();
+              
+              if (result.success && result.data.length > 0) {
+                // Se trovi il contatto, selezionalo
+                const transformedContact = {
+                  _id: result.data[0]._id,
+                  leadId: result.data[0].leadId,
+                  name: [result.data[0].firstName, result.data[0].lastName].filter(Boolean).join(" ") || result.data[0].name || "Contatto",
+                  firstName: result.data[0].firstName,
+                  lastName: result.data[0].lastName,
+                  email: result.data[0].email || "",
+                  phone: result.data[0].phone || "",
+                  source: result.data[0].source || "",
+                  formType: result.data[0].formType || "form",
+                  status: result.data[0].status || "new",
+                  createdAt: result.data[0].createdAt,
+                  updatedAt: result.data[0].updatedAt,
+                  message: result.data[0].message || result.data[0].extendedData?.formData?.message || "",
+                  service: result.data[0].service || result.data[0].extendedData?.formData?.service || "",
+                  value: result.data[0].value !== undefined ? result.data[0].value : (result.data[0].extendedData?.value || 0),
+                  extendedData: result.data[0].extendedData
+                };
+                
+                setSelectedContact(transformedContact);
+              } else {
+                // Se non lo trovi nemmeno con la query diretta
+                toast("error", "Contatto non trovato", "Il contatto richiesto non è stato trovato.");
+                loadContacts(); // Carica comunque i contatti normali
+              }
+            } catch (error) {
+              console.error("Error loading contact by ID:", error);
+              toast("error", "Errore", "Impossibile trovare il contatto specificato.");
+              loadContacts();
+            }
+          };
+          
+          fetchContactById();
+        }
+      }
+    }
+  }, [contacts, isLoading]);
   
   // Carica i contatti all'avvio e quando cambiano i filtri
   useEffect(() => {
