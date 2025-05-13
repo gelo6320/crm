@@ -647,7 +647,6 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
           <th className="px-4 py-2 text-left">Consenso Ads</th>
           <th className="px-4 py-2 text-left">Prima visita</th>
           <th className="px-4 py-2 text-left">Ultima visita</th>
-          <th className="px-4 py-2 text-left">Sincronizzato</th>
           <th className="px-4 py-2 text-left">FB CAPI</th>
         </tr>
       </thead>
@@ -694,12 +693,6 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
             </td>
             <td className="px-4 py-2.5 whitespace-nowrap">
               {formatDateTime(audience.lastSeen)}
-            </td>
-            <td className="px-4 py-2.5">
-              {audience.syncedToFacebook 
-                ? <span className="text-success">✓</span> 
-                : <span className="text-danger">✗</span>
-              }
             </td>
             <td className="px-4 py-2.5">
               <CapiStatus capiData={audience.facebookCapi} />
