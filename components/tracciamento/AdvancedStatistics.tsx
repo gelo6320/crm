@@ -26,7 +26,8 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  LabelList
 } from 'recharts';
 import axios from 'axios';
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
@@ -101,6 +102,7 @@ interface AggregatedStats {
 interface ChartDataItem {
   name: string;
   value: number;
+  originalId?: string;
 }
 
 interface TimeSourceChartItem {
@@ -246,6 +248,50 @@ const AdvancedStatistics: React.FC = () => {
       name,
       value
     }));
+  };
+  
+  // Prepara i dati per il grafico dei pulsanti più cliccati
+  const prepareButtonClicksData = (): ChartDataItem[] => {
+    if (!statistics || statistics.length === 0) return [];
+    
+    // Combiniamo i dati di tutte le date
+    const combinedButtonClicks = statistics.reduce((acc: Record<string, number>, stat) => {
+      if (!stat.buttonClicks || !stat.buttonClicks.byId) return acc;
+      
+      // Converti da Map a oggetto regolare se necessario
+      const byId = typeof stat.buttonClicks.byId === 'object' ? stat.buttonClicks.byId : {};
+      
+      Object.entries(byId).forEach(([buttonId, count]) => {
+        acc[buttonId] = (acc[buttonId] || 0) + (count as number);
+      });
+      
+      return acc;
+    }, {});
+    
+    // Converti in array, formatta i nomi e ordina per conteggio (decrescente)
+    return Object.entries(combinedButtonClicks)
+      .map(([buttonId, value]) => ({
+        name: formatButtonId(buttonId),
+        value,
+        originalId: buttonId
+      }))
+      .sort((a, b) => b.value - a.value);
+  };
+  
+  // Funzione helper per formattare gli ID dei pulsanti per la visualizzazione
+  const formatButtonId = (id: string): string => {
+    // Rimuovi prefissi comuni come 'btn-' o 'button-'
+    let name = id.replace(/^(btn-|button-)/i, '');
+    
+    // Sostituisci trattini e underscore con spazi
+    name = name.replace(/[-_]/g, ' ');
+    
+    // Metti in maiuscolo la prima lettera di ogni parola
+    name = name.split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+      
+    return name;
   };
   
   // Prepara i dati per il grafico del tempo per sorgente
@@ -401,29 +447,29 @@ const AdvancedStatistics: React.FC = () => {
                   <h4 className="text-sm font-medium mb-2 text-zinc-300">Sorgenti di Traffico</h4>
                   <div className="h-52 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={prepareSourcesData()}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          paddingAngle={2}
-                          dataKey="value"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {prepareSourcesData().map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={SOURCE_COLORS[entry.name] || COLORS[index % COLORS.length]} 
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value) => [`${value} visite`, 'Visite']} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                      <Pie
+                        data={prepareSourcesData()}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={70}
+                        fill="#8884d8"
+                        paddingAngle={2}
+                        dataKey="value"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {prepareSourcesData().map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={SOURCE_COLORS[entry.name] || COLORS[index % COLORS.length]} 
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [`${value} visite`, 'Visite']} />
+                    </PieChart>
+                  </ResponsiveContainer>
                   </div>
                 </div>
                 
@@ -432,24 +478,24 @@ const AdvancedStatistics: React.FC = () => {
                   <h4 className="text-sm font-medium mb-2 text-zinc-300">Mobile vs Desktop</h4>
                   <div className="h-52 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={prepareMobileDesktopData()}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        >
-                          <Cell fill="#10b981" />  {/* Mobile */}
-                          <Cell fill="#0ea5e9" />  {/* Desktop */}
-                        </Pie>
-                        <Tooltip formatter={(value) => [`${value} visite`, 'Dispositivi']} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                      <Pie
+                        data={prepareMobileDesktopData()}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={70}
+                        fill="#8884d8"
+                        dataKey="value"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        <Cell fill="#10b981" />  {/* Mobile */}
+                        <Cell fill="#0ea5e9" />  {/* Desktop */}
+                      </Pie>
+                      <Tooltip formatter={(value) => [`${value} visite`, 'Dispositivi']} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
                   </div>
                 </div>
               </div>
@@ -460,15 +506,19 @@ const AdvancedStatistics: React.FC = () => {
                 <div className="h-52 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={prepareTimeBySourceData()}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#444" />
-                      <XAxis dataKey="name" tick={{ fill: '#9CA3AF' }} />
-                      <YAxis tick={{ fill: '#9CA3AF' }} unit="s" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#444" strokeWidth={0.5} />
+                      <XAxis dataKey="name" tick={{ fill: '#9CA3AF', fontSize: 11 }} />
+                      <YAxis 
+                        tick={{ fill: '#9CA3AF', fontSize: 11 }} 
+                        unit="s"
+                        domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.3)]} 
+                      />
                       <Tooltip 
                         formatter={(value) => [`${formatTime(value as number)}`, 'Tempo Medio']}
                         contentStyle={{ backgroundColor: '#27272A', borderColor: '#3F3F46' }}
                         itemStyle={{ color: '#E4E4E7' }}
                       />
-                      <Bar dataKey="avgTime" fill="#FF6B00" />
+                      <Bar dataKey="avgTime" fill="#FF6B00" maxBarSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -480,21 +530,67 @@ const AdvancedStatistics: React.FC = () => {
                 <div className="h-52 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={prepareConversionsBySourceData()}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#444" />
-                      <XAxis dataKey="name" tick={{ fill: '#9CA3AF' }} />
-                      <YAxis tick={{ fill: '#9CA3AF' }} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#444" strokeWidth={0.5} />
+                      <XAxis dataKey="name" tick={{ fill: '#9CA3AF', fontSize: 11 }} />
+                      <YAxis 
+                        tick={{ fill: '#9CA3AF', fontSize: 11 }} 
+                        domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.3)]}
+                      />
                       <Tooltip 
                         formatter={(value) => [`${value} conversioni`, 'Conversioni']}
                         contentStyle={{ backgroundColor: '#27272A', borderColor: '#3F3F46' }}
                         itemStyle={{ color: '#E4E4E7' }}
                       />
-                      <Bar dataKey="value">
+                      <Bar dataKey="value" maxBarSize={40}>
                         {prepareConversionsBySourceData().map((entry, index) => (
                           <Cell 
                             key={`cell-${index}`} 
                             fill={SOURCE_COLORS[entry.name] || COLORS[index % COLORS.length]} 
                           />
                         ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              
+              {/* Grafico dei pulsanti più cliccati */}
+              <div className="bg-zinc-800 rounded-lg p-4 mb-6 hover:bg-zinc-700/50 transition-colors">
+                <h4 className="text-sm font-medium mb-2 text-zinc-300">Pulsanti Più Cliccati</h4>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart 
+                      data={prepareButtonClicksData().slice(0, 10)} 
+                      layout="vertical"
+                      margin={{ top: 5, right: 40, left: 100, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#444" strokeWidth={0.5} />
+                      <XAxis 
+                        type="number" 
+                        tick={{ fill: '#9CA3AF', fontSize: 11 }} 
+                        domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.3)]}
+                      />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category" 
+                        tick={{ fill: '#9CA3AF', fontSize: 11 }} 
+                        width={100}
+                      />
+                      <Tooltip 
+                        formatter={(value) => [`${value} click`, 'Click']}
+                        contentStyle={{ backgroundColor: '#27272A', borderColor: '#3F3F46' }}
+                        itemStyle={{ color: '#E4E4E7' }}
+                      />
+                      <Bar dataKey="value" fill="#FF6B00" maxBarSize={30}>
+                        {prepareButtonClicksData().slice(0, 10).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                        <LabelList 
+                          dataKey="value" 
+                          position="right" 
+                          fill="#fff" 
+                          formatter={(value: number) => value} 
+                        />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
