@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Database, Users, RefreshCw, Search, BarChart2 } from "lucide-react";
+import { Download, Database, Users, RefreshCw, Search, BarChart2, AlertCircle, CheckCircle, Info } from "lucide-react";
 import Pagination from "@/components/ui/Pagination";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "@/components/ui/toaster";
@@ -11,6 +11,17 @@ import axios from "axios";
 
 // Definiamo l'URL base per le API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+
+// Interfaccia per i dati CAPI Facebook
+interface FacebookCapi {
+  sent: boolean;
+  timestamp?: string;
+  success?: boolean;
+  eventId?: string;
+  payload?: any;
+  response?: any;
+  error?: any;
+}
 
 // Definizione delle interfacce per i tipi di dati
 interface Visit {
@@ -37,6 +48,8 @@ interface Visit {
     country: string;
     country_code: string;
   };
+  // Aggiungiamo il campo facebookCapi
+  facebookCapi?: FacebookCapi;
 }
 
 interface Client {
@@ -66,8 +79,9 @@ interface Client {
     marketing: boolean;
     analytics: boolean;
     thirdParty: boolean;
-    
   };
+  // Aggiungiamo il campo facebookCapi
+  facebookCapi?: FacebookCapi;
 }
 
 interface FacebookAudience {
@@ -83,8 +97,8 @@ interface FacebookAudience {
   // Campi di localizzazione sia nella radice che nella struttura nidificata
   country: string;
   city: string;
-  region: string;  // Aggiungi questa proprietà
-  country_code: string; // Aggiungi questa proprietà
+  region: string;
+  country_code: string;
   // Struttura nidificata opzionale per il nuovo formato
   location?: {
     city: string;
@@ -101,10 +115,56 @@ interface FacebookAudience {
   lastSeen: string;
   lastUpdated: string;
   syncedToFacebook: boolean;
+  // Aggiungiamo il campo facebookCapi
+  facebookCapi?: FacebookCapi;
 }
 
 // Tipo di tabella attiva
 type ActiveTab = "visits" | "clients" | "audiences";
+
+// Helper component to render CAPI status
+function CapiStatus({ capiData }: { capiData?: FacebookCapi }) {
+  if (!capiData || !capiData.sent) {
+    return (
+      <span className="flex items-center text-zinc-500 text-xs">
+        <Info size={14} className="mr-1" />
+        Non inviato
+      </span>
+    );
+  }
+
+  if (capiData.success) {
+    return (
+      <span className="flex items-center text-success text-xs" title={`Evento inviato con successo: ${capiData.eventId}`}>
+        <CheckCircle size={14} className="mr-1" />
+        Successo
+      </span>
+    );
+  } else {
+    return (
+      <span 
+        className="flex items-center text-danger text-xs" 
+        title={`Errore: ${capiData.error?.message || 'Errore sconosciuto'}`}
+      >
+        <AlertCircle size={14} className="mr-1" />
+        Errore
+      </span>
+    );
+  }
+}
+
+// Tooltip helper component
+function Tooltip({ children, content }: { children: React.ReactNode, content: string }) {
+  return (
+    <div className="group relative inline-block">
+      {children}
+      <div className="opacity-0 bg-zinc-800 text-xs text-white rounded py-1 px-2 absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-1 pointer-events-none transition-opacity group-hover:opacity-100 w-48 text-center">
+        {content}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-800"></div>
+      </div>
+    </div>
+  );
+}
 
 export default function BancaDatiPage() {
   // Stato per il tab attivo
@@ -397,6 +457,7 @@ function VisitsTable({ visits, isLoading }: { visits: Visit[], isLoading: boolea
           <th className="px-4 py-2 text-left">IP</th>
           <th className="px-4 py-2 text-left">Località</th>
           <th className="px-4 py-2 text-left">Durata</th>
+          <th className="px-4 py-2 text-left">FB CAPI</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-zinc-800">
@@ -422,6 +483,9 @@ function VisitsTable({ visits, isLoading }: { visits: Visit[], isLoading: boolea
             </td>
             <td className="px-4 py-2.5">
               {visit.timeOnPage ? `${Math.round(visit.timeOnPage)}s` : "-"}
+            </td>
+            <td className="px-4 py-2.5">
+              <CapiStatus capiData={visit.facebookCapi} />
             </td>
           </tr>
         ))}
@@ -462,6 +526,7 @@ function ClientsTable({ clients, isLoading }: { clients: Client[], isLoading: bo
           <th className="px-4 py-2 text-left">Stato</th>
           <th className="px-4 py-2 text-left">Data</th>
           <th className="px-4 py-2 text-left">Consenso</th>
+          <th className="px-4 py-2 text-left">FB CAPI</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-zinc-800">
@@ -495,13 +560,27 @@ function ClientsTable({ clients, isLoading }: { clients: Client[], isLoading: bo
             </td>
             <td className="px-4 py-2.5">
               <div className="flex space-x-1">
-                <span className={`w-2 h-2 rounded-full ${client.consent?.marketing ? 'bg-success' : 'bg-danger'}`} 
-                      title={client.consent?.marketing ? 'Marketing: Sì' : 'Marketing: No'}></span>
-                <span className={`w-2 h-2 rounded-full ${client.consent?.analytics ? 'bg-success' : 'bg-danger'}`}
-                      title={client.consent?.analytics ? 'Analytics: Sì' : 'Analytics: No'}></span>
-                <span className={`w-2 h-2 rounded-full ${client.consent?.thirdParty ? 'bg-success' : 'bg-danger'}`}
-                      title={client.consent?.thirdParty ? 'Terze parti: Sì' : 'Terze parti: No'}></span>
+                <Tooltip content="Marketing">
+                  <span className={`w-2 h-2 rounded-full ${client.consent?.marketing ? 'bg-success' : 'bg-danger'}`} 
+                        title={client.consent?.marketing ? 'Marketing: Sì' : 'Marketing: No'}></span>
+                </Tooltip>
+                <Tooltip content="Analytics">
+                  <span className={`w-2 h-2 rounded-full ${client.consent?.analytics ? 'bg-success' : 'bg-danger'}`}
+                        title={client.consent?.analytics ? 'Analytics: Sì' : 'Analytics: No'}></span>
+                </Tooltip>
+                <Tooltip content="Terze parti">
+                  <span className={`w-2 h-2 rounded-full ${client.consent?.thirdParty ? 'bg-success' : 'bg-danger'}`}
+                        title={client.consent?.thirdParty ? 'Terze parti: Sì' : 'Terze parti: No'}></span>
+                </Tooltip>
               </div>
+            </td>
+            <td className="px-4 py-2.5">
+              <CapiStatus capiData={client.facebookCapi} />
+              {client.facebookCapi?.eventId && (
+                <div className="text-xs text-zinc-500 font-mono mt-1 truncate max-w-[120px]" title={client.facebookCapi.eventId}>
+                  {client.facebookCapi.eventId.substring(0, 10)}...
+                </div>
+              )}
             </td>
           </tr>
         ))}
@@ -569,6 +648,7 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
           <th className="px-4 py-2 text-left">Prima visita</th>
           <th className="px-4 py-2 text-left">Ultima visita</th>
           <th className="px-4 py-2 text-left">Sincronizzato</th>
+          <th className="px-4 py-2 text-left">FB CAPI</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-zinc-800">
@@ -620,6 +700,14 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
                 ? <span className="text-success">✓</span> 
                 : <span className="text-danger">✗</span>
               }
+            </td>
+            <td className="px-4 py-2.5">
+              <CapiStatus capiData={audience.facebookCapi} />
+              {audience.facebookCapi?.eventId && (
+                <div className="text-xs text-zinc-500 font-mono mt-1 truncate max-w-[120px]" title={audience.facebookCapi.eventId}>
+                  {audience.facebookCapi.eventId.substring(0, 10)}...
+                </div>
+              )}
             </td>
           </tr>
         ))}
