@@ -470,13 +470,13 @@ const AdvancedStatistics: React.FC = () => {
                         data={prepareSourcesData()}
                         cx="50%"
                         cy="50%"
-                        innerRadius={60}
-                        outerRadius={70}
+                        innerRadius={isMobile ? 50 : 60}
+                        outerRadius={isMobile ? 70 : 80}
                         fill="#8884d8"
                         paddingAngle={2}
                         dataKey="value"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        labelLine={!isMobile}
+                        label={isMobile ? false : ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       >
                         {prepareSourcesData().map((entry, index) => (
                           <Cell 
@@ -486,6 +486,7 @@ const AdvancedStatistics: React.FC = () => {
                         ))}
                       </Pie>
                       <Tooltip formatter={(value) => [`${value} visite`, 'Visite']} />
+                      {isMobile && <Legend layout="horizontal" verticalAlign="bottom" align="center" />}
                     </PieChart>
                   </ResponsiveContainer>
                   </div>
@@ -504,8 +505,8 @@ const AdvancedStatistics: React.FC = () => {
                         outerRadius={70}
                         fill="#8884d8"
                         dataKey="value"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        labelLine={!isMobile}
+                        label={isMobile ? false : ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       >
                         <Cell fill="#10b981" />  {/* Mobile */}
                         <Cell fill="#0ea5e9" />  {/* Desktop */}
@@ -572,7 +573,7 @@ const AdvancedStatistics: React.FC = () => {
                 </div>
               </div>
               
-              {/* Grafico dei pulsanti più cliccati */}
+              {/* Grafico dei pulsanti più cliccati - MODIFICATO CON MARGINE SINISTRO RIDOTTO */}
               <div className="bg-zinc-800 rounded-lg p-4 mb-6 hover:bg-zinc-700/50 transition-colors">
                 <h4 className="text-sm font-medium mb-2 text-zinc-300">Pulsanti Più Cliccati</h4>
                 <div className="h-64 w-full">
@@ -580,7 +581,7 @@ const AdvancedStatistics: React.FC = () => {
                     <BarChart 
                       data={prepareButtonClicksData().slice(0, 10)} 
                       layout="vertical"
-                      margin={{ top: 5, right: 40, left: 100, bottom: 5 }}
+                      margin={{ top: 5, right: 40, left: isMobile ? 60 : 80, bottom: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#444" strokeWidth={0.5} />
                       <XAxis 
@@ -592,7 +593,7 @@ const AdvancedStatistics: React.FC = () => {
                         dataKey="name" 
                         type="category" 
                         tick={{ fill: '#9CA3AF', fontSize: 11 }} 
-                        width={100}
+                        width={isMobile ? 60 : 80}
                       />
                       <Tooltip 
                         formatter={(value) => [`${value} click`, 'Click']}
