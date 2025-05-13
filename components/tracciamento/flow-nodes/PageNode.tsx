@@ -17,8 +17,10 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
   const url = data.detail.data?.url || '';
   const title = data.detail.data?.title || 'Pagina senza titolo';
   const referrer = data.detail.data?.referrer || '';
+  const scrollDepth = data.detail.data?.scrollDepth;
+  const timeOnPage = data.detail.data?.timeOnPage;
   
-  // Ottieni il tempo formattato
+  // Get formatted time
   const getFormattedTime = () => {
     try {
       const date = new Date(data.detail.timestamp);
@@ -28,35 +30,70 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
     }
   };
   
+  // Format domain from URL
+  const getDomain = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch (e) {
+      return url;
+    }
+  };
+  
+  // Format path from URL
+  const getPath = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.pathname;
+    } catch (e) {
+      return '';
+    }
+  };
+  
   return (
     <div className="rounded-lg shadow-sm overflow-hidden">
-      {/* Header colorato */}
+      {/* Header */}
       <div className="bg-primary px-3 py-2 flex items-center">
         <Eye size={16} className="text-white mr-2" />
         <span className="text-white font-medium">Pagina</span>
         <span className="ml-auto text-xs text-white opacity-80">{getFormattedTime()}</span>
       </div>
       
-      {/* Contenuto */}
+      {/* Content */}
       <div className="bg-white p-3 dark:bg-zinc-800">
         <div className="font-medium mb-1 text-zinc-900 dark:text-white">{title}</div>
         
         {url && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 truncate" title={url}>
             <Globe size={12} className="inline mr-1" />
-            {url.length > 30 ? url.substring(0, 27) + '...' : url}
+            {url.length > 30 ? getDomain(url) + getPath(url).substring(0, 10) + '...' : url}
           </div>
         )}
         
         {referrer && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate" title={referrer}>
             <Link size={12} className="inline mr-1" />
-            {referrer.length > 30 ? 'Da: ' + referrer.substring(0, 25) + '...' : 'Da: ' + referrer}
+            {referrer.length > 30 ? 'Da: ' + getDomain(referrer) : 'Da: ' + referrer}
           </div>
         )}
+        
+        {/* Add scroll depth and time on page if available */}
+        <div className="flex mt-1 gap-2">
+          {scrollDepth !== undefined && (
+            <div className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+              Scroll: {scrollDepth}%
+            </div>
+          )}
+          
+          {timeOnPage !== undefined && (
+            <div className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+              Tempo: {timeOnPage}s
+            </div>
+          )}
+        </div>
       </div>
       
-      {/* Connettori */}
+      {/* Connection points */}
       <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="w-2 h-2 bg-primary" />
       <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="w-2 h-2 bg-primary" />
     </div>

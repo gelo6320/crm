@@ -15,106 +15,100 @@ interface NavigationNodeProps {
 }
 
 export default function NavigationNode({ data, isConnectable }: NavigationNodeProps) {
-  // Determina il tipo di navigazione
+  // Determine navigation type based on event data
   const getNavigationType = () => {
-    // Per eventi direttamente identificati come scroll, time_on_page, exit_intent
-    if (data.detail.type === 'scroll' || 
-        data.detail.type === 'time_on_page' || 
-        data.detail.type === 'exit_intent') {
-      return data.detail.type;
+    const type = data.detail.type;
+    // Check for direct type matches first
+    if (type === 'scroll' || type === 'time_on_page' || type === 'exit_intent') {
+      return type;
     }
     
-    // Per eventi con name che indica il tipo
-    if (data.detail.data?.name) {
+    // Check for event names that indicate type
+    if (type === 'event' && data.detail.data?.name) {
       if (data.detail.data.name.includes('scroll')) return 'scroll';
       if (data.detail.data.name.includes('time_on_page')) return 'time_on_page';
       if (data.detail.data.name.includes('exit_intent')) return 'exit_intent';
       if (data.detail.data.name === 'page_visibility') return 'page_visibility';
       if (data.detail.data.name === 'session_end') return 'session_end';
     }
-    
-    // Per eventi con proprietà specifiche
-    if (data.detail.data?.depth !== undefined || 
-        data.detail.data?.totalScrollDistance !== undefined ||
+
+    // Check for specific properties that indicate the navigation type
+    if (data.detail.data?.scrollDepth !== undefined || 
+        data.detail.data?.scrollPercentage !== undefined ||
+        data.detail.data?.depth !== undefined ||
         data.detail.data?.percent !== undefined) {
       return 'scroll';
     }
     
-    if (data.detail.data?.timeOnPage !== undefined || 
-        data.detail.data?.seconds !== undefined) {
-      return 'time_on_page';
-    }
-    
-    if (data.detail.data?.visible !== undefined) {
+    if (data.detail.data?.isVisible !== undefined) {
       return 'page_visibility';
     }
     
-    // Fallback
     return 'generic_navigation';
   };
 
   const navigationType = getNavigationType();
   
-  // Ottieni l'icona appropriata in base al tipo di navigazione
+  // Get appropriate icon based on navigation type
   const getNavigationIcon = () => {
     switch (navigationType) {
-      case 'scroll':
-        return <ArrowUp size={16} className="text-white" />;
-      case 'time_on_page':
-        return <Clock size={16} className="text-white" />;
-      case 'exit_intent':
-        return <XCircle size={16} className="text-white" />;
-      case 'page_visibility':
-        return <Eye size={16} className="text-white" />;
-      case 'session_end':
-        return <Timer size={16} className="text-white" />;
-      default:
-        return <MousePointer size={16} className="text-white" />;
+      case 'scroll': return <ArrowUp size={16} className="text-white" />;
+      case 'time_on_page': return <Clock size={16} className="text-white" />;
+      case 'exit_intent': return <XCircle size={16} className="text-white" />;
+      case 'page_visibility': return <Eye size={16} className="text-white" />;
+      case 'session_end': return <Timer size={16} className="text-white" />;
+      default: return <MousePointer size={16} className="text-white" />;
     }
   };
 
-  // Ottieni l'etichetta appropriata in base al tipo di navigazione
+  // Get appropriate label based on navigation type
   const getNavigationLabel = () => {
     switch (navigationType) {
-      case 'scroll':
-        return 'Scroll';
-      case 'time_on_page':
-        return 'Tempo';
-      case 'exit_intent':
-        return 'Uscita';
-      case 'page_visibility':
-        return 'Visibilità';
-      case 'session_end':
-        return 'Fine';
-      default:
-        return 'Navigazione';
+      case 'scroll': return 'Scroll';
+      case 'time_on_page': return 'Tempo';
+      case 'exit_intent': return 'Uscita';
+      case 'page_visibility': return 'Visibilità';
+      case 'session_end': return 'Fine';
+      default: return 'Navigazione';
     }
   };
   
-  // Ottieni valore pertinente
+  // Get appropriate value based on navigation type
   const getNavigationValue = () => {
     if (navigationType === 'scroll') {
-      const depth = data.detail.data?.depth || 
-                  data.detail.data?.percent || 
-                  (data.detail.data?.data?.depth) || 
-                  (data.detail.data?.data?.percent) || 0;
+      // First check for the pre-formatted percentage from our API
+      if (data.detail.data?.scrollPercentage) {
+        return data.detail.data.scrollPercentage;
+      }
+      
+      // Then check various possible scroll data locations
+      const depth = 
+        data.detail.data?.scrollDepth || 
+        data.detail.data?.depth || 
+        data.detail.data?.percent || 
+        (data.detail.data?.raw?.depth) || 
+        (data.detail.data?.raw?.percent) || 
+        0;
+      
+      // Format as percentage
       return `${depth}%`;
     }
     
     if (navigationType === 'time_on_page') {
-      const seconds = data.detail.data?.timeOnPage || 
-                    data.detail.data?.seconds || 
-                    data.detail.data?.duration ||
-                    (data.detail.data?.data?.timeOnPage) || 
-                    (data.detail.data?.data?.seconds) || 0;
+      const seconds = 
+        data.detail.data?.timeOnPage || 
+        data.detail.data?.seconds || 
+        data.detail.data?.duration ||
+        (data.detail.data?.raw?.timeOnPage) || 
+        0;
       
       return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds/60)}m ${seconds%60}s`;
     }
     
     if (navigationType === 'page_visibility') {
-      const isVisible = data.detail.data?.visible !== undefined ? 
-                      data.detail.data.visible : 
-                      (data.detail.data?.data?.visible);
+      const isVisible = data.detail.data?.isVisible !== undefined ? 
+                      data.detail.data.isVisible : 
+                      data.detail.data?.visible;
       
       return isVisible ? 'Visibile' : 'Nascosta';
     }
@@ -122,10 +116,25 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
     return '';
   };
   
+  // Calculate if this is a significant scroll (>10%)
+  const isSignificantScroll = () => {
+    if (navigationType !== 'scroll') return false;
+    
+    const depth = 
+      data.detail.data?.scrollDepth || 
+      data.detail.data?.depth || 
+      data.detail.data?.percent || 
+      (data.detail.data?.raw?.depth) || 
+      (data.detail.data?.raw?.percent) || 
+      0;
+    
+    return depth >= 10;
+  };
+  
   return (
     <div className="rounded-lg shadow-sm overflow-hidden">
-      {/* Header colorato */}
-      <div className="bg-green-500 px-3 py-2 flex items-center">
+      {/* Header with color based on significance */}
+      <div className={`${isSignificantScroll() ? 'bg-green-600' : 'bg-green-500'} px-3 py-2 flex items-center`}>
         {getNavigationIcon()}
         <span className="text-white font-medium ml-2">{getNavigationLabel()}</span>
         
@@ -136,7 +145,7 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
         )}
       </div>
       
-      {/* Contenuto */}
+      {/* Content with more detailed info */}
       <div className="bg-white p-3 dark:bg-zinc-800">
         <div className="font-medium text-zinc-900 dark:text-white">
           {navigationType === 'scroll' ? 'Scorrimento Pagina' : 
@@ -146,27 +155,39 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
           navigationType === 'session_end' ? 'Fine Sessione' : 'Navigazione'}
         </div>
         
-        {/* Aggiungi dettagli specifici del tipo di navigazione */}
-        {navigationType === 'scroll' && data.detail.data?.direction && (
+        {/* Scroll details */}
+        {navigationType === 'scroll' && (
+          <>
+            {data.detail.data?.totalScrollDistance && (
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Distanza: {data.detail.data.totalScrollDistance}px
+              </div>
+            )}
+            
+            {data.detail.data?.raw?.documentHeight && (
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Doc: {data.detail.data.raw.documentHeight}px, Viewport: {data.detail.data.raw.viewportHeight || '?'}px
+              </div>
+            )}
+          </>
+        )}
+        
+        {/* Time on page details */}
+        {navigationType === 'time_on_page' && data.detail.data?.timeOnPage && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Direzione: {data.detail.data.direction === 'up' ? 'verso l\'alto' : 'verso il basso'}
+            Durata: {formatTime(data.detail.data.timeOnPage)}
           </div>
         )}
         
-        {navigationType === 'session_end' && data.detail.data?.pageViews && (
+        {/* Page visibility details */}
+        {navigationType === 'page_visibility' && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Pagine viste: {data.detail.data.pageViews}
-          </div>
-        )}
-        
-        {navigationType === 'session_end' && data.detail.data?.totalTimeOnPage && (
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Tempo totale: {formatTime(data.detail.data.totalTimeOnPage)}
+            Stato: {data.detail.data?.isVisible ? 'Pagina attiva' : 'Scheda in background'}
           </div>
         )}
       </div>
       
-      {/* Connettori */}
+      {/* Connection points */}
       <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="w-2 h-2 bg-green-500" />
       <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="w-2 h-2 bg-green-500" />
     </div>
