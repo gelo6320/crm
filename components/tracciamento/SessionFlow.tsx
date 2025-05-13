@@ -129,15 +129,6 @@ export default function SessionFlow({
           label: getNodeLabel(detail)
         },
         position: { x: 250 * (index % 2), y: 120 * index },
-        style: {
-          border: nodeBorder,
-          borderRadius: '5px',
-          backgroundColor: nodeBackground,
-          color: nodeTextColor,
-          fontWeight: 500,
-          padding: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
       };

@@ -14,80 +14,51 @@ interface PageNodeProps {
 }
 
 export default function PageNode({ data, isConnectable }: PageNodeProps) {
-  // Estrai l'URL e il titolo in modo sicuro
   const url = data.detail.data?.url || '';
   const title = data.detail.data?.title || 'Pagina senza titolo';
   const referrer = data.detail.data?.referrer || '';
   
-  // Estrai il pathname dall'URL in modo sicuro
-  const getPathname = (url: string): string => {
-    try {
-      return new URL(url).pathname;
-    } catch (e) {
-      return url;
-    }
-  };
-  
-  // Crea un'etichetta più compatta per l'URL
-  const displayUrl = url.length > 40 ? url.substring(0, 37) + '...' : url;
-  
   // Ottieni il tempo formattato
-  const getFormattedTime = (): string => {
+  const getFormattedTime = () => {
     try {
       const date = new Date(data.detail.timestamp);
-      return date.toLocaleTimeString('it-IT', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
+      return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
       return '';
     }
   };
   
   return (
-    <div className="p-3 rounded-md min-w-[200px] bg-primary/20 border border-primary text-white">
-      <Handle
-        type="target"
-        position={Position.Left}
-        isConnectable={isConnectable}
-        className="w-2 h-2 bg-primary"
-      />
-      
-      <div className="flex items-center mb-1">
-        <Eye size={14} className="mr-2 text-primary" />
-        <span className="text-xs font-medium text-white">Visualizzazione Pagina</span>
+    <div className="rounded-lg shadow-sm overflow-hidden">
+      {/* Header colorato */}
+      <div className="bg-primary px-3 py-2 flex items-center">
+        <Eye size={16} className="text-white mr-2" />
+        <span className="text-white font-medium">Pagina</span>
+        <span className="ml-auto text-xs text-white opacity-80">{getFormattedTime()}</span>
       </div>
       
-      <div className="font-medium text-sm truncate text-white" title={title}>
-        {title}
+      {/* Contenuto */}
+      <div className="bg-white p-3 dark:bg-zinc-800">
+        <div className="font-medium mb-1 text-zinc-900 dark:text-white">{title}</div>
+        
+        {url && (
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 truncate" title={url}>
+            <Globe size={12} className="inline mr-1" />
+            {url.length > 30 ? url.substring(0, 27) + '...' : url}
+          </div>
+        )}
+        
+        {referrer && (
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate" title={referrer}>
+            <Link size={12} className="inline mr-1" />
+            {referrer.length > 30 ? 'Da: ' + referrer.substring(0, 25) + '...' : 'Da: ' + referrer}
+          </div>
+        )}
       </div>
       
-      <div className="text-xs text-white mt-1 flex items-center" title={url}>
-        <Globe size={12} className="mr-1 text-zinc-400" />
-        <span className="truncate">{displayUrl}</span>
-      </div>
-      
-      {referrer && (
-        <div className="text-xs text-white mt-1 flex items-center" title={`Referrer: ${referrer}`}>
-          <Link size={12} className="mr-1 text-zinc-400" />
-          <span className="truncate">
-            {referrer.length > 30 ? referrer.substring(0, 27) + '...' : referrer}
-          </span>
-        </div>
-      )}
-      
-      <div className="text-xs text-zinc-400 mt-1 flex items-center">
-        <Calendar size={12} className="mr-1 text-zinc-500" />
-        <span>{getFormattedTime()}</span>
-      </div>
-      
-      <Handle
-        type="source"
-        position={Position.Right}
-        isConnectable={isConnectable}
-        className="w-2 h-2 bg-primary"
-      />
+      {/* Connettori */}
+      <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="w-2 h-2 bg-primary" />
+      <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="w-2 h-2 bg-primary" />
     </div>
   );
 }

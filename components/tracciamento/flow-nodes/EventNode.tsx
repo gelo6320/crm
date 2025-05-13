@@ -15,188 +15,105 @@ interface EventNodeProps {
 }
 
 export default function EventNode({ data, isConnectable }: EventNodeProps) {
-  // Ottieni l'etichetta specifica per il tipo di evento di conversione
-  const getEventTypeLabel = () => {
-    // Verifica il tipo di conversione
+  // Determina se è un lead o conversione
+  const isLead = data.detail.data?.formType || 
+                (data.detail.data?.name && data.detail.data.name.includes('lead_acquisition'));
+  
+  // Estrai valore per conversioni
+  const value = data.detail.data?.value;
+  
+  // Estrai nome per lead
+  const name = data.detail.data?.firstName 
+    ? `${data.detail.data.firstName} ${data.detail.data.lastName || ''}`
+    : '';
     
-    // Conversione standard
-    if (data.detail.data?.conversionType) {
-      return `Conversione: ${data.detail.data.conversionType}`;
-    }
-    
-    // Converisione nel campo name
-    if (data.detail.data?.name && data.detail.data.name.includes('conversion_')) {
-      const conversionType = data.detail.data.name.replace('conversion_', '');
-      return `Conversione: ${conversionType}`;
-    }
-    
-    // Lead acquisition
-    if ((data.detail.data?.name && data.detail.data.name.includes('lead_acquisition')) || 
-        (data.detail.data?.formType)) {
-      return 'Acquisizione Lead';
-    }
-    
-    // Conversione generica
-    if (data.detail.data?.category === 'conversion') {
-      return 'Conversione';
-    }
-    
-    return 'Evento di Conversione';
+  // Ottieni il tipo di conversione per visualizzazione
+  const getConversionType = () => {
+    if (data.detail.data?.conversionType) 
+      return data.detail.data.conversionType;
+      
+    if (data.detail.data?.name && data.detail.data.name.includes('conversion_')) 
+      return data.detail.data.name.replace('conversion_', '');
+      
+    return 'standard';
   };
   
-  // Ottieni l'etichetta principale (seconda riga del label)
-  const mainLabel = data.label.split('\n')[1] || data.label;
-  
-  // Determina il tipo specifico di evento per la visualizzazione corretta
-  const isLeadAcquisition = 
-    (data.detail.data?.name && data.detail.data.name.includes('lead_acquisition')) || 
-    data.detail.data?.formType;
-    
-  const isConversion = 
-    data.detail.data?.conversionType || 
-    (data.detail.data?.name && data.detail.data.name.includes('conversion')) ||
-    data.detail.data?.category === 'conversion';
-  
-  // Ottieni la data formattata
+  // Ottieni il tempo formattato
   const getFormattedTime = () => {
     try {
       const date = new Date(data.detail.timestamp);
-      return date.toLocaleTimeString('it-IT', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
+      return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
       return '';
     }
   };
   
   return (
-    <div className="p-3 rounded-md min-w-[200px] bg-danger/20 border border-danger text-white">
-      <Handle
-        type="target"
-        position={Position.Left}
-        isConnectable={isConnectable}
-        className="w-2 h-2 bg-danger"
-      />
-      
-      <div className="flex items-center mb-1">
-        <AlertCircle size={14} className="mr-2 text-danger" />
-        <span className="text-xs font-medium text-white">{getEventTypeLabel()}</span>
+    <div className="rounded-lg shadow-sm overflow-hidden">
+      {/* Header colorato */}
+      <div className="bg-red-500 px-3 py-2 flex items-center">
+        <AlertCircle size={16} className="text-white" />
+        <span className="text-white font-medium ml-2">
+          {isLead ? 'Lead' : 'Conversione'}
+        </span>
+        <span className="ml-auto text-xs text-white opacity-80">{getFormattedTime()}</span>
       </div>
       
-      <div className="font-medium text-sm truncate text-white" title={mainLabel}>
-        {mainLabel}
-      </div>
-      
-      {/* Mostra la categoria se disponibile */}
-      {data.detail.data?.category && (
-        <div className="text-xs text-white mt-1 truncate flex items-center">
-          <Tag size={12} className="mr-1" />
-          <span>Categoria: {data.detail.data.category}</span>
+      {/* Contenuto principale */}
+      <div className="bg-white p-3 dark:bg-zinc-800">
+        <div className="font-medium mb-2 text-zinc-900 dark:text-white">
+          {isLead ? 'Nuovo Lead' : 'Conversione Completata'}
         </div>
-      )}
-      
-      {/* Visualizzazione per tutti i tipi di conversione */}
-      {isConversion && !isLeadAcquisition && (
-        <>
-          {/* ConversionType */}
-          {data.detail.data?.conversionType && (
-            <div className="text-xs text-white mt-1 truncate flex items-center">
-              <Tag size={12} className="mr-1" />
-              <span>Tipo: {data.detail.data.conversionType}</span>
-            </div>
-          )}
-          
-          {/* Valore della conversione */}
-          {(data.detail.data?.value !== undefined) && (
-            <div className="text-xs text-white mt-1 truncate flex items-center">
-              <DollarSign size={12} className="mr-1" />
-              <span>Valore: {typeof data.detail.data.value === 'object' && data.detail.data.value !== null
-                ? ('$numberInt' in data.detail.data.value 
-                   ? (data.detail.data.value as any).$numberInt 
-                   : data.detail.data.value)
-                : data.detail.data.value}</span>
-            </div>
-          )}
-        </>
-      )}
-      
-      {/* Visualizzazione specifica per lead acquisition */}
-      {isLeadAcquisition && (
-        <>
-          {/* Tipo di form */}
-          {data.detail.data?.formType && (
-            <div className="text-xs text-white mt-1 truncate flex items-center">
-              <Tag size={12} className="mr-1" />
-              <span>Form: {data.detail.data.formType}</span>
-            </div>
-          )}
-          
-          {/* Dati utente - nome */}
-          {data.detail.data?.firstName && (
-            <div className="text-xs text-white mt-1 flex items-center">
-              <User size={12} className="mr-1" />
-              <span className="truncate">
-                {data.detail.data.firstName} {data.detail.data.lastName || ''}
-              </span>
-            </div>
-          )}
-          
-          {/* Dati utente - email */}
-          {data.detail.data?.email && (
-            <div className="text-xs text-white mt-1 flex items-center">
-              <Mail size={12} className="mr-1" />
-              <span className="truncate">
-                {typeof data.detail.data.email === 'string' && 
-                 data.detail.data.email.includes('fad327ee') 
-                  ? 'Email criptata' 
-                  : data.detail.data.email}
-              </span>
-            </div>
-          )}
-          
-          {/* Dati utente - telefono */}
-          {data.detail.data?.phone && (
-            <div className="text-xs text-white mt-1 flex items-center">
-              <Phone size={12} className="mr-1" />
-              <span className="truncate">{data.detail.data.phone}</span>
-            </div>
-          )}
-          
-          {/* Messaggio dal formData */}
-          {data.detail.data?.formData?.message && (
-            <div className="text-xs text-white mt-1 flex items-center">
-              <MessageSquare size={12} className="mr-1" />
-              <span className="truncate">
-                {data.detail.data.formData.message.length > 15 
-                  ? 'Messaggio presente' 
-                  : data.detail.data.formData.message}
-              </span>
-            </div>
-          )}
-          
-          {/* Consenso marketing */}
-          {data.detail.data?.adOptimizationConsent && (
-            <div className="text-xs text-white mt-1 truncate">
-              Consenso: {data.detail.data.adOptimizationConsent}
-            </div>
-          )}
-        </>
-      )}
-      
-      {/* Timestamp */}
-      <div className="text-xs text-zinc-400 mt-1 flex items-center">
-        <Calendar size={12} className="mr-1 text-zinc-500" />
-        <span>{getFormattedTime()}</span>
+        
+        {/* Dettagli lead */}
+        {isLead && name && (
+          <div className="flex items-center text-sm text-zinc-700 dark:text-zinc-300 mb-1">
+            <User size={14} className="mr-1" />
+            <span>{name}</span>
+          </div>
+        )}
+        
+        {isLead && data.detail.data?.email && (
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center">
+            <Mail size={12} className="mr-1" />
+            <span className="truncate">
+              {typeof data.detail.data.email === 'string' && data.detail.data.email.includes('consent_not_granted') 
+                ? 'Email (protetta)' 
+                : data.detail.data.email}
+            </span>
+          </div>
+        )}
+        
+        {isLead && data.detail.data?.phone && (
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 flex items-center">
+            <Phone size={12} className="mr-1" />
+            <span>{data.detail.data.phone}</span>
+          </div>
+        )}
+        
+        {/* Dettagli conversione */}
+        {!isLead && (
+          <div className="mt-1">
+            {value !== undefined && (
+              <div className="inline-block px-3 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-sm font-medium">
+                {typeof value === 'object' && value !== null
+                  ? ('$numberInt' in value ? value.$numberInt : JSON.stringify(value)) 
+                  : value} €
+              </div>
+            )}
+            
+            {!value && (
+              <div className="text-xs py-1 px-2 rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 inline-block">
+                {getConversionType()}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       
-      <Handle
-        type="source"
-        position={Position.Right}
-        isConnectable={isConnectable}
-        className="w-2 h-2 bg-danger"
-      />
+      {/* Connettori */}
+      <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="w-2 h-2 bg-red-500" />
+      <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="w-2 h-2 bg-red-500" />
     </div>
   );
 }
