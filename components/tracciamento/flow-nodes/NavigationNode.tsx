@@ -18,6 +18,13 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
   // Determine navigation type based on event data
   const getNavigationType = () => {
     const type = data.detail.type;
+    
+    // Caso specifico per scroll_bottom
+    if (type === 'scroll_bottom' || 
+        (type === 'event' && data.detail.data?.name === 'scroll_bottom')) {
+      return 'scroll_bottom';
+    }
+    
     // Check for direct type matches first
     if (type === 'scroll' || type === 'time_on_page' || type === 'exit_intent') {
       return type;
@@ -53,6 +60,7 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
   const getNavigationIcon = () => {
     switch (navigationType) {
       case 'scroll': return <ArrowUp size={16} className="text-white" />;
+      case 'scroll_bottom': return <ArrowUp size={16} className="text-white" />;
       case 'time_on_page': return <Clock size={16} className="text-white" />;
       case 'exit_intent': return <XCircle size={16} className="text-white" />;
       case 'page_visibility': return <Eye size={16} className="text-white" />;
@@ -65,6 +73,7 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
   const getNavigationLabel = () => {
     switch (navigationType) {
       case 'scroll': return 'Scroll';
+      case 'scroll_bottom': return 'Fine Pagina';
       case 'time_on_page': return 'Tempo';
       case 'exit_intent': return 'Uscita';
       case 'page_visibility': return 'Visibilità';
@@ -94,6 +103,10 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
       return `${depth}%`;
     }
     
+    if (navigationType === 'scroll_bottom') {
+      return '100%';
+    }
+    
     if (navigationType === 'time_on_page') {
       const seconds = 
         data.detail.data?.timeOnPage || 
@@ -116,8 +129,10 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
     return '';
   };
   
-  // Calculate if this is a significant scroll (>10%)
+  // Calculate if this is a significant scroll (>10%) or scroll_bottom
   const isSignificantScroll = () => {
+    if (navigationType === 'scroll_bottom') return true;
+    
     if (navigationType !== 'scroll') return false;
     
     const depth = 
@@ -149,6 +164,7 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
       <div className="bg-white p-3 dark:bg-zinc-800">
         <div className="font-medium text-zinc-900 dark:text-white">
           {navigationType === 'scroll' ? 'Scorrimento Pagina' : 
+          navigationType === 'scroll_bottom' ? 'Fine Pagina Raggiunta' :
           navigationType === 'time_on_page' ? 'Tempo sulla Pagina' :
           navigationType === 'exit_intent' ? 'Intenzione di Uscita' :
           navigationType === 'page_visibility' ? 'Visibilità Pagina' :
@@ -170,6 +186,16 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
               </div>
             )}
           </>
+        )}
+        
+        {/* Scroll Bottom details */}
+        {navigationType === 'scroll_bottom' && (
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            Pagina scorsa completamente
+            {data.detail.data?.raw?.totalScrollDistance && (
+              <span className="ml-1">({data.detail.data.raw.totalScrollDistance}px)</span>
+            )}
+          </div>
         )}
         
         {/* Time on page details */}

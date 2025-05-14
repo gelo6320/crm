@@ -100,16 +100,26 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
   
   // Get conversion type for display
   const getConversionType = () => {
+    // Caso specifico per conversion_contact_form
+    if (data.detail.type === 'conversion_contact_form') {
+      return 'form_contatto';
+    }
+    
     if (data.detail.data?.conversionType) 
       return data.detail.data.conversionType;
-      
-    if (data.detail.type === 'conversion_contact_form')
-      return 'contact_form';
       
     if (data.detail.data?.name && data.detail.data.name.includes('conversion_')) 
       return data.detail.data.name.replace('conversion_', '');
       
     return 'standard';
+  };
+  
+  // Get form data for conversion_contact_form
+  const getFormData = () => {
+    if (data.detail.type === 'conversion_contact_form' && data.detail.data?.formData) {
+      return data.detail.data.formData;
+    }
+    return null;
   };
   
   // Get formatted time
@@ -127,6 +137,7 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
   const phone = getPhone();
   const value = getFormattedValue();
   const conversionType = getConversionType();
+  const formData = getFormData();
   
   return (
     <div className="rounded-lg shadow-sm overflow-hidden">
@@ -168,6 +179,30 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 flex items-center">
             <Phone size={12} className="mr-1" />
             <span>{phone}</span>
+          </div>
+        )}
+        
+        {/* Form Data for conversion_contact_form */}
+        {formData && (
+          <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs">
+            {formData.email && (
+              <div className="flex items-center mb-1">
+                <Mail size={12} className="mr-1 text-red-700 dark:text-red-300" />
+                <span>{formData.email}</span>
+              </div>
+            )}
+            {formData.firstName && (
+              <div className="flex items-center">
+                <User size={12} className="mr-1 text-red-700 dark:text-red-300" />
+                <span>{formData.firstName} {formData.lastName || ''}</span>
+              </div>
+            )}
+            {formData.phone && (
+              <div className="flex items-center mt-1">
+                <Phone size={12} className="mr-1 text-red-700 dark:text-red-300" />
+                <span>{formData.phone}</span>
+              </div>
+            )}
           </div>
         )}
         

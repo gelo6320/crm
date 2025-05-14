@@ -82,14 +82,21 @@ export default function SessionFlow({
       setNoData(false);
     }
     
+    // Filtra gli eventi scroll_depth, mantenendo solo quelli significativi
+    const filteredDetails = sessionDetails.filter(detail => 
+      detail.type !== 'scroll_depth' // Rimuovi tutti gli eventi scroll_depth
+    );
+    
+    console.log(`Filtrati ${sessionDetails.length - filteredDetails.length} eventi scroll_depth`);
+    
     // Crea i nodi e bordi direttamente dai dati di UserPath
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
     
     // Log per debug
-    console.log("Elaborazione di", sessionDetails.length, "dettagli sessione");
+    console.log("Elaborazione di", filteredDetails.length, "dettagli sessione filtrati");
     
-    sessionDetails.forEach((detail, index) => {
+    filteredDetails.forEach((detail, index) => {
       let nodeType = 'actionNode';
       let nodeBackground = '#3498db'; // Default blu
       let nodeBorder = '1px solid #1e6091';
@@ -101,18 +108,27 @@ export default function SessionFlow({
         nodeBackground = '#FF6B00'; // Primario
         nodeBorder = '1px solid #d05600';
       } 
-      // Check for conversion events
+      // Gestisci correttamente gli eventi di conversione e conversion_contact_form
       else if (detail.type === 'conversion' || 
-               detail.type === 'event' && 
-               (detail.data?.category === 'conversion' || 
-                detail.data?.conversionType ||
-                (detail.data?.name && detail.data.name.includes('conversion')))) {
+               detail.type === 'conversion_contact_form' ||
+               (detail.type === 'event' && 
+                (detail.data?.category === 'conversion' || 
+                 detail.data?.conversionType ||
+                 (detail.data?.name && detail.data.name.includes('conversion'))))) {
         nodeType = 'eventNode';
         nodeBackground = '#e74c3c'; // Rosso per eventi di conversione
         nodeBorder = '1px solid #c0392b';
       } 
+      // Gestisci correttamente gli eventi scroll_bottom
+      else if (detail.type === 'scroll_bottom' ||
+               (detail.type === 'event' && detail.data?.name === 'scroll_bottom')) {
+        nodeType = 'navigationNode';
+        nodeBackground = '#2ecc71'; // Verde per eventi di navigazione
+        nodeBorder = '1px solid #27ae60';
+      } 
       // Check for click events
       else if (detail.type === 'click' || 
+               detail.type === 'generic_click' ||
                (detail.type === 'event' && detail.data?.name === 'generic_click')) {
         nodeType = 'actionNode';
         nodeBackground = '#3498db'; // Blu per click
@@ -128,7 +144,6 @@ export default function SessionFlow({
                  detail.data?.name === 'page_visibility' ||
                  detail.data?.name === 'time_on_page' ||
                  detail.data?.name === 'scroll' ||
-                 detail.data?.name === 'scroll_depth' ||
                  // Additional check for time/visibility events
                  detail.data?.isVisible !== undefined ||
                  detail.data?.timeOnPage !== undefined
@@ -156,13 +171,13 @@ export default function SessionFlow({
       // Crea i bordi tra i nodi
       if (index > 0) {
         const timeBetween = getTimeDifference(
-          new Date(sessionDetails[index - 1].timestamp),
+          new Date(filteredDetails[index - 1].timestamp),
           new Date(detail.timestamp)
         );
         
         const edge: Edge = {
-          id: `edge-${sessionDetails[index - 1].id}-${detail.id}`,
-          source: sessionDetails[index - 1].id,
+          id: `edge-${filteredDetails[index - 1].id}-${detail.id}`,
+          source: filteredDetails[index - 1].id,
           target: detail.id,
           type: 'smoothstep',
           animated: true,
@@ -222,11 +237,37 @@ export default function SessionFlow({
           }
           return `Visualizzazione Pagina\n${detail.data?.title || 'Pagina sconosciuta'}`;
         
+        // ===== CONVERSION_CONTACT_FORM =====
+        case 'conversion_contact_form':
+          // Estrai i dati significativi
+          const formValue = detail.data?.value || 0;
+          const formEmail = detail.data?.formData?.email || '';
+          const formName = detail.data?.formData?.firstName 
+            ? `${detail.data.formData.firstName} ${detail.data.formData.lastName || ''}`
+            : (formEmail.split('@')[0] || 'Utente');
+            
+          return `Conversione: Form Contatto\nValore: ${formValue}€ - ${formName}`;
+          
+        // ===== LEAD_ACQUISITION =====  
+        case 'lead_acquisition_contact':
+          let leadInfo = '';
+          if (detail.data?.formData?.firstName) {
+            leadInfo = `${detail.data.formData.firstName} ${detail.data.formData.lastName || ''}`;
+          } else if (detail.data?.formData?.email) {
+            leadInfo = detail.data.formData.email;
+          } else {
+            leadInfo = 'Lead acquisito';
+          }
+          return `Acquisizione Lead\n${leadInfo}`;
+        
         // ===== CLICK DIRETTI =====
         case 'click':
+        case 'generic_click':
           // Verifica la struttura dei dati del click
           if (detail.data?.tagName) {
             return `Click su ${detail.data.tagName}\n${detail.data.text || 'elemento'}`;
+          } else if (detail.data?.elementText) {
+            return `Click su Elemento\n${detail.data.elementText}`;
           } else if (detail.data?.formId) {
             return `Click su Campo Form\n${detail.data.element || 'campo'}`;
           } else if (detail.data?.selector && detail.data.selector.includes('form')) {
@@ -238,10 +279,19 @@ export default function SessionFlow({
           }
           return `Click su Elemento\n${detail.data?.element || 'elemento'}`;
         
+        // ===== EMAIL COLLECTED =====
+        case 'email_collected':
+          return `Email Raccolta\n${detail.data?.raw?.form || 'Form'}`;
+        
         // ===== SCROLL DIRETTI =====
         case 'scroll':
           const direction = detail.data?.direction === 'up' ? 'verso l\'alto' : 'verso il basso';
-          return `Navigazione: Scroll ${direction}\nProfondità: ${detail.data?.depth || detail.data?.percent || '?'}%`;
+          const depth = detail.data?.scrollDepth || detail.data?.depth || detail.data?.percent || '?';
+          return `Navigazione: Scroll ${direction}\nProfondità: ${depth}%`;
+        
+        // ===== SCROLL BOTTOM =====
+        case 'scroll_bottom':
+          return `Navigazione: Fine Pagina\nScroll 100%`;
         
         // ===== TEMPO SULLA PAGINA DIRETTI =====
         case 'time_on_page':
@@ -258,17 +308,21 @@ export default function SessionFlow({
           }
           return `Invio Form\n${detail.data?.page || 'pagina'}`;
         
+        // ===== PAGE VISIBILITY =====
+        case 'page_visibility':
+          return `Navigazione: Visibilità\n${detail.data?.isVisible ? 'Pagina visibile' : 'Pagina nascosta'}`;
+        
         // ===== EVENTI GENERICI =====
         case 'event':
           // ----- CLICK GENERICI -----
           if (detail.data?.name === 'generic_click' || (detail.data?.tagName && detail.data?.text)) {
             const tagName = detail.data?.tagName || 'elemento';
-            const text = detail.data?.text || '';
+            const text = detail.data?.text || detail.data?.elementText || '';
             return `Click su ${tagName}\n${text}`;
           }
           
           // ----- EMAIL COMPILATA -----
-          if (detail.data?.fieldName === 'email') {
+          if (detail.data?.fieldName === 'email' || detail.data?.name === 'email_collected') {
             return `Campo Email Compilato\n${detail.data.form || 'Form'}`;
           }
           
@@ -288,7 +342,7 @@ export default function SessionFlow({
                                      : detail.data.value)
                                   : detail.data?.value;
             
-            return `Conversione\n${conversionType}${value ? ` (${value})` : ''}`;
+            return `Conversione\n${conversionType}${value ? ` (${value}€)` : ''}`;
           }
           
           // ----- LEAD ACQUISITION -----
@@ -313,23 +367,23 @@ export default function SessionFlow({
           // ----- EVENTI DI NAVIGAZIONE -----
           // Scroll
           if (detail.data?.name === 'scroll' || 
-              detail.data?.name === 'scroll_depth' || 
-              detail.data?.name === 'scroll_bottom' ||
               detail.data?.depth !== undefined ||
               detail.data?.totalScrollDistance !== undefined ||
               detail.data?.percent !== undefined) {
             
             const depth = detail.data?.depth || 
                         detail.data?.percent || 
+                        detail.data?.scrollDepth ||
                         (detail.data?.data?.depth) || 
                         (detail.data?.data?.percent) || 
                         '?';
             
-            if (detail.data?.name === 'scroll_bottom') {
-              return `Navigazione: Fine Pagina\nScroll 100%`;
-            }
-            
             return `Navigazione: Scroll\nProfondità: ${depth}%`;
+          }
+          
+          // Scroll Bottom
+          if (detail.data?.name === 'scroll_bottom') {
+            return `Navigazione: Fine Pagina\nScroll 100%`;
           }
           
           // Tempo sulla pagina
@@ -347,8 +401,9 @@ export default function SessionFlow({
           }
           
           // Visibilità pagina
-          if (detail.data?.name === 'page_visibility' || detail.data?.visible !== undefined) {
-            const isVisible = detail.data?.visible || 
+          if (detail.data?.name === 'page_visibility' || detail.data?.isVisible !== undefined) {
+            const isVisible = detail.data?.isVisible || 
+                            detail.data?.visible ||
                             (detail.data?.data?.visible);
             
             return `Navigazione: Visibilità\n${isVisible ? 'Pagina visibile' : 'Pagina nascosta'}`;
@@ -395,19 +450,6 @@ export default function SessionFlow({
                            '?';
             
             return `${mediaType}: ${action}\nProgresso: ${progress}%`;
-          }
-          
-          // ----- EVENTI FUNNEL -----
-          if (detail.data?.name === 'funnel_progression' || 
-              detail.data?.funnelName || 
-              (detail.data?.fromStep !== undefined && detail.data?.toStep !== undefined)) {
-            
-            const funnelName = detail.data?.funnelName || 'principale';
-            const toStep = detail.data?.toStep || 
-                         detail.data?.data?.toStep || 
-                         '?';
-            
-            return `Funnel: Passaggio\n${funnelName} → Step ${toStep}`;
           }
           
           // ----- ALTRI EVENTI CON NOME -----
