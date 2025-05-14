@@ -61,6 +61,8 @@ export default function SessionFlow({
   const flowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useRef<any>(null);
   
+  // Modificare la funzione nel file SessionFlow.tsx che determina il tipo di nodo
+
   useEffect(() => {
     if (isLoading) {
       setNoData(false);
@@ -81,7 +83,7 @@ export default function SessionFlow({
       setNoData(false);
     }
     
-    // Create nodes and edges directly from UserPath data
+    // Create nodes and edges directly from session details
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
     
@@ -89,46 +91,88 @@ export default function SessionFlow({
     console.log("Processing", sessionDetails.length, "session details");
     
     sessionDetails.forEach((detail, index) => {
-      // Determine the node type based on the consolidated event type
+      // Determine the node type based on the event type and metadata
       let nodeType = 'actionNode'; // Default
       
-      // Handle both original 'type' field and consolidated event types
-      if (detail.type === 'page_view') {
+      // MIGLIORAMENTO: Logica più robusta per determinare i tipi di nodo
+      if (detail.type === 'page_view' || detail.type === 'pageview') {
         nodeType = 'pageNode';
       } 
       // Conversion events
-      else if (detail.type === 'conversion' || 
-               (detail.data?.category === 'conversion') ||
-               (detail.data?.name && detail.data.name.includes('conversion'))) {
+      else if (
+        detail.type === 'conversion' || 
+        detail.type === 'conversion_contact_form' ||
+        (detail.data?.conversionType) ||
+        (detail.data?.name && 
+          (detail.data.name.includes('conversion') || 
+           detail.data.name.includes('lead_acquisition')))
+      ) {
         nodeType = 'eventNode';
       }
-      // Scroll, visibility, time, session events - map to navigation node
-      else if (['scroll', 'page_visibility', 'time_on_page', 'session_end'].includes(detail.type) ||
-               (detail.data?.category === 'navigation')) {
+      // Form interactions that lead to lead acquisition
+      else if (
+        detail.type === 'form_interaction' && 
+        detail.data?.interactionType && 
+        (detail.data.interactionType === 'lead_facebook' || 
+         detail.data.interactionType === 'email_collected' ||
+         detail.data.interactionType === 'phone_collected')
+      ) {
+        nodeType = 'eventNode';
+      }
+      // Navigation events: scroll, visibility, time, session events
+      else if (
+        ['scroll', 'page_visibility', 'time_on_page', 'session_end'].includes(detail.type) ||
+        (detail.data?.category === 'navigation') ||
+        (detail.data?.scrollTypes) || 
+        (detail.data?.percent && detail.type !== 'conversion')
+      ) {
         nodeType = 'navigationNode';
       }
-      // Click events
-      else if (detail.type === 'click' || 
-               (detail.data?.name && detail.data.name.includes('click'))) {
+      // Click events and other interactions
+      else if (
+        detail.type === 'click' || 
+        (detail.data?.buttonType) ||
+        (detail.data?.elementText) ||
+        (detail.type === 'form_interaction' && 
+          (!detail.data?.interactionType || 
+           !['lead_facebook', 'email_collected', 'phone_collected'].includes(detail.data.interactionType)))
+      ) {
         nodeType = 'actionNode';
-      }
-      // Form interactions
-      else if (detail.type === 'form_interaction' || 
-               (detail.data?.name && detail.data.name.includes('form'))) {
-        nodeType = 'actionNode';
-      }
-      // Lead acquisition - treat as event node
-      else if (detail.data?.name && detail.data.name.includes('lead_acquisition')) {
-        nodeType = 'eventNode';
       }
       
-      // Create the node
+      // Create the node with enhanced metadata
       const node: Node = {
         id: detail.id,
         type: nodeType,
         data: { 
           detail,
-          label: getNodeLabel(detail)
+          label: getNodeLabel(detail),
+          // Aggiungi metadati aggiuntivi in base al tipo di nodo
+          ...(nodeType === 'pageNode' && {
+            url: detail.data?.url || '',
+            title: detail.data?.title || detail.data?.metadata?.title || 'Pagina senza titolo',
+            referrer: detail.data?.referrer || detail.data?.metadata?.referrer || '',
+          }),
+          ...(nodeType === 'actionNode' && {
+            elementText: detail.data?.elementText || detail.data?.metadata?.text || '',
+            tagName: detail.data?.tagName || detail.data?.metadata?.tagName || '',
+          }),
+          ...(nodeType === 'navigationNode' && {
+            percent: detail.data?.percent || detail.data?.metadata?.percent || 0,
+            scrollType: detail.data?.scrollTypes || [],
+            isVisible: detail.data?.isVisible !== undefined ? detail.data.isVisible : 
+                      (detail.data?.metadata?.isVisible !== undefined ? detail.data.metadata.isVisible : null),
+          }),
+          ...(nodeType === 'eventNode' && {
+            conversionType: detail.data?.conversionType || 
+                            (detail.type === 'conversion_contact_form' ? 'contact_form' : 'standard'),
+            formData: detail.data?.formData || {},
+            value: detail.data?.value || 0,
+            isLead: detail.data?.isLeadForm || 
+                    (detail.type === 'form_interaction' && 
+                     detail.data?.interactionType && 
+                     detail.data.interactionType.includes('lead')) || false,
+          }),
         },
         position: { x: 250 * (index % 2), y: 120 * index },
         sourcePosition: Position.Right,
@@ -137,7 +181,7 @@ export default function SessionFlow({
       
       newNodes.push(node);
       
-      // Create edges between nodes
+      // Create edges between nodes with time information
       if (index > 0) {
         const timeBetween = getTimeDifference(
           new Date(sessionDetails[index - 1].timestamp),
@@ -191,59 +235,89 @@ export default function SessionFlow({
     }
     
     try {
-      // Use the consolidated event type as the primary determination factor
+      // Use the event type as the primary determination factor
       switch (detail.type) {
         // Page views
         case 'page_view':
-          if (detail.data?.url) {
-            const pageTitle = detail.data.title || new URL(detail.data.url).pathname;
+        case 'pageview':
+          if (detail.data?.url || detail.data?.metadata?.url) {
+            const url = detail.data?.url || detail.data?.metadata?.url;
+            const pageTitle = detail.data?.title || detail.data?.metadata?.title || 
+                            (url ? new URL(url).pathname : 'Unknown page');
             return `Page View\n${pageTitle}`;
           }
-          return `Page View\n${detail.data?.title || 'Unknown page'}`;
+          return `Page View\n${detail.data?.title || detail.data?.metadata?.title || 'Unknown page'}`;
         
-        // Consolidated click events
+        // Click events
         case 'click':
-          const elementText = detail.data?.elementText || detail.data?.text || '';
-          const tagName = detail.data?.tagName || 'element';
+          const elementText = detail.data?.elementText || detail.data?.metadata?.elementText || 
+                             detail.data?.buttonName || detail.data?.text || '';
+          const tagName = detail.data?.tagName || detail.data?.metadata?.tagName || 'element';
           return `Click on ${tagName}\n${elementText.substring(0, 20)}${elementText.length > 20 ? '...' : ''}`;
         
-        // Form interactions
+        // Form interactions - improved handling
         case 'form_interaction':
-          const formName = detail.data?.formName || 'form';
           const interactionType = detail.data?.interactionType || 'interaction';
+          
+          if (interactionType === 'email_collected') {
+            return `Email Collected\n${detail.data?.email || detail.data?.fieldName || ''}`;
+          } else if (interactionType === 'phone_collected') {
+            return `Phone Collected\n${detail.data?.phone || detail.data?.fieldName || ''}`;
+          } else if (interactionType === 'lead_facebook') {
+            return `Lead Facebook\n${detail.data?.formData?.email || ''}`;
+          } else if (interactionType === 'submit') {
+            const formName = detail.data?.formName || 'form';
+            return `Form Submit\n${formName}`;
+          }
+          
+          const formName = detail.data?.formName || 'form';
           const fieldName = detail.data?.fieldName ? `\n${detail.data.fieldName}` : '';
           return `Form ${interactionType}\n${formName}${fieldName}`;
         
-        // Video interactions
-        case 'video':
-          const videoAction = detail.data?.action || 'played';
-          const videoName = detail.data?.videoName || detail.data?.name || 'video';
-          const progress = detail.data?.percent ? `\n${detail.data.percent}%` : '';
-          return `Video ${videoAction}\n${videoName}${progress}`;
-        
-        // Scroll events
+        // Scroll events - improved with scrollTypes handling
         case 'scroll':
-          const scrollDepth = detail.data?.percent || detail.data?.depth || '0';
+          if (detail.data?.scrollTypes && detail.data.scrollTypes.includes('bottom')) {
+            return `Scroll to Bottom\n100%`;
+          }
+          
+          const scrollDepth = detail.data?.percent || detail.data?.metadata?.percent || 
+                            detail.data?.depth || detail.data?.scrollDepth || '0';
           return `Scroll\n${scrollDepth}%`;
         
         // Time on page events
         case 'time_on_page':
-          const seconds = detail.data?.totalTimeSeconds || detail.data?.seconds || 0;
+          const seconds = detail.data?.totalTimeSeconds || detail.data?.timeOnPage || 
+                        detail.data?.seconds || detail.data?.metadata?.timeOnPage || 0;
           return `Time on page\n${seconds}s`;
         
         // Page visibility
         case 'page_visibility':
-          const isVisible = detail.data?.isVisible ? 'visible' : 'hidden';
-          return `Page ${isVisible}`;
+          const isVisible = detail.data?.isVisible !== undefined ? 
+                          detail.data.isVisible : 
+                          (detail.data?.metadata?.isVisible !== undefined ? 
+                           detail.data.metadata.isVisible : false);
+          return `Page ${isVisible ? 'visible' : 'hidden'}`;
         
         // Session end
         case 'session_end':
           return `Session end\n${detail.data?.status || ''}`;
         
-        // Conversion events
+        // Conversion events - improved with formData handling
         case 'conversion':
+        case 'conversion_contact_form':
           const convType = detail.data?.conversionType || 'standard';
-          const value = detail.data?.value ? `\n${detail.data.value}€` : '';
+          // Extract value and format it if available
+          const value = detail.data?.value ? 
+              `\n${typeof detail.data.value === 'object' && detail.data.value !== null && 
+                '$numberInt' in detail.data.value ? 
+                (detail.data.value as any).$numberInt : detail.data.value}€` : '';
+          
+          // Check for lead form data
+          if (detail.data?.isLeadForm || detail.data?.formData) {
+            const email = detail.data.formData?.email || '';
+            return `Lead Acquisition\n${email}`;
+          }
+          
           return `Conversion\n${convType}${value}`;
         
         // Generic events - try to extract meaningful information

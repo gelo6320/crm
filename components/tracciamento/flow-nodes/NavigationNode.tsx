@@ -1,4 +1,4 @@
-// components/tracciamento/flow-nodes/NavigationNode.tsx
+// components/tracciamento/flow-nodes/NavigationNode.tsx - Updated
 import { Handle, Position } from 'reactflow';
 import { ArrowUp, Clock, MousePointer, Eye, XCircle, Timer, Percent } from 'lucide-react';
 import { formatTime } from '@/lib/utils/format';
@@ -9,46 +9,72 @@ interface NavigationNodeProps {
     detail: {
       type: string;
       data: Record<string, any>;
+      timestamp?: string;
     }
   };
   isConnectable: boolean;
 }
 
 export default function NavigationNode({ data, isConnectable }: NavigationNodeProps) {
+  // Helper per estrarre dati da diverse locazioni nell'oggetto
+  const getMetadata = (key: string, defaultValue: any = null) => {
+    // Check in data directly
+    if (data.detail.data?.[key] !== undefined) {
+      return data.detail.data[key];
+    }
+    
+    // Check in metadata if exists
+    if (data.detail.data?.metadata?.[key] !== undefined) {
+      return data.detail.data.metadata[key];
+    }
+    
+    // Check in raw if exists
+    if (data.detail.data?.raw?.[key] !== undefined) {
+      return data.detail.data.raw[key];
+    }
+    
+    return defaultValue;
+  };
+  
   // Determine navigation type based on event data
   const getNavigationType = () => {
     const type = data.detail.type;
     
     // Caso specifico per scroll_bottom
-    if (type === 'scroll_bottom' || 
-        (type === 'event' && data.detail.data?.name === 'scroll_bottom')) {
+    if (type === 'scroll' && getMetadata('scrollTypes') && 
+        getMetadata('scrollTypes').includes('bottom')) {
       return 'scroll_bottom';
     }
     
     // Check for direct type matches first
-    if (type === 'scroll' || type === 'time_on_page' || type === 'exit_intent') {
+    if (['scroll', 'time_on_page', 'exit_intent', 'page_visibility', 'session_end'].includes(type)) {
       return type;
     }
     
     // Check for event names that indicate type
-    if (type === 'event' && data.detail.data?.name) {
-      if (data.detail.data.name.includes('scroll')) return 'scroll';
-      if (data.detail.data.name.includes('time_on_page')) return 'time_on_page';
-      if (data.detail.data.name.includes('exit_intent')) return 'exit_intent';
-      if (data.detail.data.name === 'page_visibility') return 'page_visibility';
-      if (data.detail.data.name === 'session_end') return 'session_end';
+    if (type === 'event' && getMetadata('name')) {
+      if (getMetadata('name').includes('scroll')) return 'scroll';
+      if (getMetadata('name').includes('time_on_page')) return 'time_on_page';
+      if (getMetadata('name').includes('exit_intent')) return 'exit_intent';
+      if (getMetadata('name') === 'page_visibility') return 'page_visibility';
+      if (getMetadata('name') === 'session_end') return 'session_end';
     }
 
     // Check for specific properties that indicate the navigation type
-    if (data.detail.data?.scrollDepth !== undefined || 
-        data.detail.data?.scrollPercentage !== undefined ||
-        data.detail.data?.depth !== undefined ||
-        data.detail.data?.percent !== undefined) {
+    if (getMetadata('scrollDepth') !== undefined || 
+        getMetadata('scrollPercentage') !== undefined ||
+        getMetadata('depth') !== undefined ||
+        getMetadata('percent') !== undefined) {
       return 'scroll';
     }
     
-    if (data.detail.data?.isVisible !== undefined) {
+    if (getMetadata('isVisible') !== undefined) {
       return 'page_visibility';
+    }
+    
+    if (getMetadata('totalTimeSeconds') !== undefined ||
+        getMetadata('timeOnPage') !== undefined) {
+      return 'time_on_page';
     }
     
     return 'generic_navigation';
@@ -86,17 +112,15 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
   const getNavigationValue = () => {
     if (navigationType === 'scroll') {
       // First check for the pre-formatted percentage from our API
-      if (data.detail.data?.scrollPercentage) {
-        return data.detail.data.scrollPercentage;
+      if (getMetadata('scrollPercentage')) {
+        return getMetadata('scrollPercentage');
       }
       
       // Then check various possible scroll data locations
       const depth = 
-        data.detail.data?.scrollDepth || 
-        data.detail.data?.depth || 
-        data.detail.data?.percent || 
-        (data.detail.data?.raw?.depth) || 
-        (data.detail.data?.raw?.percent) || 
+        getMetadata('scrollDepth') || 
+        getMetadata('depth') || 
+        getMetadata('percent') || 
         0;
       
       // Format as percentage
@@ -109,41 +133,53 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
     
     if (navigationType === 'time_on_page') {
       const seconds = 
-        data.detail.data?.timeOnPage || 
-        data.detail.data?.seconds || 
-        data.detail.data?.duration ||
-        (data.detail.data?.raw?.timeOnPage) || 
+        getMetadata('totalTimeSeconds') || 
+        getMetadata('timeOnPage') || 
+        getMetadata('seconds') || 
+        getMetadata('duration') ||
         0;
       
       return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds/60)}m ${seconds%60}s`;
     }
     
     if (navigationType === 'page_visibility') {
-      const isVisible = data.detail.data?.isVisible !== undefined ? 
-                      data.detail.data.isVisible : 
-                      data.detail.data?.visible;
+      const isVisible = getMetadata('isVisible') !== undefined ? 
+                      getMetadata('isVisible') : 
+                      getMetadata('visible');
       
       return isVisible ? 'Visibile' : 'Nascosta';
+    }
+    
+    if (navigationType === 'session_end') {
+      return getMetadata('status') || 'completed';
     }
     
     return '';
   };
   
-  // Calculate if this is a significant scroll (>10%) or scroll_bottom
+  // Calculate if this is a significant scroll (>50%) or scroll_bottom
   const isSignificantScroll = () => {
     if (navigationType === 'scroll_bottom') return true;
     
     if (navigationType !== 'scroll') return false;
     
     const depth = 
-      data.detail.data?.scrollDepth || 
-      data.detail.data?.depth || 
-      data.detail.data?.percent || 
-      (data.detail.data?.raw?.depth) || 
-      (data.detail.data?.raw?.percent) || 
+      getMetadata('scrollDepth') || 
+      getMetadata('depth') || 
+      getMetadata('percent') || 
       0;
     
-    return depth >= 10;
+    return depth >= 50;
+  };
+  
+  // Get formatted time
+  const getFormattedTime = () => {
+    try {
+      const date = data.detail.timestamp ? new Date(data.detail.timestamp) : new Date();
+      return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return '';
+    }
   };
   
   return (
@@ -157,6 +193,10 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
           <span className="ml-auto bg-white text-green-700 text-xs py-0.5 px-2 rounded-full font-medium">
             {getNavigationValue()}
           </span>
+        )}
+        
+        {!getNavigationValue() && (
+          <span className="ml-auto text-xs text-white opacity-80">{getFormattedTime()}</span>
         )}
       </div>
       
@@ -174,41 +214,74 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
         {/* Scroll details */}
         {navigationType === 'scroll' && (
           <>
-            {data.detail.data?.totalScrollDistance && (
+            {getMetadata('totalScrollDistance') && (
               <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                Distanza: {data.detail.data.totalScrollDistance}px
+                Distanza: {getMetadata('totalScrollDistance')}px
               </div>
             )}
             
-            {data.detail.data?.raw?.documentHeight && (
+            {getMetadata('scrollTypes') && (
               <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                Doc: {data.detail.data.raw.documentHeight}px, Viewport: {data.detail.data.raw.viewportHeight || '?'}px
+                Tipo: {getMetadata('scrollTypes').join(', ')}
+              </div>
+            )}
+            
+            {getMetadata('documentHeight') && (
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Doc: {getMetadata('documentHeight')}px, 
+                Viewport: {getMetadata('viewportHeight') || '?'}px
               </div>
             )}
           </>
         )}
         
-        {/* Scroll Bottom details */}
-        {navigationType === 'scroll_bottom' && (
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Pagina scorsa completamente
-            {data.detail.data?.raw?.totalScrollDistance && (
-              <span className="ml-1">({data.detail.data.raw.totalScrollDistance}px)</span>
-            )}
-          </div>
-        )}
-        
         {/* Time on page details */}
-        {navigationType === 'time_on_page' && data.detail.data?.timeOnPage && (
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Durata: {formatTime(data.detail.data.timeOnPage)}
-          </div>
+        {navigationType === 'time_on_page' && (
+          <>
+            {getMetadata('totalTimeSeconds') && (
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Durata: {formatTime(getMetadata('totalTimeSeconds'))}
+              </div>
+            )}
+            
+            {getMetadata('status') && (
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Stato: {getMetadata('status')}
+              </div>
+            )}
+            
+            {getMetadata('isActive') !== undefined && (
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Attivo: {getMetadata('isActive') ? 'Sì' : 'No'}
+              </div>
+            )}
+          </>
         )}
         
         {/* Page visibility details */}
         {navigationType === 'page_visibility' && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Stato: {data.detail.data?.isVisible ? 'Pagina attiva' : 'Scheda in background'}
+            Stato: {getMetadata('isVisible') ? 'Pagina attiva' : 'Scheda in background'}
+            {getMetadata('totalVisibleTime') && (
+              <div className="mt-1">
+                Tempo visibile: {formatTime(Math.floor(getMetadata('totalVisibleTime')/1000))}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Session end details */}
+        {navigationType === 'session_end' && (
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            {getMetadata('totalTimeOnPage') && (
+              <div>Durata sessione: {formatTime(getMetadata('totalTimeOnPage'))}</div>
+            )}
+            {getMetadata('events') && (
+              <div className="mt-1">Eventi: {getMetadata('events')}</div>
+            )}
+            {getMetadata('pageViews') && (
+              <div className="mt-1">Pagine viste: {getMetadata('pageViews')}</div>
+            )}
           </div>
         )}
       </div>

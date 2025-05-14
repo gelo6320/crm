@@ -1,11 +1,12 @@
-// components/tracciamento/flow-nodes/PageNode.tsx
+// components/tracciamento/flow-nodes/PageNode.tsx - Updated version
 import { Handle, Position } from 'reactflow';
-import { Eye, Globe, Link, Calendar } from 'lucide-react';
+import { Eye, Globe, Link, Calendar, Clock } from 'lucide-react';
 
 interface PageNodeProps {
   data: {
     label: string;
     detail: {
+      type: string;
       data: Record<string, any>;
       timestamp: string;
     }
@@ -14,11 +15,32 @@ interface PageNodeProps {
 }
 
 export default function PageNode({ data, isConnectable }: PageNodeProps) {
-  const url = data.detail.data?.url || '';
-  const title = data.detail.data?.title || 'Pagina senza titolo';
-  const referrer = data.detail.data?.referrer || '';
-  const scrollDepth = data.detail.data?.scrollDepth;
-  const timeOnPage = data.detail.data?.timeOnPage;
+  // Extract metadata from various locations in the object structure
+  const getMetadata = (key: string, defaultValue: any = null) => {
+    // Check in data directly
+    if (data.detail.data?.[key] !== undefined) {
+      return data.detail.data[key];
+    }
+    
+    // Check in metadata if exists
+    if (data.detail.data?.metadata?.[key] !== undefined) {
+      return data.detail.data.metadata[key];
+    }
+    
+    // Check in raw if exists
+    if (data.detail.data?.raw?.[key] !== undefined) {
+      return data.detail.data.raw[key];
+    }
+    
+    return defaultValue;
+  };
+  
+  const url = getMetadata('url', '');
+  const title = getMetadata('title', 'Pagina senza titolo');
+  const referrer = getMetadata('referrer', '');
+  const scrollDepth = getMetadata('scrollDepth') || getMetadata('percent');
+  const timeOnPage = getMetadata('timeOnPage') || getMetadata('totalTimeSeconds');
+  const pageType = getMetadata('pageType');
   
   // Get formatted time
   const getFormattedTime = () => {
@@ -77,6 +99,13 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
           </div>
         )}
         
+        {/* Page type if available */}
+        {pageType && (
+          <div className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full mt-1 inline-block">
+            {pageType}
+          </div>
+        )}
+        
         {/* Add scroll depth and time on page if available */}
         <div className="flex mt-1 gap-2">
           {scrollDepth !== undefined && (
@@ -87,7 +116,8 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
           
           {timeOnPage !== undefined && (
             <div className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-              Tempo: {timeOnPage}s
+              <Clock size={10} className="inline mr-1" />
+              {timeOnPage}s
             </div>
           )}
         </div>

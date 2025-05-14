@@ -1,6 +1,6 @@
-// components/tracciamento/flow-nodes/ActionNode.tsx
+// components/tracciamento/flow-nodes/ActionNode.tsx - Updated
 import { Handle, Position } from 'reactflow';
-import { MousePointer, FileText, Mail, MousePointerClick } from 'lucide-react';
+import { MousePointer, FileText, Mail, MousePointerClick, Keyboard, FormInput } from 'lucide-react';
 
 interface ActionNodeProps {
   data: {
@@ -8,24 +8,64 @@ interface ActionNodeProps {
     detail: {
       type: string;
       data: Record<string, any>;
+      timestamp?: string;
     }
   };
   isConnectable: boolean;
 }
 
 export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
+  // Helper per estrarre dati da diverse locazioni nell'oggetto
+  const getMetadata = (key: string, defaultValue: any = null) => {
+    // Check in data directly
+    if (data.detail.data?.[key] !== undefined) {
+      return data.detail.data[key];
+    }
+    
+    // Check in metadata if exists
+    if (data.detail.data?.metadata?.[key] !== undefined) {
+      return data.detail.data.metadata[key];
+    }
+    
+    // Check in raw if exists
+    if (data.detail.data?.raw?.[key] !== undefined) {
+      return data.detail.data.raw[key];
+    }
+    
+    return defaultValue;
+  };
+  
   // Determine the appropriate icon based on event type
   const getIconByType = () => {
     const type = data.detail.type;
+    const interactionType = getMetadata('interactionType');
+    
+    // Is this a click event?
     const isClick = 
       type === 'click' || 
-      type === 'generic_click' || 
-      (type === 'event' && data.detail.data?.name === 'generic_click');
+      getMetadata('buttonType') ||
+      (type === 'event' && getMetadata('name') === 'generic_click');
       
     if (isClick) return <MousePointerClick size={16} className="text-white" />;
-    if (type === 'form_submit') return <FileText size={16} className="text-white" />;
-    if (type === 'email_collected' || data.detail.data?.fieldName === 'email') 
+    
+    // Form interactions
+    if (type === 'form_interaction') {
+      if (interactionType === 'typing' || interactionType === 'filled') {
+        return <Keyboard size={16} className="text-white" />;
+      }
+      if (interactionType === 'submit') {
+        return <FileText size={16} className="text-white" />;
+      }
+      if (interactionType === 'focus') {
+        return <FormInput size={16} className="text-white" />;
+      }
+      return <FileText size={16} className="text-white" />;
+    }
+    
+    // Email related - but not a lead (those go in EventNode)
+    if (type === 'email_interaction' || getMetadata('fieldName') === 'email') {
       return <Mail size={16} className="text-white" />;
+    }
     
     return <MousePointer size={16} className="text-white" />;
   };
@@ -33,55 +73,52 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
   // Get the appropriate title based on event type
   const getActionTitle = () => {
     const type = data.detail.type;
-    if (type === 'click' || type === 'generic_click') return 'Click';
-    if (type === 'event' && data.detail.data?.name === 'generic_click') return 'Click';
-    if (type === 'form_submit') return 'Form';
-    if (type === 'email_collected' || data.detail.data?.fieldName === 'email') return 'Email';
+    const interactionType = getMetadata('interactionType');
     
-    // Check for specific event names
-    if (type === 'event' && data.detail.data?.name) {
-      if (data.detail.data.name === 'email_collected') return 'Email';
-      return data.detail.data.name.charAt(0).toUpperCase() + data.detail.data.name.slice(1).replace(/_/g, ' ');
+    if (type === 'click') return 'Click';
+    
+    if (type === 'form_interaction') {
+      if (interactionType === 'typing') return 'Input';
+      if (interactionType === 'filled') return 'Campo';
+      if (interactionType === 'focus') return 'Focus';
+      if (interactionType === 'submit') return 'Submit';
+      return interactionType ? `Form ${interactionType}` : 'Form';
+    }
+    
+    if (type === 'event' && getMetadata('name')) {
+      return getMetadata('name').charAt(0).toUpperCase() + 
+             getMetadata('name').slice(1).replace(/_/g, ' ');
     }
     
     return 'Azione';
   };
   
-  // Get click element text or email value
+  // Get click element text or input value
   const getElementDetails = () => {
+    const type = data.detail.type;
+    
     // For click events
-    if (data.detail.data?.elementText) {
-      return data.detail.data.elementText;
+    if (type === 'click') {
+      return getMetadata('elementText') || getMetadata('text') || 
+             getMetadata('buttonName') || '';
     }
     
-    // For events with raw.text
-    if (data.detail.data?.raw?.text) {
-      return data.detail.data.raw.text;
+    // For form interactions
+    if (type === 'form_interaction') {
+      const fieldName = getMetadata('fieldName') || '';
+      const fieldValue = getMetadata('hasValue') ? '(con valore)' : '(vuoto)';
+      return fieldName ? `${fieldName} ${fieldValue}` : '';
     }
     
-    // Check for standard text property
-    if (data.detail.data?.text) {
-      return data.detail.data.text;
-    }
-    
-    return null;
+    return '';
   };
   
   // Get the HTML element type if available
   const getElementType = () => {
-    if (data.detail.data?.elementType) {
-      return data.detail.data.elementType;
-    }
-    
-    if (data.detail.data?.tagName) {
-      return data.detail.data.tagName;
-    }
-    
-    if (data.detail.data?.raw?.tagName) {
-      return data.detail.data.raw.tagName;
-    }
-    
-    return null;
+    return getMetadata('elementType') || 
+           getMetadata('tagName') || 
+           getMetadata('fieldType') || 
+           null;
   };
   
   const elementText = getElementDetails();
@@ -89,13 +126,21 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
   
   // Is this a click event?
   const isClick = data.detail.type === 'click' || 
-                data.detail.type === 'generic_click' || 
-                (data.detail.type === 'event' && data.detail.data?.name === 'generic_click');
+                getMetadata('buttonType') || 
+                (data.detail.type === 'event' && getMetadata('name') === 'generic_click');
   
-  // Is this an email collection event?
-  const isEmailEvent = data.detail.type === 'email_collected' || 
-                     (data.detail.type === 'event' && data.detail.data?.name === 'email_collected') ||
-                     data.detail.data?.fieldName === 'email';
+  // Is this a form interaction?
+  const isFormInteraction = data.detail.type === 'form_interaction';
+  
+  // Get formatted time
+  const getFormattedTime = () => {
+    try {
+      const date = data.detail.timestamp ? new Date(data.detail.timestamp) : new Date();
+      return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return '';
+    }
+  };
   
   return (
     <div className="rounded-lg shadow-sm overflow-hidden">
@@ -103,16 +148,17 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
       <div className="bg-blue-500 px-3 py-2 flex items-center">
         {getIconByType()}
         <span className="text-white font-medium ml-2">{getActionTitle()}</span>
+        <span className="ml-auto text-xs text-white opacity-80">{getFormattedTime()}</span>
       </div>
       
       {/* Content */}
       <div className="bg-white p-3 dark:bg-zinc-800">
         {/* Main content area */}
         <div className="flex flex-col">
-          {/* Element text (if available) */}
+          {/* Element text or field name */}
           {elementText && (
             <div className="font-medium mb-1 text-zinc-900 dark:text-white truncate" title={elementText}>
-              "{elementText.substring(0, 20)}{elementText.length > 20 ? '...' : ''}"
+              {isClick ? `"${elementText.substring(0, 20)}${elementText.length > 20 ? '...' : ''}"` : elementText}
             </div>
           )}
           
@@ -123,17 +169,31 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
             </div>
           )}
           
-          {/* For click events, show position if available */}
-          {isClick && data.detail.data?.raw?.position && (
+          {/* Form name if available */}
+          {isFormInteraction && getMetadata('formName') && (
             <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Pos: {data.detail.data.raw.position.x},{data.detail.data.raw.position.y}
+              Form: {getMetadata('formName')}
             </div>
           )}
           
-          {/* For email events, show form details if available */}
-          {isEmailEvent && data.detail.data?.raw?.form && (
+          {/* For click events, show position if available */}
+          {isClick && getMetadata('position') && (
             <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Form: {data.detail.data.raw.form}
+              Pos: {getMetadata('position').x},{getMetadata('position').y}
+            </div>
+          )}
+          
+          {/* For click events, show href if available */}
+          {isClick && getMetadata('href') && (
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 truncate" title={getMetadata('href')}>
+              Link: {getMetadata('href').substring(0, 25)}{getMetadata('href').length > 25 ? '...' : ''}
+            </div>
+          )}
+          
+          {/* For form interactions, show more details */}
+          {isFormInteraction && getMetadata('interactionType') === 'typing' && getMetadata('fieldLength') && (
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              Lunghezza: {getMetadata('fieldLength')} caratteri
             </div>
           )}
         </div>

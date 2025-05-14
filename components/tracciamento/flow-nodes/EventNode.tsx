@@ -1,4 +1,4 @@
-// components/tracciamento/flow-nodes/EventNode.tsx
+// components/tracciamento/flow-nodes/EventNode.tsx - Updated
 import { Handle, Position } from 'reactflow';
 import { AlertCircle, Mail, User, Phone, MessageSquare, Tag, DollarSign, Calendar } from 'lucide-react';
 
@@ -15,30 +15,57 @@ interface EventNodeProps {
 }
 
 export default function EventNode({ data, isConnectable }: EventNodeProps) {
+  // Helper per estrarre dati da diverse locazioni nell'oggetto
+  const getMetadata = (key: string, defaultValue: any = null) => {
+    // Check in data directly
+    if (data.detail.data?.[key] !== undefined) {
+      return data.detail.data[key];
+    }
+    
+    // Check in metadata if exists
+    if (data.detail.data?.metadata?.[key] !== undefined) {
+      return data.detail.data.metadata[key];
+    }
+    
+    // Check in formData if exists
+    if (data.detail.data?.formData?.[key] !== undefined) {
+      return data.detail.data.formData[key];
+    }
+    
+    // Check in raw if exists
+    if (data.detail.data?.raw?.[key] !== undefined) {
+      return data.detail.data.raw[key];
+    }
+    
+    return defaultValue;
+  };
+  
   // Determine if this is a lead acquisition or conversion event
   const isLead = 
     data.detail.type === 'lead_acquisition_contact' ||
-    (data.detail.data?.name && 
-     data.detail.data.name.includes('lead_acquisition')) ||
-    data.detail.data?.formType;
+    data.detail.type === 'form_interaction' && 
+      (getMetadata('interactionType') === 'lead_facebook' || 
+       getMetadata('interactionType') === 'email_collected' ||
+       getMetadata('interactionType') === 'phone_collected') ||
+    (getMetadata('name') && 
+     getMetadata('name').includes('lead_acquisition')) ||
+    getMetadata('isLeadForm') === true ||
+    getMetadata('formType');
   
-  // Extract value for conversions
+  // Extract value for conversions (handling MongoDB number format)
   const getValue = () => {
-    // If value is directly available
-    if (data.detail.data?.value !== undefined) {
-      if (typeof data.detail.data.value === 'object' && data.detail.data.value !== null) {
-        // Handle MongoDB number format
-        if ('$numberInt' in data.detail.data.value) {
-          return data.detail.data.value.$numberInt;
-        }
-        return JSON.stringify(data.detail.data.value);
-      }
-      return data.detail.data.value;
-    }
+    const value = getMetadata('value');
     
-    // Look in formData or metadata
-    if (data.detail.data?.formData?.value) {
-      return data.detail.data.formData.value;
+    // If value is directly available
+    if (value !== null) {
+      if (typeof value === 'object' && value !== null) {
+        // Handle MongoDB number format
+        if ('$numberInt' in value) {
+          return value.$numberInt;
+        }
+        return JSON.stringify(value);
+      }
+      return value;
     }
     
     return null;
@@ -55,47 +82,40 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
   // Extract name from various possible locations
   const getName = () => {
     // First check for explicit firstName/lastName
-    if (data.detail.data?.firstName) {
-      return `${data.detail.data.firstName} ${data.detail.data.lastName || ''}`;
-    }
+    const firstName = getMetadata('firstName');
+    const lastName = getMetadata('lastName');
     
-    // Then check in formData
-    if (data.detail.data?.formData?.firstName) {
-      return `${data.detail.data.formData.firstName} ${data.detail.data.formData.lastName || ''}`;
+    if (firstName) {
+      return `${firstName} ${lastName || ''}`;
     }
     
     // Check for name field
-    if (data.detail.data?.name && typeof data.detail.data.name === 'string' && !data.detail.data.name.includes('_')) {
-      return data.detail.data.name;
+    const name = getMetadata('name');
+    if (name && typeof name === 'string' && !name.includes('_')) {
+      return name;
     }
     
     return '';
   };
   
-  // Extract email from various possible locations
+  // Extract email with privacy consideration
   const getEmail = () => {
-    if (typeof data.detail.data?.email === 'string') {
-      return data.detail.data.email;
-    }
+    const email = getMetadata('email');
     
-    if (data.detail.data?.formData?.email) {
-      return data.detail.data.formData.email;
+    if (email && typeof email === 'string') {
+      // Privacy check - don't show full email if consent not granted
+      if (email.includes('consent_not_granted')) {
+        return 'Email (protetta)';
+      }
+      return email;
     }
     
     return null;
   };
   
-  // Extract phone from various possible locations
+  // Extract phone
   const getPhone = () => {
-    if (data.detail.data?.phone) {
-      return data.detail.data.phone;
-    }
-    
-    if (data.detail.data?.formData?.phone) {
-      return data.detail.data.formData.phone;
-    }
-    
-    return null;
+    return getMetadata('phone');
   };
   
   // Get conversion type for display
@@ -105,18 +125,21 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
       return 'form_contatto';
     }
     
-    if (data.detail.data?.conversionType) 
-      return data.detail.data.conversionType;
+    const conversionType = getMetadata('conversionType');
+    if (conversionType) return conversionType;
       
-    if (data.detail.data?.name && data.detail.data.name.includes('conversion_')) 
-      return data.detail.data.name.replace('conversion_', '');
+    const name = getMetadata('name');
+    if (name && name.includes('conversion_')) 
+      return name.replace('conversion_', '');
       
     return 'standard';
   };
   
   // Get form data for conversion_contact_form
   const getFormData = () => {
-    if (data.detail.type === 'conversion_contact_form' && data.detail.data?.formData) {
+    if ((data.detail.type === 'conversion_contact_form' || 
+         data.detail.type === 'form_interaction' && getMetadata('interactionType') === 'lead_facebook') && 
+        data.detail.data?.formData) {
       return data.detail.data.formData;
     }
     return null;
@@ -167,11 +190,7 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
         {isLead && email && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center">
             <Mail size={12} className="mr-1" />
-            <span className="truncate">
-              {typeof email === 'string' && email.includes('consent_not_granted') 
-                ? 'Email (protetta)' 
-                : email}
-            </span>
+            <span className="truncate">{email}</span>
           </div>
         )}
         
@@ -182,25 +201,37 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
           </div>
         )}
         
-        {/* Form Data for conversion_contact_form */}
+        {/* Form Data specifically for form submissions */}
         {formData && (
           <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs">
-            {formData.email && (
+            {formData.email && formData.email !== email && (
               <div className="flex items-center mb-1">
                 <Mail size={12} className="mr-1 text-red-700 dark:text-red-300" />
                 <span>{formData.email}</span>
               </div>
             )}
-            {formData.firstName && (
+            {formData.firstName && !name && (
               <div className="flex items-center">
                 <User size={12} className="mr-1 text-red-700 dark:text-red-300" />
                 <span>{formData.firstName} {formData.lastName || ''}</span>
               </div>
             )}
-            {formData.phone && (
+            {formData.phone && formData.phone !== phone && (
               <div className="flex items-center mt-1">
                 <Phone size={12} className="mr-1 text-red-700 dark:text-red-300" />
                 <span>{formData.phone}</span>
+              </div>
+            )}
+            {formData.message && (
+              <div className="flex items-center mt-1">
+                <MessageSquare size={12} className="mr-1 text-red-700 dark:text-red-300" />
+                <span className="truncate">{formData.message.substring(0, 20)}{formData.message.length > 20 ? '...' : ''}</span>
+              </div>
+            )}
+            {/* Display consent information if available */}
+            {formData.adOptimizationConsent !== undefined && (
+              <div className="mt-1 text-red-700 dark:text-red-300">
+                Consenso: {formData.adOptimizationConsent === true ? 'Sì' : 'No'}
               </div>
             )}
           </div>
@@ -218,6 +249,13 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
             <div className="text-xs py-1 px-2 rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 inline-block ml-2">
               {conversionType}
             </div>
+          </div>
+        )}
+        
+        {/* Display interaction type for form_interaction events */}
+        {data.detail.type === 'form_interaction' && getMetadata('interactionType') && (
+          <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            Tipo: {getMetadata('interactionType')}
           </div>
         )}
       </div>
