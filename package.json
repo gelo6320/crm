@@ -17,6 +17,7 @@
     "axios": "^1.8.4",
     "chart.js": "^4.4.9",
     "chartjs-adapter-date-fns": "^3.0.0",
+    "dagre": "^0.8.5",
     "framer-motion": "^12.10.5",
     "lucide-react": "^0.501.0",
     "next": "15.3.1",

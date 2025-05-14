@@ -1,7 +1,4 @@
-// Modifica da fare nel file SessionFlow.tsx
-// Nelle funzioni di rendering, assicuriamoci che il flow venga renderizzato 
-// anche con pochi dati
-
+// SessionFlow.tsx - Versione completa con layout migliorato
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import ReactFlow, {
   Background,
@@ -18,6 +15,7 @@ import ReactFlow, {
   MarkerType,
   NodeMouseHandler
 } from 'reactflow';
+import dagre from 'dagre';
 import 'reactflow/dist/style.css';
 import { SessionDetail, UserSession } from '@/types/tracciamento';
 import { formatDateTime } from '@/lib/utils/date';
@@ -29,6 +27,7 @@ import PageNode from './flow-nodes/PageNode';
 import ActionNode from './flow-nodes/ActionNode';
 import EventNode from './flow-nodes/EventNode';
 import NavigationNode from './flow-nodes/NavigationNode';
+import FormNode from './flow-nodes/FormNode'; // Aggiungiamo il nuovo tipo di nodo
 
 interface SessionFlowProps {
   sessionDetails: SessionDetail[];
@@ -42,7 +41,49 @@ const nodeTypes = {
   pageNode: PageNode,
   actionNode: ActionNode,
   eventNode: EventNode,
-  navigationNode: NavigationNode, // Aggiungi il nuovo tipo
+  navigationNode: NavigationNode,
+  formNode: FormNode, // Aggiungi il nuovo tipo
+};
+
+// Funzione per applicare il layout Dagre ai nodi
+const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'LR') => {
+  // Crea un nuovo grafo Dagre
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+  
+  // Configura il layout con direzione
+  dagreGraph.setGraph({ 
+    rankdir: direction,
+    nodesep: 80,     // Spazio orizzontale tra nodi
+    ranksep: 150,    // Spazio verticale tra ranghi
+    marginx: 50,
+    marginy: 50 
+  });
+  
+  // Imposta le dimensioni dei nodi
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: 220, height: 120 });
+  });
+  
+  // Aggiungi edges al grafo
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+  
+  // Calcola il layout
+  dagre.layout(dagreGraph);
+  
+  // Aggiorna la posizione dei nodi
+  return nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    return {
+      ...node,
+      position: {
+        x: nodeWithPosition.x - 110, // Centra orizzontalmente
+        y: nodeWithPosition.y - 60,  // Centra verticalmente
+      },
+    };
+  });
 };
 
 export default function SessionFlow({
@@ -61,8 +102,6 @@ export default function SessionFlow({
   const flowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useRef<any>(null);
   
-  // Modificare la funzione nel file SessionFlow.tsx che determina il tipo di nodo
-
   useEffect(() => {
     if (isLoading) {
       setNoData(false);
@@ -83,153 +122,123 @@ export default function SessionFlow({
       setNoData(false);
     }
     
-    // Create nodes and edges
-    const newNodes: Node[] = [];
+    // Create initial nodes and edges without positions
+    const initialNodes: Node[] = [];
     const newEdges: Edge[] = [];
     
-    // Configurazione layout: posizionamento basato su timeline verticale
-    const timelineLayout = {
-      nodeWidth: 220,     // Larghezza fissa dei nodi
-      nodeGap: 30,        // Spazio verticale tra i nodi
-      columnGap: 300,     // Spazio tra le colonne
-      startY: 20,         // Margine superiore
-      nodesByType: {      // Offset orizzontale per tipo di nodo
-        pageNode: 0,
-        actionNode: 100,
-        navigationNode: 50,
-        eventNode: 150
-      },
-      mobileScaleFactor: window.innerWidth < 768 ? 0.8 : 1 // Scala più piccola su mobile
-    };
-
-    // Posiziona i nodi in modo ordinato
-    let lastY = timelineLayout.startY;
-    let prevNodeType = '';
-    let columnX = 0;
-    
-    // Log for debugging
-    console.log("Processing", sessionDetails.length, "session details");
-    
+    // Process each session detail to create nodes
     sessionDetails.forEach((detail, index) => {
       // Determine the node type based on the event type and metadata
-      let nodeType = 'actionNode'; // Default
+      let nodeType = determineNodeType(detail);
       
-      // Page views
-      if (detail.type === 'page_view' || detail.type === 'pageview') {
-        nodeType = 'pageNode';
-      } 
-      // Conversion events - Solo eventi di conversione effettiva
-      else if (
-        detail.type === 'conversion' || 
-        (detail.data?.category === 'conversion') ||
-        (detail.type === 'form_interaction' && 
-          detail.data?.interactionType === 'lead_facebook')
-      ) {
-        nodeType = 'eventNode';
-      }
-      // Lead collection - IMPORTANTE: solo alcuni form_interaction specifici
-      else if (
-        (detail.type === 'form_interaction' && 
-         detail.data?.interactionType && 
-         ['phone_collected', 'email_collected'].includes(detail.data.interactionType))
-      ) {
-        nodeType = 'eventNode';
-      }
-      // Navigation events
-      else if (
-        ['scroll', 'page_visibility', 'time_on_page', 'session_end'].includes(detail.type) ||
-        (detail.data?.category === 'navigation') ||
-        (detail.data?.scrollTypes)
-      ) {
-        nodeType = 'navigationNode';
-      }
-      // Click events
-      else if (
-        detail.type === 'click' || 
-        (detail.data?.name && detail.data.name.includes('click'))
-      ) {
-        nodeType = 'actionNode';
-      }
-      // TUTTI gli altri form_interaction devono essere actionNode
-      else if (detail.type === 'form_interaction') {
-        nodeType = 'actionNode';
-      }
+      // Create the node (without position - will be set by layout algorithm)
+      const node: Node = {
+        id: detail.id,
+        type: nodeType,
+        data: { 
+          detail,
+          label: getNodeLabel(detail)
+        },
+        position: { x: 0, y: 0 }, // Temporary position
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+      };
       
-          // Calc position (with type-based offset for visual clarity)
-          let xPos = columnX + (timelineLayout.nodesByType[nodeType as keyof typeof timelineLayout.nodesByType] || 0);
-          
-          // Se cambiamo tipo di nodo, aggiungiamo spazio extra per la leggibilità
-          let extraGap = prevNodeType !== nodeType ? timelineLayout.nodeGap * 1.5 : timelineLayout.nodeGap;
-          
-          // Create the node
-          const node: Node = {
-            id: detail.id,
-            type: nodeType,
-            data: { 
-              detail,
-              label: getNodeLabel(detail)
-            },
-            position: { 
-              x: xPos * timelineLayout.mobileScaleFactor, 
-              y: lastY
-            },
-            sourcePosition: Position.Bottom,
-            targetPosition: Position.Top,
-          };
-          
-          newNodes.push(node);
-          
-          // Create edge to previous node
-          if (index > 0) {
-            const timeBetween = getTimeDifference(
-              new Date(sessionDetails[index - 1].timestamp),
-              new Date(detail.timestamp)
-            );
-            
-            const edge: Edge = {
-              id: `edge-${sessionDetails[index - 1].id}-${detail.id}`,
-              source: sessionDetails[index - 1].id,
-              target: detail.id,
-              type: 'step',  // Modificato da 'smoothstep' a 'step' per un aspetto più ordinato
-              animated: true,
-              markerEnd: {
-                type: MarkerType.ArrowClosed,
-                width: 15,
-                height: 15,
-                color: '#64748b',
-              },
-              style: {
-                stroke: '#64748b',
-                strokeWidth: 2, // Linea più spessa
-              },
-              data: {
-                timeDiff: timeBetween
-              },
-              label: timeBetween,
-              labelStyle: { fill: '#94a3b8', fontWeight: 500 },
-              labelBgStyle: { fill: '#1e293b', fillOpacity: 0.7 },
-            };
-            
-            newEdges.push(edge);
-          }
-          
-          // Aggiorna la posizione Y per il prossimo nodo
-          lastY += extraGap + 120; // Altezza stimata del nodo + spazio
-          prevNodeType = nodeType;
-        });
+      initialNodes.push(node);
+      
+      // Create edge to previous node
+      if (index > 0) {
+        const timeBetween = getTimeDifference(
+          new Date(sessionDetails[index - 1].timestamp),
+          new Date(detail.timestamp)
+        );
         
-        console.log("Generated flow:", { nodes: newNodes.length, edges: newEdges.length });
-        setNodes(newNodes);
-        setEdges(newEdges);
+        const edge: Edge = {
+          id: `edge-${sessionDetails[index - 1].id}-${detail.id}`,
+          source: sessionDetails[index - 1].id,
+          target: detail.id,
+          type: 'smoothstep',  // Modificato da 'step' a 'smoothstep' per un aspetto più fluido
+          animated: true,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 15,
+            height: 15,
+            color: '#64748b',
+          },
+          style: {
+            stroke: '#64748b',
+            strokeWidth: 2,
+          },
+          data: {
+            timeDiff: timeBetween
+          },
+          label: timeBetween,
+          labelStyle: { fill: '#94a3b8', fontWeight: 500 },
+          labelBgStyle: { fill: '#1e293b', fillOpacity: 0.7 },
+        };
         
-        // Fit view after nodes are created
-        setTimeout(() => {
-          if (reactFlowInstance.current) {
-            reactFlowInstance.current.fitView({ padding: 0.2 });
-          }
-        }, 100);
-      }, [sessionDetails, isLoading, setNodes, setEdges]);
-
+        newEdges.push(edge);
+      }
+    });
+    
+    // Applica il layout Dagre
+    const nodesWithLayout = getLayoutedElements(initialNodes, newEdges);
+    
+    // Imposta i nodi e gli archi
+    setNodes(nodesWithLayout);
+    setEdges(newEdges);
+    
+    // Fit view after nodes are created
+    setTimeout(() => {
+      if (reactFlowInstance.current) {
+        reactFlowInstance.current.fitView({ padding: 0.2 });
+      }
+    }, 200);
+    
+  }, [sessionDetails, isLoading, setNodes, setEdges]);
+  
+  // Determina il tipo di nodo in base ai dati dell'evento
+  const determineNodeType = (detail: SessionDetail) => {
+    // Page views
+    if (detail.type === 'page_view' || detail.type === 'pageview') {
+      return 'pageNode';
+    } 
+    // Conversion events - Solo eventi di conversione effettiva o lead specifici
+    else if (
+      detail.type === 'conversion' || 
+      (detail.data?.category === 'conversion')
+    ) {
+      return 'eventNode';
+    }
+    // Lead collection specifici - vanno come eventi
+    else if (
+      (detail.type === 'form_interaction' && 
+       detail.data?.interactionType === 'lead_facebook')
+    ) {
+      return 'eventNode';
+    }
+    // Tutti gli altri form_interaction vanno nel nuovo tipo formNode
+    else if (detail.type === 'form_interaction') {
+      return 'formNode';
+    }
+    // Navigation events
+    else if (
+      ['scroll', 'page_visibility', 'time_on_page', 'session_end'].includes(detail.type) ||
+      (detail.data?.category === 'navigation') ||
+      (detail.data?.scrollTypes)
+    ) {
+      return 'navigationNode';
+    }
+    // Click events
+    else if (
+      detail.type === 'click' || 
+      (detail.data?.name && detail.data.name.includes('click'))
+    ) {
+      return 'actionNode';
+    }
+    
+    return 'actionNode'; // Default
+  };
   
   const getNodeLabel = (detail: SessionDetail) => {
     const defaultLabel = "Unspecified event";
@@ -465,99 +474,105 @@ export default function SessionFlow({
           </button>
         </div>
       ) : (
-          <div className="flow-wrapper" ref={flowWrapper}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={onNodeClick}
-              nodeTypes={nodeTypes}
-              fitView
-              minZoom={0.5}
-              maxZoom={1.5}
-              defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
-              attributionPosition="bottom-right"
-              onInit={(instance) => {
-                reactFlowInstance.current = instance;
-                console.log("ReactFlow inizializzato");
-                // Importante: usa setTimeout per dare tempo al componente di renderizzare
-                setTimeout(() => {
-                  console.log("Esecuzione fitView");
-                  if (instance && typeof instance.fitView === 'function') {
-                    instance.fitView({ padding: 0.2 });
-                  }
-                }, 300);
+        <div className="flow-wrapper h-full" ref={flowWrapper}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            nodeTypes={nodeTypes}
+            fitView
+            minZoom={0.5}
+            maxZoom={1.5}
+            defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+            attributionPosition="bottom-right"
+            onInit={(instance) => {
+              reactFlowInstance.current = instance;
+              console.log("ReactFlow inizializzato");
+              // Importante: usa setTimeout per dare tempo al componente di renderizzare
+              setTimeout(() => {
+                console.log("Esecuzione fitView");
+                if (instance && typeof instance.fitView === 'function') {
+                  instance.fitView({ padding: 0.2 });
+                }
+              }, 300);
+            }}
+            style={{ width: '100%', height: '100%' }}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background color="#64748b" gap={16} size={1} />
+            <Controls 
+              showInteractive={false}
+              position="top-right"
+              style={{ marginTop: '60px' }}
+            />
+            <MiniMap 
+              nodeColor={(node) => {
+                switch (node.type) {
+                  case 'pageNode':
+                    return '#FF6B00';
+                  case 'eventNode':
+                    return '#e74c3c';
+                  case 'navigationNode':
+                    return '#2ecc71';
+                  case 'formNode':
+                    return '#9c27b0'; // Colore viola per formNode
+                  default:
+                    return '#3498db';
+                }
               }}
-              style={{ width: '100%', height: '100%' }}
-              proOptions={{ hideAttribution: true }}
-            >
-              <Background color="#64748b" gap={16} size={1} />
-              <Controls 
-                showInteractive={false}
-                position="top-right"
-                style={{ marginTop: '60px' }}
-              />
-              <MiniMap 
-                nodeColor={(node) => {
-                  switch (node.type) {
-                    case 'pageNode':
-                      return '#FF6B00';
-                    case 'eventNode':
-                      return '#e74c3c';
-                    case 'navigationNode':
-                      return '#2ecc71';
-                    default:
-                      return '#3498db';
-                  }
-                }}
-                maskColor="rgba(0, 0, 0, 0.5)"
-                zoomable
-                pannable
-              />
+              maskColor="rgba(0, 0, 0, 0.5)"
+              zoomable
+              pannable
+            />
+          
+            <Panel position="top-right" className="space-x-2">
+              <button 
+                onClick={handleZoomIn}
+                className="p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
+                title="Zoom in"
+              >
+                <ZoomIn size={16} />
+              </button>
+              <button 
+                onClick={handleZoomOut}
+                className="p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
+                title="Zoom out"
+              >
+                <ZoomOut size={16} />
+              </button>
+            </Panel>
             
-              <Panel position="top-right" className="space-x-2">
-                <button 
-                  onClick={handleZoomIn}
-                  className="p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
-                  title="Zoom in"
-                >
-                  <ZoomIn size={16} />
-                </button>
-                <button 
-                  onClick={handleZoomOut}
-                  className="p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
-                  title="Zoom out"
-                >
-                  <ZoomOut size={16} />
-                </button>
-              </Panel>
-              
-              <Panel position="bottom-left">
-                <div className="bg-zinc-800 p-2 rounded border border-zinc-700">
-                  <div className="text-xs mb-2">Legenda:</div>
-                  <div className="grid grid-cols-1 gap-1">
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-primary mr-2"></div>
-                      <span className="text-xs">Visualizzazione pagina</span>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-info mr-2"></div>
-                      <span className="text-xs">Interazione</span>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-success mr-2"></div>
-                      <span className="text-xs">Navigazione</span>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-danger mr-2"></div>
-                      <span className="text-xs">Evento di conversione</span>
-                    </div>
+            <Panel position="bottom-left">
+              <div className="bg-zinc-800 p-2 rounded border border-zinc-700">
+                <div className="text-xs mb-2">Legenda:</div>
+                <div className="grid grid-cols-1 gap-1">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full bg-primary mr-2"></div>
+                    <span className="text-xs">Visualizzazione pagina</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full bg-info mr-2"></div>
+                    <span className="text-xs">Interazione</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full bg-purple-500 mr-2"></div>
+                    <span className="text-xs">Form Interaction</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full bg-success mr-2"></div>
+                    <span className="text-xs">Navigazione</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full bg-danger mr-2"></div>
+                    <span className="text-xs">Evento di conversione</span>
                   </div>
                 </div>
-              </Panel>
-            </ReactFlow>
+              </div>
+            </Panel>
+          </ReactFlow>
         </div>
       )}
       
@@ -570,11 +585,14 @@ export default function SessionFlow({
                 <Eye size={16} className="text-primary mr-2" />
               ) : selectedNode.type === 'eventNode' ? (
                 <AlertCircle size={16} className="text-danger mr-2" />
+              ) : selectedNode.type === 'formNode' ? (
+                <Info size={16} className="text-purple-500 mr-2" />
               ) : (
                 <MousePointer size={16} className="text-info mr-2" />
               )}
               {selectedNode.data.detail.type === 'page_view' ? 'Visualizzazione pagina' : 
-               selectedNode.data.detail.type === 'event' ? 'Evento di conversione' : 
+               selectedNode.data.detail.type === 'event' ? 'Evento di conversione' :
+               selectedNode.data.detail.type === 'form_interaction' ? 'Interazione Form' :
                'Interazione utente'}
             </h3>
             <div className="text-xs text-zinc-400">
@@ -645,26 +663,34 @@ export default function SessionFlow({
               </>
             )}
             
-            {selectedNode.data.detail.type === 'form_submit' && (
+            {selectedNode.data.detail.type === 'form_interaction' && (
               <>
                 <div>
-                  <div className="text-xs text-zinc-400 mb-1">Form ID</div>
-                  <div className="text-sm">{selectedNode.data.detail.data?.formId || 'Non specificato'}</div>
+                  <div className="text-xs text-zinc-400 mb-1">Tipo interazione</div>
+                  <div className="text-sm">{selectedNode.data.detail.data?.interactionType || 'Non specificato'}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-zinc-400 mb-1">Pagina</div>
-                  <div className="text-sm truncate">
-                    {selectedNode.data.detail.data?.page || window.location.pathname}
-                  </div>
+                  <div className="text-xs text-zinc-400 mb-1">Campo</div>
+                  <div className="text-sm">{selectedNode.data.detail.data?.fieldName || 'Non specificato'}</div>
                 </div>
+                {selectedNode.data.detail.data?.formData && (
+                  <div className="md:col-span-2">
+                    <div className="text-xs text-zinc-400 mb-1">Dati Form</div>
+                    <div className="text-sm bg-zinc-900 p-2 rounded">
+                      <pre className="text-xs overflow-x-auto">
+                        {JSON.stringify(selectedNode.data.detail.data.formData, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
               </>
             )}
             
-            {selectedNode.data.detail.type === 'event' && (
+            {selectedNode.data.detail.type === 'conversion' && (
               <>
                 <div>
-                  <div className="text-xs text-zinc-400 mb-1">Nome evento</div>
-                  <div className="text-sm">{selectedNode.data.detail.data?.name || 'Evento senza nome'}</div>
+                  <div className="text-xs text-zinc-400 mb-1">Tipo conversione</div>
+                  <div className="text-sm">{selectedNode.data.detail.data?.conversionType || 'standard'}</div>
                 </div>
                 {selectedNode.data.detail.data?.value && (
                   <div>
@@ -672,10 +698,14 @@ export default function SessionFlow({
                     <div className="text-sm">{selectedNode.data.detail.data.value}</div>
                   </div>
                 )}
-                {selectedNode.data.detail.data?.category && (
-                  <div>
-                    <div className="text-xs text-zinc-400 mb-1">Categoria</div>
-                    <div className="text-sm">{selectedNode.data.detail.data.category}</div>
+                {selectedNode.data.detail.data?.formData && (
+                  <div className="md:col-span-2">
+                    <div className="text-xs text-zinc-400 mb-1">Dati Lead</div>
+                    <div className="text-sm bg-zinc-900 p-2 rounded">
+                      <pre className="text-xs overflow-x-auto">
+                        {JSON.stringify(selectedNode.data.detail.data.formData, null, 2)}
+                      </pre>
+                    </div>
                   </div>
                 )}
               </>
