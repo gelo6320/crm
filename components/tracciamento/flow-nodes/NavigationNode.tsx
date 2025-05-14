@@ -183,7 +183,7 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
   };
   
   return (
-    <div className="rounded-lg shadow-sm overflow-hidden">
+    <div className="rounded-lg shadow-sm overflow-hidden w-60">
       {/* Header with color based on significance */}
       <div className={`${isSignificantScroll() ? 'bg-green-600' : 'bg-green-500'} px-3 py-2 flex items-center`}>
         {getNavigationIcon()}

@@ -75,7 +75,7 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
   };
   
   return (
-    <div className="rounded-lg shadow-sm overflow-hidden">
+    <div className="rounded-lg shadow-sm overflow-hidden w-60">
       {/* Header */}
       <div className="bg-primary px-3 py-2 flex items-center">
         <Eye size={16} className="text-white mr-2" />

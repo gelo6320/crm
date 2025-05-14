@@ -143,7 +143,7 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
   };
   
   return (
-    <div className="rounded-lg shadow-sm overflow-hidden">
+    <div className="rounded-lg shadow-sm overflow-hidden w-60">
       {/* Header */}
       <div className="bg-blue-500 px-3 py-2 flex items-center">
         {getIconByType()}

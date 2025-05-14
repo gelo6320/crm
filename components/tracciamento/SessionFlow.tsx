@@ -83,9 +83,29 @@ export default function SessionFlow({
       setNoData(false);
     }
     
-    // Create nodes and edges directly from session details
+    // Create nodes and edges
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
+    
+    // Configurazione layout: posizionamento basato su timeline verticale
+    const timelineLayout = {
+      nodeWidth: 220,     // Larghezza fissa dei nodi
+      nodeGap: 30,        // Spazio verticale tra i nodi
+      columnGap: 300,     // Spazio tra le colonne
+      startY: 20,         // Margine superiore
+      nodesByType: {      // Offset orizzontale per tipo di nodo
+        pageNode: 0,
+        actionNode: 100,
+        navigationNode: 50,
+        eventNode: 150
+      },
+      mobileScaleFactor: window.innerWidth < 768 ? 0.8 : 1 // Scala più piccola su mobile
+    };
+
+    // Posiziona i nodi in modo ordinato
+    let lastY = timelineLayout.startY;
+    let prevNodeType = '';
+    let columnX = 0;
     
     // Log for debugging
     console.log("Processing", sessionDetails.length, "session details");
@@ -94,33 +114,32 @@ export default function SessionFlow({
       // Determine the node type based on the event type and metadata
       let nodeType = 'actionNode'; // Default
       
-      // CORREZIONE: Aggiunta "pageview" (senza underscore) alla condizione
+      // Page views
       if (detail.type === 'page_view' || detail.type === 'pageview') {
         nodeType = 'pageNode';
       } 
-      // Conversion events and lead collection
+      // Conversion events - Solo eventi di conversione effettiva
       else if (
         detail.type === 'conversion' || 
         (detail.data?.category === 'conversion') ||
-        (detail.data?.conversionType) ||
-        (detail.data?.name && detail.data.name.includes('conversion'))
+        (detail.type === 'form_interaction' && 
+          detail.data?.interactionType === 'lead_facebook')
       ) {
         nodeType = 'eventNode';
       }
-      // CORREZIONE: Tratta phone_collected e email_collected come eventNode
+      // Lead collection - IMPORTANTE: solo alcuni form_interaction specifici
       else if (
-        detail.type === 'form_interaction' && 
-        detail.data?.interactionType && 
-        (detail.data.interactionType === 'phone_collected' || 
-         detail.data.interactionType === 'email_collected' ||
-         detail.data.interactionType === 'lead_facebook')
+        (detail.type === 'form_interaction' && 
+         detail.data?.interactionType && 
+         ['phone_collected', 'email_collected'].includes(detail.data.interactionType))
       ) {
         nodeType = 'eventNode';
       }
-      // Scroll, visibility, time, session events - map to navigation node
+      // Navigation events
       else if (
         ['scroll', 'page_visibility', 'time_on_page', 'session_end'].includes(detail.type) ||
-        (detail.data?.category === 'navigation')
+        (detail.data?.category === 'navigation') ||
+        (detail.data?.scrollTypes)
       ) {
         nodeType = 'navigationNode';
       }
@@ -131,100 +150,86 @@ export default function SessionFlow({
       ) {
         nodeType = 'actionNode';
       }
-      // Form interactions (escluse quelle già gestite come eventi)
-      else if (
-        detail.type === 'form_interaction' && 
-        (!detail.data?.interactionType || 
-         !['phone_collected', 'email_collected', 'lead_facebook'].includes(detail.data.interactionType))
-      ) {
+      // TUTTI gli altri form_interaction devono essere actionNode
+      else if (detail.type === 'form_interaction') {
         nodeType = 'actionNode';
       }
       
-      // Create the node with enhanced metadata
-      const node: Node = {
-        id: detail.id,
-        type: nodeType,
-        data: { 
-          detail,
-          label: getNodeLabel(detail),
-          // Aggiungi metadati aggiuntivi in base al tipo di nodo
-          ...(nodeType === 'pageNode' && {
-            url: detail.data?.url || '',
-            title: detail.data?.title || detail.data?.metadata?.title || 'Pagina senza titolo',
-            referrer: detail.data?.referrer || detail.data?.metadata?.referrer || '',
-          }),
-          ...(nodeType === 'actionNode' && {
-            elementText: detail.data?.elementText || detail.data?.metadata?.text || '',
-            tagName: detail.data?.tagName || detail.data?.metadata?.tagName || '',
-          }),
-          ...(nodeType === 'navigationNode' && {
-            percent: detail.data?.percent || detail.data?.metadata?.percent || 0,
-            scrollType: detail.data?.scrollTypes || [],
-            isVisible: detail.data?.isVisible !== undefined ? detail.data.isVisible : 
-                      (detail.data?.metadata?.isVisible !== undefined ? detail.data.metadata.isVisible : null),
-          }),
-          ...(nodeType === 'eventNode' && {
-            conversionType: detail.data?.conversionType || 
-                            (detail.type === 'conversion_contact_form' ? 'contact_form' : 'standard'),
-            formData: detail.data?.formData || {},
-            value: detail.data?.value || 0,
-            isLead: detail.data?.isLeadForm || 
-                    (detail.type === 'form_interaction' && 
-                     detail.data?.interactionType && 
-                     detail.data.interactionType.includes('lead')) || false,
-          }),
-        },
-        position: { x: 250 * (index % 2), y: 120 * index },
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
-      };
-      
-      newNodes.push(node);
-      
-      // Create edges between nodes with time information
-      if (index > 0) {
-        const timeBetween = getTimeDifference(
-          new Date(sessionDetails[index - 1].timestamp),
-          new Date(detail.timestamp)
-        );
+          // Calc position (with type-based offset for visual clarity)
+          let xPos = columnX + (timelineLayout.nodesByType[nodeType as keyof typeof timelineLayout.nodesByType] || 0);
+          
+          // Se cambiamo tipo di nodo, aggiungiamo spazio extra per la leggibilità
+          let extraGap = prevNodeType !== nodeType ? timelineLayout.nodeGap * 1.5 : timelineLayout.nodeGap;
+          
+          // Create the node
+          const node: Node = {
+            id: detail.id,
+            type: nodeType,
+            data: { 
+              detail,
+              label: getNodeLabel(detail)
+            },
+            position: { 
+              x: xPos * timelineLayout.mobileScaleFactor, 
+              y: lastY
+            },
+            sourcePosition: Position.Bottom,
+            targetPosition: Position.Top,
+          };
+          
+          newNodes.push(node);
+          
+          // Create edge to previous node
+          if (index > 0) {
+            const timeBetween = getTimeDifference(
+              new Date(sessionDetails[index - 1].timestamp),
+              new Date(detail.timestamp)
+            );
+            
+            const edge: Edge = {
+              id: `edge-${sessionDetails[index - 1].id}-${detail.id}`,
+              source: sessionDetails[index - 1].id,
+              target: detail.id,
+              type: 'step',  // Modificato da 'smoothstep' a 'step' per un aspetto più ordinato
+              animated: true,
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                width: 15,
+                height: 15,
+                color: '#64748b',
+              },
+              style: {
+                stroke: '#64748b',
+                strokeWidth: 2, // Linea più spessa
+              },
+              data: {
+                timeDiff: timeBetween
+              },
+              label: timeBetween,
+              labelStyle: { fill: '#94a3b8', fontWeight: 500 },
+              labelBgStyle: { fill: '#1e293b', fillOpacity: 0.7 },
+            };
+            
+            newEdges.push(edge);
+          }
+          
+          // Aggiorna la posizione Y per il prossimo nodo
+          lastY += extraGap + 120; // Altezza stimata del nodo + spazio
+          prevNodeType = nodeType;
+        });
         
-        const edge: Edge = {
-          id: `edge-${sessionDetails[index - 1].id}-${detail.id}`,
-          source: sessionDetails[index - 1].id,
-          target: detail.id,
-          type: 'smoothstep',
-          animated: true,
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            width: 15,
-            height: 15,
-            color: '#64748b',
-          },
-          style: {
-            stroke: '#64748b',
-          },
-          data: {
-            timeDiff: timeBetween
-          },
-          label: timeBetween,
-          labelStyle: { fill: '#94a3b8', fontWeight: 500 },
-          labelBgStyle: { fill: '#1e293b', fillOpacity: 0.7 },
-        };
+        console.log("Generated flow:", { nodes: newNodes.length, edges: newEdges.length });
+        setNodes(newNodes);
+        setEdges(newEdges);
         
-        newEdges.push(edge);
-      }
-    });
-    
-    console.log("Generated flow:", { nodes: newNodes.length, edges: newEdges.length });
-    setNodes(newNodes);
-    setEdges(newEdges);
-    
-    setTimeout(() => {
-      if (reactFlowInstance.current) {
-        reactFlowInstance.current.fitView({ padding: 0.2 });
-      }
-    }, 100);
-  }, [sessionDetails, isLoading, setNodes, setEdges]);
+        // Fit view after nodes are created
+        setTimeout(() => {
+          if (reactFlowInstance.current) {
+            reactFlowInstance.current.fitView({ padding: 0.2 });
+          }
+        }, 100);
+      }, [sessionDetails, isLoading, setNodes, setEdges]);
+
   
   const getNodeLabel = (detail: SessionDetail) => {
     const defaultLabel = "Unspecified event";
@@ -470,6 +475,9 @@ export default function SessionFlow({
               onNodeClick={onNodeClick}
               nodeTypes={nodeTypes}
               fitView
+              minZoom={0.5}
+              maxZoom={1.5}
+              defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
               attributionPosition="bottom-right"
               onInit={(instance) => {
                 reactFlowInstance.current = instance;
@@ -486,7 +494,11 @@ export default function SessionFlow({
               proOptions={{ hideAttribution: true }}
             >
               <Background color="#64748b" gap={16} size={1} />
-              <Controls showInteractive={false} />
+              <Controls 
+                showInteractive={false}
+                position="top-right"
+                style={{ marginTop: '60px' }}
+              />
               <MiniMap 
                 nodeColor={(node) => {
                   switch (node.type) {
@@ -501,49 +513,51 @@ export default function SessionFlow({
                   }
                 }}
                 maskColor="rgba(0, 0, 0, 0.5)"
+                zoomable
+                pannable
               />
             
-            <Panel position="top-right" className="space-x-2">
-              <button 
-                onClick={handleZoomIn}
-                className="p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
-                title="Zoom in"
-              >
-                <ZoomIn size={16} />
-              </button>
-              <button 
-                onClick={handleZoomOut}
-                className="p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
-                title="Zoom out"
-              >
-                <ZoomOut size={16} />
-              </button>
-            </Panel>
-            
-            <Panel position="bottom-left">
-              <div className="bg-zinc-800 p-2 rounded border border-zinc-700">
-                <div className="text-xs mb-2">Legenda:</div>
-                <div className="grid grid-cols-1 gap-1">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-primary mr-2"></div>
-                    <span className="text-xs">Visualizzazione pagina</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-info mr-2"></div>
-                    <span className="text-xs">Interazione</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-success mr-2"></div>
-                    <span className="text-xs">Navigazione</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-danger mr-2"></div>
-                    <span className="text-xs">Evento di conversione</span>
+              <Panel position="top-right" className="space-x-2">
+                <button 
+                  onClick={handleZoomIn}
+                  className="p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
+                  title="Zoom in"
+                >
+                  <ZoomIn size={16} />
+                </button>
+                <button 
+                  onClick={handleZoomOut}
+                  className="p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
+                  title="Zoom out"
+                >
+                  <ZoomOut size={16} />
+                </button>
+              </Panel>
+              
+              <Panel position="bottom-left">
+                <div className="bg-zinc-800 p-2 rounded border border-zinc-700">
+                  <div className="text-xs mb-2">Legenda:</div>
+                  <div className="grid grid-cols-1 gap-1">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-primary mr-2"></div>
+                      <span className="text-xs">Visualizzazione pagina</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-info mr-2"></div>
+                      <span className="text-xs">Interazione</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-success mr-2"></div>
+                      <span className="text-xs">Navigazione</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full bg-danger mr-2"></div>
+                      <span className="text-xs">Evento di conversione</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Panel>
-          </ReactFlow>
+              </Panel>
+            </ReactFlow>
         </div>
       )}
       
