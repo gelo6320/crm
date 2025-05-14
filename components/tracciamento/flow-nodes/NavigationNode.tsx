@@ -1,4 +1,4 @@
-// components/tracciamento/flow-nodes/NavigationNode.tsx - Updated
+// components/tracciamento/flow-nodes/NavigationNode.tsx
 import { Handle, Position } from 'reactflow';
 import { ArrowUp, Clock, MousePointer, Eye, XCircle, Timer, Percent } from 'lucide-react';
 import { formatTime } from '@/lib/utils/format';
@@ -183,26 +183,26 @@ export default function NavigationNode({ data, isConnectable }: NavigationNodePr
   };
   
   return (
-    <div className="rounded-lg shadow-sm overflow-hidden w-60">
+    <div className="rounded-lg shadow-sm overflow-hidden min-w-[220px] max-w-[320px] w-auto">
       {/* Header with color based on significance */}
       <div className={`${isSignificantScroll() ? 'bg-green-600' : 'bg-green-500'} px-3 py-2 flex items-center`}>
         {getNavigationIcon()}
         <span className="text-white font-medium ml-2">{getNavigationLabel()}</span>
         
         {getNavigationValue() && (
-          <span className="ml-auto bg-white text-green-700 text-xs py-0.5 px-2 rounded-full font-medium">
+          <span className="ml-auto bg-white text-green-700 text-xs py-0.5 px-2 rounded-full font-medium flex-shrink-0">
             {getNavigationValue()}
           </span>
         )}
         
         {!getNavigationValue() && (
-          <span className="ml-auto text-xs text-white opacity-80">{getFormattedTime()}</span>
+          <span className="ml-auto text-xs text-white opacity-80 flex-shrink-0">{getFormattedTime()}</span>
         )}
       </div>
       
       {/* Content with more detailed info */}
       <div className="bg-white p-3 dark:bg-zinc-800">
-        <div className="font-medium text-zinc-900 dark:text-white">
+        <div className="font-medium text-zinc-900 dark:text-white break-words">
           {navigationType === 'scroll' ? 'Scorrimento Pagina' : 
           navigationType === 'scroll_bottom' ? 'Fine Pagina Raggiunta' :
           navigationType === 'time_on_page' ? 'Tempo sulla Pagina' :

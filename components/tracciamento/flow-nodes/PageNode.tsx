@@ -75,36 +75,36 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
   };
   
   return (
-    <div className="rounded-lg shadow-sm overflow-hidden w-60">
+    <div className="rounded-lg shadow-sm overflow-hidden min-w-[220px] max-w-[320px] w-auto">
       {/* Header */}
       <div className="bg-primary px-3 py-2 flex items-center">
-        <Eye size={16} className="text-white mr-2" />
+        <Eye size={16} className="text-white mr-2 flex-shrink-0" />
         <span className="text-white font-medium">Pagina</span>
-        <span className="ml-auto text-xs text-white opacity-80">{getFormattedTime()}</span>
+        <span className="ml-auto text-xs text-white opacity-80 flex-shrink-0">{getFormattedTime()}</span>
       </div>
       
       {/* Content */}
       <div className="bg-white p-3 dark:bg-zinc-800">
-        <div className="font-medium mb-1 text-zinc-900 dark:text-white">{title}</div>
+        <div className="font-medium mb-1 text-zinc-900 dark:text-white break-words">{title}</div>
         
         {url && (
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 truncate" title={url}>
-            <Globe size={12} className="inline mr-1" />
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 overflow-hidden text-ellipsis" title={url}>
+            <Globe size={12} className="inline mr-1 flex-shrink-0" />
             {url.length > 30 ? getDomain(url) + getPath(url).substring(0, 10) + '...' : url}
           </div>
         )}
         
         {/* Show raw URL if different from URL */}
         {rawUrl && rawUrl !== url && (
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 truncate" title={rawUrl}>
-            <Globe size={12} className="inline mr-1" />
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 overflow-hidden text-ellipsis" title={rawUrl}>
+            <Globe size={12} className="inline mr-1 flex-shrink-0" />
             Raw: {rawUrl.length > 25 ? getDomain(rawUrl) + '...' : rawUrl}
           </div>
         )}
         
         {referrer && (
-          <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate" title={referrer}>
-            <Link size={12} className="inline mr-1" />
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 overflow-hidden text-ellipsis" title={referrer}>
+            <Link size={12} className="inline mr-1 flex-shrink-0" />
             {referrer.length > 30 ? 'Da: ' + getDomain(referrer) : 'Da: ' + referrer}
           </div>
         )}
@@ -126,7 +126,7 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
         </div>
         
         {/* Add scroll depth and time on page if available */}
-        <div className="flex mt-1 gap-2">
+        <div className="flex flex-wrap mt-1 gap-2">
           {scrollDepth !== undefined && (
             <div className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
               Scroll: {scrollDepth}%
@@ -135,7 +135,7 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
           
           {timeOnPage !== undefined && (
             <div className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-              <Clock size={10} className="inline mr-1" />
+              <Clock size={10} className="inline mr-1 flex-shrink-0" />
               {timeOnPage}s
             </div>
           )}

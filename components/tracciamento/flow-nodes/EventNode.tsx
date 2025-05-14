@@ -43,10 +43,10 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
   // Determine if this is a lead acquisition or conversion event
   const isLead = 
     data.detail.type === 'lead_acquisition_contact' ||
-    data.detail.type === 'form_interaction' && 
-      (getMetadata('interactionType') === 'lead_facebook' || 
-       getMetadata('interactionType') === 'email_collected' ||
-       getMetadata('interactionType') === 'phone_collected') ||
+    (data.detail.type === 'form_interaction' && 
+     getMetadata('interactionType') === 'email_collected') ||
+    (data.detail.type === 'form_interaction' && 
+     getMetadata('interactionType') === 'phone_collected') ||
     (getMetadata('name') && 
      getMetadata('name').includes('lead_acquisition')) ||
     getMetadata('isLeadForm') === true ||
@@ -140,7 +140,7 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
     if ((data.detail.type === 'conversion_contact_form' || 
          data.detail.type === 'conversion' ||
          (data.detail.type === 'form_interaction' && 
-          ['lead_facebook', 'email_collected', 'phone_collected'].includes(getMetadata('interactionType') || ''))) && 
+          ['email_collected', 'phone_collected'].includes(getMetadata('interactionType') || ''))) && 
         data.detail.data?.formData) {
       return data.detail.data.formData;
     }
@@ -165,41 +165,41 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
   const formData = getFormData();
   
   return (
-    <div className="rounded-lg shadow-sm overflow-hidden w-60">
+    <div className="rounded-lg shadow-sm overflow-hidden min-w-[220px] max-w-[320px] w-auto">
       {/* Header */}
       <div className="bg-red-500 px-3 py-2 flex items-center">
-        <AlertCircle size={16} className="text-white" />
+        <AlertCircle size={16} className="text-white flex-shrink-0" />
         <span className="text-white font-medium ml-2">
           {isLead ? 'Lead' : 'Conversione'}
         </span>
-        <span className="ml-auto text-xs text-white opacity-80">{getFormattedTime()}</span>
+        <span className="ml-auto text-xs text-white opacity-80 flex-shrink-0">{getFormattedTime()}</span>
       </div>
       
       {/* Content */}
       <div className="bg-white p-3 dark:bg-zinc-800">
-        <div className="font-medium mb-2 text-zinc-900 dark:text-white">
+        <div className="font-medium mb-2 text-zinc-900 dark:text-white break-words">
           {isLead ? 'Nuovo Lead' : 'Conversione Completata'}
         </div>
         
         {/* Lead details */}
         {isLead && name && (
           <div className="flex items-center text-sm text-zinc-700 dark:text-zinc-300 mb-1">
-            <User size={14} className="mr-1" />
-            <span>{name}</span>
+            <User size={14} className="mr-1 flex-shrink-0" />
+            <span className="break-words">{name}</span>
           </div>
         )}
         
         {isLead && email && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center">
-            <Mail size={12} className="mr-1" />
-            <span className="truncate">{email}</span>
+            <Mail size={12} className="mr-1 flex-shrink-0" />
+            <span className="break-words">{email}</span>
           </div>
         )}
         
         {isLead && phone && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 flex items-center">
-            <Phone size={12} className="mr-1" />
-            <span>{phone}</span>
+            <Phone size={12} className="mr-1 flex-shrink-0" />
+            <span className="break-words">{phone}</span>
           </div>
         )}
         
@@ -208,26 +208,26 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
           <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs">
             {formData.email && (
               <div className="flex items-center mb-1">
-                <Mail size={12} className="mr-1 text-red-700 dark:text-red-300" />
-                <span>{formData.email}</span>
+                <Mail size={12} className="mr-1 text-red-700 dark:text-red-300 flex-shrink-0" />
+                <span className="break-words">{formData.email}</span>
               </div>
             )}
             {formData.firstName && (
               <div className="flex items-center">
-                <User size={12} className="mr-1 text-red-700 dark:text-red-300" />
-                <span>{formData.firstName} {formData.lastName || ''}</span>
+                <User size={12} className="mr-1 text-red-700 dark:text-red-300 flex-shrink-0" />
+                <span className="break-words">{formData.firstName} {formData.lastName || ''}</span>
               </div>
             )}
             {formData.phone && (
               <div className="flex items-center mt-1">
-                <Phone size={12} className="mr-1 text-red-700 dark:text-red-300" />
-                <span>{formData.phone}</span>
+                <Phone size={12} className="mr-1 text-red-700 dark:text-red-300 flex-shrink-0" />
+                <span className="break-words">{formData.phone}</span>
               </div>
             )}
             {formData.message && (
               <div className="flex items-center mt-1">
-                <MessageSquare size={12} className="mr-1 text-red-700 dark:text-red-300" />
-                <span className="truncate">{formData.message.substring(0, 30)}{formData.message.length > 30 ? '...' : ''}</span>
+                <MessageSquare size={12} className="mr-1 text-red-700 dark:text-red-300 flex-shrink-0" />
+                <span className="break-words">{formData.message.substring(0, 30)}{formData.message.length > 30 ? '...' : ''}</span>
               </div>
             )}
             
@@ -235,9 +235,9 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
               .filter(([key]) => !['email', 'firstName', 'lastName', 'phone', 'message'].includes(key))
               .map(([key, value]) => (
                 <div key={key} className="flex items-center mt-1">
-                  <Tag size={12} className="mr-1 text-red-700 dark:text-red-300" />
+                  <Tag size={12} className="mr-1 text-red-700 dark:text-red-300 flex-shrink-0" />
                   <span className="font-medium mr-1">{key}:</span>
-                  <span>
+                  <span className="break-words">
                     {typeof value === 'boolean' 
                       ? (value ? 'Sì' : 'No') 
                       : value === null 
@@ -257,14 +257,14 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
         
         {/* Conversion details */}
         {!isLead && (
-          <div className="mt-1">
+          <div className="mt-1 flex flex-wrap gap-2">
             {value && (
               <div className="inline-block px-3 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-sm font-medium">
                 {value}
               </div>
             )}
             
-            <div className="text-xs py-1 px-2 rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 inline-block ml-2">
+            <div className="text-xs py-1 px-2 rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 inline-block">
               {conversionType}
             </div>
           </div>
@@ -273,7 +273,7 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
         {/* Mostra adOptimizationConsent se disponibile */}
         {getMetadata('adOptimizationConsent') && (
           <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 flex items-center">
-            <Check size={12} className="mr-1" />
+            <Check size={12} className="mr-1 flex-shrink-0" />
             Consenso: {getMetadata('adOptimizationConsent') === "GRANTED" ? 'Concesso' : 
                       (getMetadata('adOptimizationConsent') === true ? 'Sì' : 'No')}
           </div>
@@ -295,7 +295,7 @@ export default function EventNode({ data, isConnectable }: EventNodeProps) {
         
         {/* Display URL if available */}
         {getMetadata('url') && (
-          <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 truncate">
+          <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 break-words">
             URL: {getMetadata('url')}
           </div>
         )}

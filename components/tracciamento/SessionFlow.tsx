@@ -27,7 +27,7 @@ import PageNode from './flow-nodes/PageNode';
 import ActionNode from './flow-nodes/ActionNode';
 import EventNode from './flow-nodes/EventNode';
 import NavigationNode from './flow-nodes/NavigationNode';
-import FormNode from './flow-nodes/FormNode'; // Aggiungiamo il nuovo tipo di nodo
+import FormNode from './flow-nodes/FormNode';
 
 interface SessionFlowProps {
   sessionDetails: SessionDetail[];
@@ -42,11 +42,15 @@ const nodeTypes = {
   actionNode: ActionNode,
   eventNode: EventNode,
   navigationNode: NavigationNode,
-  formNode: FormNode, // Aggiungi il nuovo tipo
+  formNode: FormNode,
 };
 
 // Funzione per applicare il layout Dagre ai nodi
-const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'LR') => {
+const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
+  // Determina la direzione in base alla larghezza dello schermo
+  const isMobile = window.innerWidth < 768;
+  const direction = isMobile ? 'TB' : 'LR';  // TB = top to bottom per mobile
+  
   // Crea un nuovo grafo Dagre
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -54,15 +58,19 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'LR') => 
   // Configura il layout con direzione
   dagreGraph.setGraph({ 
     rankdir: direction,
-    nodesep: 80,     // Spazio orizzontale tra nodi
-    ranksep: 150,    // Spazio verticale tra ranghi
-    marginx: 50,
-    marginy: 50 
+    nodesep: isMobile ? 50 : 80,     // Spazio tra nodi
+    ranksep: isMobile ? 100 : 150,   // Spazio tra ranghi
+    marginx: isMobile ? 20 : 50,
+    marginy: isMobile ? 40 : 50,
+    align: 'UL'                     // Allineamento superiore sinistro per layout più compatto
   });
   
-  // Imposta le dimensioni dei nodi
+  // Adatta la posizione dei nodi in base alla direzione
   nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: 220, height: 120 });
+    dagreGraph.setNode(node.id, { 
+      width: 240, 
+      height: getNodeHeightEstimate(node) // Funzione che stima l'altezza
+    });
   });
   
   // Aggiungi edges al grafo
@@ -73,17 +81,48 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'LR') => 
   // Calcola il layout
   dagre.layout(dagreGraph);
   
-  // Aggiorna la posizione dei nodi
+  // Aggiorna la posizione e le direzioni dei handle dei nodi
   return nodes.map((node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
+    
+    // Imposta le posizioni dei connettori in base alla direzione
+    const sourcePosition = isMobile ? Position.Bottom : Position.Right;
+    const targetPosition = isMobile ? Position.Top : Position.Left;
+    
     return {
       ...node,
       position: {
-        x: nodeWithPosition.x - 110, // Centra orizzontalmente
+        x: nodeWithPosition.x - 120, // Centra orizzontalmente
         y: nodeWithPosition.y - 60,  // Centra verticalmente
       },
+      sourcePosition,
+      targetPosition,
     };
   });
+};
+
+// Funzione ausiliaria per stimare l'altezza del nodo
+const getNodeHeightEstimate = (node: Node) => {
+  // Base height
+  let height = 100;
+  
+  // Aggiungi altezza in base al contenuto
+  if (node.data?.detail?.data) {
+    // Stima basata sul numero di campi
+    const fieldsCount = Object.keys(node.data.detail.data).length;
+    height += Math.min(fieldsCount * 10, 50); // Limita l'altezza massima aggiuntiva
+    
+    // Stima basata sulla lunghezza del testo
+    const textContent = node.data.label || '';
+    height += Math.min(textContent.length / 5, 30);
+    
+    // Aggiungi spazio extra per formNode con formData
+    if (node.type === 'formNode' && node.data.detail.data.formData) {
+      height += 40;
+    }
+  }
+  
+  return height;
 };
 
 export default function SessionFlow({
@@ -99,8 +138,35 @@ export default function SessionFlow({
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [noData, setNoData] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const flowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useRef<any>(null);
+  
+  // Effetto per gestire il cambiamento di dimensione della finestra
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      
+      // Solo se i nodi sono già stati creati, riapplica il layout
+      if (nodes.length > 0) {
+        const nodesWithLayout = getLayoutedElements(nodes, edges);
+        setNodes(nodesWithLayout);
+        
+        // Fit view after layout update
+        setTimeout(() => {
+          if (reactFlowInstance.current) {
+            reactFlowInstance.current.fitView({ padding: 0.2 });
+          }
+        }, 100);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [nodes, edges, setNodes]);
   
   useEffect(() => {
     if (isLoading) {
@@ -122,12 +188,25 @@ export default function SessionFlow({
       setNoData(false);
     }
     
+    // Filtra gli eventi lead_facebook
+    const filteredDetails = sessionDetails.filter(detail => 
+      !(detail.type === 'form_interaction' && 
+        detail.data?.interactionType === 'lead_facebook')
+    );
+    
+    // Verifica nuovamente se ci sono abbastanza dati dopo il filtraggio
+    if (filteredDetails.length < 2) {
+      setNoData(true);
+      return;
+    }
+    
     // Create initial nodes and edges without positions
     const initialNodes: Node[] = [];
     const newEdges: Edge[] = [];
+    let lastVisibleNodeIndex = -1;
     
     // Process each session detail to create nodes
-    sessionDetails.forEach((detail, index) => {
+    filteredDetails.forEach((detail, index) => {
       // Determine the node type based on the event type and metadata
       let nodeType = determineNodeType(detail);
       
@@ -140,24 +219,26 @@ export default function SessionFlow({
           label: getNodeLabel(detail)
         },
         position: { x: 0, y: 0 }, // Temporary position
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
+        // Position dinamiche che verranno aggiornate dal layout
+        sourcePosition: isMobile ? Position.Bottom : Position.Right,
+        targetPosition: isMobile ? Position.Top : Position.Left,
       };
       
       initialNodes.push(node);
+      lastVisibleNodeIndex++;
       
       // Create edge to previous node
-      if (index > 0) {
+      if (lastVisibleNodeIndex > 0) {
         const timeBetween = getTimeDifference(
-          new Date(sessionDetails[index - 1].timestamp),
+          new Date(filteredDetails[lastVisibleNodeIndex - 1].timestamp),
           new Date(detail.timestamp)
         );
         
         const edge: Edge = {
-          id: `edge-${sessionDetails[index - 1].id}-${detail.id}`,
-          source: sessionDetails[index - 1].id,
+          id: `edge-${initialNodes[lastVisibleNodeIndex - 1].id}-${detail.id}`,
+          source: initialNodes[lastVisibleNodeIndex - 1].id,
           target: detail.id,
-          type: 'smoothstep',  // Modificato da 'step' a 'smoothstep' per un aspetto più fluido
+          type: 'smoothstep',
           animated: true,
           markerEnd: {
             type: MarkerType.ArrowClosed,
@@ -195,7 +276,7 @@ export default function SessionFlow({
       }
     }, 200);
     
-  }, [sessionDetails, isLoading, setNodes, setEdges]);
+  }, [sessionDetails, isLoading, isMobile, setNodes, setEdges]);
   
   // Determina il tipo di nodo in base ai dati dell'evento
   const determineNodeType = (detail: SessionDetail) => {
@@ -203,21 +284,14 @@ export default function SessionFlow({
     if (detail.type === 'page_view' || detail.type === 'pageview') {
       return 'pageNode';
     } 
-    // Conversion events - Solo eventi di conversione effettiva o lead specifici
+    // Conversion events - Solo eventi di conversione effettiva
     else if (
       detail.type === 'conversion' || 
       (detail.data?.category === 'conversion')
     ) {
       return 'eventNode';
     }
-    // Lead collection specifici - vanno come eventi
-    else if (
-      (detail.type === 'form_interaction' && 
-       detail.data?.interactionType === 'lead_facebook')
-    ) {
-      return 'eventNode';
-    }
-    // Tutti gli altri form_interaction vanno nel nuovo tipo formNode
+    // Form interactions
     else if (detail.type === 'form_interaction') {
       return 'formNode';
     }
@@ -275,8 +349,6 @@ export default function SessionFlow({
             return `Email Collected\n${detail.data?.email || detail.data?.fieldName || ''}`;
           } else if (interactionType === 'phone_collected') {
             return `Phone Collected\n${detail.data?.phone || detail.data?.fieldName || ''}`;
-          } else if (interactionType === 'lead_facebook') {
-            return `Lead Facebook\n${detail.data?.formData?.email || ''}`;
           } else if (interactionType === 'submit') {
             const formName = detail.data?.formName || 'form';
             return `Form Submit\n${formName}`;
@@ -447,7 +519,11 @@ export default function SessionFlow({
           <div className="grid grid-cols-3 gap-2">
             <div className="text-center p-2 bg-zinc-900 rounded">
               <div className="text-xs text-zinc-400">Durata</div>
-              <div className="text-lg font-medium text-primary">{formatTime(session.duration)} min</div>
+              <div className="text-lg font-medium text-primary">
+                {session.duration < 60 ? 
+                  `${session.duration}s` : 
+                  `${formatTime(session.duration)} min`}
+              </div>
             </div>
             <div className="text-center p-2 bg-zinc-900 rounded">
               <div className="text-xs text-zinc-400">Interazioni</div>

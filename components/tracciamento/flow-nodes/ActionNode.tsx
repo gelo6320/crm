@@ -1,4 +1,4 @@
-// components/tracciamento/flow-nodes/ActionNode.tsx - Updated
+// components/tracciamento/flow-nodes/ActionNode.tsx
 import { Handle, Position } from 'reactflow';
 import { MousePointer, FileText, Mail, MousePointerClick, Keyboard, FormInput } from 'lucide-react';
 
@@ -143,12 +143,12 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
   };
   
   return (
-    <div className="rounded-lg shadow-sm overflow-hidden w-60">
+    <div className="rounded-lg shadow-sm overflow-hidden min-w-[220px] max-w-[320px] w-auto">
       {/* Header */}
       <div className="bg-blue-500 px-3 py-2 flex items-center">
         {getIconByType()}
         <span className="text-white font-medium ml-2">{getActionTitle()}</span>
-        <span className="ml-auto text-xs text-white opacity-80">{getFormattedTime()}</span>
+        <span className="ml-auto text-xs text-white opacity-80 flex-shrink-0">{getFormattedTime()}</span>
       </div>
       
       {/* Content */}
@@ -157,7 +157,7 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
         <div className="flex flex-col">
           {/* Element text or field name */}
           {elementText && (
-            <div className="font-medium mb-1 text-zinc-900 dark:text-white truncate" title={elementText}>
+            <div className="font-medium mb-1 text-zinc-900 dark:text-white break-words" title={elementText}>
               {isClick ? `"${elementText.substring(0, 20)}${elementText.length > 20 ? '...' : ''}"` : elementText}
             </div>
           )}
@@ -171,7 +171,7 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
           
           {/* Form name if available */}
           {isFormInteraction && getMetadata('formName') && (
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 break-words">
               Form: {getMetadata('formName')}
             </div>
           )}
@@ -185,7 +185,7 @@ export default function ActionNode({ data, isConnectable }: ActionNodeProps) {
           
           {/* For click events, show href if available */}
           {isClick && getMetadata('href') && (
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 truncate" title={getMetadata('href')}>
+            <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 break-words" title={getMetadata('href')}>
               Link: {getMetadata('href').substring(0, 25)}{getMetadata('href').length > 25 ? '...' : ''}
             </div>
           )}
