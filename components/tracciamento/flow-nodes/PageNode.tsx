@@ -1,4 +1,4 @@
-// components/tracciamento/flow-nodes/PageNode.tsx - Updated version
+// components/tracciamento/flow-nodes/PageNode.tsx
 import { Handle, Position } from 'reactflow';
 import { Eye, Globe, Link, Calendar, Clock } from 'lucide-react';
 
@@ -8,14 +8,14 @@ interface PageNodeProps {
     detail: {
       type: string;
       data: Record<string, any>;
-      timestamp: string;
+      timestamp?: string;
     }
   };
   isConnectable: boolean;
 }
 
 export default function PageNode({ data, isConnectable }: PageNodeProps) {
-  // Extract metadata from various locations in the object structure
+  // Helper per estrarre dati da diverse posizioni nell'oggetto
   const getMetadata = (key: string, defaultValue: any = null) => {
     // Check in data directly
     if (data.detail.data?.[key] !== undefined) {
@@ -38,14 +38,16 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
   const url = getMetadata('url', '');
   const title = getMetadata('title', 'Pagina senza titolo');
   const referrer = getMetadata('referrer', '');
+  const rawUrl = getMetadata('rawUrl', url);
   const scrollDepth = getMetadata('scrollDepth') || getMetadata('percent');
   const timeOnPage = getMetadata('timeOnPage') || getMetadata('totalTimeSeconds');
-  const pageType = getMetadata('pageType');
+  const pageType = getMetadata('pageType') || getMetadata('category');
+  const isDuplicate = getMetadata('isDuplicate');
   
   // Get formatted time
   const getFormattedTime = () => {
     try {
-      const date = new Date(data.detail.timestamp);
+      const date = data.detail.timestamp ? new Date(data.detail.timestamp) : new Date();
       return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
       return '';
@@ -92,6 +94,14 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
           </div>
         )}
         
+        {/* Show raw URL if different from URL */}
+        {rawUrl && rawUrl !== url && (
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1 truncate" title={rawUrl}>
+            <Globe size={12} className="inline mr-1" />
+            Raw: {rawUrl.length > 25 ? getDomain(rawUrl) + '...' : rawUrl}
+          </div>
+        )}
+        
         {referrer && (
           <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate" title={referrer}>
             <Link size={12} className="inline mr-1" />
@@ -100,11 +110,20 @@ export default function PageNode({ data, isConnectable }: PageNodeProps) {
         )}
         
         {/* Page type if available */}
-        {pageType && (
-          <div className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full mt-1 inline-block">
-            {pageType}
-          </div>
-        )}
+        <div className="flex flex-wrap mt-1 gap-2">
+          {pageType && (
+            <div className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full inline-block">
+              {pageType}
+            </div>
+          )}
+          
+          {/* Show if this is a duplicate page view */}
+          {isDuplicate && (
+            <div className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 px-2 py-0.5 rounded-full inline-block">
+              Duplicato
+            </div>
+          )}
+        </div>
         
         {/* Add scroll depth and time on page if available */}
         <div className="flex mt-1 gap-2">

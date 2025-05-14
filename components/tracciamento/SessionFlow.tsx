@@ -94,48 +94,48 @@ export default function SessionFlow({
       // Determine the node type based on the event type and metadata
       let nodeType = 'actionNode'; // Default
       
-      // MIGLIORAMENTO: Logica più robusta per determinare i tipi di nodo
+      // CORREZIONE: Aggiunta "pageview" (senza underscore) alla condizione
       if (detail.type === 'page_view' || detail.type === 'pageview') {
         nodeType = 'pageNode';
       } 
-      // Conversion events
+      // Conversion events and lead collection
       else if (
         detail.type === 'conversion' || 
-        detail.type === 'conversion_contact_form' ||
+        (detail.data?.category === 'conversion') ||
         (detail.data?.conversionType) ||
-        (detail.data?.name && 
-          (detail.data.name.includes('conversion') || 
-           detail.data.name.includes('lead_acquisition')))
+        (detail.data?.name && detail.data.name.includes('conversion'))
       ) {
         nodeType = 'eventNode';
       }
-      // Form interactions that lead to lead acquisition
+      // CORREZIONE: Tratta phone_collected e email_collected come eventNode
       else if (
         detail.type === 'form_interaction' && 
         detail.data?.interactionType && 
-        (detail.data.interactionType === 'lead_facebook' || 
+        (detail.data.interactionType === 'phone_collected' || 
          detail.data.interactionType === 'email_collected' ||
-         detail.data.interactionType === 'phone_collected')
+         detail.data.interactionType === 'lead_facebook')
       ) {
         nodeType = 'eventNode';
       }
-      // Navigation events: scroll, visibility, time, session events
+      // Scroll, visibility, time, session events - map to navigation node
       else if (
         ['scroll', 'page_visibility', 'time_on_page', 'session_end'].includes(detail.type) ||
-        (detail.data?.category === 'navigation') ||
-        (detail.data?.scrollTypes) || 
-        (detail.data?.percent && detail.type !== 'conversion')
+        (detail.data?.category === 'navigation')
       ) {
         nodeType = 'navigationNode';
       }
-      // Click events and other interactions
+      // Click events
       else if (
         detail.type === 'click' || 
-        (detail.data?.buttonType) ||
-        (detail.data?.elementText) ||
-        (detail.type === 'form_interaction' && 
-          (!detail.data?.interactionType || 
-           !['lead_facebook', 'email_collected', 'phone_collected'].includes(detail.data.interactionType)))
+        (detail.data?.name && detail.data.name.includes('click'))
+      ) {
+        nodeType = 'actionNode';
+      }
+      // Form interactions (escluse quelle già gestite come eventi)
+      else if (
+        detail.type === 'form_interaction' && 
+        (!detail.data?.interactionType || 
+         !['phone_collected', 'email_collected', 'lead_facebook'].includes(detail.data.interactionType))
       ) {
         nodeType = 'actionNode';
       }
@@ -235,18 +235,16 @@ export default function SessionFlow({
     }
     
     try {
-      // Use the event type as the primary determination factor
+      // CORREZIONE: Aggiungi supporto per "pageview" (senza underscore)
       switch (detail.type) {
         // Page views
         case 'page_view':
         case 'pageview':
-          if (detail.data?.url || detail.data?.metadata?.url) {
-            const url = detail.data?.url || detail.data?.metadata?.url;
-            const pageTitle = detail.data?.title || detail.data?.metadata?.title || 
-                            (url ? new URL(url).pathname : 'Unknown page');
+          if (detail.data?.url) {
+            const pageTitle = detail.data.title || new URL(detail.data.url).pathname;
             return `Page View\n${pageTitle}`;
           }
-          return `Page View\n${detail.data?.title || detail.data?.metadata?.title || 'Unknown page'}`;
+          return `Page View\n${detail.data?.title || 'Unknown page'}`;
         
         // Click events
         case 'click':
