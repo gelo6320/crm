@@ -15,7 +15,7 @@ import ReactFlow, {
   MarkerType,
   NodeMouseHandler
 } from 'reactflow';
-import dagre from 'dagre';
+import dagre from '@dagrejs/dagre';
 import 'reactflow/dist/style.css';
 import { SessionDetail, UserSession } from '@/types/tracciamento';
 import { formatDateTime } from '@/lib/utils/date';
