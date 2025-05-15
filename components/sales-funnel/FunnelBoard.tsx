@@ -761,10 +761,10 @@ export default function CustomFunnelBoard({
         }}
       >
         <div 
-          className="funnel-board min-w-max flex gap-4 p-2"
+          className="funnel-board min-w-max flex gap-4 p-2 h-full"
           style={{ 
             willChange: 'transform', 
-            contain: 'layout style'  // Ottimizzazione performance
+            contain: 'layout style'
           }}
         >
           {COLUMNS.map((column) => (
