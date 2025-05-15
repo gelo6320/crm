@@ -703,7 +703,7 @@ export default function CustomFunnelBoard({
     });
   
     return (
-      <div className={`funnel-column ${isMoving ? "column-fade-transition" : ""}`}>
+      <div className={`funnel-column ${isMoving ? "column-fade-transition" : ""} h-full flex flex-col`}>
         <div className={`funnel-header ${color}`}>
           <h3 className="text-sm font-medium">{title}</h3>
           <div className="w-5 h-5 rounded-full bg-black/25 flex items-center justify-center text-xs font-medium">
@@ -713,7 +713,7 @@ export default function CustomFunnelBoard({
   
         <div 
           ref={setNodeRef}
-          className={`funnel-body ${isOver ? "drag-over" : ""}`}
+          className={`funnel-body ${isOver ? "drag-over" : ""} flex-1 overflow-y-auto`}
           data-column-id={id}
         >
           <SortableContext
@@ -753,11 +753,11 @@ export default function CustomFunnelBoard({
     >
       <div
         ref={boardRef}
-        className="funnel-board-container w-full overflow-x-auto overscroll-x-none"
+        className="funnel-board-container w-full overflow-x-auto overscroll-x-none h-[calc(100vh-220px)]"
         id="funnel-board-container"
         style={{ 
-          willChange: 'transform, scroll-position',  // Ottimizzazione performance
-          WebkitOverflowScrolling: 'touch', // Miglior scrolling su iOS
+          willChange: 'transform, scroll-position',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         <div 

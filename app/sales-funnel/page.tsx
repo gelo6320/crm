@@ -28,6 +28,8 @@ export default function SalesFunnelPage() {
     realizedValue: 0,
     lostValue: 0,
     serviceDistribution: {},
+    conversionRateTrend: undefined,
+    realizedValueTrend: undefined
   });
   
   const [isLoading, setIsLoading] = useState(true);

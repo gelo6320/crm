@@ -114,6 +114,8 @@ export interface FunnelStats {
   realizedValue: number;
   lostValue: number;
   serviceDistribution: Record<string, number>;
+  conversionRateTrend?: number;
+  realizedValueTrend?: number;
 }
 
 export interface SiteMetrics {

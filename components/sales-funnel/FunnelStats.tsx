@@ -51,12 +51,12 @@ export default function FunnelStats({ stats }: FunnelStatsProps) {
     <div className="bg-zinc-800/80 backdrop-blur-sm rounded-lg shadow-md mb-5 transition-all duration-300 overflow-hidden">
       {/* Desktop View (orizzontale) */}
       <div className="hidden md:flex">
-        <StatItem 
-          title="Tasso Conversione" 
-          value={`${stats.conversionRate}%`}
-          icon={<TrendingUp size={18} strokeWidth={2} className="text-primary" />}
-          trend={2.5}
-        />
+      <StatItem 
+        title="Tasso Conversione" 
+        value={`${stats.conversionRate}%`}
+        icon={<TrendingUp size={18} strokeWidth={2} className="text-primary" />}
+        trend={stats.conversionRateTrend}
+      />
         
         <StatItem 
           title="Lead Totali" 
@@ -74,7 +74,7 @@ export default function FunnelStats({ stats }: FunnelStatsProps) {
           title="Valore Realizzato" 
           value={formatMoney(stats.realizedValue)}
           icon={<Award size={18} strokeWidth={2} className="text-green-500" />}
-          trend={5.8}
+          trend={stats.realizedValueTrend}
           isLast={true}
         />
       </div>
