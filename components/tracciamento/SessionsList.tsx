@@ -22,6 +22,15 @@ export default function SessionsList({
 }: SessionsListProps) {
   const [sortBy, setSortBy] = useState<"recent" | "duration" | "interactions" | "pages">("recent");
   
+  // Funzione per formattare la durata in modo appropriato
+  const formatDuration = (durationInSeconds: number): string => {
+    if (durationInSeconds < 60) {
+      return `${durationInSeconds} sec`;
+    } else {
+      return `${formatTime(durationInSeconds)} min`;
+    }
+  };
+  
   // Ordinamento delle sessioni in base al criterio selezionato
   const sortedSessions = [...sessions].sort((a, b) => {
     switch (sortBy) {
@@ -178,7 +187,7 @@ export default function SessionsList({
                   
                   <div className="flex items-center text-sm">
                     <Timer size={14} className="text-warning mr-2" />
-                    <span>{formatTime(session.duration)} min</span>
+                    <span>{formatDuration(session.duration)}</span>
                   </div>
                   
                   <div className="flex items-center text-sm">
