@@ -411,17 +411,19 @@ export default function CustomFunnelBoard({
       // Usa sempre l'ID corretto
       const idToUse = movingLead.lead.leadId || movingLead.lead._id;
 
+      // Find the lead status check section in handleConfirmMove
       const checkResponse = await axios.get(`${API_BASE_URL}/api/leads/${idToUse}`, {
         withCredentials: true,
       });
-
-      const currentStatus = checkResponse.data?.status || movingLead.prevStatus;
-
-      // Procedi solo se lo stato attuale corrisponde al nostro fromStage previsto
-      if (currentStatus !== movingLead.prevStatus) {
-        console.warn(`Status mismatch: expected ${movingLead.prevStatus}, got ${currentStatus}`);
-
-        // Mostra notifica all'utente
+      
+      const currentDbStatus = checkResponse.data?.status || movingLead.prevStatus;
+      // Map the database status to funnel status before comparing
+      const currentFunnelStatus = mapDatabaseStatusToFunnelStatus(currentDbStatus);
+      
+      // Now compare the properly mapped status
+      if (currentFunnelStatus !== movingLead.prevStatus) {
+        console.warn(`Status mismatch: expected ${movingLead.prevStatus}, got ${currentFunnelStatus}`);
+        
         toast(
           "warning",
           "Stato aggiornato",
