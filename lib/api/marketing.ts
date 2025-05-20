@@ -295,18 +295,22 @@ function calculateMetrics(data: any): {
   
   console.log(`Metriche calcolate: Leads: ${leads}, CostPerLead: ${costPerLead}, Conversions: ${conversions}, CostPerConversion: ${costPerConversion}, ROAS: ${roas}`);
   
-  return {
+  const result = {
     impressions,
     clicks,
     ctr,
     cpc,
-    spend,
+    spend,  // Questo dovrebbe essere 0.33
     leads,
     costPerLead,
     conversions,
     costPerConversion,
     roas
   };
+  
+  console.log("Metriche calcolate con spesa:", result.spend);
+  
+  return result;
 }
 
 async function testFacebookAPIResponse() {

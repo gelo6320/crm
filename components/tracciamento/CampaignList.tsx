@@ -77,6 +77,15 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
   
   // Formatta valuta
   const formatCurrency = (value: number) => {
+    // Aggiungi log per debug
+    console.log("Formattazione valore:", value);
+    
+    // Assicurati che il valore sia un numero valido
+    if (value === undefined || value === null || isNaN(value)) {
+      return "€0,00";
+    }
+    
+    // Forzare almeno 2 decimali anche per piccoli valori
     return new Intl.NumberFormat('it-IT', {
       style: 'currency',
       currency: 'EUR',
@@ -175,6 +184,11 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
   
   // Elementi visualizzabili su mobile vs desktop
   const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  console.log("Campagne ricevute:", campaigns);
+  if (campaigns.length > 0) {
+    console.log("Prima campagna spesa:", campaigns[0].spend);
+  }
   
   if (isLoading) {
     return (
