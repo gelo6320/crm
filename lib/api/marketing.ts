@@ -104,20 +104,39 @@ function extractActionData(actions: any[] = []) {
   let leads = 0;
   let conversions = 0;
   
-  if (actions) {
+  if (actions && Array.isArray(actions)) {
+    console.log("Azioni ricevute:", actions.length > 0 ? 
+      `${actions.length} azioni` : "Nessuna azione trovata");
+    
     actions.forEach(action => {
-      if (action.action_type === 'lead') {
-        leads += parseInt(action.value) || 0;
-      } else if (
-        action.action_type === 'purchase' || 
-        action.action_type === 'complete_registration' ||
-        action.action_type === 'offsite_conversion'
-      ) {
-        conversions += parseInt(action.value) || 0;
+      // Verifica che action sia un oggetto valido
+      if (action && typeof action === 'object') {
+        if (action.action_type === 'lead') {
+          // Conversione sicura a numero
+          const value = typeof action.value === 'string' ? 
+            parseFloat(action.value) : 
+            typeof action.value === 'number' ? 
+              action.value : 0;
+          
+          leads += value || 0;
+        } else if (
+          action.action_type === 'purchase' || 
+          action.action_type === 'complete_registration' ||
+          action.action_type === 'offsite_conversion'
+        ) {
+          // Conversione sicura a numero
+          const value = typeof action.value === 'string' ? 
+            parseFloat(action.value) : 
+            typeof action.value === 'number' ? 
+              action.value : 0;
+          
+          conversions += value || 0;
+        }
       }
     });
   }
   
+  console.log(`Leads estratti: ${leads}, Conversioni estratte: ${conversions}`);
   return { leads, conversions };
 }
 
@@ -202,7 +221,7 @@ function calculateMetrics(data: any): {
   
   // Stima ROAS (personalizzare in base al valore reale delle conversioni)
   const estimatedValue = conversions * 100; // Esempio: ogni conversione vale 100 EUR
-  const roas = spend > 0 ? estimatedValue / spend : 0;
+  const roas = spend > 0 ? parseFloat((estimatedValue / spend).toFixed(2)) : 0;
   
   return {
     impressions,

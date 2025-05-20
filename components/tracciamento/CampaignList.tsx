@@ -80,7 +80,8 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     return new Intl.NumberFormat('it-IT', {
       style: 'currency',
       currency: 'EUR',
-      minimumFractionDigits: 2
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(value);
   };
   
@@ -283,27 +284,27 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                             {getSmartTruncatedName(campaign.name, isMobileView ? 20 : 30)}
                           </div>
                           <span className={`text-xs ${getStatusClass(campaign.status)}`}>
-                            {campaign.status} · Budget: {formatCurrency(campaign.dailyBudget).replace(',00', '')}/g
+                            {campaign.status} · Budget: {formatCurrency(campaign.dailyBudget)}/g
                           </span>
                         </div>
                       </div>
                       <div className="text-right font-medium text-sm">
-                        {formatCurrency(campaign.spend).replace(',00', '')}
+                        {formatCurrency(campaign.spend)}
                       </div>
                       <div className="text-right font-medium text-sm">
                         {campaign.leads.toLocaleString()}
                       </div>
                       <div className="text-right font-medium text-sm">
-                        {formatCurrency(campaign.costPerLead).replace(',00', '')}
+                        {formatCurrency(campaign.costPerLead)}
                       </div>
                       <div className="text-right font-medium text-sm">
                         {campaign.conversions.toLocaleString()}
                       </div>
                       <div className="text-right font-medium text-sm">
-                        {formatCurrency(campaign.costPerConversion).replace(',00', '')}
+                        {formatCurrency(campaign.costPerConversion)}
                       </div>
                       <div className={`text-right font-medium text-sm ${getValueColorClass(campaign.roas)}`}>
-                        {campaign.roas.toFixed(1)}x
+                        {campaign.roas.toFixed(2)}x
                       </div>
                     </motion.div>
                     
@@ -356,22 +357,22 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                       </div>
                                     </div>
                                     <div className="text-right text-xs">
-                                      {formatCurrency(adSet.spend).replace(',00', '')}
+                                      {formatCurrency(adSet.spend)}
                                     </div>
                                     <div className="text-right text-xs">
                                       {adSet.leads.toLocaleString()}
                                     </div>
                                     <div className="text-right text-xs">
-                                      {formatCurrency(adSet.costPerLead).replace(',00', '')}
+                                      {formatCurrency(adSet.costPerLead)}
                                     </div>
                                     <div className="text-right text-xs">
                                       {adSet.conversions.toLocaleString()}
                                     </div>
                                     <div className="text-right text-xs">
-                                      {formatCurrency(adSet.costPerConversion).replace(',00', '')}
+                                      {formatCurrency(adSet.costPerConversion)}
                                     </div>
                                     <div className={`text-right text-xs ${getValueColorClass(adSet.roas)}`}>
-                                      {adSet.roas.toFixed(1)}x
+                                      {adSet.roas.toFixed(2)}x
                                     </div>
                                   </div>
                                   
@@ -411,22 +412,22 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                                 </span>
                                               </div>
                                               <div className="text-right text-[10px]">
-                                                {formatCurrency(ad.spend).replace(',00', '')}
+                                                {formatCurrency(ad.spend)}
                                               </div>
                                               <div className="text-right text-[10px]">
                                                 {ad.leads.toLocaleString()}
                                               </div>
                                               <div className="text-right text-[10px]">
-                                                {formatCurrency(ad.costPerLead).replace(',00', '')}
+                                                {formatCurrency(ad.costPerLead)}
                                               </div>
                                               <div className="text-right text-[10px]">
                                                 {ad.conversions.toLocaleString()}
                                               </div>
                                               <div className="text-right text-[10px]">
-                                                {formatCurrency(ad.costPerConversion).replace(',00', '')}
+                                                {formatCurrency(ad.costPerConversion)}
                                               </div>
                                               <div className={`text-right text-[10px] ${getValueColorClass(ad.roas)}`}>
-                                                {ad.roas.toFixed(1)}x
+                                                {ad.roas.toFixed(2)}x
                                               </div>
                                             </div>
                                           ))}
