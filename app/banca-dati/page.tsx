@@ -2,12 +2,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Database, Users, RefreshCw, Search, BarChart2, AlertCircle, CheckCircle, Info } from "lucide-react";
+import { Download, Database, Users, RefreshCw, Search, BarChart2, AlertCircle, CheckCircle2, Info } from "lucide-react";
 import Pagination from "@/components/ui/Pagination";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "@/components/ui/toaster";
 import { formatDateTime } from "@/lib/utils/date";
 import axios from "axios";
+import { EnhancedCapiStatus, CapiDetailsModal } from "@/components/banca/CapiDetailsComponent";
 
 // Definiamo l'URL base per le API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
@@ -48,7 +49,7 @@ interface Visit {
     country: string;
     country_code: string;
   };
-  // Aggiungiamo il campo facebookCapi
+  // Campo facebookCapi
   facebookCapi?: FacebookCapi;
 }
 
@@ -80,7 +81,7 @@ interface Client {
     analytics: boolean;
     thirdParty: boolean;
   };
-  // Aggiungiamo il campo facebookCapi
+  // Campo facebookCapi
   facebookCapi?: FacebookCapi;
 }
 
@@ -115,43 +116,12 @@ interface FacebookAudience {
   lastSeen: string;
   lastUpdated: string;
   syncedToFacebook: boolean;
-  // Aggiungiamo il campo facebookCapi
+  // Campo facebookCapi
   facebookCapi?: FacebookCapi;
 }
 
 // Tipo di tabella attiva
 type ActiveTab = "visits" | "clients" | "audiences";
-
-// Helper component to render CAPI status
-function CapiStatus({ capiData }: { capiData?: FacebookCapi }) {
-  if (!capiData || !capiData.sent) {
-    return (
-      <span className="flex items-center text-zinc-500 text-xs">
-        <Info size={14} className="mr-1" />
-        Non inviato
-      </span>
-    );
-  }
-
-  if (capiData.success) {
-    return (
-      <span className="flex items-center text-success text-xs" title={`Evento inviato con successo: ${capiData.eventId}`}>
-        <CheckCircle size={14} className="mr-1" />
-        Successo
-      </span>
-    );
-  } else {
-    return (
-      <span 
-        className="flex items-center text-danger text-xs" 
-        title={`Errore: ${capiData.error?.message || 'Errore sconosciuto'}`}
-      >
-        <AlertCircle size={14} className="mr-1" />
-        Errore
-      </span>
-    );
-  }
-}
 
 // Tooltip helper component
 function Tooltip({ children, content }: { children: React.ReactNode, content: string }) {
@@ -485,7 +455,7 @@ function VisitsTable({ visits, isLoading }: { visits: Visit[], isLoading: boolea
               {visit.timeOnPage ? `${Math.round(visit.timeOnPage)}s` : "-"}
             </td>
             <td className="px-4 py-2.5">
-              <CapiStatus capiData={visit.facebookCapi} />
+              <EnhancedCapiStatus capiData={visit.facebookCapi} />
             </td>
           </tr>
         ))}
@@ -575,8 +545,8 @@ function ClientsTable({ clients, isLoading }: { clients: Client[], isLoading: bo
               </div>
             </td>
             <td className="px-4 py-2.5">
-              <CapiStatus capiData={client.facebookCapi} />
-              {client.facebookCapi?.eventId && (
+              <EnhancedCapiStatus capiData={client.facebookCapi} />
+              {client.facebookCapi?.eventId && !client.facebookCapi?.error && (
                 <div className="text-xs text-zinc-500 font-mono mt-1 truncate max-w-[120px]" title={client.facebookCapi.eventId}>
                   {client.facebookCapi.eventId.substring(0, 10)}...
                 </div>
@@ -695,8 +665,8 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
               {formatDateTime(audience.lastSeen)}
             </td>
             <td className="px-4 py-2.5">
-              <CapiStatus capiData={audience.facebookCapi} />
-              {audience.facebookCapi?.eventId && (
+              <EnhancedCapiStatus capiData={audience.facebookCapi} />
+              {audience.facebookCapi?.eventId && !audience.facebookCapi?.error && (
                 <div className="text-xs text-zinc-500 font-mono mt-1 truncate max-w-[120px]" title={audience.facebookCapi.eventId}>
                   {audience.facebookCapi.eventId.substring(0, 10)}...
                 </div>
