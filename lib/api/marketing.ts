@@ -3,6 +3,8 @@
 
 import axios from "axios";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+
 // Definisci il tipo per i dati di riepilogo della campagna
 export interface MarketingOverview {
   dates: string[];
@@ -222,7 +224,10 @@ export async function fetchMarketingOverview(
 ): Promise<MarketingOverview> {
   try {
     // Prima facciamo una richiesta per ottenere la configurazione utente dal backend
-    const configResponse = await axios.get('/api/user/config');
+    const configResponse = await axios.get(
+      `${API_BASE_URL}/api/user/config`,
+      { withCredentials: true }
+    );
     
     // Estrai la configurazione dalla risposta
     const userConfig = configResponse.data.config || {};
@@ -270,7 +275,10 @@ export async function fetchCampaigns(
 ): Promise<Campaign[]> {
   try {
     // Prima facciamo una richiesta per ottenere la configurazione utente dal backend
-    const configResponse = await axios.get('/api/user/config');
+    const configResponse = await axios.get(
+      `${API_BASE_URL}/api/user/config`,
+      { withCredentials: true }
+    );
     
     // Estrai la configurazione dalla risposta
     const userConfig = configResponse.data.config || {};
@@ -389,7 +397,10 @@ export async function fetchAdSets(
   try {
     // Usa le stesse credenziali della chiamata principale
     // Prima facciamo una richiesta per ottenere la configurazione utente dal backend
-    const configResponse = await axios.get('/api/user/config');
+    const configResponse = await axios.get(
+      `${API_BASE_URL}/api/user/config`,
+      { withCredentials: true }
+    );
     
     // Estrai la configurazione dalla risposta
     const userConfig = configResponse.data.config || {};
@@ -509,7 +520,10 @@ export async function fetchAds(
   try {
     // Usa le stesse credenziali della chiamata principale
     // Prima facciamo una richiesta per ottenere la configurazione utente dal backend
-    const configResponse = await axios.get('/api/user/config');
+    const configResponse = await axios.get(
+      `${API_BASE_URL}/api/user/config`,
+      { withCredentials: true }
+    );
     
     // Estrai la configurazione dalla risposta
     const userConfig = configResponse.data.config || {};
