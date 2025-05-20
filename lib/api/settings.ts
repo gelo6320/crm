@@ -10,9 +10,11 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzione
 export interface UserSettings {
   mongoDbUri: string;
   apiKeys: {
-    facebookAccessToken: string;
+    facebookAccessToken: string;      // Per Facebook Conversion API (CAPI)
+    facebookMarketingToken: string;   // NUOVO: Per Facebook Marketing API
     googleApiKey: string;
     facebookPixelId: string;
+    facebookAccountId: string;        // ID dell'account pubblicitario Facebook
   };
   webhooks: {
     callbackUrl: string;
@@ -39,9 +41,11 @@ export async function fetchUserSettings(): Promise<UserSettings> {
       return {
         mongoDbUri: serverConfig.mongodb_uri || "",
         apiKeys: {
-          facebookAccessToken: serverConfig.access_token || "",
+          facebookAccessToken: serverConfig.access_token || "",  // Per CAPI
+          facebookMarketingToken: serverConfig.marketing_api_token || "", // NUOVO: Per Marketing API  
           googleApiKey: "", // Non disponibile dal backend
-          facebookPixelId: serverConfig.meta_pixel_id || ""
+          facebookPixelId: serverConfig.meta_pixel_id || "",
+          facebookAccountId: serverConfig.fb_account_id || ""
         },
         webhooks: {
           callbackUrl: ""  // Non disponibile dal backend
@@ -58,8 +62,10 @@ export async function fetchUserSettings(): Promise<UserSettings> {
       mongoDbUri: "",
       apiKeys: {
         facebookAccessToken: "",
+        facebookMarketingToken: "", // NUOVO
         googleApiKey: "",
-        facebookPixelId: ""
+        facebookPixelId: "",
+        facebookAccountId: ""
       },
       webhooks: {
         callbackUrl: ""
@@ -81,8 +87,10 @@ export async function saveUserSettings(settings: UserSettings): Promise<{
     // Trasforma i dati dal formato frontend al formato backend
     const backendSettings = {
       mongodb_uri: settings.mongoDbUri,
-      access_token: settings.apiKeys.facebookAccessToken,
-      meta_pixel_id: settings.apiKeys.facebookPixelId
+      access_token: settings.apiKeys.facebookAccessToken,        // Per CAPI
+      marketing_api_token: settings.apiKeys.facebookMarketingToken, // NUOVO: Per Marketing API
+      meta_pixel_id: settings.apiKeys.facebookPixelId,
+      fb_account_id: settings.apiKeys.facebookAccountId
     };
     
     const response = await axios.post(

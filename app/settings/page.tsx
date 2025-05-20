@@ -11,9 +11,11 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<UserSettings>({
     mongoDbUri: "",
     apiKeys: {
-      facebookAccessToken: "",
+      facebookAccessToken: "",           // Per Facebook Conversion API (CAPI)
+      facebookMarketingToken: "",        // NUOVO: Per Facebook Marketing API
       googleApiKey: "",
-      facebookPixelId: "" // Aggiunto questo campo mancante
+      facebookPixelId: "",
+      facebookAccountId: ""
     },
     webhooks: {
       callbackUrl: ""
@@ -136,10 +138,15 @@ export default function SettingsPage() {
               </p>
             </div>
             
-            {/* Facebook Access Token */}
+            {/* Sezione Facebook */}
+            <div className="pt-2 pb-1 border-t border-b border-zinc-700 mb-2">
+              <h3 className="text-sm font-medium text-zinc-300">Configurazione Facebook</h3>
+            </div>
+            
+            {/* Facebook Conversion API Token */}
             <div>
               <label htmlFor="apiKeys.facebookAccessToken" className="block text-sm font-medium mb-1">
-                Facebook Access Token
+                Facebook Conversion API Token (CAPI)
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -163,7 +170,70 @@ export default function SettingsPage() {
                 </button>
               </div>
               <p className="mt-1 text-xs text-zinc-400">
-                Token di accesso a Facebook Conversion API
+                Token di accesso a Facebook Conversion API (per tracking conversioni)
+              </p>
+            </div>
+            
+            {/* NUOVO: Facebook Marketing API Token */}
+            <div>
+              <label htmlFor="apiKeys.facebookMarketingToken" className="block text-sm font-medium mb-1">
+                Facebook Marketing API Token
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Key size={16} className="text-zinc-500" />
+                </div>
+                <input
+                  type={showToken ? "text" : "password"}
+                  id="apiKeys.facebookMarketingToken"
+                  name="apiKeys.facebookMarketingToken"
+                  value={settings.apiKeys?.facebookMarketingToken || ""}
+                  onChange={handleChange}
+                  className="input w-full pl-10 pr-10"
+                  placeholder="EAABiLT7R4n8BAHDpZBs6jc..."
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 px-3 flex items-center text-zinc-400 hover:text-white"
+                  onClick={() => setShowToken(!showToken)}
+                >
+                  {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-zinc-400">
+                Token di accesso a Facebook Marketing API (per dati campagne)
+              </p>
+              <p className="text-xs text-info mt-1">
+                <Info size={12} className="inline mr-1" />
+                Questo token è diverso da quello CAPI e richiede permessi specifici (ads_management, ads_read)
+              </p>
+            </div>
+            
+            {/* Facebook Account ID */}
+            <div>
+              <label htmlFor="apiKeys.facebookAccountId" className="block text-sm font-medium mb-1">
+                Facebook Account ID
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Key size={16} className="text-zinc-500" />
+                </div>
+                <input
+                  type="text"
+                  id="apiKeys.facebookAccountId"
+                  name="apiKeys.facebookAccountId"
+                  value={settings.apiKeys?.facebookAccountId || ""}
+                  onChange={handleChange}
+                  className="input w-full pl-10"
+                  placeholder="123456789012345"
+                />
+              </div>
+              <p className="mt-1 text-xs text-zinc-400">
+                ID dell'account pubblicitario di Facebook (senza il prefisso 'act_')
+              </p>
+              <p className="text-xs text-info mt-1">
+                <Info size={12} className="inline mr-1" />
+                Puoi trovare questo ID nella dashboard di Facebook Ads Manager nell'URL o nelle impostazioni dell'account
               </p>
             </div>
             
@@ -268,6 +338,8 @@ export default function SettingsPage() {
               <p className="text-sm">
                 Le impostazioni di configurazione vengono caricate all'avvio dell'applicazione
                 e vengono utilizzate per la connessione al database e l'autenticazione con servizi esterni.
+                <br/><br/>
+                <strong>Facebook Marketing API:</strong> Per accedere ai dati delle campagne pubblicitarie sono necessari sia il token specifico per Marketing API che l'ID dell'account pubblicitario.
               </p>
             </div>
             
