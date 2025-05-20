@@ -16,6 +16,23 @@ export interface MarketingOverview {
   averageRoas: number;
 }
 
+interface InsightObject {
+  campaign_id?: string;
+  adset_id?: string;
+  ad_id?: string;
+  impressions?: string;
+  clicks?: string;
+  spend?: string;
+  actions?: any[];
+  conversions?: any;
+  [key: string]: any; // Per qualsiasi altra proprietà che potrebbe essere presente
+}
+
+// Definisci un'interfaccia per l'oggetto map risultante
+interface InsightsMap {
+  [key: string]: InsightObject;
+}
+
 interface CampaignBasic {
   id: string;
 }
@@ -469,15 +486,15 @@ export async function fetchCampaigns(
     }
     
     const insightsResponse = await axios.get(
-      `https://graph.facebook.com/${FB_API_VERSION}/insights`,
+      `https://graph.facebook.com/${FB_API_VERSION}/act_${FB_ACCOUNT_ID}/insights`,
       {
         params: {
-          access_token: FB_MARKETING_TOKEN, // MODIFICATO: usa il token Marketing API
-          level: 'campaign',
-          ids: campaignIds,
+          access_token: FB_MARKETING_TOKEN,
           time_range: JSON.stringify({ since, until }),
-          fields: 'campaign_id,impressions,clicks,spend,actions',
-          action_breakdowns: 'action_type',
+          level: 'campaign', // Specifica campaign come livello
+          fields: 'campaign_id,campaign_name,impressions,clicks,spend,actions,conversions',
+          breakdowns: 'campaign_id', // Questo è essenziale per ottenere i dati per campagna
+          limit: 50
         }
       }
     );
@@ -487,10 +504,13 @@ export async function fetchCampaigns(
     console.log("ID campagne negli insights:", insights.map((i: InsightBasic) => i.campaign_id));
     
     // Mappa insights alle campagne
-    const insightsMap = insights.reduce((map: any, insight: any) => {
-      map[insight.campaign_id] = insight;
+    const insightsMap: InsightsMap = insights.reduce((map: InsightsMap, insight: InsightObject) => {
+      const campaignId = insight.campaign_id;
+      if (campaignId) {
+        map[campaignId] = insight;
+      }
       return map;
-    }, {});
+    }, {} as InsightsMap);
     
     // Costruisci i nostri oggetti Campaign con adSets
     const result: Campaign[] = [];
@@ -592,15 +612,22 @@ export async function fetchAdSets(
     }
     
     const insightsResponse = await axios.get(
-      `https://graph.facebook.com/${FB_API_VERSION}/insights`,
+      `https://graph.facebook.com/${FB_API_VERSION}/act_${FB_ACCOUNT_ID}/insights`,
       {
         params: {
-          access_token: FB_MARKETING_TOKEN, // MODIFICATO: usa il token Marketing API
-          level: 'adset',
-          ids: adSetIds,
+          access_token: FB_MARKETING_TOKEN,
           time_range: JSON.stringify({ since, until }),
-          fields: 'adset_id,impressions,clicks,spend,actions',
-          action_breakdowns: 'action_type',
+          level: 'adset', // Cambia il livello a adset
+          breakdowns: 'adset_id', // Usa il breakdown per adset_id
+          fields: 'adset_id,adset_name,impressions,clicks,spend,actions,conversions',
+          filtering: [
+            {
+              field: 'campaign.id',
+              operator: 'EQUAL',
+              value: campaignId
+            }
+          ],
+          limit: 50
         }
       }
     );
@@ -715,15 +742,22 @@ export async function fetchAds(
     }
     
     const insightsResponse = await axios.get(
-      `https://graph.facebook.com/${FB_API_VERSION}/insights`,
+      `https://graph.facebook.com/${FB_API_VERSION}/act_${FB_ACCOUNT_ID}/insights`,
       {
         params: {
-          access_token: FB_MARKETING_TOKEN, // MODIFICATO: usa il token Marketing API
-          level: 'ad',
-          ids: adIds,
+          access_token: FB_MARKETING_TOKEN,
           time_range: JSON.stringify({ since, until }),
-          fields: 'ad_id,impressions,clicks,spend,actions',
-          action_breakdowns: 'action_type',
+          level: 'ad', // Cambia il livello a ad
+          breakdowns: 'ad_id', // Usa il breakdown per ad_id
+          fields: 'ad_id,ad_name,impressions,clicks,spend,actions,conversions',
+          filtering: [
+            {
+              field: 'adset.id',
+              operator: 'EQUAL',
+              value: adSetId
+            }
+          ],
+          limit: 50
         }
       }
     );
