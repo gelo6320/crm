@@ -206,22 +206,94 @@ function calculateMetrics(data: any): {
   costPerConversion: number;
   roas: number;
 } {
+  // Log per diagnostica
+  console.log("Dati ricevuti per calcolo metriche:", 
+    JSON.stringify({
+      impressions: data.impressions,
+      clicks: data.clicks,
+      spend: data.spend,
+      cost_per_lead: data.cost_per_lead,
+      cost_per_conversion: data.cost_per_conversion,
+      campi_disponibili: Object.keys(data)
+    })
+  );
+  
   const impressions = parseInt(data.impressions) || 0;
   const clicks = parseInt(data.clicks) || 0;
   const spend = parseFloat(data.spend) || 0;
   
-  // Estrai leads e conversions dalle actions
-  const { leads, conversions } = extractActionData(data.actions);
+  // Estrai lead e conversioni con priorità sui campi diretti
+  let leads = 0;
+  let conversions = 0;
+  let costPerLead = 0;
+  let costPerConversion = 0;
+  
+  // Prima prova ad ottenere leads e conversions dai campi diretti
+  if (data.leads !== undefined) {
+    leads = parseFloat(data.leads) || 0;
+  } else if (data.conversions && data.conversions.lead) {
+    leads = parseFloat(data.conversions.lead) || 0;
+  } else {
+    // Fallback al metodo actions
+    const actionData = extractActionData(data.actions || []);
+    leads = actionData.leads;
+  }
+  
+  // Stessa cosa per conversioni
+  if (data.conversions && (data.conversions.purchase || data.conversions.total)) {
+    conversions = parseFloat(data.conversions.purchase || data.conversions.total) || 0;
+  } else {
+    // Fallback al metodo actions
+    const actionData = extractActionData(data.actions || []);
+    conversions = actionData.conversions;
+  }
+  
+  // Per costPerLead
+  if (data.cost_per_lead !== undefined) {
+    costPerLead = parseFloat(data.cost_per_lead) || 0;
+  } else if (data.cost_per_action_type && data.cost_per_action_type.lead) {
+    costPerLead = parseFloat(data.cost_per_action_type.lead) || 0;
+  } else {
+    // Calcola manualmente
+    costPerLead = leads > 0 && spend > 0 ? spend / leads : 0;
+  }
+  
+  // Per costPerConversion
+  if (data.cost_per_conversion !== undefined) {
+    costPerConversion = parseFloat(data.cost_per_conversion) || 0;
+  } else if (data.cost_per_action_type && 
+            (data.cost_per_action_type.purchase || data.cost_per_action_type.complete_registration)) {
+    costPerConversion = parseFloat(data.cost_per_action_type.purchase || 
+                                 data.cost_per_action_type.complete_registration) || 0;
+  } else {
+    // Calcola manualmente
+    costPerConversion = conversions > 0 && spend > 0 ? spend / conversions : 0;
+  }
   
   // Calcola metriche derivate
   const ctr = clicks > 0 && impressions > 0 ? clicks / impressions * 100 : 0;
   const cpc = clicks > 0 && spend > 0 ? spend / clicks : 0;
-  const costPerLead = leads > 0 && spend > 0 ? spend / leads : 0;
-  const costPerConversion = conversions > 0 && spend > 0 ? spend / conversions : 0;
   
   // Stima ROAS (personalizzare in base al valore reale delle conversioni)
-  const estimatedValue = conversions * 100; // Esempio: ogni conversione vale 100 EUR
+  // Prova prima a guardare action_values se disponibile
+  let estimatedValue = 0;
+  if (data.action_values && Array.isArray(data.action_values)) {
+    data.action_values.forEach((actionValue: any) => {
+      if (actionValue.action_type === 'purchase' || 
+          actionValue.action_type === 'offsite_conversion') {
+        estimatedValue += parseFloat(actionValue.value) || 0;
+      }
+    });
+  }
+  
+  // Se non troviamo valori, usiamo il calcolo stimato
+  if (estimatedValue === 0) {
+    estimatedValue = conversions * 100; // Esempio: ogni conversione vale 100 EUR
+  }
+  
   const roas = spend > 0 ? parseFloat((estimatedValue / spend).toFixed(2)) : 0;
+  
+  console.log(`Metriche calcolate: Leads: ${leads}, CostPerLead: ${costPerLead}, Conversions: ${conversions}, CostPerConversion: ${costPerConversion}, ROAS: ${roas}`);
   
   return {
     impressions,
@@ -237,17 +309,57 @@ function calculateMetrics(data: any): {
   };
 }
 
+async function testFacebookAPIResponse() {
+  try {
+
+    const configResponse = await axios.get(
+      `${API_BASE_URL}/api/user/config`,
+      { withCredentials: true }
+    );
+
+    const userConfig = configResponse.data.config || {};
+    const FB_MARKETING_TOKEN = userConfig.marketing_api_token || '';
+    const FB_ACCOUNT_ID = userConfig.fb_account_id || '';
+
+    const response = await axios.get(
+      `https://graph.facebook.com/${FB_API_VERSION}/act_${FB_ACCOUNT_ID}/insights`,
+      {
+        params: {
+          access_token: FB_MARKETING_TOKEN,
+          time_range: JSON.stringify({ since: '2025-05-13', until: '2025-05-20' }),
+          level: 'account',
+          limit: 1,
+          fields: 'date_start,spend,impressions,clicks,actions,conversions,cost_per_result',
+        }
+      }
+    );
+    
+    console.log("TEST API RESPONSE:", JSON.stringify(response.data, null, 2));
+    console.log("Campi disponibili:", Object.keys(response.data.data[0] || {}));
+    
+    // Se ci sono actions, mostra i tipi
+    if (response.data.data && response.data.data[0] && response.data.data[0].actions) {
+      console.log("Tipi di azioni disponibili:", 
+        response.data.data[0].actions.map((a: any) => a.action_type).join(', '));
+    }
+  } catch (error) {
+    console.error("Test API fallito:", error);
+  }
+}
+
 // API per recuperare i dati di riepilogo (per il grafico)
 export async function fetchMarketingOverview(
   timeRange: string = "30d"
 ): Promise<MarketingOverview> {
+
+  await testFacebookAPIResponse();
+
   try {
     // Prima facciamo una richiesta per ottenere la configurazione utente dal backend
     const configResponse = await axios.get(
       `${API_BASE_URL}/api/user/config`,
       { withCredentials: true }
     );
-    
     // Estrai la configurazione dalla risposta
     const userConfig = configResponse.data.config || {};
     const FB_MARKETING_TOKEN = userConfig.marketing_api_token || ''; // MODIFICATO: usa marketing_api_token invece di access_token
@@ -269,12 +381,13 @@ export async function fetchMarketingOverview(
       `https://graph.facebook.com/${FB_API_VERSION}/act_${FB_ACCOUNT_ID}/insights`,
       {
         params: {
-          access_token: FB_MARKETING_TOKEN, // MODIFICATO: usa il token Marketing API
+          access_token: FB_MARKETING_TOKEN,
           time_range: JSON.stringify({ since, until }),
           level: 'account',
           time_increment: 1,
-          fields: 'date_start,impressions,clicks,spend,actions',
+          fields: 'date_start,impressions,clicks,spend,actions,action_values,cost_per_action_type,cost_per_lead,cost_per_outbound_click,conversions,cost_per_conversion',
           action_breakdowns: 'action_type',
+          action_report_time: 'conversion',
         }
       }
     );
