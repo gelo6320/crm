@@ -493,7 +493,6 @@ export async function fetchCampaigns(
           time_range: JSON.stringify({ since, until }),
           level: 'campaign', // Specifica campaign come livello
           fields: 'campaign_id,campaign_name,impressions,clicks,spend,actions,conversions',
-          breakdowns: 'campaign_id', // Questo è essenziale per ottenere i dati per campagna
           limit: 50
         }
       }
@@ -618,7 +617,6 @@ export async function fetchAdSets(
           access_token: FB_MARKETING_TOKEN,
           time_range: JSON.stringify({ since, until }),
           level: 'adset', // Cambia il livello a adset
-          breakdowns: 'adset_id', // Usa il breakdown per adset_id
           fields: 'adset_id,adset_name,impressions,clicks,spend,actions,conversions',
           filtering: [
             {
@@ -748,7 +746,6 @@ export async function fetchAds(
           access_token: FB_MARKETING_TOKEN,
           time_range: JSON.stringify({ since, until }),
           level: 'ad', // Cambia il livello a ad
-          breakdowns: 'ad_id', // Usa il breakdown per ad_id
           fields: 'ad_id,ad_name,impressions,clicks,spend,actions,conversions',
           filtering: [
             {
