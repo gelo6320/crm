@@ -16,6 +16,14 @@ export interface MarketingOverview {
   averageRoas: number;
 }
 
+interface CampaignBasic {
+  id: string;
+}
+
+interface InsightBasic {
+  campaign_id: string;
+}
+
 // Definisci i tipi per la struttura delle campagne
 export interface Ad {
   id: string;
@@ -443,6 +451,8 @@ export async function fetchCampaigns(
     );
     
     const campaigns = campaignsResponse.data.data || [];
+
+    console.log("ID campagne recuperate:", campaigns.map((c: CampaignBasic) => c.id));
     
     if (campaigns.length === 0) {
       console.log(`Nessuna campagna trovata per l'account ID ${FB_ACCOUNT_ID}`);
@@ -473,6 +483,8 @@ export async function fetchCampaigns(
     );
     
     const insights = insightsResponse.data.data || [];
+
+    console.log("ID campagne negli insights:", insights.map((i: InsightBasic) => i.campaign_id));
     
     // Mappa insights alle campagne
     const insightsMap = insights.reduce((map: any, insight: any) => {
