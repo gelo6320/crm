@@ -69,6 +69,7 @@ interface CustomFunnelBoardProps {
   funnelData: FunnelData;
   setFunnelData: React.Dispatch<React.SetStateAction<FunnelData>>;
   onLeadMove: () => Promise<void>;
+  highlightedLeadId?: string | null;
 }
 
 // Main Component
@@ -76,6 +77,7 @@ export default function CustomFunnelBoard({
   funnelData,
   setFunnelData,
   onLeadMove,
+  highlightedLeadId = null
 }: CustomFunnelBoardProps) {
   // State per modali e operazioni sulle lead
   const [editingLead, setEditingLead] = useState<FunnelItem | null>(null);

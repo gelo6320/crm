@@ -98,6 +98,7 @@ export interface FunnelItem extends Lead {
 }
 
 export interface FunnelData {
+  [key: string]: FunnelItem[];
   new: FunnelItem[];
   contacted: FunnelItem[];
   qualified: FunnelItem[];

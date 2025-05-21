@@ -16,6 +16,9 @@ interface SearchResult {
   section: string;
   sectionPath: string;
   type?: string;
+  // Aggiungi le proprietà mancanti
+  start?: string; // Per gli eventi del calendario
+  client?: string; // Per i progetti
 }
 
 interface HeaderProps {

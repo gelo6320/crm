@@ -80,7 +80,7 @@ export default function CalendarPage() {
         }, 3000);
       }
     }
-  }, [events, searchParams]);
+  }, [events]);
   
   useEffect(() => {
     // Filter events for the selected date

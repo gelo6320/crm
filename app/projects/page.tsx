@@ -139,7 +139,7 @@ export default function ProjectsPage() {
       // Trova e scorri all'elemento
       setTimeout(() => {
         const element = document.getElementById(`project-${projectId}`);
-        if (element) {
+        if (element) { // ✅ Buono - verifica che l'elemento esista
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           
           // Aggiungi una classe di evidenziazione temporanea
@@ -157,6 +157,15 @@ export default function ProjectsPage() {
               window.history.replaceState({}, document.title, url.toString());
             }
           }, 3000);
+        } else {
+          // ✅ Potrebbe essere aggiunto: gestione del caso in cui l'elemento non esista
+          setHighlightedProjectId(null);
+          // Pulisci comunque l'URL
+          if (window.history.replaceState) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('id');
+            window.history.replaceState({}, document.title, url.toString());
+          }
         }
       }, 300);
     }
