@@ -8,6 +8,8 @@ import Image from "next/image";
 import Link from "next/link";
 import axios from "axios";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+
 // Define the SearchResult type for suggestions
 interface SearchResult {
   id: string;
@@ -91,7 +93,9 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
     setIsSearching(true);
     try {
       // Use the global search API to get results from multiple sections
-      const response = await axios.get(`/api/global-search?query=${encodeURIComponent(searchQuery)}&limit=10`);
+      const response = await axios.get(`${API_BASE_URL}/api/global-search?query=${encodeURIComponent(searchQuery)}&limit=10`,
+        { withCredentials: true }
+      );
       
       if (response.data.success && response.data.data.length > 0) {
         setSearchResults(response.data.data);
