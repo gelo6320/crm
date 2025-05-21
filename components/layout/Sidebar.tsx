@@ -2,7 +2,8 @@
 import { 
   BarChart3, Calendar, FileText, Bookmark, 
   Facebook, Share2, Users, Settings, LogOut,
-  X, Globe, Shield, HardHat, LineChart, Filter, Vault
+  X, Globe, Shield, HardHat, LineChart, Filter, Vault,
+  Target  // Aggiungi questa icona
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -50,6 +51,7 @@ export default function Sidebar({ open, setOpen, isMobile }: SidebarProps) {
       { name: "Tracciamento", href: "/tracciamento", icon: LineChart },
       { name: "Sales Funnel", href: "/sales-funnel", icon: Filter },
       { name: "Banca Dati", href: "/banca-dati", icon: Vault },
+      { name: "Pubblicità", href: "/pubblicita", icon: Target },
       { name: "Calendario", href: "/calendar", icon: Calendar },
       { name: "I tuoi siti", href: "/my-sites", icon: Globe },
       { name: "Progetti", href: "/projects", icon: ConstructionIcon },

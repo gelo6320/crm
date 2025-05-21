@@ -49,8 +49,18 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
         return "Sales Funnel";
       case "/tracciamento":
         return "Tracciamento";
+      case "/pubblicita":
+        return "Pubblicità";
       case "/settings":
         return "Impostazioni";
+      case "/contacts":
+        return "Contatti";
+      case "banca-dati":
+        return "Banca Dati";
+      case "/my-sites":
+        return "I tuoi siti";
+      case "/projects":
+        return "Progetti";
       default:
         return "Dashboard";
     }
