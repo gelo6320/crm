@@ -96,7 +96,7 @@ export interface Campaign {
 }
 
 // Configurazione Facebook API
-const FB_API_VERSION = 'v18.0'; // Usa la versione stabile più recente
+const FB_API_VERSION = 'v22.0'; // Usa la versione stabile più recente
 
 // Helper per convertire il nostro timeRange nel formato date di Facebook
 function convertTimeRangeToDateRange(timeRange: string): { since: string, until: string } {

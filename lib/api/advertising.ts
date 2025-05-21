@@ -5,7 +5,7 @@ import axios from 'axios';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.costruzionedigitale.com';
 
 // Configurazione Facebook API
-const FB_API_VERSION = 'v18.0';
+const FB_API_VERSION = 'v22.0';
 
 // Definizione dei tipi di dati
 export interface Ad {
