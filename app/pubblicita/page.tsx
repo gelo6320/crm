@@ -47,9 +47,9 @@ export default function AdvertisingPage() {
   }
 
   return (
-    <div className="max-w-full px-0 sm:px-4 py-4 space-y-4 sm:space-y-6">
+    <div className="max-w-full p-2 sm:p-4 space-y-3 sm:space-y-4">
       {/* Header con titolo e pulsante di aggiornamento */}
-      <div className="flex justify-between items-center px-4 sm:px-0">
+      <div className="flex justify-between items-center">
         <div className="flex items-center">
           <div className="p-2 mr-3 rounded-full bg-primary/10">
             <Facebook size={20} className="text-primary" />
@@ -68,32 +68,53 @@ export default function AdvertisingPage() {
         </motion.button>
       </div>
       
-      {/* Container principale */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 px-4 sm:px-0">
-        {/* Lista inserzioni */}
-        <div className="lg:col-span-1">
-          <AdsList 
-            ads={ads} 
-            selectedAdId={selectedAdId} 
-            onSelectAd={(adId) => setSelectedAdId(adId)} 
-          />
-        </div>
-        
-        {/* Dettagli inserzione */}
-        <div className="lg:col-span-2">
-          {selectedAd ? (
-            <AdDetails ad={selectedAd} />
-          ) : (
-            <motion.div 
-              className="bg-zinc-800 rounded-lg p-6 flex items-center justify-center text-zinc-400 h-64"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              Seleziona un'inserzione per visualizzare i dettagli
-            </motion.div>
-          )}
-        </div>
+      {/* Lista inserzioni (full width) */}
+      <div className="w-full">
+        <AdsList 
+          ads={ads} 
+          selectedAdId={selectedAdId} 
+          onSelectAd={(adId) => setSelectedAdId(adId)} 
+        />
       </div>
+      
+      {/* Container dettagli (anteprima + statistiche) */}
+      {selectedAd && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Visualizzazione mobile: prima anteprima poi statistiche */}
+          <div className="lg:hidden w-full space-y-4">
+            <AdDetails 
+              ad={selectedAd}
+              layout="mobile" 
+            />
+          </div>
+          
+          {/* Visualizzazione desktop: statistiche a sx, anteprima a dx */}
+          <div className="hidden lg:block lg:col-span-1">
+            <AdDetails 
+              ad={selectedAd}
+              layout="stats-only"
+            />
+          </div>
+          
+          <div className="hidden lg:block lg:col-span-2">
+            <AdDetails 
+              ad={selectedAd}
+              layout="preview-only"
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Messaggio se nessuna inserzione selezionata */}
+      {!selectedAd && (
+        <motion.div 
+          className="bg-zinc-800 rounded-lg p-6 flex items-center justify-center text-zinc-400 h-64"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          Seleziona un'inserzione per visualizzare i dettagli
+        </motion.div>
+      )}
     </div>
   );
 }
