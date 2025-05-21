@@ -350,6 +350,42 @@ export default function ContactsPage() {
   useEffect(() => {
     loadContacts();
   }, [currentPage, selectedStatus, sourceFilter]);
+
+  // Aggiungi questo effect dopo gli altri useEffect
+useEffect(() => {
+  // Check if there's an ID in the URL query params
+  const params = new URLSearchParams(window.location.search);
+  const contactId = params.get('id');
+  
+  if (contactId) {
+    // Set the highlighted contact ID
+    setHighlightedContactId(contactId);
+    
+    // Schedule a scroll to the element
+    setTimeout(() => {
+      const element = document.getElementById(`contact-${contactId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Add a temporary highlight class
+        element.classList.add('bg-primary/10');
+        
+        // Remove the highlight after 3 seconds
+        setTimeout(() => {
+          element.classList.remove('bg-primary/10');
+          setHighlightedContactId(null);
+          
+          // Clear the URL parameter
+          if (window.history.replaceState) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('id');
+            window.history.replaceState({}, document.title, url.toString());
+          }
+        }, 3000);
+      }
+    }, 300);
+  }
+}, [contacts]); // Re-run when contacts change
   
   // Funzione per caricare i contatti usando la nuova API unificata
   const loadContacts = async () => {
@@ -409,6 +445,8 @@ export default function ContactsPage() {
   const handleRefresh = () => {
     loadContacts();
   };
+
+  const [highlightedContactId, setHighlightedContactId] = useState<string | null>(null);
   
   // Gestisce il cambio di stato del filtro
   const handleStatusFilter = (status: string) => {
@@ -678,10 +716,13 @@ export default function ContactsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
-                {contacts.map((contact) => (
+              {contacts.map((contact) => (
                   <tr 
                     key={contact._id} 
-                    className="hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                    id={`contact-${contact._id}`}
+                    className={`hover:bg-zinc-800/50 transition-colors cursor-pointer ${
+                      highlightedContactId === contact._id ? 'bg-primary/10' : ''
+                    }`}
                     onClick={() => handleContactClick(contact)}
                   >
                     <td className="px-4 py-3">

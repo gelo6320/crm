@@ -22,6 +22,7 @@ export default function CalendarPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
   
   useEffect(() => {
     const checkMobile = () => {
@@ -46,6 +47,40 @@ export default function CalendarPage() {
     
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  // Aggiungi questo effect per gestire gli eventi selezionati dalla ricerca
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const eventId = params.get('id');
+    
+    if (eventId && events.length > 0) {
+      // Trova l'evento nel nostro elenco
+      const selectedEvent = events.find(e => e.id === eventId);
+      
+      if (selectedEvent) {
+        // Imposta la data selezionata
+        setSelectedDate(new Date(selectedEvent.start));
+        
+        // Apri i dettagli dell'evento
+        handleEditEvent(selectedEvent);
+        
+        // Evidenzia temporaneamente l'evento
+        setHighlightedEventId(eventId);
+        
+        // Pulisci l'URL
+        if (window.history.replaceState) {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('id');
+          window.history.replaceState({}, document.title, url.toString());
+        }
+        
+        // Rimuovi l'evidenziazione dopo qualche secondo
+        setTimeout(() => {
+          setHighlightedEventId(null);
+        }, 3000);
+      }
+    }
+  }, [events, searchParams]);
   
   useEffect(() => {
     // Filter events for the selected date

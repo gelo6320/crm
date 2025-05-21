@@ -72,6 +72,7 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const router = useRouter();
+  const [highlightedProjectId, setHighlightedProjectId] = useState<string | null>(null);
   
   // Carica i progetti all'avvio e quando cambiano i filtri
   useEffect(() => {
@@ -125,6 +126,41 @@ export default function ProjectsPage() {
   const handleProjectClick = (projectId: string) => {
     router.push(`/projects/${projectId}`);
   };
+
+  // Aggiungi questo effect per gestire i progetti selezionati dalla ricerca
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const projectId = params.get('id');
+    
+    if (projectId && projects.length > 0) {
+      // Imposta l'ID del progetto evidenziato
+      setHighlightedProjectId(projectId);
+      
+      // Trova e scorri all'elemento
+      setTimeout(() => {
+        const element = document.getElementById(`project-${projectId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Aggiungi una classe di evidenziazione temporanea
+          element.classList.add('bg-primary/10');
+          
+          // Rimuovi l'evidenziazione dopo 3 secondi
+          setTimeout(() => {
+            element.classList.remove('bg-primary/10');
+            setHighlightedProjectId(null);
+            
+            // Pulisci i parametri URL
+            if (window.history.replaceState) {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('id');
+              window.history.replaceState({}, document.title, url.toString());
+            }
+          }, 3000);
+        }
+      }, 300);
+    }
+  }, [projects]);
   
   // Visualizzazione di caricamento
   if (isLoading && projects.length === 0) {
@@ -199,9 +235,9 @@ export default function ProjectsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((project) => (
             <div 
-              key={project._id} 
-              className="card overflow-hidden hover:shadow-lg transition-all cursor-pointer"
-              onClick={() => handleProjectClick(project._id)}
+              key={project._id}
+              id={`project-${project._id}`}
+              className={`card p-4 ${highlightedProjectId === project._id ? 'bg-primary/10' : ''}`}
             >
               {/* Immagine di copertina o placeholder */}
               <div className="h-40 bg-zinc-900 relative">
