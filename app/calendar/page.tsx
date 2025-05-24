@@ -6,7 +6,7 @@ import {
   Calendar as CalendarIcon, Plus, Menu, X, Clock, MapPin, 
   Bell, Bookmark, Filter, Download, Upload, Search,
   ChevronLeft, ChevronRight, Grid3X3, CalendarDays, 
-  CalendarRange, List, PanelLeftClose, PanelLeft
+  CalendarRange, List
 } from "lucide-react";
 import FullCalendar from '@fullcalendar/react';
 import { EventClickArg, DateSelectArg, EventDropArg } from '@fullcalendar/core';
@@ -21,7 +21,6 @@ import { CalendarEvent } from "@/types";
 import EventModal from "@/components/calendar/EventModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import CalendarSidebar from "@/components/calendar/CalendarSidebar";
-import ExternalEventsPanel from "@/components/calendar/ExternalEventsPanel";
 import { toast } from "react-hot-toast";
 import itLocale from '@fullcalendar/core/locales/it';
 import { formatDate, formatTime } from "@/lib/utils/date";
@@ -346,7 +345,6 @@ export default function CalendarPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
-  const [showExternalEvents, setShowExternalEvents] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -640,7 +638,7 @@ export default function CalendarPage() {
       
       <div className="h-[calc(100vh-60px)] sm:h-[calc(100vh-100px)] flex flex-col animate-fade-in w-full">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 px-2 sm:px-0">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2 px-2 sm:px-0">
           <div className="flex items-center gap-3 w-full sm:w-auto">
             {/* Mobile menu button */}
             {isMobile && (
@@ -654,13 +652,14 @@ export default function CalendarPage() {
             
             {/* Search bar */}
             <div className="relative flex-1 sm:flex-initial">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-500" size={16} />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-zinc-500" size={14} />
+
               <input
                 type="text"
                 placeholder="Cerca eventi..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                className="pl-8 pr-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48"
               />
             </div>
             
@@ -671,63 +670,50 @@ export default function CalendarPage() {
                 filterStatus !== "all" ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"
               }`}
             >
-              <Filter size={20} />
+              <Filter size={16} />
             </button>
           </div>
           
           {/* Action buttons */}
           <div className="flex items-center gap-2 ml-auto">
-            {/* Toggle external events panel - Desktop only */}
-            {!isMobile && (
-              <button
-                onClick={() => setShowExternalEvents(!showExternalEvents)}
-                className={`p-2 rounded-lg transition-colors ${
-                  showExternalEvents ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"
-                }`}
-                title={showExternalEvents ? "Nascondi eventi rapidi" : "Mostra eventi rapidi"}
-              >
-                {showExternalEvents ? <PanelLeftClose size={20} /> : <PanelLeft size={20} />}
-              </button>
-            )}
-            
             {/* View toggle for desktop */}
             {!isMobile && (
-              <div className="flex bg-zinc-800 rounded-lg p-1">
-                <button
-                  onClick={() => handleViewChange('dayGridMonth')}
-                  className={`p-1.5 rounded transition-colors ${
-                    currentView === 'dayGridMonth' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'
-                  }`}
-                  title="Vista mensile"
-                >
-                  <Grid3X3 size={18} />
-                </button>
+              <div className="flex bg-zinc-800 rounded-md p-0.5">
+              <button
+                onClick={() => handleViewChange('dayGridMonth')}
+                className={`p-1 rounded transition-colors ${
+                  currentView === 'dayGridMonth' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'
+                }`}
+                title="Vista mensile"
+              >
+                <Grid3X3 size={14} />
+              </button>
                 <button
                   onClick={() => handleViewChange('timeGridWeek')}
-                  className={`p-1.5 rounded transition-colors ${
+                  className={`p-1 rounded transition-colors ${
                     currentView === 'timeGridWeek' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'
                   }`}
                   title="Vista settimanale"
                 >
-                  <CalendarRange size={18} />
+                  <CalendarRange size={14} />
                 </button>
                 <button
                   onClick={() => handleViewChange('timeGridDay')}
-                  className={`p-1.5 rounded transition-colors ${
+                  className={`p-1 rounded transition-colors ${
                     currentView === 'timeGridDay' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'
                   }`}
                   title="Vista giornaliera"
                 >
-                  <CalendarDays size={18} />
+                  <CalendarDays size={14} />
                 </button>
                 <button
                   onClick={() => handleViewChange('listWeek')}
-                  className={`p-1.5 rounded transition-colors ${
+                  className={`p-1 rounded transition-colors ${
                     currentView === 'listWeek' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'
                   }`}
                   title="Vista lista"
                 >
-                  <List size={18} />
+                  <List size={14} />
                 </button>
               </div>
             )}
@@ -735,9 +721,9 @@ export default function CalendarPage() {
             {/* New event button */}
             <button
               onClick={handleNewEvent}
-              className="bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center justify-center py-2 px-3 text-sm rounded-lg transition-colors"
+              className="bg-blue-600 hover:bg-blue-500 text-white inline-flex items-center justify-center py-1.5 px-2.5 text-xs rounded-md transition-colors"
             >
-              <Plus size={18} className="mr-1.5" />
+              <Plus size={14} className="mr-1" />
               <span className="hidden sm:inline">Nuovo evento</span>
               <span className="sm:hidden">Nuovo</span>
             </button>
@@ -746,11 +732,11 @@ export default function CalendarPage() {
         
         {/* Filters panel */}
         {showFilters && (
-          <div className="bg-zinc-800 rounded-lg p-4 mb-4 animate-fade-in">
-            <div className="flex flex-wrap gap-2">
+          <div className="bg-zinc-800 rounded-md p-2 mb-2 animate-fade-in">
+            <div className="flex flex-wrap gap-1.5">
               <button
                 onClick={() => setFilterStatus("all")}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                className={`px-2.5 py-1 rounded-md text-xs transition-colors ${
                   filterStatus === "all" ? "bg-blue-600 text-white" : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
                 }`}
               >
@@ -794,13 +780,6 @@ export default function CalendarPage() {
         
         {/* Main content */}
         <div className="flex-1 flex gap-4 overflow-hidden">
-          {/* External events panel - Desktop only */}
-          {!isMobile && showExternalEvents && (
-            <div className="w-64 bg-zinc-800 rounded-lg overflow-y-auto animate-fade-in">
-              <ExternalEventsPanel />
-            </div>
-          )}
-          
           {/* Calendar container */}
           <div className={`flex-1 bg-zinc-900 rounded-lg overflow-hidden ${
             isMobile && showSidebar ? 'hidden' : ''
@@ -825,28 +804,6 @@ export default function CalendarPage() {
               events={fullCalendarEvents}
               editable={true}
               droppable={true}
-              eventReceive={async (info) => {
-                // Handle external event drops
-                const newEvent: CalendarEvent = {
-                  id: "",
-                  title: info.event.title,
-                  start: info.event.start!,
-                  end: info.event.end || info.event.start!,
-                  status: info.event.extendedProps.status || "pending",
-                  eventType: info.event.extendedProps.eventType || "appointment",
-                  location: info.event.extendedProps.location || "",
-                  description: info.event.extendedProps.description || ""
-                };
-                
-                try {
-                  await createCalendarEvent(newEvent);
-                  await loadEvents();
-                  toast.success("Evento creato con successo");
-                } catch (error) {
-                  info.revert();
-                  toast.error("Errore nella creazione dell'evento");
-                }
-              }}
               selectable={true}
               selectMirror={true}
               dayMaxEvents={isMobile ? 2 : 3}
