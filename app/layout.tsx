@@ -93,9 +93,6 @@ export default function RootLayout({
     if (isMobile) {
       return 'ml-0'; // On mobile, sidebar is overlay, no margin needed
     }
-    
-    // On desktop, adjust margin based on sidebar hover state
-    return sidebarHovered ? 'ml-64' : 'ml-16';
   };
 
   // Show loader during authentication check
