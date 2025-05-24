@@ -155,7 +155,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
               (open ? 'translate-x-0 w-64' : '-translate-x-full w-64') : 
               `translate-x-0 ${sidebarWidth}`
             }
-            md:relative md:z-0 md:translate-x-0 pt-[57px] mt-px
+            pt-[57px] mt-px
           `}
         >
           {/* Sidebar content */}
