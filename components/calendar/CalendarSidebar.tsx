@@ -282,10 +282,7 @@ export default function CalendarSidebar({
                                 {event.location && (
                                   <span className="flex items-center">
                                     <MapPin size={10} className="mr-1" />
-                                    {event.location === 'office' ? 'Ufficio' : 
-                                     event.location === 'client' ? 'Cliente' :
-                                     event.location === 'remote' ? 'Remoto' : 
-                                     event.location === 'site' ? 'Cantiere' : event.location}
+                                    {event.location}
                                   </span>
                                 )}
                               </div>

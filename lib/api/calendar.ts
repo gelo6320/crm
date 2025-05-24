@@ -13,7 +13,15 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
       { withCredentials: true }
     );
     
-    return response.data.data || [];
+    // Mappa gli eventi per includere l'id corretto
+    const events = response.data.data || [];
+    return events.map((event: any) => ({
+      ...event,
+      id: event._id || event.id, // Usa _id come id principale
+      _id: event._id, // Mantieni anche _id per retrocompatibilità
+      start: new Date(event.start),
+      end: new Date(event.end)
+    }));
   } catch (error) {
     console.error("Errore durante il recupero degli eventi:", error);
     return [];

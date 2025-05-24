@@ -1,14 +1,16 @@
 // types/calendar.ts
 export interface CalendarEvent {
-    id: string;
-    title: string;
-    start: Date;
-    end: Date;
-    status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-    eventType: 'appointment' | 'reminder';
-    location?: string;
-    description?: string;
-  }
+  id: string;
+  _id?: string;
+  title: string;
+  start: Date;
+  end: Date;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  eventType: 'appointment' | 'reminder';
+  location?: string;
+  description?: string;
+  duration?: number;
+}
   
   // Utils per definire i colori in base allo stato dell'evento
   export const getEventColor = (status: string, eventType: string = 'appointment'): string => {

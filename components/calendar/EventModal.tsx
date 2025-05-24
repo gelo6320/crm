@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Bookmark, Clock, MapPin, Trash2, Check } from "lucide-react";
-import { CalendarEvent } from "@/types";
+import { CalendarEvent } from "@/types/calendar";
 
 interface EventModalProps {
   event: CalendarEvent;
@@ -26,7 +26,6 @@ export default function EventModal({
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [duration, setDuration] = useState("60");
-  const [status, setStatus] = useState(event.status || "pending");
   const [eventType, setEventType] = useState(event.eventType || "appointment");
   const [location, setLocation] = useState(event.location || "");
   const [description, setDescription] = useState(event.description || "");
@@ -45,8 +44,10 @@ export default function EventModal({
     const minutes = start.getMinutes().toString().padStart(2, '0');
     setTime(`${hours}:${minutes}`);
     
-    // Calculate duration in minutes
-    if (event.end) {
+    // Calculate duration in minutes - usa event.duration se disponibile
+    if (event.duration) {
+      setDuration(event.duration.toString());
+    } else if (event.end) {
       const end = new Date(event.end);
       const durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
       setDuration(durationMinutes.toString());
@@ -89,7 +90,7 @@ export default function EventModal({
       title,
       start,
       end,
-      status,
+      status: "pending",
       eventType,
       location,
       description,
@@ -212,30 +213,22 @@ export default function EventModal({
                 >
                   <option value="15">15 minuti</option>
                   <option value="30">30 minuti</option>
+                  <option value="45">45 minuti</option>
                   <option value="60">1 ora</option>
+                  <option value="75">1 ora e 15 min</option>
                   <option value="90">1 ora e 30 min</option>
+                  <option value="105">1 ora e 45 min</option>
                   <option value="120">2 ore</option>
+                  <option value="150">2 ore e 30 min</option>
                   <option value="180">3 ore</option>
+                  <option value="240">4 ore</option>
+                  <option value="300">5 ore</option>
+                  <option value="360">6 ore</option>
+                  <option value="420">7 ore</option>
+                  <option value="480">8 ore</option>
                 </select>
               </div>
             )}
-            
-            <div className={eventType === 'appointment' ? '' : 'col-span-2'}>
-              <label htmlFor="status" className="block text-sm font-medium mb-1">
-                Stato
-              </label>
-              <select
-                id="status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="pending">In attesa</option>
-                <option value="confirmed">Confermato</option>
-                <option value="completed">Completato</option>
-                <option value="cancelled">Cancellato</option>
-              </select>
-            </div>
           </div>
           
           {eventType === 'appointment' && (
@@ -243,21 +236,14 @@ export default function EventModal({
               <label htmlFor="location" className="block text-sm font-medium mb-1">
                 Luogo
               </label>
-              <div className="relative">
-                <select
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full bg-zinc-700 border border-zinc-600 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Seleziona</option>
-                  <option value="office">Ufficio</option>
-                  <option value="client">Cliente</option>
-                  <option value="remote">Remoto</option>
-                  <option value="site">Cantiere</option>
-                </select>
-                <MapPin size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400" />
-              </div>
+              <input
+                type="text"
+                id="location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Inserisci il luogo dell'appuntamento"
+              />
             </div>
           )}
           

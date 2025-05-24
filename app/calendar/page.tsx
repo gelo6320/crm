@@ -407,16 +407,27 @@ export default function CalendarPage() {
 
   // Convert our events to FullCalendar format
   const fullCalendarEvents = events
-    .filter(event => {
-      if (filterStatus !== "all" && event.status !== filterStatus) return false;
-      if (searchQuery && !event.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      return true;
-    })
-    .map(event => ({
-      id: event.id,
+  .filter(event => {
+    if (filterStatus !== "all" && event.status !== filterStatus) return false;
+    if (searchQuery && !event.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  })
+  .map(event => {
+    // Assicurati che le date siano oggetti Date validi
+    const startDate = new Date(event.start);
+    const endDate = new Date(event.end);
+    
+    // Verifica che le date siano valide
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      console.warn('Date non valide per evento:', event);
+      return null;
+    }
+    
+    return {
+      id: event.id || (event as any)._id, // Gestisci entrambi i casi
       title: event.title,
-      start: event.start,
-      end: event.end,
+      start: startDate,
+      end: endDate,
       backgroundColor: getEventColor(event.status, event.eventType),
       borderColor: getEventColor(event.status, event.eventType),
       extendedProps: {
@@ -429,72 +440,84 @@ export default function CalendarPage() {
         `fc-event-${event.status}`,
         `fc-event-${event.eventType}`
       ]
-    }));
+    };
+  })
+  .filter(event => event !== null);
 
-  const handleDateSelect = (selectInfo: DateSelectArg) => {
-    const calendarApi = selectInfo.view.calendar;
-    calendarApi.unselect();
+    const handleDateSelect = (selectInfo: DateSelectArg) => {
+      const calendarApi = selectInfo.view.calendar;
+      calendarApi.unselect();
+    
+      // Calcola la durata in minuti
+      const durationMs = selectInfo.end.getTime() - selectInfo.start.getTime();
+      const durationMinutes = Math.round(durationMs / (1000 * 60));
+    
+      const newEvent: CalendarEvent = {
+        id: "",
+        title: "",
+        start: selectInfo.start,
+        end: selectInfo.end,
+        status: "pending",
+        eventType: "appointment",
+        description: "",
+        // Passa la durata calcolata
+        duration: durationMinutes
+      };
+      
+      setCurrentEvent(newEvent);
+      setIsEditing(false);
+    };
 
-    const newEvent: CalendarEvent = {
-      id: "",
-      title: "",
-      start: selectInfo.start,
-      end: selectInfo.end,
-      status: "pending",
-      eventType: "appointment",
-      description: ""
+    const handleEventClick = (clickInfo: EventClickArg) => {
+      const eventId = clickInfo.event.id;
+      // Cerca l'evento sia per 'id' che per '_id'
+      const event = events.find(e => e.id === eventId || (e as any)._id === eventId);
+      if (event) {
+        handleEditEvent(event);
+      }
+    };
+
+    const handleEventDrop = async (dropInfo: EventDropArg) => {
+      const eventId = dropInfo.event.id;
+      const event = events.find(e => e.id === eventId || (e as any)._id === eventId);
+      if (event) {
+        const updatedEvent = {
+          ...event,
+          start: dropInfo.event.start!,
+          end: dropInfo.event.end || dropInfo.event.start!
+        };
+        
+        try {
+          await updateCalendarEvent(event.id || (event as any)._id, updatedEvent);
+          await loadEvents();
+          toast.success("Evento spostato con successo");
+        } catch (error) {
+          dropInfo.revert();
+          toast.error("Errore nello spostamento dell'evento");
+        }
+      }
     };
     
-    setCurrentEvent(newEvent);
-    setIsEditing(false);
-  };
-
-  const handleEventClick = (clickInfo: EventClickArg) => {
-    const event = events.find(e => e.id === clickInfo.event.id);
-    if (event) {
-      handleEditEvent(event);
-    }
-  };
-
-  const handleEventDrop = async (dropInfo: EventDropArg) => {
-    const event = events.find(e => e.id === dropInfo.event.id);
-    if (event) {
-      const updatedEvent = {
-        ...event,
-        start: dropInfo.event.start!,
-        end: dropInfo.event.end || dropInfo.event.start!
-      };
-      
-      try {
-        await updateCalendarEvent(event.id, updatedEvent);
-        await loadEvents();
-        toast.success("Evento spostato con successo");
-      } catch (error) {
-        dropInfo.revert();
-        toast.error("Errore nello spostamento dell'evento");
+    const handleEventResize = async (resizeInfo: EventResizeDoneArg) => {
+      const eventId = resizeInfo.event.id;
+      const event = events.find(e => e.id === eventId || (e as any)._id === eventId);
+      if (event) {
+        const updatedEvent = {
+          ...event,
+          start: resizeInfo.event.start!,
+          end: resizeInfo.event.end!
+        };
+        
+        try {
+          await updateCalendarEvent(event.id || (event as any)._id, updatedEvent);
+          await loadEvents();
+          toast.success("Durata evento aggiornata");
+        } catch (error) {
+          resizeInfo.revert();
+          toast.error("Errore nell'aggiornamento della durata");
+        }
       }
-    }
-  };
-
-  const handleEventResize = async (resizeInfo: EventResizeDoneArg) => {
-    const event = events.find(e => e.id === resizeInfo.event.id);
-    if (event) {
-      const updatedEvent = {
-        ...event,
-        start: resizeInfo.event.start!,
-        end: resizeInfo.event.end!
-      };
-      
-      try {
-        await updateCalendarEvent(event.id, updatedEvent);
-        await loadEvents();
-        toast.success("Durata evento aggiornata");
-      } catch (error) {
-        resizeInfo.revert();
-        toast.error("Errore nell'aggiornamento della durata");
-      }
-    }
-  };
+    };
 
   const handleNewEvent = () => {
     const now = new Date();
