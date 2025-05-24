@@ -95,27 +95,27 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
           href={link.href}
           onClick={closeSidebar}
           className={`
-            group relative flex items-center rounded-lg text-sm font-medium transition-all duration-200 w-full px-2 py-2
+            group relative flex items-center rounded-lg text-sm font-medium transition-all duration-200 w-full px-2 py-1.5
             ${isActive 
               ? 'bg-primary/10 text-primary' 
               : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}
             ${link.adminOnly ? 'border-r-2 border-primary' : ''}
           `}
         >
-          {/* Icon container - always fixed position */}
-          <div className="flex items-center justify-center w-8 h-8 shrink-0">
-            <Icon size={18} className={isActive ? 'text-primary' : ''} />
+          {/* Icon container - reduced size */}
+          <div className="flex items-center justify-center w-6 h-6 shrink-0">
+            <Icon size={16} className={isActive ? 'text-primary' : ''} />
           </div>
           
           {/* Text container with smooth expand/collapse */}
           <div className={`
-            ml-3 whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden
+            ml-2 whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden text-sm
             ${isExpanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}
           `}>
             {link.name}
           </div>
     
-          {/* Tooltip for minimized state */}
+          {/* Tooltip per minimized state */}
           {!isExpanded && (
             <div className="
               absolute left-full ml-2 px-2 py-1 bg-zinc-900 text-white text-xs rounded-md
@@ -128,7 +128,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
     
           {/* Active indicator for minimized state */}
           {!isExpanded && isActive && (
-            <div className="absolute -right-0.5 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-primary rounded-l-full" />
+            <div className="absolute -right-0.5 top-1/2 transform -translate-y-1/2 w-1 h-4 bg-primary rounded-l-full" />
           )}
         </Link>
       );
@@ -157,32 +157,32 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
           `}
         >
           {/* Sidebar content */}
-          <div className="py-3 h-[calc(100vh-57px)] flex flex-col">
+          <div className="py-2 h-[calc(100vh-57px)] flex flex-col">
             {/* Navigation links */}
-            <nav className="px-2 space-y-1 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+            <nav className="px-2 space-y-0.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
               {links.map(renderLink)}
             </nav>
             
             {/* Logout button */}
-            <div className="mt-6 px-2">
-              <div className="border-t border-zinc-800 pt-4">
+            <div className="mt-4 px-2">
+              <div className="border-t border-zinc-800 pt-3">
                 <button 
                   onClick={handleLogout} 
-                  className="group relative flex items-center text-sm font-medium text-zinc-400 rounded-lg hover:text-white hover:bg-zinc-800 transition-all duration-200 w-full px-2 py-2"
+                  className="group relative flex items-center text-sm font-medium text-zinc-400 rounded-lg hover:text-white hover:bg-zinc-800 transition-all duration-200 w-full px-2 py-1.5"
                 >
-                  {/* Icon container - always 52px from left */}
-                  <div className="flex items-center justify-center w-8 h-8 shrink-0">
-                    <LogOut size={18} />
+                  {/* Icon container - reduced size */}
+                  <div className="flex items-center justify-center w-6 h-6 shrink-0">
+                    <LogOut size={16} />
                   </div>
                   
                   {/* Text container */}
                   <div className={`
-                    ml-3 whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden
+                    ml-2 whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden text-sm
                     ${isExpanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}
                   `}>
                     Logout
                   </div>
-
+            
                   {/* Tooltip for minimized state */}
                   {!isExpanded && (
                     <div className="
