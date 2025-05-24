@@ -93,6 +93,7 @@ export default function RootLayout({
     if (isMobile) {
       return 'ml-0'; // On mobile, sidebar is overlay, no margin needed
     }
+    return 'ml-16'; // Always 16px margin for the collapsed sidebar width
   };
 
   // Show loader during authentication check
