@@ -17,7 +17,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { EventResizeDoneArg } from '@fullcalendar/interaction';
 import multiMonthPlugin from '@fullcalendar/multimonth';
 import { fetchCalendarEvents, createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from "@/lib/api/calendar";
-import { CalendarEvent } from "@/types";
+import { CalendarEvent } from "@/types/calendar";
 import EventModal from "@/components/calendar/EventModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import CalendarSidebar from "@/components/calendar/CalendarSidebar";
@@ -396,7 +396,15 @@ export default function CalendarPage() {
     setIsLoading(true);
     try {
       const data = await fetchCalendarEvents();
-      setEvents(data);
+      // Converti le date string in oggetti Date se necessario
+      const normalizedData = data.map(event => ({
+        ...event,
+        start: event.start instanceof Date ? event.start : new Date(event.start),
+        end: event.end instanceof Date ? event.end : new Date(event.end),
+        eventType: event.eventType || "appointment", // Provide default value
+        status: event.status || "pending" // Provide default value if needed
+      }));
+      setEvents(normalizedData);
     } catch (error) {
       console.error("Error loading events:", error);
       toast.error("Errore nel caricamento degli eventi");
@@ -654,6 +662,24 @@ export default function CalendarPage() {
   if (isLoading && events.length === 0) {
     return <LoadingSpinner />;
   }
+
+  const handleEditEventSafe = (event: any) => {
+    const normalizedEvent: CalendarEvent = {
+      ...event,
+      start: event.start instanceof Date ? event.start : new Date(event.start),
+      end: event.end instanceof Date ? event.end : new Date(event.end)
+    };
+    handleEditEvent(normalizedEvent);
+  };
+  
+  const handleDeleteEventSafe = async (event: any) => {
+    const normalizedEvent: CalendarEvent = {
+      ...event,
+      start: event.start instanceof Date ? event.start : new Date(event.start),
+      end: event.end instanceof Date ? event.end : new Date(event.end)
+    };
+    await handleDeleteEvent(normalizedEvent);
+  };
 
   return (
     <>
@@ -927,8 +953,8 @@ export default function CalendarPage() {
               <CalendarSidebar
                 selectedDate={selectedDate}
                 events={selectedEvents}
-                onEditEvent={handleEditEvent}
-                onDeleteEvent={handleDeleteEvent}
+                onEditEvent={handleEditEventSafe}
+                onDeleteEvent={handleDeleteEventSafe}
                 onClose={isMobile ? toggleSidebar : undefined}
               />
             </div>
