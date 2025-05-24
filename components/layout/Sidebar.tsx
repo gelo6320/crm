@@ -95,28 +95,26 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
           href={link.href}
           onClick={closeSidebar}
           className={`
-            group relative flex items-center rounded-lg text-sm font-medium transition-all duration-200
-            ${isExpanded ? 'px-3 py-2' : 'px-2 py-2 justify-center'}
+            group relative flex items-center rounded-lg text-sm font-medium transition-all duration-200 w-full px-2 py-2
             ${isActive 
               ? 'bg-primary/10 text-primary' 
               : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}
             ${link.adminOnly ? 'border-r-2 border-primary' : ''}
           `}
         >
-          <Icon 
-            size={18} 
-            className={`${isActive ? 'text-primary' : ''} ${isExpanded ? 'mr-3' : ''} transition-all duration-200`} 
-          />
+          {/* Icon container - always fixed position */}
+          <div className="flex items-center justify-center w-8 h-8 shrink-0">
+            <Icon size={18} className={isActive ? 'text-primary' : ''} />
+          </div>
           
-          {/* Text with animation */}
-          <span className={`
-            whitespace-nowrap transition-all duration-200 
-            ${isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}
-            ${!isExpanded && 'sr-only'}
+          {/* Text container with smooth expand/collapse */}
+          <div className={`
+            ml-3 whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden
+            ${isExpanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}
           `}>
             {link.name}
-          </span>
-
+          </div>
+    
           {/* Tooltip for minimized state */}
           {!isExpanded && (
             <div className="
@@ -127,7 +125,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
               {link.name}
             </div>
           )}
-
+    
           {/* Active indicator for minimized state */}
           {!isExpanded && isActive && (
             <div className="absolute -right-0.5 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-primary rounded-l-full" />
@@ -150,41 +148,40 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
         <div 
           className={`
             fixed top-0 left-0 z-40 h-full bg-black border-r border-zinc-800 
-            transform transition-all duration-300 ease-in-out 
+            transition-all duration-300 ease-in-out 
             ${isMobile ? 
-              (open ? 'translate-x-0 w-64' : '-translate-x-full w-64') : 
-              `translate-x-0 ${sidebarWidth}`
+              `transform ${open ? 'translate-x-0' : '-translate-x-full'} w-64` : 
+              `${isHovered ? 'w-64' : 'w-16'}`
             }
-            pt-[57px] mt-px
+            pt-[57px] mt-px overflow-hidden
           `}
         >
           {/* Sidebar content */}
-          <div className="py-3 overflow-hidden h-[calc(100vh-57px)] flex flex-col">
+          <div className="py-3 h-[calc(100vh-57px)] flex flex-col">
             {/* Navigation links */}
-            <nav className={`px-2 space-y-1 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent ${isExpanded ? '' : 'scrollbar-hide'}`}>
+            <nav className="px-2 space-y-1 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
               {links.map(renderLink)}
             </nav>
             
             {/* Logout button */}
-            <div className={`mt-6 ${isExpanded ? 'px-4' : 'px-2'}`}>
+            <div className="mt-6 px-2">
               <div className="border-t border-zinc-800 pt-4">
                 <button 
                   onClick={handleLogout} 
-                  className={`
-                    group relative flex items-center text-sm font-medium text-zinc-400 rounded-lg hover:text-white hover:bg-zinc-800 transition-all duration-200
-                    ${isExpanded ? 'w-full px-3 py-2' : 'px-2 py-2 justify-center'}
-                  `}
+                  className="group relative flex items-center text-sm font-medium text-zinc-400 rounded-lg hover:text-white hover:bg-zinc-800 transition-all duration-200 w-full px-2 py-2"
                 >
-                  <LogOut size={18} className={`${isExpanded ? 'mr-3' : ''} transition-all duration-200`} />
+                  {/* Icon container - always 52px from left */}
+                  <div className="flex items-center justify-center w-8 h-8 shrink-0">
+                    <LogOut size={18} />
+                  </div>
                   
-                  {/* Text with animation */}
-                  <span className={`
-                    whitespace-nowrap transition-all duration-200 
-                    ${isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'}
-                    ${!isExpanded && 'sr-only'}
+                  {/* Text container */}
+                  <div className={`
+                    ml-3 whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden
+                    ${isExpanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}
                   `}>
                     Logout
-                  </span>
+                  </div>
 
                   {/* Tooltip for minimized state */}
                   {!isExpanded && (
