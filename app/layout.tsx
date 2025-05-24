@@ -22,6 +22,7 @@ export default function RootLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarHovered, setSidebarHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,6 +88,16 @@ export default function RootLayout({
     }
   }, [isLoginPage, pathname, router]);
 
+  // Calculate content margin based on sidebar state
+  const getContentMargin = () => {
+    if (isMobile) {
+      return 'ml-0'; // On mobile, sidebar is overlay, no margin needed
+    }
+    
+    // On desktop, adjust margin based on sidebar hover state
+    return sidebarHovered ? 'ml-64' : 'ml-16';
+  };
+
   // Show loader during authentication check
   if (isLoading && !isLoginPage) {
     return (
@@ -108,22 +119,45 @@ export default function RootLayout({
               {children}
             </div>
           ) : (
-            // Layout modificato con header sopra la sidebar
+            // Main layout with adaptive sidebar
             <div className="flex flex-col h-screen overflow-hidden">
-              {/* Header ora è fuori dalla sidebar e si estende su tutta la larghezza */}
+              {/* Header extends across full width */}
               <Header setSidebarOpen={setSidebarOpen} />
               
-              {/* Contenitore principale sotto l'header */}
-              <div className="flex flex-1 overflow-hidden pt-[1px]">
-                {/* Sidebar */}
-                <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} isMobile={isMobile} />
+              {/* Main container below header */}
+              <div className="flex flex-1 overflow-hidden pt-[1px] relative">
+                {/* Sidebar with hover detection */}
+                <div
+                  onMouseEnter={() => !isMobile && setSidebarHovered(true)}
+                  onMouseLeave={() => !isMobile && setSidebarHovered(false)}
+                  className="relative z-30"
+                >
+                  <Sidebar 
+                    open={sidebarOpen} 
+                    setOpen={setSidebarOpen} 
+                    isMobile={isMobile}
+                    isHovered={sidebarHovered}
+                  />
+                </div>
                 
-                {/* Contenuto principale */}
-                <main className="flex-1 bg-zinc-900 overflow-y-auto">
-                  <div className="px-2 py-2 md:p-4 max-w-full">
+                {/* Main content with adaptive margin */}
+                <main className={`
+                  flex-1 bg-zinc-900 overflow-y-auto transition-all duration-300 ease-in-out
+                  ${getContentMargin()}
+                  ${isMobile && sidebarOpen ? 'pointer-events-none' : ''}
+                `}>
+                  <div className="px-2 py-2 md:p-4 max-w-full min-h-full">
                     {children}
                   </div>
                 </main>
+
+                {/* Optional: Content overlay for mobile when sidebar is open */}
+                {isMobile && sidebarOpen && (
+                  <div 
+                    className="absolute inset-0 bg-black/20 z-20 pointer-events-none"
+                    style={{ left: '256px' }} // Width of expanded sidebar
+                  />
+                )}
               </div>
             </div>
           )}
