@@ -505,9 +505,10 @@ useEffect(() => {
   const getActiveFilterLabel = () => {
     if (sourceFilter) {
       switch(sourceFilter) {
-        case "form": return "Form di contatto";
-        case "facebook": return "Lead Facebook";
-        case "booking": return "Prenotazioni";
+        case "direct": return "Diretto";
+        case "facebook": return "Facebook";
+        case "google": return "Google";
+        case "other": return "Altro";
         default: return "";
       }
     }
@@ -621,25 +622,15 @@ useEffect(() => {
                   {activeFilterType === 'source' && (
                     <div className="py-1">
                       <button
-                        onClick={() => handleSourceFilter("")}
-                        className={`w-full text-left px-3 py-1.5 text-sm rounded ${
-                          sourceFilter === "" 
-                            ? "bg-primary/10 text-primary" 
-                            : "hover:bg-zinc-700"
-                        }`}
-                      >
-                        Tutte le fonti
-                      </button>
-                      <button
-                        onClick={() => handleSourceFilter("form")}
+                        onClick={() => handleSourceFilter("direct")}
                         className={`w-full text-left px-3 py-1.5 text-sm rounded flex items-center ${
-                          sourceFilter === "form" 
+                          sourceFilter === "direct" 
                             ? "bg-primary/10 text-primary" 
                             : "hover:bg-zinc-700"
                         }`}
                       >
                         {getSourceIcon('form')}
-                        <span className="ml-2">Form di contatto</span>
+                        <span className="ml-2">Diretto</span>
                       </button>
                       <button
                         onClick={() => handleSourceFilter("facebook")}
@@ -650,18 +641,29 @@ useEffect(() => {
                         }`}
                       >
                         {getSourceIcon('facebook')}
-                        <span className="ml-2">Lead Facebook</span>
+                        <span className="ml-2">Facebook</span>
                       </button>
                       <button
-                        onClick={() => handleSourceFilter("booking")}
+                        onClick={() => handleSourceFilter("google")}
                         className={`w-full text-left px-3 py-1.5 text-sm rounded flex items-center ${
-                          sourceFilter === "booking" 
+                          sourceFilter === "google" 
                             ? "bg-primary/10 text-primary" 
                             : "hover:bg-zinc-700"
                         }`}
                       >
-                        {getSourceIcon('booking')}
-                        <span className="ml-2">Prenotazioni</span>
+                        {getSourceIcon('form')}
+                        <span className="ml-2">Google</span>
+                      </button>
+                      <button
+                        onClick={() => handleSourceFilter("other")}
+                        className={`w-full text-left px-3 py-1.5 text-sm rounded flex items-center ${
+                          sourceFilter === "other" 
+                            ? "bg-primary/10 text-primary" 
+                            : "hover:bg-zinc-700"
+                        }`}
+                      >
+                        {getSourceIcon('form')}
+                        <span className="ml-2">Altro</span>
                       </button>
                     </div>
                   )}

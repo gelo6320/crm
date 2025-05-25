@@ -18,19 +18,6 @@ export default function EditValueModal({ lead, onClose, onSave }: EditValueModal
   const [service, setService] = useState<string>(lead.service || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const services = [
-    "Ristrutturazione completa",
-    "Ristrutturazione bagno",
-    "Ristrutturazione cucina",
-    "Rifacimento tetto",
-    "Impianto elettrico",
-    "Impianto idraulico",
-    "Cappotto termico",
-    "Infissi e serramenti",
-    "Rifacimento pavimenti",
-    "Ampliamento casa",
-  ];
-  
   // Close modal on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -106,19 +93,14 @@ export default function EditValueModal({ lead, onClose, onSave }: EditValueModal
               <label htmlFor="service" className="block text-sm font-medium mb-1">
                 Tipo di servizio
               </label>
-              <select
+              <input
+                type="text"
                 id="service"
                 value={service}
                 onChange={(e) => setService(e.target.value)}
+                placeholder="Inserisci il tipo di servizio"
                 className="input w-full"
-              >
-                <option value="">Seleziona un servizio</option>
-                {services.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+              />
               <p className="mt-1 text-xs text-zinc-400">
                 Categoria di lavoro richiesto
               </p>
