@@ -125,11 +125,6 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
               {link.name}
             </div>
           )}
-    
-          {/* Active indicator for minimized state */}
-          {!isExpanded && isActive && (
-            <div className="absolute -right-0.5 top-1/2 transform -translate-y-1/2 w-1 h-4 bg-primary rounded-l-full" />
-          )}
         </Link>
       );
     };
