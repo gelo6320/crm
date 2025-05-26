@@ -3,7 +3,7 @@ import {
   BarChart3, Calendar, FileText, Bookmark, 
   Facebook, Share2, Users, Settings, LogOut,
   X, Globe, Shield, HardHat, LineChart, Filter, Vault,
-  Target
+  Target, MessageCircle
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -50,6 +50,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
       { name: "Contatti", href: "/contacts", icon: Users },
       { name: "Tracciamento", href: "/tracciamento", icon: LineChart },
       { name: "Sales Funnel", href: "/sales-funnel", icon: Filter },
+      { name: "WhatsApp Chats", href: "/whatsapp", icon: MessageCircle },
       { name: "Banca Dati", href: "/banca-dati", icon: Vault },
       { name: "Pubblicità", href: "/pubblicita", icon: Target },
       { name: "Calendario", href: "/calendar", icon: Calendar },
