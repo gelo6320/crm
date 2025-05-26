@@ -11,10 +11,16 @@ export interface UserSettings {
   mongoDbUri: string;
   apiKeys: {
     facebookAccessToken: string;      // Per Facebook Conversion API (CAPI)
-    facebookMarketingToken: string;   // NUOVO: Per Facebook Marketing API
+    facebookMarketingToken: string;   // Per Facebook Marketing API
     googleApiKey: string;
     facebookPixelId: string;
     facebookAccountId: string;        // ID dell'account pubblicitario Facebook
+  };
+  whatsapp: {
+    accessToken: string;              // Token di accesso WhatsApp Business API
+    phoneNumberId: string;            // ID del numero di telefono WhatsApp Business
+    webhookToken: string;             // Token per autenticare i webhook WhatsApp
+    verifyToken: string;              // Token di verifica per setup webhook
   };
   webhooks: {
     callbackUrl: string;
@@ -42,10 +48,16 @@ export async function fetchUserSettings(): Promise<UserSettings> {
         mongoDbUri: serverConfig.mongodb_uri || "",
         apiKeys: {
           facebookAccessToken: serverConfig.access_token || "",  // Per CAPI
-          facebookMarketingToken: serverConfig.marketing_api_token || "", // NUOVO: Per Marketing API  
+          facebookMarketingToken: serverConfig.marketing_api_token || "", // Per Marketing API  
           googleApiKey: "", // Non disponibile dal backend
           facebookPixelId: serverConfig.meta_pixel_id || "",
           facebookAccountId: serverConfig.fb_account_id || ""
+        },
+        whatsapp: {
+          accessToken: serverConfig.whatsapp_access_token || "",
+          phoneNumberId: serverConfig.whatsapp_phone_number_id || "",
+          webhookToken: serverConfig.whatsapp_webhook_token || "",
+          verifyToken: serverConfig.whatsapp_verify_token || ""
         },
         webhooks: {
           callbackUrl: ""  // Non disponibile dal backend
@@ -62,10 +74,16 @@ export async function fetchUserSettings(): Promise<UserSettings> {
       mongoDbUri: "",
       apiKeys: {
         facebookAccessToken: "",
-        facebookMarketingToken: "", // NUOVO
+        facebookMarketingToken: "",
         googleApiKey: "",
         facebookPixelId: "",
         facebookAccountId: ""
+      },
+      whatsapp: {
+        accessToken: "",
+        phoneNumberId: "",
+        webhookToken: "",
+        verifyToken: ""
       },
       webhooks: {
         callbackUrl: ""
@@ -88,9 +106,13 @@ export async function saveUserSettings(settings: UserSettings): Promise<{
     const backendSettings = {
       mongodb_uri: settings.mongoDbUri,
       access_token: settings.apiKeys.facebookAccessToken,        // Per CAPI
-      marketing_api_token: settings.apiKeys.facebookMarketingToken, // NUOVO: Per Marketing API
+      marketing_api_token: settings.apiKeys.facebookMarketingToken, // Per Marketing API
       meta_pixel_id: settings.apiKeys.facebookPixelId,
-      fb_account_id: settings.apiKeys.facebookAccountId
+      fb_account_id: settings.apiKeys.facebookAccountId,
+      whatsapp_access_token: settings.whatsapp.accessToken,
+      whatsapp_phone_number_id: settings.whatsapp.phoneNumberId,
+      whatsapp_webhook_token: settings.whatsapp.webhookToken,
+      whatsapp_verify_token: settings.whatsapp.verifyToken
     };
     
     const response = await axios.post(

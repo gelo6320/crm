@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, Info, Save, Database, Key } from "lucide-react";
+import { Eye, EyeOff, Info, Save, Database, Key, MessageCircle } from "lucide-react";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { fetchUserSettings, saveUserSettings, UserSettings } from "@/lib/api/settings";
 import { toast } from "@/components/ui/toaster";
@@ -12,10 +12,16 @@ export default function SettingsPage() {
     mongoDbUri: "",
     apiKeys: {
       facebookAccessToken: "",           // Per Facebook Conversion API (CAPI)
-      facebookMarketingToken: "",        // NUOVO: Per Facebook Marketing API
+      facebookMarketingToken: "",        // Per Facebook Marketing API
       googleApiKey: "",
       facebookPixelId: "",
       facebookAccountId: ""
+    },
+    whatsapp: {
+      accessToken: "",                   // Token di accesso WhatsApp Business API
+      phoneNumberId: "",                 // ID del numero di telefono WhatsApp Business
+      webhookToken: "",                  // Token per autenticare i webhook WhatsApp
+      verifyToken: ""                    // Token di verifica per setup webhook
     },
     webhooks: {
       callbackUrl: ""
@@ -50,12 +56,12 @@ export default function SettingsPage() {
     const checked = (e.target as HTMLInputElement).type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
     const type = (e.target as HTMLInputElement).type;
     
-    // Gestisci campi nidificati (es. apiKeys.facebookAccessToken)
+    // Gestisci campi nidificati (es. apiKeys.facebookAccessToken, whatsapp.accessToken)
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
       
       // Utilizziamo un tipizzazione sicura verificando che parent sia una chiave valida di UserSettings
-      if (parent === 'apiKeys' || parent === 'webhooks') {
+      if (parent === 'apiKeys' || parent === 'webhooks' || parent === 'whatsapp') {
         setSettings(prev => ({
           ...prev,
           [parent]: {
@@ -174,7 +180,7 @@ export default function SettingsPage() {
               </p>
             </div>
             
-            {/* NUOVO: Facebook Marketing API Token */}
+            {/* Facebook Marketing API Token */}
             <div>
               <label htmlFor="apiKeys.facebookMarketingToken" className="block text-sm font-medium mb-1">
                 Facebook Marketing API Token
@@ -261,6 +267,143 @@ export default function SettingsPage() {
               </p>
             </div>
             
+            {/* Sezione WhatsApp */}
+            <div className="pt-2 pb-1 border-t border-b border-zinc-700 mb-2">
+              <h3 className="text-sm font-medium text-zinc-300 flex items-center">
+                <MessageCircle size={16} className="mr-2" />
+                Configurazione WhatsApp Business API
+              </h3>
+            </div>
+            
+            {/* WhatsApp Access Token */}
+            <div>
+              <label htmlFor="whatsapp.accessToken" className="block text-sm font-medium mb-1">
+                WhatsApp Access Token
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Key size={16} className="text-zinc-500" />
+                </div>
+                <input
+                  type={showToken ? "text" : "password"}
+                  id="whatsapp.accessToken"
+                  name="whatsapp.accessToken"
+                  value={settings.whatsapp?.accessToken || ""}
+                  onChange={handleChange}
+                  className="input w-full pl-10 pr-10"
+                  placeholder="EAABZXHxxX..."
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 px-3 flex items-center text-zinc-400 hover:text-white"
+                  onClick={() => setShowToken(!showToken)}
+                >
+                  {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-zinc-400">
+                Token di accesso per WhatsApp Business API (gestione messaggi)
+              </p>
+              <p className="text-xs text-info mt-1">
+                <Info size={12} className="inline mr-1" />
+                Genera questo token dalle impostazioni della tua app Facebook per sviluppatori
+              </p>
+            </div>
+            
+            {/* WhatsApp Phone Number ID */}
+            <div>
+              <label htmlFor="whatsapp.phoneNumberId" className="block text-sm font-medium mb-1">
+                WhatsApp Phone Number ID
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <MessageCircle size={16} className="text-zinc-500" />
+                </div>
+                <input
+                  type="text"
+                  id="whatsapp.phoneNumberId"
+                  name="whatsapp.phoneNumberId"
+                  value={settings.whatsapp?.phoneNumberId || ""}
+                  onChange={handleChange}
+                  className="input w-full pl-10"
+                  placeholder="123456789012345"
+                />
+              </div>
+              <p className="mt-1 text-xs text-zinc-400">
+                ID del numero di telefono WhatsApp Business registrato
+              </p>
+              <p className="text-xs text-info mt-1">
+                <Info size={12} className="inline mr-1" />
+                Trovi questo ID nella dashboard di WhatsApp Business (non è il numero di telefono)
+              </p>
+            </div>
+            
+            {/* WhatsApp Webhook Token */}
+            <div>
+              <label htmlFor="whatsapp.webhookToken" className="block text-sm font-medium mb-1">
+                WhatsApp Webhook Token
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Key size={16} className="text-zinc-500" />
+                </div>
+                <input
+                  type={showToken ? "text" : "password"}
+                  id="whatsapp.webhookToken"
+                  name="whatsapp.webhookToken"
+                  value={settings.whatsapp?.webhookToken || ""}
+                  onChange={handleChange}
+                  className="input w-full pl-10 pr-10"
+                  placeholder="my_webhook_secret_token"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 px-3 flex items-center text-zinc-400 hover:text-white"
+                  onClick={() => setShowToken(!showToken)}
+                >
+                  {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-zinc-400">
+                Token per autenticare le richieste webhook di WhatsApp
+              </p>
+            </div>
+            
+            {/* WhatsApp Verify Token */}
+            <div>
+              <label htmlFor="whatsapp.verifyToken" className="block text-sm font-medium mb-1">
+                WhatsApp Verify Token
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Key size={16} className="text-zinc-500" />
+                </div>
+                <input
+                  type={showToken ? "text" : "password"}
+                  id="whatsapp.verifyToken"
+                  name="whatsapp.verifyToken"
+                  value={settings.whatsapp?.verifyToken || ""}
+                  onChange={handleChange}
+                  className="input w-full pl-10 pr-10"
+                  placeholder="my_verify_token"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 px-3 flex items-center text-zinc-400 hover:text-white"
+                  onClick={() => setShowToken(!showToken)}
+                >
+                  {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-zinc-400">
+                Token di verifica per il setup iniziale dei webhook WhatsApp
+              </p>
+              <p className="text-xs text-info mt-1">
+                <Info size={12} className="inline mr-1" />
+                Usato una sola volta durante la configurazione del webhook URL
+              </p>
+            </div>
+            
             {/* Google API Key */}
             <div>
               <label htmlFor="apiKeys.googleApiKey" className="block text-sm font-medium mb-1">
@@ -340,6 +483,8 @@ export default function SettingsPage() {
                 e vengono utilizzate per la connessione al database e l'autenticazione con servizi esterni.
                 <br/><br/>
                 <strong>Facebook Marketing API:</strong> Per accedere ai dati delle campagne pubblicitarie sono necessari sia il token specifico per Marketing API che l'ID dell'account pubblicitario.
+                <br/><br/>
+                <strong>WhatsApp Business API:</strong> Per l'integrazione WhatsApp sono richiesti tutti i token specifici. Il verify token viene usato solo per la configurazione iniziale dei webhook.
               </p>
             </div>
             

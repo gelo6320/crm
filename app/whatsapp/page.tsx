@@ -1,8 +1,8 @@
-// app/whatsapp/page.tsx
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
 import { 
   MessageCircle, 
   Send, 
@@ -20,6 +20,9 @@ import {
   X,
   BarChart
 } from 'lucide-react';
+
+// Definizione dell'URL base dell'API
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.costruzionedigitale.com';
 
 // Interfacce TypeScript
 interface Cliente {
@@ -185,15 +188,15 @@ const WhatsAppChats: React.FC = () => {
 
   const fetchUserConfig = async (): Promise<void> => {
     try {
-      const response = await fetch('/api/user/config', {
-        credentials: 'include'
-      });
-      const data: ApiResponse<UserConfig> = await response.json();
+      const response = await axios.get(
+        `${API_BASE_URL}/api/user/config`,
+        { withCredentials: true }
+      );
       
-      if (data.success) {
-        setConfig(data.data || null);
+      if (response.data.success) {
+        setConfig(response.data.config || null);
       } else {
-        console.error('Errore recupero configurazione:', data.message);
+        console.error('Errore recupero configurazione:', response.data.message);
       }
     } catch (error) {
       console.error('Errore fetch configurazione:', error);
