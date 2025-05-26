@@ -206,7 +206,7 @@ const WhatsAppChats: React.FC = () => {
   const testWhatsAppConnection = async (): Promise<void> => {
     try {
       setConnectionStatus('checking');
-      const response = await fetch('/api/whatsapp/test-connection', {
+      const response = await fetch(`${API_BASE_URL}/api/whatsapp/test-connection`, {
         credentials: 'include'
       });
       const data: ApiResponse<any> = await response.json();
@@ -223,7 +223,7 @@ const WhatsAppChats: React.FC = () => {
 
   const fetchWhatsAppStats = async (): Promise<void> => {
     try {
-      const response = await fetch('/api/whatsapp/stats', {
+      const response = await fetch(`${API_BASE_URL}/api/whatsapp/stats`, {
         credentials: 'include'
       });
       const data: ApiResponse<WhatsAppStats> = await response.json();
@@ -242,7 +242,7 @@ const WhatsAppChats: React.FC = () => {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
       
-      const response = await fetch(`/api/chat/conversations?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/api/chat/conversations?${params}`, {
         credentials: 'include'
       });
       const data: ApiResponse<ConversationsResponse> = await response.json();
@@ -259,7 +259,7 @@ const WhatsAppChats: React.FC = () => {
 
   const fetchConversationDetails = async (conversationId: string): Promise<void> => {
     try {
-      const response = await fetch(`/api/chat/conversations/${conversationId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/chat/conversations/${conversationId}`, {
         credentials: 'include'
       });
       const data: ApiResponse<ConversationDetails> = await response.json();
@@ -279,7 +279,7 @@ const WhatsAppChats: React.FC = () => {
       setIsResponding(true);
       
       // Invia messaggio tramite endpoint backend
-      const response = await fetch('/api/whatsapp/send-message', {
+      const response = await fetch(`${API_BASE_URL}/api/whatsapp/send-message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
