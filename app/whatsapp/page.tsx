@@ -18,7 +18,8 @@ import {
   Calendar,
   MoreVertical,
   X,
-  BarChart
+  BarChart,
+  Plus
 } from 'lucide-react';
 
 // Definizione dell'URL base dell'API
@@ -156,6 +157,9 @@ const WhatsAppChats: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('checking');
   const [showStats, setShowStats] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showNewChatModal, setShowNewChatModal] = useState<boolean>(false);
+  const [newChatPhone, setNewChatPhone] = useState<string>('');
+  const [newChatName, setNewChatName] = useState<string>('');
 
   // Fetch configurazione utente
   useEffect(() => {
@@ -338,6 +342,68 @@ const WhatsAppChats: React.FC = () => {
     
     return matchesSearch;
   });
+
+  const startNewConversation = async (): Promise<void> => {
+    if (!newChatPhone.trim()) {
+      alert('Inserisci un numero di telefono valido');
+      return;
+    }
+  
+    try {
+      setIsResponding(true);
+      
+      // Normalizza il numero (aggiungi +39 se inizia con 0, altrimenti lascia com'è)
+      let normalizedPhone = newChatPhone.trim();
+      if (normalizedPhone.startsWith('0')) {
+        normalizedPhone = '+39' + normalizedPhone.substring(1);
+      } else if (!normalizedPhone.startsWith('+')) {
+        normalizedPhone = '+39' + normalizedPhone;
+      }
+  
+      // Invia richiesta per iniziare nuova conversazione
+      const response = await fetch(`${API_BASE_URL}/api/whatsapp/start-conversation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          phone: normalizedPhone,
+          name: newChatName.trim() || 'Nuovo Contatto'
+        })
+      });
+  
+      const data: ApiResponse<ConversationDetails> = await response.json();
+  
+      if (data.success && data.data) {
+        // Seleziona la nuova conversazione
+        setSelectedConversation(data.data);
+        
+        // Aggiungi alla lista delle conversazioni se non esiste già
+        setConversations(prev => {
+          const exists = prev.find(conv => conv.conversationId === data.data!.conversation.conversationId);
+          if (!exists) {
+            return [data.data!.conversation, ...prev];
+          }
+          return prev;
+        });
+        
+        // Chiudi il modal e resetta i campi
+        setShowNewChatModal(false);
+        setNewChatPhone('');
+        setNewChatName('');
+        
+        console.log('Nuova conversazione creata:', data.data.conversation.conversationId);
+      } else {
+        alert(`Errore: ${data.message || 'Impossibile creare la conversazione'}`);
+      }
+    } catch (error) {
+      console.error('Errore nella creazione della nuova conversazione:', error);
+      alert('Errore durante la creazione della conversazione');
+    } finally {
+      setIsResponding(false);
+    }
+  };
 
   const formatTime = (timestamp: string): string => {
     return new Date(timestamp).toLocaleString('it-IT', {
@@ -581,30 +647,129 @@ const WhatsAppChats: React.FC = () => {
             <>
               {/* Header chat */}
               <div className="p-4 border-b border-zinc-800 bg-zinc-800/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <User size={20} className="mr-3 text-green-400" />
-                    <div>
-                      <h2 className="font-semibold">
-                        {selectedConversation.conversation.cliente.nome || 
-                         selectedConversation.conversation.cliente.contactName || 
-                         'Utente'}
-                      </h2>
-                      <p className="text-sm text-zinc-400">
-                        {selectedConversation.conversation.cliente.telefono}
-                      </p>
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between mb-4">
+                  <h1 className="text-xl font-bold flex items-center">
+                    <MessageCircle className="mr-2 text-green-400" size={24} />
+                    WhatsApp Chats
+                  </h1>
                   <div className="flex items-center space-x-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedConversation.conversation.status)}`}>
-                      {getStatusLabel(selectedConversation.conversation.status)}
-                    </span>
-                    <button className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors">
-                      <MoreVertical size={16} />
+                    <button
+                      onClick={() => setShowNewChatModal(true)}
+                      className="p-2 rounded-lg bg-green-600 hover:bg-green-500 transition-colors"
+                      title="Nuova Conversazione"
+                    >
+                      <Plus size={16} />
+                    </button>
+                    <button
+                      onClick={() => setShowStats(!showStats)}
+                      className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
+                      title="Mostra/Nascondi Statistiche"
+                    >
+                      <BarChart size={16} />
+                    </button>
+                    <button
+                      onClick={fetchConversations}
+                      disabled={loading}
+                      className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
+                    >
+                      <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                     </button>
                   </div>
                 </div>
               </div>
+
+              {/* Modal Nuova Conversazione */}
+              {showNewChatModal && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) {
+                      setShowNewChatModal(false);
+                    }
+                  }}
+                >
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    className="bg-zinc-800 rounded-lg p-6 w-full max-w-md mx-4"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-semibold">Nuova Conversazione</h2>
+                      <button
+                        onClick={() => setShowNewChatModal(false)}
+                        className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">
+                          Numero di Telefono *
+                        </label>
+                        <input
+                          type="tel"
+                          placeholder="+39 123 456 7890 o 0123456789"
+                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          value={newChatPhone}
+                          onChange={(e) => setNewChatPhone(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              startNewConversation();
+                            }
+                          }}
+                        />
+                        <div className="text-xs text-zinc-400 mt-1">
+                          Formato: +39 oppure inizia con 0 per numeri italiani
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">
+                          Nome (opzionale)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Nome del contatto"
+                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          value={newChatName}
+                          onChange={(e) => setNewChatName(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              startNewConversation();
+                            }
+                          }}
+                        />
+                      </div>
+                      
+                      <div className="flex space-x-3 pt-4">
+                        <button
+                          onClick={() => setShowNewChatModal(false)}
+                          className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
+                        >
+                          Annulla
+                        </button>
+                        <button
+                          onClick={startNewConversation}
+                          disabled={!newChatPhone.trim() || isResponding}
+                          className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-zinc-600 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center"
+                        >
+                          {isResponding ? (
+                            <RefreshCw size={16} className="animate-spin" />
+                          ) : (
+                            'Inizia Chat'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
 
               {/* Messaggi */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
