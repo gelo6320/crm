@@ -148,37 +148,23 @@ type StatusFilter = 'all' | 'active' | 'completed' | 'abandoned' | 'blocked' | '
 
 // Componente per indicatore stato bot
 const BotStatusIndicator: React.FC<{
-  conversationId: string;
-  botControlStates: Map<string, any>;
-  getBotControlStatus: (id: string) => Promise<any>;
-}> = ({ conversationId, botControlStates, getBotControlStatus }) => {
-  const [status, setStatus] = useState<any>({ isPaused: false });
-  
-  useEffect(() => {
-    const fetchStatus = async () => {
-      const cached = botControlStates.get(conversationId);
-      if (cached) {
-        setStatus(cached);
-      } else {
-        const newStatus = await getBotControlStatus(conversationId);
-        setStatus(newStatus);
-      }
-    };
+    conversationId: string;
+    botControlStates: Map<string, any>;
+  }> = ({ conversationId, botControlStates }) => {
+    // ✅ SOLO lettura dallo stato, nessuna richiesta API
+    const status = botControlStates.get(conversationId) || { isPaused: false };
     
-    fetchStatus();
-  }, [conversationId, botControlStates]);
-  
-  return (
-    <div className="flex items-center text-xs">
-      <div className={`w-2 h-2 rounded-full mr-2 ${
-        status.isPaused ? 'bg-orange-500' : 'bg-green-500'
-      }`}></div>
-      <span className={status.isPaused ? 'text-orange-400' : 'text-green-400'}>
-        Bot {status.isPaused ? 'In Pausa' : 'Attivo'}
-      </span>
-    </div>
-  );
-};
+    return (
+      <div className="flex items-center text-xs">
+        <div className={`w-2 h-2 rounded-full mr-2 ${
+          status.isPaused ? 'bg-orange-500' : 'bg-green-500'
+        }`}></div>
+        <span className={status.isPaused ? 'text-orange-400' : 'text-green-400'}>
+          Bot {status.isPaused ? 'In Pausa' : 'Attivo'}
+        </span>
+      </div>
+    );
+  };
 
 // Componente per bottoni controllo bot
 const BotControlButtons: React.FC<{
@@ -291,6 +277,8 @@ const WhatsAppChats: React.FC = () => {
   const [showNewChatModal, setShowNewChatModal] = useState<boolean>(false);
   const [newChatPhone, setNewChatPhone] = useState<string>('');
   const [newChatName, setNewChatName] = useState<string>('');
+  const [lastBotStatesFetch, setLastBotStatesFetch] = useState<number>(0);
+  const [isFetchingBotStates, setIsFetchingBotStates] = useState<boolean>(false);
 
   // Nuovi state per controllo bot
   const [botControlStates, setBotControlStates] = useState<Map<string, any>>(new Map());
@@ -309,19 +297,111 @@ const WhatsAppChats: React.FC = () => {
       testWhatsAppConnection();
       fetchConversations();
       fetchWhatsAppStats();
-      // Auto-refresh ogni 30 secondi
-      const interval = setInterval(() => {
-        fetchConversations();
-        fetchWhatsAppStats();
-      }, 30000);
+      
+      // ✅ NUOVA funzione combinata per fetch tutto
+      const fetchAllData = async () => {
+        if (loading || isFetchingBotStates) {
+          console.log('⏭️ Skipping auto-refresh - already loading');
+          return;
+        }
+        
+        console.log('🔄 Auto-refresh (conversazioni + stati bot)');
+        
+        // Fetch conversazioni e stats
+        await Promise.all([
+          fetchConversations(),
+          fetchWhatsAppStats()
+        ]);
+        
+        // Fetch stati bot solo se necessario
+        await fetchBotStatesForVisibleConversations();
+      };
+      
+      // Auto-refresh ogni 30 secondi MA con logica intelligente
+      const interval = setInterval(fetchAllData, 30000);
       return () => clearInterval(interval);
     }
-  }, [config, statusFilter]);
+  }, [config, statusFilter, loading, isFetchingBotStates]);
 
-  // Scroll ai messaggi più recenti
-  useEffect(() => {
-    scrollToBottom();
-  }, [selectedConversation]);
+  const fetchBotStatesForVisibleConversations = async (): Promise<void> => {
+      // Evita richieste troppo frequenti (max 1 ogni 10 secondi)
+      const now = Date.now();
+      if (now - lastBotStatesFetch < 10000) {
+        console.log('⏭️ Skipping bot states fetch - too recent');
+        return;
+      }
+      
+      if (isFetchingBotStates) {
+        console.log('⏭️ Skipping bot states fetch - already in progress');
+        return;
+      }
+      
+      const conversationsToFetch = filteredConversations
+        .slice(0, 10)
+        .filter(conv => !botControlStates.has(conv.conversationId));
+      
+      if (conversationsToFetch.length === 0) {
+        console.log('✅ All bot states already cached');
+        return;
+      }
+      
+      setIsFetchingBotStates(true);
+      setLastBotStatesFetch(now);
+      
+      console.log(`🔄 Loading bot states for ${conversationsToFetch.length} conversations`);
+      
+      try {
+        // ✅ Carica TUTTI gli stati in parallelo
+        const statePromises = conversationsToFetch.map(async (conversation) => {
+          try {
+            const response = await fetch(`${API_BASE_URL}/api/whatsapp/bot-status/${conversation.conversationId}`, {
+              credentials: 'include'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+              return {
+                conversationId: conversation.conversationId,
+                status: data.data.botControl || { isPaused: false }
+              };
+            }
+          } catch (error) {
+            console.error(`❌ Error fetching bot status for ${conversation.conversationId}:`, error);
+          }
+          
+          return {
+            conversationId: conversation.conversationId,
+            status: { isPaused: false }
+          };
+        });
+        
+        // ✅ Aspetta TUTTE le risposte
+        const results = await Promise.allSettled(statePromises);
+        
+        // ✅ Aggiorna la mappa UNA SOLA VOLTA
+        setBotControlStates(prev => {
+          const newMap = new Map(prev);
+          results.forEach((result) => {
+            if (result.status === 'fulfilled' && result.value) {
+              newMap.set(result.value.conversationId, result.value.status);
+            }
+          });
+          return newMap;
+        });
+        
+        console.log(`✅ Bot states loaded for ${conversationsToFetch.length} conversations`);
+        
+      } catch (error) {
+        console.error('❌ Error in fetchBotStatesForVisibleConversations:', error);
+      } finally {
+        setIsFetchingBotStates(false);
+      }
+    };
+  
+    // Scroll ai messaggi più recenti
+    useEffect(() => {
+      scrollToBottom();
+    }, [selectedConversation]);
 
   const filteredConversations = conversations.filter(conv => {
     const matchesSearch = !searchTerm || 
@@ -331,24 +411,6 @@ const WhatsAppChats: React.FC = () => {
     
     return matchesSearch;
   });
-
-  // Carica stati bot per conversazioni visibili
-  useEffect(() => {
-    const loadBotStates = async () => {
-      for (const conversation of filteredConversations.slice(0, 10)) {
-        try {
-          const status = await getBotControlStatus(conversation.conversationId);
-          setBotControlStates(prev => new Map(prev.set(conversation.conversationId, status)));
-        } catch (error) {
-          console.error(`Errore caricamento stato bot per ${conversation.conversationId}:`, error);
-        }
-      }
-    };
-
-    if (filteredConversations.length > 0) {
-      loadBotStates();
-    }
-  }, [filteredConversations]);
 
   const scrollToBottom = (): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -868,7 +930,6 @@ const WhatsAppChats: React.FC = () => {
                       transition={{ delay: index * 0.05 }}
                       onClick={() => {
                         fetchConversationDetails(conversation.conversationId);
-                        getBotControlStatus(conversation.conversationId);
                       }}
                       className={`p-4 border-b border-zinc-800 cursor-pointer hover:bg-zinc-800/50 transition-colors ${
                         selectedConversation?.conversation.conversationId === conversation.conversationId 
@@ -956,7 +1017,6 @@ const WhatsAppChats: React.FC = () => {
                     <BotStatusIndicator 
                       conversationId={selectedConversation.conversation.conversationId}
                       botControlStates={botControlStates}
-                      getBotControlStatus={getBotControlStatus}
                     />
                     
                     {/* Controlli Bot */}
