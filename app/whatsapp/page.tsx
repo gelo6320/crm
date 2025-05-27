@@ -327,79 +327,79 @@ const WhatsAppChats: React.FC = () => {
   }, [config, statusFilter]);
 
   const fetchBotStatesForVisibleConversations = async (): Promise<void> => {
-      // Evita richieste troppo frequenti (max 1 ogni 10 secondi)
-      const now = Date.now();
-      if (now - lastBotStatesFetch < 10000) {
-        console.log('⏭️ Skipping bot states fetch - too recent');
-        return;
-      }
-      
-      if (isFetchingBotStates) {
-        console.log('⏭️ Skipping bot states fetch - already in progress');
-        return;
-      }
-      
-      const conversationsToFetch = filteredConversations
-        .slice(0, 10)
-        .filter(conv => !botControlStates.has(conv.conversationId));
-      
-      if (conversationsToFetch.length === 0) {
-        console.log('✅ All bot states already cached');
-        return;
-      }
-      
-      setIsFetchingBotStates(true);
-      setLastBotStatesFetch(now);
-      
-      console.log(`🔄 Loading bot states for ${conversationsToFetch.length} conversations`);
-      
-      try {
-        // ✅ Carica TUTTI gli stati in parallelo
-        const statePromises = conversationsToFetch.map(async (conversation) => {
-          try {
-            const response = await fetch(`${API_BASE_URL}/api/whatsapp/bot-status/${conversation.conversationId}`, {
-              credentials: 'include'
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-              return {
-                conversationId: conversation.conversationId,
-                status: data.data.botControl || { isPaused: false }
-              };
-            }
-          } catch (error) {
-            console.error(`❌ Error fetching bot status for ${conversation.conversationId}:`, error);
-          }
-          
-          return {
-            conversationId: conversation.conversationId,
-            status: { isPaused: false }
-          };
-        });
-        
-        // ✅ Aspetta TUTTE le risposte
-        const results = await Promise.allSettled(statePromises);
-        
-        // ✅ Aggiorna la mappa UNA SOLA VOLTA
-        setBotControlStates(prev => {
-          const newMap = new Map(prev);
-          results.forEach((result) => {
-            if (result.status === 'fulfilled' && result.value) {
-              newMap.set(result.value.conversationId, result.value.status);
-            }
+    // Evita richieste troppo frequenti (max 1 ogni 5 secondi invece di 10)
+    const now = Date.now();
+    if (now - lastBotStatesFetch < 5000) {
+      console.log('⏭️ Skipping bot states fetch - too recent');
+      return;
+    }
+    
+    if (isFetchingBotStates) {
+      console.log('⏭️ Skipping bot states fetch - already in progress');
+      return;
+    }
+    
+    // ✅ MODIFICA: Fetch sempre le prime 10 conversazioni, indipendentemente dalla cache
+    const conversationsToFetch = filteredConversations.slice(0, 10);
+    
+    if (conversationsToFetch.length === 0) {
+      console.log('✅ No conversations to fetch bot states for');
+      return;
+    }
+    
+    setIsFetchingBotStates(true);
+    setLastBotStatesFetch(now);
+    
+    console.log(`🔄 Loading/updating bot states for ${conversationsToFetch.length} conversations`);
+    
+    try {
+      // ✅ Carica TUTTI gli stati in parallelo (sempre)
+      const statePromises = conversationsToFetch.map(async (conversation) => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/whatsapp/bot-status/${conversation.conversationId}`, {
+            credentials: 'include'
           });
-          return newMap;
+          const data = await response.json();
+          
+          if (data.success) {
+            return {
+              conversationId: conversation.conversationId,
+              status: data.data.botControl || { isPaused: false }
+            };
+          }
+        } catch (error) {
+          console.error(`❌ Error fetching bot status for ${conversation.conversationId}:`, error);
+        }
+        
+        return {
+          conversationId: conversation.conversationId,
+          status: { isPaused: false }
+        };
+      });
+      
+      // ✅ Aspetta TUTTE le risposte
+      const results = await Promise.allSettled(statePromises);
+      
+      // ✅ Aggiorna la mappa UNA SOLA VOLTA
+      setBotControlStates(prev => {
+        const newMap = new Map(prev);
+        results.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value) {
+            // ✅ SEMPRE aggiorna, anche se già presente
+            newMap.set(result.value.conversationId, result.value.status);
+          }
         });
-        
-        console.log(`✅ Bot states loaded for ${conversationsToFetch.length} conversations`);
-        
-      } catch (error) {
-        console.error('❌ Error in fetchBotStatesForVisibleConversations:', error);
-      } finally {
-        setIsFetchingBotStates(false);
-      }
-    };
+        return newMap;
+      });
+      
+      console.log(`✅ Bot states loaded/updated for ${conversationsToFetch.length} conversations`);
+      
+    } catch (error) {
+      console.error('❌ Error in fetchBotStatesForVisibleConversations:', error);
+    } finally {
+      setIsFetchingBotStates(false);
+    }
+  };
   
     // Scroll ai messaggi più recenti
     useEffect(() => {
