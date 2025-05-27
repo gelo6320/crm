@@ -28,6 +28,7 @@ interface SidebarLink {
   href: string;
   icon: React.ElementType;
   adminOnly?: boolean;
+  hasNewBadge?: boolean; // Nuova proprietà per il cartellino
 }
 
 export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: SidebarProps) {
@@ -50,7 +51,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
       { name: "Contatti", href: "/contacts", icon: Users },
       { name: "Tracciamento", href: "/tracciamento", icon: LineChart },
       { name: "Sales Funnel", href: "/sales-funnel", icon: Filter },
-      { name: "WhatsApp Chats", href: "/whatsapp", icon: MessageCircle },
+      { name: "WhatsApp IA", href: "/whatsapp", icon: MessageCircle, hasNewBadge: true },
       { name: "Banca Dati", href: "/banca-dati", icon: Vault },
       { name: "Pubblicità", href: "/pubblicita", icon: Target },
       { name: "Calendario", href: "/calendar", icon: Calendar },
@@ -104,16 +105,28 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
           `}
         >
           {/* Icon container - reduced size */}
-          <div className="flex items-center justify-center w-6 h-6 shrink-0">
+          <div className="flex items-center justify-center w-6 h-6 shrink-0 relative">
             <Icon size={16} className={isActive ? 'text-primary' : ''} />
+            
+            {/* Puntino arancione quando minimizzata */}
+            {link.hasNewBadge && !isExpanded && (
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-400 rounded-full animate-pulse shadow-lg shadow-orange-400/50"></div>
+            )}
           </div>
           
           {/* Text container with smooth expand/collapse */}
           <div className={`
-            ml-2 whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden text-sm
+            ml-2 whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden text-sm flex items-center flex-1
             ${isExpanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}
           `}>
-            {link.name}
+            <span>{link.name}</span>
+            
+            {/* Cartellino "nuovo" quando espansa */}
+            {link.hasNewBadge && isExpanded && (
+              <span className="ml-2 px-2 py-0.5 text-xs font-bold bg-orange-400 text-black rounded-full animate-pulse shadow-lg shadow-orange-400/50 uppercase tracking-wide">
+                nuovo
+              </span>
+            )}
           </div>
     
           {/* Tooltip per minimized state */}
@@ -121,9 +134,14 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
             <div className="
               absolute left-full ml-2 px-2 py-1 bg-zinc-900 text-white text-xs rounded-md
               opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50
-              pointer-events-none whitespace-nowrap border border-zinc-700
+              pointer-events-none whitespace-nowrap border border-zinc-700 flex items-center
             ">
               {link.name}
+              {link.hasNewBadge && (
+                <span className="ml-2 px-1.5 py-0.5 text-xs font-bold bg-orange-400 text-black rounded-full uppercase tracking-wide">
+                  nuovo
+                </span>
+              )}
             </div>
           )}
         </Link>
