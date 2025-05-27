@@ -295,6 +295,15 @@ const WhatsAppChats: React.FC = () => {
   const isRefreshing = useRef(false);
 
   useEffect(() => {
+    // Fetch gli stati del bot quando le conversazioni sono caricate E il config è disponibile
+    if (config && config.whatsapp_access_token && conversations.length > 0) {
+      console.log('🔄 Initial bot states fetch after conversations loaded');
+      fetchBotStatesForVisibleConversations();
+    }
+  }, [conversations, config]); // Dipende da conversations E config
+  
+  // 2. MODIFICA il useEffect esistente per separare meglio i timing
+  useEffect(() => {
     if (config && config.whatsapp_access_token) {
       testWhatsAppConnection();
       fetchConversations();
@@ -310,12 +319,18 @@ const WhatsAppChats: React.FC = () => {
         console.log('🔄 Auto-refresh (conversazioni + stati bot)');
         
         try {
+          // Prima carica conversazioni e stats
           await Promise.all([
             fetchConversations(),
             fetchWhatsAppStats()
           ]);
           
-          await fetchBotStatesForVisibleConversations();
+          // POI carica gli stati del bot (dopo che conversations è aggiornato)
+          // Aspetta un piccolo delay per assicurarsi che filteredConversations sia aggiornato
+          setTimeout(() => {
+            fetchBotStatesForVisibleConversations();
+          }, 100);
+          
         } finally {
           isRefreshing.current = false;
         }
@@ -327,9 +342,9 @@ const WhatsAppChats: React.FC = () => {
   }, [config, statusFilter]);
 
   const fetchBotStatesForVisibleConversations = async (): Promise<void> => {
-    // Evita richieste troppo frequenti (max 1 ogni 5 secondi invece di 10)
+    // Evita richieste troppo frequenti
     const now = Date.now();
-    if (now - lastBotStatesFetch < 5000) {
+    if (now - lastBotStatesFetch < 3000) { // Riduci a 3 secondi
       console.log('⏭️ Skipping bot states fetch - too recent');
       return;
     }
@@ -339,8 +354,8 @@ const WhatsAppChats: React.FC = () => {
       return;
     }
     
-    // ✅ MODIFICA: Fetch sempre le prime 10 conversazioni, indipendentemente dalla cache
-    const conversationsToFetch = filteredConversations.slice(0, 10);
+    // AGGIORNA: Usa conversations direttamente invece di filteredConversations per evitare problemi di timing
+    const conversationsToFetch = conversations.slice(0, 10);
     
     if (conversationsToFetch.length === 0) {
       console.log('✅ No conversations to fetch bot states for');
@@ -353,12 +368,16 @@ const WhatsAppChats: React.FC = () => {
     console.log(`🔄 Loading/updating bot states for ${conversationsToFetch.length} conversations`);
     
     try {
-      // ✅ Carica TUTTI gli stati in parallelo (sempre)
       const statePromises = conversationsToFetch.map(async (conversation) => {
         try {
           const response = await fetch(`${API_BASE_URL}/api/whatsapp/bot-status/${conversation.conversationId}`, {
             credentials: 'include'
           });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
           const data = await response.json();
           
           if (data.success) {
@@ -366,6 +385,8 @@ const WhatsAppChats: React.FC = () => {
               conversationId: conversation.conversationId,
               status: data.data.botControl || { isPaused: false }
             };
+          } else {
+            console.warn(`❌ Bot status fetch failed for ${conversation.conversationId}:`, data.message);
           }
         } catch (error) {
           console.error(`❌ Error fetching bot status for ${conversation.conversationId}:`, error);
@@ -377,16 +398,15 @@ const WhatsAppChats: React.FC = () => {
         };
       });
       
-      // ✅ Aspetta TUTTE le risposte
       const results = await Promise.allSettled(statePromises);
       
-      // ✅ Aggiorna la mappa UNA SOLA VOLTA
+      // Aggiorna la mappa
       setBotControlStates(prev => {
         const newMap = new Map(prev);
         results.forEach((result) => {
           if (result.status === 'fulfilled' && result.value) {
-            // ✅ SEMPRE aggiorna, anche se già presente
             newMap.set(result.value.conversationId, result.value.status);
+            console.log(`✅ Updated bot state for ${result.value.conversationId}:`, result.value.status);
           }
         });
         return newMap;
@@ -505,24 +525,6 @@ const WhatsAppChats: React.FC = () => {
     }
   };
 
-  // Funzioni controllo bot
-  const getBotControlStatus = async (conversationId: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/whatsapp/bot-status/${conversationId}`, {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        setBotControlStates(prev => new Map(prev.set(conversationId, data.data.botControl)));
-        return data.data.botControl;
-      }
-    } catch (error) {
-      console.error('Errore recupero stato bot:', error);
-    }
-    return { isPaused: false };
-  };
-
   const pauseBot = async (conversationId: string, reason: string = '') => {
     try {
       setIsResponding(true);
@@ -535,10 +537,11 @@ const WhatsAppChats: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify({ reason })
       });
-
+  
       const data = await response.json();
-
+  
       if (data.success) {
+        // AGGIORNA immediatamente lo stato locale
         setBotControlStates(prev => new Map(prev.set(conversationId, {
           isPaused: true,
           pausedAt: new Date(),
@@ -547,6 +550,11 @@ const WhatsAppChats: React.FC = () => {
         })));
         
         console.log('✅ Bot messo in pausa per conversazione:', conversationId);
+        
+        // FORZA un refresh dello stato dal server per essere sicuri
+        setTimeout(() => {
+          fetchBotStateForSingleConversation(conversationId);
+        }, 500);
         
         setShowBotControlModal(false);
         setPauseReason('');
@@ -572,10 +580,11 @@ const WhatsAppChats: React.FC = () => {
         },
         credentials: 'include'
       });
-
+  
       const data = await response.json();
-
+  
       if (data.success) {
+        // AGGIORNA immediatamente lo stato locale
         setBotControlStates(prev => new Map(prev.set(conversationId, {
           isPaused: false,
           resumedAt: new Date(),
@@ -583,6 +592,11 @@ const WhatsAppChats: React.FC = () => {
         })));
         
         console.log('✅ Bot riattivato per conversazione:', conversationId);
+        
+        // FORZA un refresh dello stato dal server per essere sicuri
+        setTimeout(() => {
+          fetchBotStateForSingleConversation(conversationId);
+        }, 500);
       } else {
         alert(`Errore: ${data.message}`);
       }
@@ -593,6 +607,28 @@ const WhatsAppChats: React.FC = () => {
       setIsResponding(false);
     }
   };
+  
+  // 5. AGGIUNGI funzione helper per fetch di una singola conversazione
+  const fetchBotStateForSingleConversation = async (conversationId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/whatsapp/bot-status/${conversationId}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setBotControlStates(prev => new Map(prev.set(conversationId, data.data.botControl)));
+        console.log(`🔄 Refreshed bot state for ${conversationId}:`, data.data.botControl);
+      }
+    } catch (error) {
+      console.error(`Error refreshing bot state for ${conversationId}:`, error);
+    }
+  };  
 
   const sendMessage = async (): Promise<void> => {
     if (!newMessage.trim() || !selectedConversation) return;
