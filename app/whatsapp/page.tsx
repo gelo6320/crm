@@ -292,36 +292,39 @@ const WhatsAppChats: React.FC = () => {
   }, []);
 
   // Fetch conversazioni e test connessione
+  const isRefreshing = useRef(false);
+
   useEffect(() => {
     if (config && config.whatsapp_access_token) {
       testWhatsAppConnection();
       fetchConversations();
       fetchWhatsAppStats();
       
-      // ✅ NUOVA funzione combinata per fetch tutto
       const fetchAllData = async () => {
-        if (loading || isFetchingBotStates) {
-          console.log('⏭️ Skipping auto-refresh - already loading');
+        if (isRefreshing.current) {
+          console.log('⏭️ Skipping auto-refresh - already refreshing');
           return;
         }
         
+        isRefreshing.current = true;
         console.log('🔄 Auto-refresh (conversazioni + stati bot)');
         
-        // Fetch conversazioni e stats
-        await Promise.all([
-          fetchConversations(),
-          fetchWhatsAppStats()
-        ]);
-        
-        // Fetch stati bot solo se necessario
-        await fetchBotStatesForVisibleConversations();
+        try {
+          await Promise.all([
+            fetchConversations(),
+            fetchWhatsAppStats()
+          ]);
+          
+          await fetchBotStatesForVisibleConversations();
+        } finally {
+          isRefreshing.current = false;
+        }
       };
       
-      // Auto-refresh ogni 30 secondi MA con logica intelligente
       const interval = setInterval(fetchAllData, 30000);
       return () => clearInterval(interval);
     }
-  }, [config, statusFilter, loading, isFetchingBotStates]);
+  }, [config, statusFilter]);
 
   const fetchBotStatesForVisibleConversations = async (): Promise<void> => {
       // Evita richieste troppo frequenti (max 1 ogni 10 secondi)
