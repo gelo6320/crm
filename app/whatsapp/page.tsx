@@ -19,7 +19,10 @@ import {
   MoreVertical,
   X,
   BarChart,
-  Plus
+  Plus,
+  Play,
+  Pause,
+  AlertTriangle
 } from 'lucide-react';
 
 // Definizione dell'URL base dell'API
@@ -143,6 +146,134 @@ interface ConversationsResponse {
 type ConnectionStatus = 'checking' | 'connected' | 'error';
 type StatusFilter = 'all' | 'active' | 'completed' | 'abandoned' | 'blocked' | 'archived';
 
+// Componente per indicatore stato bot
+const BotStatusIndicator: React.FC<{
+  conversationId: string;
+  botControlStates: Map<string, any>;
+  getBotControlStatus: (id: string) => Promise<any>;
+}> = ({ conversationId, botControlStates, getBotControlStatus }) => {
+  const [status, setStatus] = useState<any>({ isPaused: false });
+  
+  useEffect(() => {
+    const fetchStatus = async () => {
+      const cached = botControlStates.get(conversationId);
+      if (cached) {
+        setStatus(cached);
+      } else {
+        const newStatus = await getBotControlStatus(conversationId);
+        setStatus(newStatus);
+      }
+    };
+    
+    fetchStatus();
+  }, [conversationId, botControlStates]);
+  
+  return (
+    <div className="flex items-center text-xs">
+      <div className={`w-2 h-2 rounded-full mr-2 ${
+        status.isPaused ? 'bg-orange-500' : 'bg-green-500'
+      }`}></div>
+      <span className={status.isPaused ? 'text-orange-400' : 'text-green-400'}>
+        Bot {status.isPaused ? 'In Pausa' : 'Attivo'}
+      </span>
+    </div>
+  );
+};
+
+// Componente per bottoni controllo bot
+const BotControlButtons: React.FC<{
+  conversationId: string;
+  botControlStates: Map<string, any>;
+  onPauseBot: () => void;
+  onResumeBot: () => void;
+  isResponding: boolean;
+}> = ({ conversationId, botControlStates, onPauseBot, onResumeBot, isResponding }) => {
+  const status = botControlStates.get(conversationId) || { isPaused: false };
+  
+  if (status.isPaused) {
+    return (
+      <button
+        onClick={onResumeBot}
+        disabled={isResponding}
+        className="p-2 rounded-lg bg-green-600 hover:bg-green-500 disabled:bg-zinc-600 transition-colors"
+        title="Riattiva Bot Automatico"
+      >
+        <Play size={16} />
+      </button>
+    );
+  } else {
+    return (
+      <button
+        onClick={onPauseBot}
+        disabled={isResponding}
+        className="p-2 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-600 transition-colors"
+        title="Metti in Pausa Bot (Gestione Manuale)"
+      >
+        <Pause size={16} />
+      </button>
+    );
+  }
+};
+
+// Componente menu azioni conversazione
+const ConversationActionsMenu: React.FC<{
+  conversationId: string;
+  botControlStates: Map<string, any>;
+  onPauseBot: () => void;
+  onResumeBot: () => void;
+}> = ({ conversationId, botControlStates, onPauseBot, onResumeBot }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const status = botControlStates.get(conversationId) || { isPaused: false };
+  
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => setShowMenu(!showMenu)}
+        className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
+      >
+        <MoreVertical size={16} />
+      </button>
+      
+      {showMenu && (
+        <div className="absolute right-0 mt-2 w-48 bg-zinc-800 rounded-lg shadow-lg border border-zinc-700 z-10">
+          <div className="p-1">
+            {status.isPaused ? (
+              <button
+                onClick={() => {
+                  onResumeBot();
+                  setShowMenu(false);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-zinc-700 rounded flex items-center"
+              >
+                <Play size={14} className="mr-2" />
+                Riattiva Bot
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  onPauseBot();
+                  setShowMenu(false);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-zinc-700 rounded flex items-center"
+              >
+                <Pause size={14} className="mr-2" />
+                Gestione Manuale
+              </button>
+            )}
+            <button
+              onClick={() => setShowMenu(false)}
+              className="w-full text-left px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-700 rounded flex items-center"
+            >
+              <Calendar size={14} className="mr-2" />
+              Pianifica Follow-up
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Componente principale WhatsApp Chats
 const WhatsAppChats: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -160,6 +291,12 @@ const WhatsAppChats: React.FC = () => {
   const [showNewChatModal, setShowNewChatModal] = useState<boolean>(false);
   const [newChatPhone, setNewChatPhone] = useState<string>('');
   const [newChatName, setNewChatName] = useState<string>('');
+
+  // Nuovi state per controllo bot
+  const [botControlStates, setBotControlStates] = useState<Map<string, any>>(new Map());
+  const [showBotControlModal, setShowBotControlModal] = useState<boolean>(false);
+  const [botControlAction, setBotControlAction] = useState<'pause' | 'resume' | null>(null);
+  const [pauseReason, setPauseReason] = useState<string>('');
 
   // Fetch configurazione utente
   useEffect(() => {
@@ -185,6 +322,33 @@ const WhatsAppChats: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [selectedConversation]);
+
+  const filteredConversations = conversations.filter(conv => {
+    const matchesSearch = !searchTerm || 
+      conv.cliente.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      conv.cliente.telefono?.includes(searchTerm) ||
+      conv.conversationId?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesSearch;
+  });
+
+  // Carica stati bot per conversazioni visibili
+  useEffect(() => {
+    const loadBotStates = async () => {
+      for (const conversation of filteredConversations.slice(0, 10)) {
+        try {
+          const status = await getBotControlStatus(conversation.conversationId);
+          setBotControlStates(prev => new Map(prev.set(conversation.conversationId, status)));
+        } catch (error) {
+          console.error(`Errore caricamento stato bot per ${conversation.conversationId}:`, error);
+        }
+      }
+    };
+
+    if (filteredConversations.length > 0) {
+      loadBotStates();
+    }
+  }, [filteredConversations]);
 
   const scrollToBottom = (): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -276,13 +440,101 @@ const WhatsAppChats: React.FC = () => {
     }
   };
 
+  // Funzioni controllo bot
+  const getBotControlStatus = async (conversationId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/whatsapp/bot-status/${conversationId}`, {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setBotControlStates(prev => new Map(prev.set(conversationId, data.data.botControl)));
+        return data.data.botControl;
+      }
+    } catch (error) {
+      console.error('Errore recupero stato bot:', error);
+    }
+    return { isPaused: false };
+  };
+
+  const pauseBot = async (conversationId: string, reason: string = '') => {
+    try {
+      setIsResponding(true);
+      
+      const response = await fetch(`${API_BASE_URL}/api/whatsapp/pause-bot/${conversationId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ reason })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setBotControlStates(prev => new Map(prev.set(conversationId, {
+          isPaused: true,
+          pausedAt: new Date(),
+          pausedBy: data.data.pausedBy,
+          pauseReason: reason
+        })));
+        
+        console.log('✅ Bot messo in pausa per conversazione:', conversationId);
+        
+        setShowBotControlModal(false);
+        setPauseReason('');
+      } else {
+        alert(`Errore: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('Errore pausa bot:', error);
+      alert('Errore nel mettere in pausa il bot');
+    } finally {
+      setIsResponding(false);
+    }
+  };
+
+  const resumeBot = async (conversationId: string) => {
+    try {
+      setIsResponding(true);
+      
+      const response = await fetch(`${API_BASE_URL}/api/whatsapp/resume-bot/${conversationId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setBotControlStates(prev => new Map(prev.set(conversationId, {
+          isPaused: false,
+          resumedAt: new Date(),
+          resumedBy: data.data.resumedBy
+        })));
+        
+        console.log('✅ Bot riattivato per conversazione:', conversationId);
+      } else {
+        alert(`Errore: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('Errore riattivazione bot:', error);
+      alert('Errore nel riattivare il bot');
+    } finally {
+      setIsResponding(false);
+    }
+  };
+
   const sendMessage = async (): Promise<void> => {
     if (!newMessage.trim() || !selectedConversation) return;
     
     try {
       setIsResponding(true);
       
-      // Invia messaggio tramite endpoint backend
       const response = await fetch(`${API_BASE_URL}/api/whatsapp/send-message`, {
         method: 'POST',
         headers: {
@@ -299,7 +551,6 @@ const WhatsAppChats: React.FC = () => {
       const data: ApiResponse<any> = await response.json();
 
       if (data.success) {
-        // Aggiungi messaggio localmente per feedback immediato
         const newMsg: Message = {
           role: 'assistant',
           content: newMessage,
@@ -319,7 +570,6 @@ const WhatsAppChats: React.FC = () => {
         setNewMessage('');
         scrollToBottom();
         
-        // Refresh conversazione dopo l'invio
         setTimeout(() => {
           fetchConversationDetails(selectedConversation.conversation.conversationId);
         }, 1000);
@@ -334,15 +584,6 @@ const WhatsAppChats: React.FC = () => {
     }
   };
 
-  const filteredConversations = conversations.filter(conv => {
-    const matchesSearch = !searchTerm || 
-      conv.cliente.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      conv.cliente.telefono?.includes(searchTerm) ||
-      conv.conversationId?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesSearch;
-  });
-
   const startNewConversation = async (): Promise<void> => {
     if (!newChatPhone.trim()) {
       alert('Inserisci un numero di telefono valido');
@@ -352,7 +593,6 @@ const WhatsAppChats: React.FC = () => {
     try {
       setIsResponding(true);
       
-      // Normalizza il numero (aggiungi +39 se inizia con 0, altrimenti lascia com'è)
       let normalizedPhone = newChatPhone.trim();
       if (normalizedPhone.startsWith('0')) {
         normalizedPhone = '+39' + normalizedPhone.substring(1);
@@ -360,7 +600,6 @@ const WhatsAppChats: React.FC = () => {
         normalizedPhone = '+39' + normalizedPhone;
       }
   
-      // Invia richiesta per iniziare nuova conversazione
       const response = await fetch(`${API_BASE_URL}/api/whatsapp/start-conversation`, {
         method: 'POST',
         headers: {
@@ -376,10 +615,8 @@ const WhatsAppChats: React.FC = () => {
       const data: ApiResponse<ConversationDetails> = await response.json();
   
       if (data.success && data.data) {
-        // Seleziona la nuova conversazione
         setSelectedConversation(data.data);
         
-        // Aggiungi alla lista delle conversazioni se non esiste già
         setConversations(prev => {
           const exists = prev.find(conv => conv.conversationId === data.data!.conversation.conversationId);
           if (!exists) {
@@ -388,7 +625,6 @@ const WhatsAppChats: React.FC = () => {
           return prev;
         });
         
-        // Chiudi il modal e resetta i campi
         setShowNewChatModal(false);
         setNewChatPhone('');
         setNewChatName('');
@@ -507,18 +743,40 @@ const WhatsAppChats: React.FC = () => {
               <div className="text-2xl font-bold text-blue-400">{whatsappStats.completedConversations}</div>
             </div>
             <div className="bg-zinc-700 rounded-lg p-4">
-              <div className="text-sm text-zinc-400">Messaggi Totali</div>
-              <div className="text-2xl font-bold text-white">{whatsappStats.totalMessages}</div>
+              <div className="text-sm text-zinc-400">Bot in Pausa</div>
+              <div className="text-2xl font-bold text-orange-400">
+                {Array.from(botControlStates.values()).filter(state => state.isPaused).length}
+              </div>
             </div>
             <div className="bg-zinc-700 rounded-lg p-4">
-              <div className="text-sm text-zinc-400">Tempo Risposta</div>
-              <div className="text-2xl font-bold text-yellow-400">{whatsappStats.avgResponseTime}ms</div>
+              <div className="text-sm text-zinc-400">Messaggi Totali</div>
+              <div className="text-2xl font-bold text-white">{whatsappStats.totalMessages}</div>
             </div>
             <div className="bg-zinc-700 rounded-lg p-4">
               <div className="text-sm text-zinc-400">Conversion Rate</div>
               <div className="text-2xl font-bold text-purple-400">{whatsappStats.conversionRate}%</div>
             </div>
           </div>
+
+          {/* Lista conversazioni in pausa */}
+          {Array.from(botControlStates.entries()).filter(([_, state]) => state.isPaused).length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-medium text-zinc-300 mb-2">Conversazioni in Gestione Manuale:</h3>
+              <div className="space-y-1">
+                {Array.from(botControlStates.entries())
+                  .filter(([_, state]) => state.isPaused)
+                  .slice(0, 3)
+                  .map(([conversationId, state]) => {
+                    const conv = filteredConversations.find(c => c.conversationId === conversationId);
+                    return (
+                      <div key={conversationId} className="text-xs text-orange-300 bg-orange-900/20 rounded px-2 py-1">
+                        {conv?.cliente.nome || 'Utente'} - In pausa da: {state.pausedBy}
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -533,6 +791,13 @@ const WhatsAppChats: React.FC = () => {
                 WhatsApp Chats
               </h1>
               <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowNewChatModal(true)}
+                  className="p-2 rounded-lg bg-green-600 hover:bg-green-500 transition-colors"
+                  title="Nuova Conversazione"
+                >
+                  <Plus size={16} />
+                </button>
                 <button
                   onClick={() => setShowStats(!showStats)}
                   className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
@@ -592,43 +857,68 @@ const WhatsAppChats: React.FC = () => {
               </div>
             ) : (
               <AnimatePresence>
-                {filteredConversations.map((conversation, index) => (
-                  <motion.div
-                    key={conversation.conversationId}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => fetchConversationDetails(conversation.conversationId)}
-                    className={`p-4 border-b border-zinc-800 cursor-pointer hover:bg-zinc-800/50 transition-colors ${
-                      selectedConversation?.conversation.conversationId === conversation.conversationId 
-                        ? 'bg-zinc-800 border-l-4 border-green-400' 
-                        : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center mb-1">
-                          <User size={16} className="mr-2 text-zinc-400" />
-                          <span className="font-medium text-sm">
-                            {conversation.cliente.nome || conversation.cliente.contactName || 'Utente'}
-                          </span>
-                        </div>
-                        <div className="flex items-center text-xs text-zinc-400 mb-2">
-                          <Phone size={12} className="mr-1" />
-                          {conversation.cliente.telefono}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className={`text-xs font-medium ${getStatusColor(conversation.status)}`}>
-                            {getStatusLabel(conversation.status)}
-                          </span>
-                          <span className="text-xs text-zinc-500">
-                            {formatTime(conversation.lastActivity)}
-                          </span>
+                {filteredConversations.map((conversation, index) => {
+                  const botStatus = botControlStates.get(conversation.conversationId) || { isPaused: false };
+                  
+                  return (
+                    <motion.div
+                      key={conversation.conversationId}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => {
+                        fetchConversationDetails(conversation.conversationId);
+                        getBotControlStatus(conversation.conversationId);
+                      }}
+                      className={`p-4 border-b border-zinc-800 cursor-pointer hover:bg-zinc-800/50 transition-colors ${
+                        selectedConversation?.conversation.conversationId === conversation.conversationId 
+                          ? 'bg-zinc-800 border-l-4 border-green-400' 
+                          : ''
+                      } ${botStatus.isPaused ? 'border-l-4 border-l-orange-500' : ''}`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center mb-1">
+                            <User size={16} className="mr-2 text-zinc-400" />
+                            <span className="font-medium text-sm">
+                              {conversation.cliente.nome || conversation.cliente.contactName || 'Utente'}
+                            </span>
+                            
+                            {/* Indicatore stato bot */}
+                            {botStatus.isPaused && (
+                              <div className="ml-2 flex items-center">
+                                <Pause size={12} className="text-orange-400 mr-1" />
+                                <span className="text-xs text-orange-400 font-medium">MANUALE</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center text-xs text-zinc-400 mb-2">
+                            <Phone size={12} className="mr-1" />
+                            {conversation.cliente.telefono}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className={`text-xs font-medium ${getStatusColor(conversation.status)}`}>
+                              {getStatusLabel(conversation.status)}
+                            </span>
+                            <span className="text-xs text-zinc-500">
+                              {formatTime(conversation.lastActivity)}
+                            </span>
+                          </div>
+                          
+                          {/* Info aggiuntive se bot in pausa */}
+                          {botStatus.isPaused && botStatus.pausedBy && (
+                            <div className="mt-2 text-xs text-orange-300 bg-orange-900/20 rounded px-2 py-1">
+                              In pausa da: {botStatus.pausedBy}
+                              {botStatus.pauseReason && (
+                                <div className="text-orange-400">{botStatus.pauseReason}</div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             )}
             
@@ -645,35 +935,55 @@ const WhatsAppChats: React.FC = () => {
         <div className="flex-1 flex flex-col">
           {selectedConversation ? (
             <>
-              {/* Header chat */}
+              {/* Header chat con controlli bot */}
               <div className="p-4 border-b border-zinc-800 bg-zinc-800/50">
-                <div className="flex items-center justify-between mb-4">
-                  <h1 className="text-xl font-bold flex items-center">
-                    <MessageCircle className="mr-2 text-green-400" size={24} />
-                    WhatsApp Chats
-                  </h1>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <User size={20} className="mr-3 text-green-400" />
+                    <div>
+                      <h2 className="font-semibold">
+                        {selectedConversation.conversation.cliente.nome || 
+                         selectedConversation.conversation.cliente.contactName || 
+                         'Utente'}
+                      </h2>
+                      <p className="text-sm text-zinc-400">
+                        {selectedConversation.conversation.cliente.telefono}
+                      </p>
+                    </div>
+                  </div>
                   <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setShowNewChatModal(true)}
-                      className="p-2 rounded-lg bg-green-600 hover:bg-green-500 transition-colors"
-                      title="Nuova Conversazione"
-                    >
-                      <Plus size={16} />
-                    </button>
-                    <button
-                      onClick={() => setShowStats(!showStats)}
-                      className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
-                      title="Mostra/Nascondi Statistiche"
-                    >
-                      <BarChart size={16} />
-                    </button>
-                    <button
-                      onClick={fetchConversations}
-                      disabled={loading}
-                      className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
-                    >
-                      <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                    </button>
+                    {/* Stato Bot */}
+                    <BotStatusIndicator 
+                      conversationId={selectedConversation.conversation.conversationId}
+                      botControlStates={botControlStates}
+                      getBotControlStatus={getBotControlStatus}
+                    />
+                    
+                    {/* Controlli Bot */}
+                    <BotControlButtons
+                      conversationId={selectedConversation.conversation.conversationId}
+                      botControlStates={botControlStates}
+                      onPauseBot={() => {
+                        setBotControlAction('pause');
+                        setShowBotControlModal(true);
+                      }}
+                      onResumeBot={() => resumeBot(selectedConversation.conversation.conversationId)}
+                      isResponding={isResponding}
+                    />
+                    
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedConversation.conversation.status)}`}>
+                      {getStatusLabel(selectedConversation.conversation.status)}
+                    </span>
+                    
+                    <ConversationActionsMenu
+                      conversationId={selectedConversation.conversation.conversationId}
+                      botControlStates={botControlStates}
+                      onPauseBot={() => {
+                        setBotControlAction('pause');
+                        setShowBotControlModal(true);
+                      }}
+                      onResumeBot={() => resumeBot(selectedConversation.conversation.conversationId)}
+                    />
                   </div>
                 </div>
               </div>
@@ -767,6 +1077,119 @@ const WhatsAppChats: React.FC = () => {
                         </button>
                       </div>
                     </div>
+                  </motion.div>
+                </motion.div>
+              )}
+
+              {/* Modal per controllo bot */}
+              {showBotControlModal && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) {
+                      setShowBotControlModal(false);
+                    }
+                  }}
+                >
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    className="bg-zinc-800 rounded-lg p-6 w-full max-w-md mx-4"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-semibold">
+                        {botControlAction === 'pause' ? 'Metti in Pausa Bot' : 'Riattiva Bot'}
+                      </h2>
+                      <button
+                        onClick={() => setShowBotControlModal(false)}
+                        className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    
+                    {botControlAction === 'pause' ? (
+                      <div className="space-y-4">
+                        <div className="bg-orange-900/30 border border-orange-600/50 rounded-lg p-3">
+                          <div className="flex items-start">
+                            <AlertTriangle size={16} className="text-orange-400 mt-0.5 mr-2 flex-shrink-0" />
+                            <div className="text-sm">
+                              <p className="text-orange-200 font-medium mb-1">Gestione Manuale</p>
+                              <p className="text-orange-300">
+                                Il bot smetterà di rispondere automaticamente. Dovrai gestire manualmente i messaggi di questo cliente.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-zinc-300 mb-2">
+                            Motivo (opzionale)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="es: Cliente VIP, richieste complesse, follow-up personalizzato..."
+                            className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            value={pauseReason}
+                            onChange={(e) => setPauseReason(e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="flex space-x-3 pt-4">
+                          <button
+                            onClick={() => setShowBotControlModal(false)}
+                            className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
+                          >
+                            Annulla
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (selectedConversation) {
+                                pauseBot(selectedConversation.conversation.conversationId, pauseReason);
+                              }
+                            }}
+                            disabled={isResponding}
+                            className="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-600 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center"
+                          >
+                            {isResponding ? (
+                              <RefreshCw size={16} className="animate-spin" />
+                            ) : (
+                              'Metti in Pausa'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className="text-zinc-300">
+                          Vuoi riattivare il bot automatico per questa conversazione?
+                        </p>
+                        
+                        <div className="flex space-x-3 pt-4">
+                          <button
+                            onClick={() => setShowBotControlModal(false)}
+                            className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
+                          >
+                            Annulla
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (selectedConversation) {
+                                resumeBot(selectedConversation.conversation.conversationId);
+                              }
+                            }}
+                            disabled={isResponding}
+                            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-zinc-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+                          >
+                            Riattiva Bot
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
                 </motion.div>
               )}
