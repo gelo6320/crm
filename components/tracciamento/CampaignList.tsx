@@ -251,12 +251,13 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
           className="overflow-x-auto scrollbar-none pb-1"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
-          <div className="min-w-[800px] md:w-full">
+          <div className="min-w-[950px] md:w-full">
             {/* Header row */}
-            <div className="bg-zinc-700/30 text-xs text-zinc-400 font-medium grid grid-cols-8 gap-1 md:gap-2 p-2.5 rounded-t border-b border-zinc-700/50">
+            <div className="bg-zinc-700/30 text-xs text-zinc-400 font-medium grid grid-cols-9 gap-1 md:gap-2 p-2.5 rounded-t border-b border-zinc-700/50">
               <div className="col-span-2">CAMPAGNA</div>
               <div className="text-right">SPESA</div>
-              <div className="text-right">LEAD</div>
+              <div className="text-right">LEAD (FB)</div>
+              <div className="text-right">LEAD (REALI)</div>
               <div className="text-right">COSTO/LEAD</div>
               <div className="text-right">CONVERSIONI</div>
               <div className="text-right">COSTO/CONV</div>
@@ -309,6 +310,9 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                         {campaign.leads.toLocaleString()}
                       </div>
                       <div className="text-right font-medium text-sm">
+                        {campaign.realLeads.toLocaleString()}
+                      </div>
+                      <div className="text-right font-medium text-sm">
                         {formatCurrency(campaign.costPerLead)}
                       </div>
                       <div className="text-right font-medium text-sm">
@@ -333,10 +337,11 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                         >
                           <div className="pl-6 pr-2 py-1 space-y-1">
                             {/* AdSet header */}
-                            <div className="bg-zinc-800/80 text-xs text-zinc-400 font-medium grid grid-cols-8 gap-1 md:gap-2 p-2 my-1 rounded">
+                            <div className="bg-zinc-800/80 text-xs text-zinc-400 font-medium grid grid-cols-9 gap-1 md:gap-2 p-2 my-1 rounded">
                               <div className="col-span-2">AD SET</div>
                               <div className="text-right">SPESA</div>
-                              <div className="text-right">LEAD</div>
+                              <div className="text-right">LEAD (FB)</div>
+                              <div className="text-right">LEAD (REALI)</div>
                               <div className="text-right">COSTO/L</div>
                               <div className="text-right">CONV</div>
                               <div className="text-right">COSTO/C</div>
@@ -377,6 +382,9 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                       {adSet.leads.toLocaleString()}
                                     </div>
                                     <div className="text-right text-xs">
+                                      {adSet.realLeads.toLocaleString()}
+                                    </div>
+                                    <div className="text-right text-xs">
                                       {formatCurrency(adSet.costPerLead)}
                                     </div>
                                     <div className="text-right text-xs">
@@ -401,10 +409,11 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                       >
                                         <div className="pl-5 pr-1 py-1">
                                           {/* Ad header */}
-                                          <div className="bg-zinc-700/20 text-xs text-zinc-500 font-medium grid grid-cols-8 gap-1 md:gap-2 p-1.5 my-1 rounded">
+                                          <div className="bg-zinc-700/20 text-xs text-zinc-500 font-medium grid grid-cols-9 gap-1 md:gap-2 p-1.5 my-1 rounded">
                                             <div className="col-span-2">ANNUNCIO</div>
                                             <div className="text-right">SPESA</div>
-                                            <div className="text-right">LEAD</div>
+                                            <div className="text-right">LEAD (FB)</div>
+                                            <div className="text-right">LEAD (REALI)</div>
                                             <div className="text-right">C/L</div>
                                             <div className="text-right">CONV</div>
                                             <div className="text-right">C/C</div>
@@ -415,7 +424,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                           {adSet.ads.map(ad => (
                                             <div
                                               key={ad.id}
-                                              className="grid grid-cols-8 gap-1 md:gap-2 p-1.5 rounded items-center hover:bg-zinc-700/10 transition-colors"
+                                              className="grid grid-cols-9 gap-1 md:gap-2 p-1.5 rounded items-center hover:bg-zinc-700/10 transition-colors"
                                             >
                                               <div className="col-span-2 flex flex-col overflow-hidden">
                                                 <div className="text-xs opacity-90">
@@ -430,6 +439,9 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                               </div>
                                               <div className="text-right text-[10px]">
                                                 {ad.leads.toLocaleString()}
+                                              </div>
+                                              <div className="text-right text-[10px]">
+                                                {ad.realLeads.toLocaleString()}
                                               </div>
                                               <div className="text-right text-[10px]">
                                                 {formatCurrency(ad.costPerLead)}

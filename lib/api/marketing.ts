@@ -53,6 +53,7 @@ export interface Ad {
   cpc: number;
   spend: number;
   leads: number;
+  realLeads: number;
   costPerLead: number;
   conversions: number;
   costPerConversion: number;
@@ -70,6 +71,7 @@ export interface AdSet {
   cpc: number;
   spend: number;
   leads: number;
+  realLeads: number;
   costPerLead: number;
   conversions: number;
   costPerConversion: number;
@@ -88,6 +90,7 @@ export interface Campaign {
   cpc: number;
   spend: number;
   leads: number;
+  realLeads: number;
   costPerLead: number;
   conversions: number;
   costPerConversion: number;
@@ -226,6 +229,7 @@ function calculateMetrics(data: any): {
   cpc: number;
   spend: number;
   leads: number;
+  realLeads: number;
   costPerLead: number;
   conversions: number;
   costPerConversion: number;
@@ -327,6 +331,7 @@ function calculateMetrics(data: any): {
     cpc,
     spend,  // Questo dovrebbe essere 0.33
     leads,
+    realLeads: 0,
     costPerLead,
     conversions,
     costPerConversion,
