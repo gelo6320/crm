@@ -283,7 +283,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                   <React.Fragment key={campaign.id}>
                     <motion.div
                       variants={tableRowVariants}
-                      className={`grid grid-cols-8 gap-1 md:gap-2 p-2.5 items-center cursor-pointer hover:bg-zinc-700/10 transition-colors ${isExpanded ? 'bg-zinc-700/10' : ''}`}
+                      className={`grid grid-cols-9 gap-1 md:gap-2 p-2.5 items-center cursor-pointer hover:bg-zinc-700/10 transition-colors ${isExpanded ? 'bg-zinc-700/10' : ''}`}
                       onClick={() => toggleCampaign(campaign.id)}
                     >
                       <div className="col-span-2 flex items-center">
@@ -355,7 +355,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                               return (
                                 <React.Fragment key={adSet.id}>
                                   <div
-                                    className={`grid grid-cols-8 gap-1 md:gap-2 p-2 rounded items-center cursor-pointer hover:bg-zinc-700/10 transition-colors ${isAdSetExpanded ? 'bg-zinc-700/10' : ''}`}
+                                    className={`grid grid-cols-9 gap-1 md:gap-2 p-2 rounded items-center cursor-pointer hover:bg-zinc-700/10 transition-colors ${isAdSetExpanded ? 'bg-zinc-700/10' : ''}`}
                                     onClick={() => toggleAdSet(adSet.id)}
                                   >
                                     <div className="col-span-2 flex items-center">
