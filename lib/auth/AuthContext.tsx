@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // Se ci troviamo in un percorso protetto, reindirizza al login
           const currentPath = window.location.pathname;
-          const protectedPaths = ['/', '/crm', '/forms', '/bookings', '/events', '/facebook-leads', '/calendar', '/sales-funnel', '/settings'];
+          const protectedPaths = ['/', '/crm', '/events', '/calendar', '/sales-funnel', '/settings'];
           
           if (protectedPaths.some(path => currentPath === path || currentPath.startsWith(`${path}/`))) {
             router.push(`/login?redirectTo=${encodeURIComponent(currentPath)}`);

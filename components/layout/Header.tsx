@@ -163,12 +163,6 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
     switch (pathname) {
       case "/":
         return "Dashboard";
-      case "/forms":
-        return "Form di contatto";
-      case "/bookings":
-        return "Prenotazioni";
-      case "/facebook-leads":
-        return "Lead Facebook";
       case "/calendar":
         return "Calendario";
       case "/events":
