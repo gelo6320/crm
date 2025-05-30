@@ -370,14 +370,14 @@ export default function TracciamentoPage() {
       
       {/* Statistiche Avanzate (solo quando non c'è una landing page selezionata) */}
       {!selectedLandingPage && (
-        <AdvancedStatistics />
+        <AdvancedStatistics timeRange={timeRange} />
       )}
       
       {/* Facebook Ads (solo visibile quando non ci sono landing page selezionate) */}
       {!selectedLandingPage && (
         <div className="mt-8">
           <div className="card">
-            <MarketingApiOverview />
+            <MarketingApiOverview timeRange={timeRange as '7d' | '30d' | '90d'} />
           </div>
         </div>
       )}

@@ -122,12 +122,15 @@ const SOURCE_COLORS: Record<string, string> = {
   other: '#374151'
 };
 
-const AdvancedStatistics: React.FC = () => {
+interface AdvancedStatisticsProps {
+  timeRange: string;
+}
+
+const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [statistics, setStatistics] = useState<StatisticsData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<string>('7d');
 
   // Function to fetch statistics data directly from the server
   const fetchStatistics = async (): Promise<void> => {
@@ -402,21 +405,8 @@ const AdvancedStatistics: React.FC = () => {
       {isExpanded && (
         <div className="p-4 md:p-6">
           {/* Selettore intervallo di tempo */}
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6">
             <h4 className="text-lg font-medium text-white">Dashboard Analytics</h4>
-            <div className="flex items-center gap-2 bg-zinc-800 rounded-lg p-1">
-              <Calendar className="w-4 h-4 text-zinc-400 ml-2" />
-              <select 
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className="bg-transparent border-none text-sm focus:ring-0 focus:outline-none"
-              >
-                <option value="24h">Ultime 24 ore</option>
-                <option value="7d">Ultimi 7 giorni</option>
-                <option value="30d">Ultimi 30 giorni</option>
-                <option value="all">Tutti i dati</option>
-              </select>
-            </div>
           </div>
           
           {error && (
