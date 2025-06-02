@@ -22,7 +22,8 @@ import {
   Plus,
   Play,
   Pause,
-  AlertTriangle
+  AlertTriangle,
+  ArrowLeft
 } from 'lucide-react';
 
 // Definizione dell'URL base dell'API
@@ -279,6 +280,7 @@ const WhatsAppChats: React.FC = () => {
   const [newChatName, setNewChatName] = useState<string>('');
   const [lastBotStatesFetch, setLastBotStatesFetch] = useState<number>(0);
   const [isFetchingBotStates, setIsFetchingBotStates] = useState<boolean>(false);
+  const [showChatOnMobile, setShowChatOnMobile] = useState<boolean>(false);
 
   // Nuovi state per controllo bot
   const [botControlStates, setBotControlStates] = useState<Map<string, any>>(new Map());
@@ -519,6 +521,7 @@ const WhatsAppChats: React.FC = () => {
       
       if (data.status === 'success' && data.data) {
         setSelectedConversation(data.data);
+        setShowChatOnMobile(true); // Mostra chat su mobile
       }
     } catch (error) {
       console.error('Errore fetch dettagli conversazione:', error);
@@ -883,7 +886,7 @@ const WhatsAppChats: React.FC = () => {
 
       <div className="flex h-screen">
         {/* Sidebar - Lista conversazioni */}
-        <div className="w-1/3 border-r border-zinc-800 flex flex-col">
+        <div className={`${showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-zinc-800 flex-col`}>
           {/* Header sidebar */}
           <div className="p-4 border-b border-zinc-800 bg-zinc-800/50">
             <div className="flex items-center justify-between mb-4">
@@ -1032,13 +1035,20 @@ const WhatsAppChats: React.FC = () => {
         </div>
 
         {/* Main content - Chat details */}
-        <div className="flex-1 flex flex-col">
+        <div className={`${showChatOnMobile ? 'flex' : 'hidden md:flex'} flex-1 flex-col`}>
           {selectedConversation ? (
             <>
               {/* Header chat con controlli bot */}
               <div className="p-4 border-b border-zinc-800 bg-zinc-800/50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
+                    {/* Pulsante back per mobile */}
+                    <button
+                      onClick={() => setShowChatOnMobile(false)}
+                      className="md:hidden p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors mr-2"
+                    >
+                      <ArrowLeft size={16} />
+                    </button>
                     <User size={20} className="mr-3 text-green-400" />
                     <div>
                       <h2 className="font-semibold">
@@ -1153,7 +1163,7 @@ const WhatsAppChats: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-zinc-500">
+            <div className="hidden md:flex flex-1 flex-col items-center justify-center text-zinc-500">
               <div className="text-center">
                 <MessageCircle size={64} className="mx-auto mb-4 text-zinc-600" />
                 <h3 className="text-xl font-medium mb-2">Seleziona una conversazione</h3>
