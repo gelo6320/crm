@@ -320,7 +320,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
           
           <div className="flex items-center space-x-3">
           {/* Admin User Switcher */}
-            {isAdmin && (
+            {(isAdmin || isImpersonating || originalAdmin) && (
               <div className="relative" ref={userSwitcherRef}>
                 <button
                   onClick={() => {
