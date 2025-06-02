@@ -1,12 +1,13 @@
 // components/layout/Header.tsx
 "use client";
 
-import { Bell, Menu, Search, User, X, Loader2, Calendar as CalendarIcon, Users, Briefcase } from "lucide-react";
+import { Bell, Menu, Search, User, X, Loader2, Calendar as CalendarIcon, Users, Briefcase, UserCog, RotateCcw } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import axios from "axios";
+import { getUsers, switchUser, restoreAdmin, checkAuth } from "@/lib/api/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
@@ -27,6 +28,13 @@ interface HeaderProps {
   setSidebarOpen: (open: boolean) => void;
 }
 
+interface User {
+  _id: string;
+  username: string;
+  role: string;
+  createdAt: string;
+}
+
 export default function Header({ setSidebarOpen }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -39,6 +47,116 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [originalAdmin, setOriginalAdmin] = useState<any>(null);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [showUserSwitcher, setShowUserSwitcher] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const userSwitcherRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+      }
+      if (userSwitcherRef.current && !userSwitcherRef.current.contains(event.target as Node)) {
+        setShowUserSwitcher(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Nuovo useEffect per verificare stato utente
+  useEffect(() => {
+    const checkUserStatus = async () => {
+      try {
+        const authResult = await checkAuth();
+        if (authResult.authenticated && authResult.user) {
+          setCurrentUser(authResult.user);
+          setIsAdmin(authResult.user.role === 'admin');
+          
+          // Verifica se stiamo impersonando (potresti dover aggiungere questo al checkAuth)
+          // Per ora assumiamo che il backend restituisca queste info
+          if ((authResult as any).isImpersonating) {
+            setIsImpersonating(true);
+            setOriginalAdmin((authResult as any).originalAdmin);
+          }
+        }
+      } catch (error) {
+        console.error('Errore nel controllo stato utente:', error);
+      }
+    };
+
+    checkUserStatus();
+  }, []);
+
+  // Funzione per caricare gli utenti
+  const loadUsers = async () => {
+    if (!isAdmin) return;
+    
+    setIsLoadingUsers(true);
+    try {
+      const result = await getUsers();
+      if (result.success && result.data) {
+        setUsers(result.data);
+      }
+    } catch (error) {
+      console.error('Errore nel caricamento utenti:', error);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  // Funzione per cambiare utente
+  const handleUserSwitch = async (targetUsername: string) => {
+    try {
+      const result = await switchUser(targetUsername);
+      if (result.success) {
+        setCurrentUser(result.user);
+        setOriginalAdmin(result.originalAdmin);
+        setIsImpersonating(true);
+        setShowUserSwitcher(false);
+        
+        // Ricarica la pagina per applicare le nuove configurazioni
+        window.location.reload();
+      } else {
+        alert(result.message || 'Errore nel cambio utente');
+      }
+    } catch (error) {
+      console.error('Errore nel cambio utente:', error);
+      alert('Errore nel cambio utente');
+    }
+  };
+
+  // Funzione per ripristinare admin
+  const handleRestoreAdmin = async () => {
+    try {
+      const result = await restoreAdmin();
+      if (result.success) {
+        setCurrentUser(result.user);
+        setIsImpersonating(false);
+        setOriginalAdmin(null);
+        setShowUserSwitcher(false);
+        
+        // Ricarica la pagina per applicare le configurazioni originali
+        window.location.reload();
+      } else {
+        alert(result.message || 'Errore nel ripristino admin');
+      }
+    } catch (error) {
+      console.error('Errore nel ripristino admin:', error);
+      alert('Errore nel ripristino admin');
+    }
+  };
   
   // Close user menu when clicking outside
   useEffect(() => {
@@ -201,6 +319,99 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
           </button>
           
           <div className="flex items-center space-x-3">
+          {/* Admin User Switcher */}
+            {isAdmin && (
+              <div className="relative" ref={userSwitcherRef}>
+                <button
+                  onClick={() => {
+                    setShowUserSwitcher(!showUserSwitcher);
+                    if (!showUserSwitcher) {
+                      loadUsers();
+                    }
+                  }}
+                  className={`p-2 rounded-full transition-colors ${
+                    isImpersonating 
+                      ? 'bg-orange-600 text-white' 
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                  }`}
+                  title={isImpersonating 
+                    ? `Stai operando come: ${currentUser?.username}` 
+                    : 'Cambia profilo utente (Admin)'
+                  }
+                >
+                  <UserCog size={16} />
+                </button>
+  
+                {showUserSwitcher && (
+                  <div className="absolute right-0 mt-2 w-64 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-50">
+                    <div className="p-3 border-b border-zinc-700">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-zinc-400 uppercase tracking-wide">
+                          Gestione Utenti
+                        </span>
+                        {isImpersonating && (
+                          <button
+                            onClick={handleRestoreAdmin}
+                            className="text-xs bg-orange-600 text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-orange-700"
+                            title="Torna al profilo admin"
+                          >
+                            <RotateCcw size={10} />
+                            Ripristina Admin
+                          </button>
+                        )}
+                      </div>
+                      
+                      {isImpersonating && (
+                        <div className="mt-2 p-2 bg-orange-900/30 rounded text-xs">
+                          <div className="text-orange-200">
+                            👤 Profilo corrente: <strong>{currentUser?.username}</strong>
+                          </div>
+                          <div className="text-zinc-400">
+                            🔧 Admin originale: {originalAdmin?.username}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+  
+                    <div className="max-h-64 overflow-y-auto">
+                      {isLoadingUsers ? (
+                        <div className="flex items-center justify-center p-4">
+                          <Loader2 size={16} className="animate-spin text-zinc-400" />
+                          <span className="ml-2 text-sm text-zinc-400">Caricamento...</span>
+                        </div>
+                      ) : (
+                        <div className="py-1">
+                          {users.map((user) => (
+                            <button
+                              key={user._id}
+                              onClick={() => handleUserSwitch(user.username)}
+                              disabled={currentUser?.username === user.username}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-700 transition-colors ${
+                                currentUser?.username === user.username
+                                  ? 'bg-zinc-700 text-white'
+                                  : 'text-zinc-300'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-medium">{user.username}</div>
+                                  <div className="text-xs text-zinc-400">
+                                    {user.role === 'admin' ? '👑 Admin' : '👤 Utente'}
+                                  </div>
+                                </div>
+                                {currentUser?.username === user.username && (
+                                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {/* Logo che ora è sempre visibile */}
             <Link href="/" className="flex items-center space-x-2 text-white hover:text-primary transition">
               <Image 
