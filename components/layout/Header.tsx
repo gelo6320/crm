@@ -343,7 +343,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
                 </button>
   
                 {showUserSwitcher && (
-                  <div className="absolute right-0 mt-2 w-64 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-50">
+                  <div className="absolute left-0 mt-2 w-64 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-50">
                     <div className="p-3 border-b border-zinc-700">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-zinc-400 uppercase tracking-wide">
