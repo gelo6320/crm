@@ -50,6 +50,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
       { name: "Dashboard", href: "/", icon: BarChart3 },
       { name: "Contatti", href: "/contacts", icon: Users },
       { name: "Tracciamento", href: "/tracciamento", icon: LineChart },
+      { name: "Analitiche", href: "/analytics", icon: FileText },
       { name: "Sales Funnel", href: "/sales-funnel", icon: Filter },
       { name: "WhatsApp IA", href: "/whatsapp", icon: MessageCircle, hasNewBadge: true },
       { name: "Banca Dati", href: "/banca-dati", icon: Vault },
