@@ -403,12 +403,7 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
       
       {/* Contenuto espandibile */}
       {isExpanded && (
-        <div className="p-4 md:p-6">
-          {/* Selettore intervallo di tempo */}
-          <div className="mb-6">
-            <h4 className="text-lg font-medium text-white">Dashboard Analytics</h4>
-          </div>
-          
+        <div className="p-4 md:p-6"> 
           {error && (
             <div className="bg-red-900/20 text-red-400 p-3 rounded-md mb-4">
               {error}
