@@ -527,7 +527,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
                 }
               }}
               className="bg-zinc-900 border border-zinc-700 text-white text-xs rounded-full w-full py-1.5 pl-8 pr-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              placeholder="Cerca contatti, eventi, progetti..."
+              placeholder="Cerca contatti, eventi, progetti, chat..."
             />
             
             {searchQuery && (
