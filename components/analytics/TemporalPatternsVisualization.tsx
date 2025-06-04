@@ -65,34 +65,34 @@ export default function TemporalPatternsVisualization({
   const hourlyChartData = hourlyDistribution?.map(hour => ({
     ...hour,
     hourLabel: `${hour.hour.toString().padStart(2, '0')}:00`,
-    combinedMetric: hour.visits * 0.4 + hour.engagement * 0.6 // Weighted performance score
+    combinedMetric: (hour.visits || 0) * 0.4 + (hour.engagement || 0) * 0.6 // FIX: Protezione valori undefined
   })) || [];
 
   // Prepare weekly chart data
   const weeklyChartData = weeklyDistribution?.map(day => ({
     ...day,
     dayLabel: day.dayName.substring(0, 3), // Mon, Tue, etc.
-    performanceScore: day.visits * 0.3 + day.avgEngagement * 0.7
+    performanceScore: (day.visits || 0) * 0.3 + (day.avgEngagement || 0) * 0.7 // FIX: Protezione valori undefined
   })) || [];
 
   // Get top performing hours (non-zero visits)
   const topHours = hourlyChartData
-    .filter(hour => hour.visits > 0)
-    .sort((a, b) => b.combinedMetric - a.combinedMetric)
+    .filter(hour => (hour.visits || 0) > 0)
+    .sort((a, b) => (b.combinedMetric || 0) - (a.combinedMetric || 0))
     .slice(0, 5);
 
   // Get top performing days
   const topDays = weeklyChartData
-    .filter(day => day.visits > 0)
-    .sort((a, b) => b.performanceScore - a.performanceScore)
+    .filter(day => (day.visits || 0) > 0)
+    .sort((a, b) => (b.performanceScore || 0) - (a.performanceScore || 0))
     .slice(0, 3);
 
-  // Calculate totals
-  const totalVisits = hourlyChartData.reduce((sum, hour) => sum + hour.visits, 0);
-  const totalPageViews = hourlyChartData.reduce((sum, hour) => sum + hour.pageViews, 0);
-  const totalConversions = hourlyChartData.reduce((sum, hour) => sum + hour.conversions, 0);
+  // Calculate totals - FIX: Protezione valori undefined
+  const totalVisits = hourlyChartData.reduce((sum, hour) => sum + (hour.visits || 0), 0);
+  const totalPageViews = hourlyChartData.reduce((sum, hour) => sum + (hour.pageViews || 0), 0);
+  const totalConversions = hourlyChartData.reduce((sum, hour) => sum + (hour.conversions || 0), 0);
   const avgEngagement = totalVisits > 0 
-    ? hourlyChartData.reduce((sum, hour) => sum + (hour.engagement * hour.visits), 0) / totalVisits 
+    ? hourlyChartData.reduce((sum, hour) => sum + ((hour.engagement || 0) * (hour.visits || 0)), 0) / totalVisits 
     : 0;
 
   return (
@@ -105,7 +105,7 @@ export default function TemporalPatternsVisualization({
         </h2>
         
         <div className="text-sm text-zinc-400 capitalize">
-          {timeframe} • {data.recordsAnalyzed.toLocaleString()} records analyzed
+          {timeframe} • {(data.recordsAnalyzed || 0).toLocaleString()} records analyzed
         </div>
       </div>
 
@@ -128,7 +128,7 @@ export default function TemporalPatternsVisualization({
               {totalVisits.toLocaleString()}
             </div>
             <div className="text-xs text-zinc-500">
-              Peak: {insights.peakHour.time} ({insights.peakHour.visits} visits)
+              Peak: {insights?.peakHour?.time || 'N/A'} ({(insights?.peakHour?.visits || 0)} visits)
             </div>
           </div>
         </motion.div>
@@ -169,10 +169,10 @@ export default function TemporalPatternsVisualization({
           </div>
           <div className="space-y-2">
             <div className="text-3xl font-bold text-white">
-              {Math.round(avgEngagement)}
+              {Math.round(avgEngagement || 0)}
             </div>
             <div className="text-xs text-zinc-500">
-              Best day: {insights.peakDay.day}
+              Best day: {insights?.peakDay?.day || 'N/A'}
             </div>
           </div>
         </motion.div>
@@ -315,28 +315,28 @@ export default function TemporalPatternsVisualization({
                           {hour.hourLabel}
                           {index === 0 && <Award size={14} className="inline ml-2 text-yellow-500" />}
                         </td>
-                        <td className="py-3 text-sm text-white text-right">{hour.visits}</td>
-                        <td className="py-3 text-sm text-white text-right">{hour.pageViews}</td>
+                        <td className="py-3 text-sm text-white text-right">{hour.visits || 0}</td>
+                        <td className="py-3 text-sm text-white text-right">{hour.pageViews || 0}</td>
                         <td className="py-3 text-sm text-right">
                           <span className={`${
-                            hour.engagement >= 70 ? 'text-emerald-400' :
-                            hour.engagement >= 40 ? 'text-yellow-400' :
+                            (hour.engagement || 0) >= 70 ? 'text-emerald-400' :
+                            (hour.engagement || 0) >= 40 ? 'text-yellow-400' :
                             'text-red-400'
                           }`}>
-                            {hour.engagement}
+                            {hour.engagement || 0}
                           </span>
                         </td>
-                        <td className="py-3 text-sm text-white text-right">{hour.conversions}</td>
+                        <td className="py-3 text-sm text-white text-right">{hour.conversions || 0}</td>
                         <td className="py-3 text-sm text-right">
                           <div className="flex items-center justify-end">
                             <div className="w-16 h-2 bg-zinc-800 rounded-full mr-3">
                               <div 
                                 className="h-full bg-orange-500 rounded-full"
-                                style={{ width: `${Math.min(100, (hour.combinedMetric / Math.max(...topHours.map(h => h.combinedMetric))) * 100)}%` }}
+                                style={{ width: `${Math.min(100, ((hour.combinedMetric || 0) / Math.max(...topHours.map(h => h.combinedMetric || 0), 1)) * 100)}%` }}
                               />
                             </div>
                             <span className="text-orange-400 font-medium">
-                              {Math.round(hour.combinedMetric)}
+                              {Math.round(hour.combinedMetric || 0)}
                             </span>
                           </div>
                         </td>
@@ -418,29 +418,29 @@ export default function TemporalPatternsVisualization({
                           {day.dayName}
                           {index === 0 && <Award size={14} className="inline ml-2 text-yellow-500" />}
                         </td>
-                        <td className="py-3 text-sm text-white text-right">{day.visits}</td>
+                        <td className="py-3 text-sm text-white text-right">{day.visits || 0}</td>
                         <td className="py-3 text-sm text-right">
                           <span className={`${
-                            day.avgEngagement >= 70 ? 'text-emerald-400' :
-                            day.avgEngagement >= 40 ? 'text-yellow-400' :
+                            (day.avgEngagement || 0) >= 70 ? 'text-emerald-400' :
+                            (day.avgEngagement || 0) >= 40 ? 'text-yellow-400' :
                             'text-red-400'
                           }`}>
-                            {day.avgEngagement}
+                            {day.avgEngagement || 0}
                           </span>
                         </td>
                         <td className="py-3 text-sm text-white text-right">
-                          {day.peakHour.toString().padStart(2, '0')}:00
+                          {(day.peakHour || 0).toString().padStart(2, '0')}:00
                         </td>
                         <td className="py-3 text-sm text-right">
                           <div className="flex items-center justify-end">
                             <div className="w-16 h-2 bg-zinc-800 rounded-full mr-3">
                               <div 
                                 className="h-full bg-orange-500 rounded-full"
-                                style={{ width: `${Math.min(100, (day.performanceScore / Math.max(...topDays.map(d => d.performanceScore))) * 100)}%` }}
+                                style={{ width: `${Math.min(100, ((day.performanceScore || 0) / Math.max(...topDays.map(d => d.performanceScore || 0), 1)) * 100)}%` }}
                               />
                             </div>
                             <span className="text-orange-400 font-medium">
-                              {Math.round(day.performanceScore)}
+                              {Math.round(day.performanceScore || 0)}
                             </span>
                           </div>
                         </td>
@@ -456,7 +456,7 @@ export default function TemporalPatternsVisualization({
 
       {/* Footer */}
       <div className="text-center text-sm text-zinc-500">
-        Analysis period: {timeframe} • Best performing time: {insights.peakHour.time} on {insights.peakDay.day}
+        Analysis period: {timeframe} • Best performing time: {insights?.peakHour?.time || 'N/A'} on {insights?.peakDay?.day || 'N/A'}
       </div>
     </div>
   );
