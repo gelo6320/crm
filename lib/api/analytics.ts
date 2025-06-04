@@ -54,9 +54,9 @@ export async function fetchAnalyticsDashboard(): Promise<AnalyticsDashboard> {
  * @returns {Promise<EngagementTrendData>}
  */
 export async function fetchEngagementMetrics(
-  period: string = 'daily',
-  days: number = 7
-): Promise<EngagementTrendData> {
+    period: string = 'monthly',
+    days: number = 30
+  ): Promise<EngagementTrendData> {
   try {
     console.log(`Richiesta metriche engagement per ${days} giorni, periodo: ${period}`);
     
@@ -100,9 +100,9 @@ export async function fetchEngagementMetrics(
  * @returns {Promise<HeatmapData>}
  */
 export async function fetchHeatmapData(
-  period: string = 'daily',
-  date?: string
-): Promise<HeatmapData> {
+    period: string = 'monthly',
+    date?: string
+  ): Promise<HeatmapData> {
   try {
     console.log(`Richiesta dati heatmap per periodo: ${period}`, date ? `data: ${date}` : '');
     
@@ -149,9 +149,9 @@ export async function fetchHeatmapData(
  * @returns {Promise<TemporalAnalysis>}
  */
 export async function fetchTemporalAnalysis(
-  period: string = 'weekly',
-  weeks: number = 4
-): Promise<TemporalAnalysis> {
+    period: string = 'monthly',
+    weeks: number = 4
+  ): Promise<TemporalAnalysis> {
   try {
     console.log(`Richiesta analisi temporale per ${weeks} settimane, periodo: ${period}`);
     
@@ -234,9 +234,9 @@ export async function generateAnalytics(
  * @returns {Promise<InsightsResponse>}
  */
 export async function fetchInsights(
-  periodKey: string,
-  period: string = 'daily'
-): Promise<InsightsResponse> {
+    periodKey: string,
+    period: string = 'monthly'
+  ): Promise<InsightsResponse> {
   try {
     console.log(`Richiesta insights per periodo: ${periodKey}, tipo: ${period}`);
     
@@ -279,9 +279,9 @@ export async function fetchInsights(
  * @returns {Promise<any>} - Analytics complete
  */
 export async function fetchAnalyticsByPeriod(
-  periodKey: string,
-  period: string = 'daily'
-): Promise<any> {
+    periodKey: string,
+    period: string = 'monthly'
+  ): Promise<any> {
   try {
     console.log(`Richiesta analytics per periodo: ${periodKey}, tipo: ${period}`);
     
@@ -311,27 +311,27 @@ export async function fetchAnalyticsByPeriod(
  * Forza l'aggiornamento delle analytics di oggi
  * @returns {Promise<any>}
  */
-export async function refreshTodayAnalytics(): Promise<any> {
-  try {
-    console.log('Richiesta refresh analytics di oggi');
-    
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const request: GenerateAnalyticsRequest = {
-      startDate: today.toISOString().split('T')[0],
-      endDate: tomorrow.toISOString().split('T')[0],
-      period: 'daily',
-      force: true
-    };
-    
-    return await generateAnalytics(request);
-  } catch (error) {
-    console.error("Errore nel refresh analytics di oggi:", error);
-    throw error;
+export async function refreshCurrentAnalytics(): Promise<any> {
+    try {
+      console.log('Richiesta refresh analytics del mese corrente');
+      
+      const today = new Date();
+      const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      
+      const request: GenerateAnalyticsRequest = {
+        startDate: currentMonth.toISOString().split('T')[0],
+        endDate: nextMonth.toISOString().split('T')[0],
+        period: 'monthly', // CAMBIATO: era 'daily'
+        force: true
+      };
+      
+      return await generateAnalytics(request);
+    } catch (error) {
+      console.error("Errore nel refresh analytics del mese corrente:", error);
+      throw error;
+    }
   }
-}
 
 /**
  * Utility per formattare le date per le richieste analytics

@@ -20,7 +20,7 @@ import {
   fetchEngagementMetrics,
   fetchHeatmapData,
   fetchTemporalAnalysis,
-  refreshTodayAnalytics
+  refreshCurrentAnalytics
 } from "@/lib/api/analytics";
 import { 
   AnalyticsDashboard, 
@@ -31,10 +31,10 @@ import {
 import { toast } from "@/components/ui/toaster";
 
 const TIMEFRAME_OPTIONS = [
-  { value: 'weekly', label: 'Weekly', days: 7 },
-  { value: 'monthly', label: 'Monthly', days: 30 },
-  { value: 'quarterly', label: 'Quarterly', days: 90 }
-];
+    { value: 'monthly', label: 'Monthly', days: 30 },
+    { value: 'quarterly', label: 'Quarterly', days: 90 },
+    { value: 'weekly', label: 'Weekly', days: 7 },
+  ];
 
 export default function AnalyticsPage() {
   // Estados principales
@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      await refreshTodayAnalytics();
+      await refreshCurrentAnalytics(); // CAMBIATO: era refreshTodayAnalytics()
       await loadAllData();
       toast("success", "Updated", "Analytics data refreshed");
     } catch (error) {
@@ -102,7 +102,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black p-6">
+    <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
