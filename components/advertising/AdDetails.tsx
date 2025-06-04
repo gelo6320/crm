@@ -19,7 +19,9 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
         try {
           setIsLoading(true);
           const html = await fetchAdPreview(ad.id);
-          setPreviewHtml(html);
+          // Pulisci l'HTML rimuovendo script e popup problematici
+          const cleanedHtml = cleanPreviewHtml(html);
+          setPreviewHtml(cleanedHtml);
         } catch (error) {
           console.error('Errore nel caricamento dell\'anteprima:', error);
           setPreviewHtml('<div class="text-center p-6 text-red-500">Impossibile caricare l\'anteprima. Verifica la configurazione di Facebook.</div>');
@@ -30,6 +32,21 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
       loadPreview();
     }
   }, [ad.id, layout]);
+
+  // Funzione per pulire l'HTML dell'anteprima
+  const cleanPreviewHtml = (html: string): string => {
+    // Rimuovi script tags per evitare popup JavaScript
+    let cleaned = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    
+    // Rimuovi elementi che potrebbero causare popup di cookie
+    cleaned = cleaned.replace(/data-cookiebanner="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/class="[^"]*cookie[^"]*"/gi, '');
+    
+    // Rimuovi attributi onclick e altri event handler
+    cleaned = cleaned.replace(/on\w+="[^"]*"/gi, '');
+    
+    return cleaned;
+  };
 
   // Formatta valuta
   const formatCurrency = (value: number) => {
@@ -123,11 +140,76 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
               <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
             </div>
           ) : (
-            <div 
-              className="preview-container rounded bg-white overflow-hidden w-full"
-              style={{ height: layout === 'mobile' ? '400px' : '600px' }}
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
-            />
+            <div className="relative">
+              <div 
+                className="preview-container rounded bg-white overflow-hidden w-full relative"
+                style={{ 
+                  height: layout === 'mobile' ? '400px' : '600px',
+                  // Importante: contieni tutto all'interno
+                  position: 'relative',
+                  isolation: 'isolate'
+                }}
+              >
+                {/* Iframe per isolare il contenuto (opzione alternativa) */}
+                {/* 
+                <iframe
+                  srcDoc={previewHtml}
+                  className="w-full h-full border-0"
+                  sandbox="allow-same-origin"
+                  style={{ backgroundColor: 'white' }}
+                />
+                */}
+                
+                {/* Versione con HTML pulito */}
+                <div 
+                  className="w-full h-full overflow-hidden"
+                  dangerouslySetInnerHTML={{ __html: previewHtml }}
+                  style={{
+                    // Nascondi overflow per evitare che popup escano dal container
+                    overflow: 'hidden',
+                    position: 'relative'
+                  }}
+                />
+                
+                {/* Overlay per bloccare interazioni problematiche */}
+                <div 
+                  className="absolute inset-0 bg-transparent pointer-events-none"
+                  style={{ zIndex: 999 }}
+                />
+              </div>
+              
+              {/* CSS personalizzato per nascondere popup di Facebook */}
+              <style jsx>{`
+                .preview-container {
+                  /* Nascondi elementi di cookie/popup di Facebook */
+                }
+                .preview-container [data-cookiebanner],
+                .preview-container [class*="cookie"],
+                .preview-container [class*="Cookie"],
+                .preview-container [class*="modal"],
+                .preview-container [class*="popup"],
+                .preview-container [class*="overlay"] {
+                  display: none !important;
+                  visibility: hidden !important;
+                  opacity: 0 !important;
+                  position: absolute !important;
+                  left: -9999px !important;
+                }
+                
+                /* Assicurati che il contenuto rimanga nel container */
+                .preview-container * {
+                  max-width: 100% !important;
+                  max-height: 100% !important;
+                  position: relative !important;
+                }
+                
+                /* Nascondi eventuali elementi fixed/absolute che potrebbero uscire */
+                .preview-container [style*="position: fixed"],
+                .preview-container [style*="position: absolute"] {
+                  position: relative !important;
+                }
+              `}</style>
+            </div>
           )}
         </div>
       </motion.div>

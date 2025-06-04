@@ -15,6 +15,7 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import AnalyticsDashboardComponent from "@/components/analytics/AnalyticsDashboard";
 import EngagementMetrics from "@/components/analytics/EngagementMetrics";
 import HeatmapVisualization from "@/components/analytics/HeatmapVisualization";
+import TemporalPatternsVisualization from "@/components/analytics/TemporalPatternsVisualization";
 import { 
   fetchAnalyticsDashboard,
   fetchEngagementMetrics,
@@ -49,7 +50,7 @@ export default function AnalyticsPage() {
   
   // Global timeframe
   const [globalTimeframe, setGlobalTimeframe] = useState('monthly');
-  const [activeTab, setActiveTab] = useState<'overview' | 'engagement' | 'behavior'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'engagement' | 'behavior' | 'temporal'>('overview');
 
   const currentTimeframe = TIMEFRAME_OPTIONS.find(opt => opt.value === globalTimeframe);
 
@@ -86,7 +87,7 @@ export default function AnalyticsPage() {
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      await refreshCurrentAnalytics(); // CAMBIATO: era refreshTodayAnalytics()
+      await refreshCurrentAnalytics();
       await loadAllData();
       toast("success", "Updated", "Analytics data refreshed");
     } catch (error) {
@@ -151,7 +152,8 @@ export default function AnalyticsPage() {
             {[
               { id: 'overview', label: 'Overview', icon: Activity },
               { id: 'engagement', label: 'Engagement', icon: TrendingUp },
-              { id: 'behavior', label: 'Behavior', icon: MousePointer }
+              { id: 'behavior', label: 'Behavior', icon: MousePointer },
+              { id: 'temporal', label: 'Time Patterns', icon: Clock }
             ].map(tab => {
               const Icon = tab.icon;
               return (
@@ -189,57 +191,20 @@ export default function AnalyticsPage() {
             />
           )}
 
-          {activeTab === 'behavior' && (
-            <div className="space-y-6">
-              {heatmapData && (
-                <HeatmapVisualization
-                  data={heatmapData}
-                  isLoading={isLoading}
-                  timeframe={globalTimeframe}
-                />
-              )}
-              
-              {temporalData && (
-                <div className="bg-zinc-900 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-white mb-6 flex items-center">
-                    <Clock className="w-5 h-5 text-orange-500 mr-2" />
-                    Temporal Patterns
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-zinc-800 rounded-lg p-4">
-                      <div className="text-sm text-zinc-400 mb-2">Peak Hour</div>
-                      <div className="text-2xl font-bold text-white">
-                        {temporalData.insights.peakHour.time}
-                      </div>
-                      <div className="text-xs text-zinc-500 mt-1">
-                        {temporalData.insights.peakHour.visits} visits
-                      </div>
-                    </div>
-                    
-                    <div className="bg-zinc-800 rounded-lg p-4">
-                      <div className="text-sm text-zinc-400 mb-2">Peak Day</div>
-                      <div className="text-2xl font-bold text-white">
-                        {temporalData.insights.peakDay.day}
-                      </div>
-                      <div className="text-xs text-zinc-500 mt-1">
-                        {temporalData.insights.peakDay.visits} avg visits
-                      </div>
-                    </div>
-                    
-                    <div className="bg-zinc-800 rounded-lg p-4">
-                      <div className="text-sm text-zinc-400 mb-2">Records</div>
-                      <div className="text-2xl font-bold text-white">
-                        {temporalData.recordsAnalyzed.toLocaleString()}
-                      </div>
-                      <div className="text-xs text-zinc-500 mt-1">
-                        analyzed
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+          {activeTab === 'behavior' && heatmapData && (
+            <HeatmapVisualization
+              data={heatmapData}
+              isLoading={isLoading}
+              timeframe={globalTimeframe}
+            />
+          )}
+
+          {activeTab === 'temporal' && (
+            <TemporalPatternsVisualization
+              data={temporalData}
+              isLoading={isLoading}
+              timeframe={globalTimeframe}
+            />
           )}
         </div>
 

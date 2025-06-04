@@ -102,7 +102,7 @@ export interface AnalyticsDashboard {
   }
   
   export interface InteractionHotspot {
-    elementType: 'button' | 'form' | 'link' | 'image' | 'video' | 'text';
+    elementType: 'button' | 'form' | 'link' | 'image' | 'video' | 'text' | 'page' | 'unknown';
     elementId: string;
     interactions: number;
     uniqueUsers: number;
@@ -331,6 +331,7 @@ export interface AnalyticsDashboard {
     efficiency: number;
   }
   
+  // Temporal Analysis - Unified interface
   export interface TemporalAnalysis {
     period: string;
     weeks: number;
@@ -338,14 +339,19 @@ export interface AnalyticsDashboard {
       from: string;
       to: string;
     };
-    hourlyPattern: HourlyPattern[];
-    weeklyPattern: WeeklyDistribution[];
+    hourlyDistribution: HourlyPattern[];
+    weeklyDistribution: WeeklyDistribution[];
     insights: {
       peakHour: { hour: number; time: string; visits: number };
       peakDay: { day: string; visits: number };
       patterns: TemporalInsight[];
     };
     recordsAnalyzed: number;
+    weeklyTrends?: {
+      growth: number;
+      momentum: string;
+      seasonality: number;
+    };
   }
   
   export interface HourlyPattern extends HourlyDistribution {
