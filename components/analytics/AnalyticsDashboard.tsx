@@ -68,7 +68,17 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
     }
   };
 
-  const formatChange = (change: number) => {
+  // FIX CRITICO: Protezione completa per undefined/null/NaN
+  const formatChange = (change: number | undefined | null) => {
+    // Controllo rigoroso per tutti i casi problematici
+    if (change === undefined || change === null || isNaN(change) || typeof change !== 'number') {
+      return (
+        <div className="flex items-center text-zinc-500 text-sm">
+          <span className="ml-1">--</span>
+        </div>
+      );
+    }
+    
     const sign = change > 0 ? '+' : '';
     const color = change >= 0 ? 'text-emerald-400' : 'text-red-400';
     const icon = change >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />;
@@ -100,8 +110,8 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           </div>
           
           <div className="space-y-2">
-            <div className={`text-3xl font-bold ${getEngagementColor(summary.overallScore)}`}>
-              {summary.overallScore}
+            <div className={`text-3xl font-bold ${getEngagementColor(summary?.overallScore || 0)}`}>
+              {summary?.overallScore || 0}
             </div>
             {comparison && formatChange(comparison.engagementChange)}
           </div>
@@ -122,8 +132,8 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           </div>
           
           <div className="space-y-2">
-            <div className={`text-3xl font-bold ${getConfidenceColor(summary.confidence)}`}>
-              {summary.confidence}%
+            <div className={`text-3xl font-bold ${getConfidenceColor(summary?.confidence || 0)}`}>
+              {summary?.confidence || 0}%
             </div>
             {comparison && formatChange(comparison.confidenceChange)}
           </div>
@@ -145,9 +155,9 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           
           <div className="space-y-2">
             <div className="text-3xl font-bold text-white">
-              {summary.sampleSize.toLocaleString()}
+              {(summary?.sampleSize || 0).toLocaleString()}
             </div>
-            {comparison && (
+            {comparison && comparison.sampleSizeChange !== undefined && (
               <div className={`flex items-center text-sm ${
                 comparison.sampleSizeChange >= 0 ? 'text-emerald-400' : 'text-red-400'
               }`}>
@@ -179,10 +189,10 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           
           <div className="space-y-2">
             <div className="text-3xl font-bold text-white">
-              {summary.peakHour.toString().padStart(2, '0')}:00
+              {(summary?.peakHour || 0).toString().padStart(2, '0')}:00
             </div>
             <div className="text-sm text-zinc-500">
-              {summary.topInteraction}
+              {summary?.topInteraction || 'N/A'}
             </div>
           </div>
         </motion.div>
@@ -248,7 +258,7 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
                           <span className="text-sm font-medium text-orange-400">
                             {insight.value}
                           </span>
-                          {insight.change !== undefined && (
+                          {insight.change !== undefined && insight.change !== null && !isNaN(insight.change) && (
                             <span className={`ml-2 text-xs ${insight.change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                               ({insight.change > 0 ? '+' : ''}{insight.change}%)
                             </span>
@@ -277,19 +287,19 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
             <span className="text-zinc-500">Period:</span>
-            <div className="font-medium text-white">{dashboard.currentPeriod.period}</div>
-            <div className="text-xs text-zinc-500">{dashboard.currentPeriod.periodKey}</div>
+            <div className="font-medium text-white">{dashboard.currentPeriod?.period || 'N/A'}</div>
+            <div className="text-xs text-zinc-500">{dashboard.currentPeriod?.periodKey || 'N/A'}</div>
           </div>
           
           <div>
             <span className="text-zinc-500">Top Source:</span>
-            <div className="font-medium text-white">{summary.topSource}</div>
+            <div className="font-medium text-white">{summary?.topSource || 'N/A'}</div>
           </div>
           
           <div>
             <span className="text-zinc-500">Last Updated:</span>
             <div className="font-medium text-white">
-              {new Date(dashboard.lastUpdated).toLocaleString()}
+              {dashboard.lastUpdated ? new Date(dashboard.lastUpdated).toLocaleString() : 'N/A'}
             </div>
           </div>
         </div>
