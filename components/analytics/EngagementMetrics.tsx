@@ -52,10 +52,10 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
 
   const { chartData, stats, trend } = data;
 
-  // Prepare chart data with formatted dates
+  // Prepara dati grafico con date formattate
   const formattedChartData = chartData?.map(item => ({
     ...item,
-    formattedDate: new Date(item.date).toLocaleDateString('en-US', {
+    formattedDate: new Date(item.date).toLocaleDateString('it-IT', {
       month: 'short',
       day: 'numeric'
     })
@@ -77,23 +77,33 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
     }
   };
 
+  const getTrendLabel = (trendType: string) => {
+    switch (trendType) {
+      case 'improving': return 'miglioramento';
+      case 'declining': return 'calo';
+      default: return 'stabile';
+    }
+  };
+
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Intestazione */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white flex items-center">
           <TrendingUp className="w-6 h-6 text-orange-500 mr-3" />
-          Engagement Metrics
+          Metriche di Coinvolgimento
         </h2>
         
         <div className="text-sm text-zinc-400 capitalize">
-          {timeframe} View
+          Vista {timeframe === 'weekly' ? 'Settimanale' : 
+                timeframe === 'monthly' ? 'Mensile' : 
+                timeframe === 'quarterly' ? 'Trimestrale' : timeframe}
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Schede Statistiche */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Average Score */}
+        {/* Punteggio Medio */}
         <motion.div 
           className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
           initial={{ opacity: 0, y: 20 }}
@@ -103,7 +113,7 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Award className="w-5 h-5 text-orange-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Average Score</span>
+              <span className="text-sm font-medium text-zinc-400">Punteggio Medio</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -112,12 +122,12 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
             </div>
             <div className={`flex items-center text-sm ${getTrendColor(stats?.trend || 'stable')}`}>
               {getTrendIcon(stats?.trend || 'stable')}
-              <span className="ml-1 capitalize">{stats?.trend || 'stable'}</span>
+              <span className="ml-1 capitalize">{getTrendLabel(stats?.trend || 'stable')}</span>
             </div>
           </div>
         </motion.div>
 
-        {/* Best Performance */}
+        {/* Migliore Performance */}
         <motion.div 
           className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
           initial={{ opacity: 0, y: 20 }}
@@ -127,7 +137,7 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <TrendingUp className="w-5 h-5 text-emerald-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Best Day</span>
+              <span className="text-sm font-medium text-zinc-400">Giorno Migliore</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -135,12 +145,12 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
               {stats?.bestDay?.overallScore || 0}
             </div>
             <div className="text-xs text-zinc-500">
-              {stats?.bestDay?.date ? new Date(stats.bestDay.date).toLocaleDateString() : 'N/A'}
+              {stats?.bestDay?.date ? new Date(stats.bestDay.date).toLocaleDateString('it-IT') : 'N/A'}
             </div>
           </div>
         </motion.div>
 
-        {/* Needs Improvement */}
+        {/* Da Migliorare */}
         <motion.div 
           className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
           initial={{ opacity: 0, y: 20 }}
@@ -150,7 +160,7 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <TrendingDown className="w-5 h-5 text-red-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Lowest Day</span>
+              <span className="text-sm font-medium text-zinc-400">Giorno Peggiore</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -158,12 +168,12 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
               {stats?.worstDay?.overallScore || 0}
             </div>
             <div className="text-xs text-zinc-500">
-              {stats?.worstDay?.date ? new Date(stats.worstDay.date).toLocaleDateString() : 'N/A'}
+              {stats?.worstDay?.date ? new Date(stats.worstDay.date).toLocaleDateString('it-IT') : 'N/A'}
             </div>
           </div>
         </motion.div>
 
-        {/* Total Records */}
+        {/* Record Totali */}
         <motion.div 
           className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
           initial={{ opacity: 0, y: 20 }}
@@ -173,7 +183,7 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Calendar className="w-5 h-5 text-blue-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Records</span>
+              <span className="text-sm font-medium text-zinc-400">Record</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -181,24 +191,24 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
               {data.totalRecords?.toLocaleString() || 0}
             </div>
             <div className="text-xs text-zinc-500">
-              analyzed
+              analizzati
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Chart Section */}
+      {/* Sezione Grafici */}
       <motion.div 
         className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
-        {/* Chart Toggle */}
+        {/* Toggle Grafici */}
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-white flex items-center">
             <BarChart3 className="w-5 h-5 text-orange-500 mr-2" />
-            Engagement Trends
+            Tendenze di Coinvolgimento
           </h3>
           
           <div className="flex bg-zinc-800 rounded-lg p-1">
@@ -210,7 +220,7 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
-              Overall Score
+              Punteggio Generale
             </button>
             <button
               onClick={() => setActiveChart('components')}
@@ -220,12 +230,12 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
-              Components
+              Componenti
             </button>
           </div>
         </div>
 
-        {/* Chart */}
+        {/* Grafico */}
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             {activeChart === 'overall' ? (
@@ -254,8 +264,8 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
                     borderRadius: '8px',
                     color: '#F3F4F6'
                   }}
-                  formatter={(value: any) => [`${value}`, 'Engagement Score']}
-                  labelFormatter={(label) => `Date: ${label}`}
+                  formatter={(value: any) => [`${value}`, 'Punteggio Coinvolgimento']}
+                  labelFormatter={(label) => `Data: ${label}`}
                 />
                 <Area
                   type="monotone"
@@ -287,12 +297,12 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
                   }}
                   formatter={(value: any, name: any) => [
                     `${value}`,
-                    name === 'timeEngagement' ? 'Time' :
-                    name === 'interactionEngagement' ? 'Interactions' :
-                    name === 'depthEngagement' ? 'Depth' :
-                    name === 'conversionEngagement' ? 'Conversions' : name
+                    name === 'timeEngagement' ? 'Tempo' :
+                    name === 'interactionEngagement' ? 'Interazioni' :
+                    name === 'depthEngagement' ? 'Profondità' :
+                    name === 'conversionEngagement' ? 'Conversioni' : name
                   ]}
-                  labelFormatter={(label) => `Date: ${label}`}
+                  labelFormatter={(label) => `Data: ${label}`}
                 />
                 <Line
                   type="monotone"
@@ -327,14 +337,14 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
           </ResponsiveContainer>
         </div>
 
-        {/* Components Legend */}
+        {/* Legenda Componenti */}
         {activeChart === 'components' && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-zinc-800">
             {[
-              { name: 'Time', color: '#3B82F6', description: 'Time spent' },
-              { name: 'Interactions', color: '#10B981', description: 'Clicks & forms' },
-              { name: 'Depth', color: '#8B5CF6', description: 'Page depth' },
-              { name: 'Conversions', color: '#F59E0B', description: 'Goals reached' }
+              { name: 'Tempo', color: '#3B82F6', description: 'Tempo trascorso' },
+              { name: 'Interazioni', color: '#10B981', description: 'Click e form' },
+              { name: 'Profondità', color: '#8B5CF6', description: 'Profondità pagina' },
+              { name: 'Conversioni', color: '#F59E0B', description: 'Obiettivi raggiunti' }
             ].map(component => (
               <div key={component.name} className="flex items-center">
                 <div 
@@ -351,10 +361,10 @@ export default function EngagementMetrics({ data, isLoading, timeframe }: Engage
         )}
       </motion.div>
 
-      {/* Period Info */}
+      {/* Informazioni Periodo */}
       {data.dateRange && (
         <div className="text-center text-sm text-zinc-500">
-          Analysis from {new Date(data.dateRange.from).toLocaleDateString()} to {new Date(data.dateRange.to).toLocaleDateString()}
+          Analisi dal {new Date(data.dateRange.from).toLocaleDateString('it-IT')} al {new Date(data.dateRange.to).toLocaleDateString('it-IT')}
         </div>
       )}
     </div>

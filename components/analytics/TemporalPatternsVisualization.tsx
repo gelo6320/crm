@@ -61,33 +61,55 @@ export default function TemporalPatternsVisualization({
 
   const { hourlyDistribution, weeklyDistribution, insights } = data;
 
-  // Prepare hourly chart data
+  // Mappa nomi giorni
+  const dayNameMap: { [key: string]: string } = {
+    'Monday': 'Lun',
+    'Tuesday': 'Mar',
+    'Wednesday': 'Mer',
+    'Thursday': 'Gio',
+    'Friday': 'Ven',
+    'Saturday': 'Sab',
+    'Sunday': 'Dom'
+  };
+
+  // Mappa nomi giorni completi
+  const fullDayNameMap: { [key: string]: string } = {
+    'Monday': 'lunedì',
+    'Tuesday': 'martedì',
+    'Wednesday': 'mercoledì', 
+    'Thursday': 'giovedì',
+    'Friday': 'venerdì',
+    'Saturday': 'sabato',
+    'Sunday': 'domenica'
+  };
+
+  // Prepara dati grafico orario
   const hourlyChartData = hourlyDistribution?.map(hour => ({
     ...hour,
     hourLabel: `${hour.hour.toString().padStart(2, '0')}:00`,
     combinedMetric: (hour.visits || 0) * 0.4 + (hour.engagement || 0) * 0.6 // FIX: Protezione valori undefined
   })) || [];
 
-  // Prepare weekly chart data
+  // Prepara dati grafico settimanale
   const weeklyChartData = weeklyDistribution?.map(day => ({
     ...day,
-    dayLabel: day.dayName.substring(0, 3), // Mon, Tue, etc.
+    dayLabel: dayNameMap[day.dayName] || (day.dayName?.substring(0, 3) || 'N/A'),
     performanceScore: (day.visits || 0) * 0.3 + (day.avgEngagement || 0) * 0.7 // FIX: Protezione valori undefined
   })) || [];
 
-  // Get top performing hours (non-zero visits)
+  // Ottieni ore con migliori performance (visite non zero)
   const topHours = hourlyChartData
     .filter(hour => (hour.visits || 0) > 0)
     .sort((a, b) => (b.combinedMetric || 0) - (a.combinedMetric || 0))
     .slice(0, 5);
 
-  // Get top performing days
+  // Ottieni giorni con migliori performance
   const topDays = weeklyChartData
     .filter(day => (day.visits || 0) > 0)
     .sort((a, b) => (b.performanceScore || 0) - (a.performanceScore || 0))
     .slice(0, 3);
 
-  // Calculate totals - FIX: Protezione valori undefined
+  // Calcola totali - FIX: Protezione valori undefined
   const totalVisits = hourlyChartData.reduce((sum, hour) => sum + (hour.visits || 0), 0);
   const totalPageViews = hourlyChartData.reduce((sum, hour) => sum + (hour.pageViews || 0), 0);
   const totalConversions = hourlyChartData.reduce((sum, hour) => sum + (hour.conversions || 0), 0);
@@ -97,19 +119,21 @@ export default function TemporalPatternsVisualization({
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Intestazione */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white flex items-center">
           <Clock className="w-6 h-6 text-orange-500 mr-3" />
-          Temporal Performance Analysis
+          Analisi Performance Temporale
         </h2>
         
         <div className="text-sm text-zinc-400 capitalize">
-          {timeframe} • {(data.recordsAnalyzed || 0).toLocaleString()} records analyzed
+          {timeframe === 'weekly' ? 'Settimanale' : 
+           timeframe === 'monthly' ? 'Mensile' : 
+           timeframe === 'quarterly' ? 'Trimestrale' : timeframe} • {(data.recordsAnalyzed || 0).toLocaleString()} record analizzati
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Schede Riassuntive */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <motion.div 
           className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
@@ -120,7 +144,7 @@ export default function TemporalPatternsVisualization({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Users className="w-5 h-5 text-blue-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Total Visits</span>
+              <span className="text-sm font-medium text-zinc-400">Visite Totali</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -128,7 +152,7 @@ export default function TemporalPatternsVisualization({
               {totalVisits.toLocaleString()}
             </div>
             <div className="text-xs text-zinc-500">
-              Peak: {insights?.peakHour?.time || 'N/A'} ({(insights?.peakHour?.visits || 0)} visits)
+              Picco: {insights?.peakHour?.time || 'N/A'} ({(insights?.peakHour?.visits || 0)} visite)
             </div>
           </div>
         </motion.div>
@@ -142,7 +166,7 @@ export default function TemporalPatternsVisualization({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Eye className="w-5 h-5 text-green-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Page Views</span>
+              <span className="text-sm font-medium text-zinc-400">Visualizzazioni</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -150,7 +174,7 @@ export default function TemporalPatternsVisualization({
               {totalPageViews.toLocaleString()}
             </div>
             <div className="text-xs text-zinc-500">
-              Avg per visit: {totalVisits > 0 ? (totalPageViews / totalVisits).toFixed(1) : '0'}
+              Media per visita: {totalVisits > 0 ? (totalPageViews / totalVisits).toFixed(1) : '0'}
             </div>
           </div>
         </motion.div>
@@ -164,7 +188,7 @@ export default function TemporalPatternsVisualization({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Activity className="w-5 h-5 text-orange-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Avg Engagement</span>
+              <span className="text-sm font-medium text-zinc-400">Coinvolg. Medio</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -172,7 +196,7 @@ export default function TemporalPatternsVisualization({
               {Math.round(avgEngagement || 0)}
             </div>
             <div className="text-xs text-zinc-500">
-              Best day: {insights?.peakDay?.day || 'N/A'}
+              Giorno migliore: {fullDayNameMap[insights?.peakDay?.day || ''] || 'N/A'}
             </div>
           </div>
         </motion.div>
@@ -186,7 +210,7 @@ export default function TemporalPatternsVisualization({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Target className="w-5 h-5 text-purple-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Conversions</span>
+              <span className="text-sm font-medium text-zinc-400">Conversioni</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -194,17 +218,17 @@ export default function TemporalPatternsVisualization({
               {totalConversions.toLocaleString()}
             </div>
             <div className="text-xs text-zinc-500">
-              Rate: {totalVisits > 0 ? ((totalConversions / totalVisits) * 100).toFixed(1) : '0'}%
+              Tasso: {totalVisits > 0 ? ((totalConversions / totalVisits) * 100).toFixed(1) : '0'}%
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* View Toggle */}
+      {/* Toggle Vista */}
       <div className="flex bg-zinc-900 rounded-xl p-1 border border-zinc-800">
         {[
-          { id: 'hourly', label: 'Hourly Performance', icon: Clock },
-          { id: 'weekly', label: 'Daily Performance', icon: Calendar }
+          { id: 'hourly', label: 'Performance Oraria', icon: Clock },
+          { id: 'weekly', label: 'Performance Giornaliera', icon: Calendar }
         ].map(view => {
           const Icon = view.icon;
           return (
@@ -224,7 +248,7 @@ export default function TemporalPatternsVisualization({
         })}
       </div>
 
-      {/* Charts Section */}
+      {/* Sezione Grafici */}
       <motion.div 
         className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
         initial={{ opacity: 0, y: 20 }}
@@ -233,9 +257,9 @@ export default function TemporalPatternsVisualization({
       >
         {activeView === 'hourly' ? (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-white">Hourly Performance Distribution</h3>
+            <h3 className="text-lg font-semibold text-white">Distribuzione Performance Oraria</h3>
             
-            {/* Hourly Chart */}
+            {/* Grafico Orario */}
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={hourlyChartData}>
@@ -268,12 +292,12 @@ export default function TemporalPatternsVisualization({
                     }}
                     formatter={(value: any, name: any) => [
                       value,
-                      name === 'visits' ? 'Visits' :
-                      name === 'pageViews' ? 'Page Views' :
-                      name === 'engagement' ? 'Engagement' :
-                      name === 'conversions' ? 'Conversions' : name
+                      name === 'visits' ? 'Visite' :
+                      name === 'pageViews' ? 'Visualizzazioni' :
+                      name === 'engagement' ? 'Coinvolgimento' :
+                      name === 'conversions' ? 'Conversioni' : name
                     ]}
-                    labelFormatter={(label) => `Hour: ${label}`}
+                    labelFormatter={(label) => `Ora: ${label}`}
                   />
                   <Area
                     type="monotone"
@@ -293,18 +317,18 @@ export default function TemporalPatternsVisualization({
               </ResponsiveContainer>
             </div>
 
-            {/* Top Hours Table */}
+            {/* Tabella Ore Top */}
             <div className="space-y-4">
-              <h4 className="text-base font-medium text-white">Top Performing Hours</h4>
+              <h4 className="text-base font-medium text-white">Ore con Migliori Performance</h4>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-zinc-800">
-                      <th className="text-left text-sm font-medium text-zinc-400 pb-3">Hour</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Visits</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Page Views</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Engagement</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Conversions</th>
+                      <th className="text-left text-sm font-medium text-zinc-400 pb-3">Ora</th>
+                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Visite</th>
+                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Visualizzazioni</th>
+                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Coinvolgimento</th>
+                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Conversioni</th>
                       <th className="text-right text-sm font-medium text-zinc-400 pb-3">Performance</th>
                     </tr>
                   </thead>
@@ -349,9 +373,9 @@ export default function TemporalPatternsVisualization({
           </div>
         ) : (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-white">Daily Performance Distribution</h3>
+            <h3 className="text-lg font-semibold text-white">Distribuzione Performance Giornaliera</h3>
             
-            {/* Weekly Chart */}
+            {/* Grafico Settimanale */}
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={weeklyChartData}>
@@ -374,13 +398,13 @@ export default function TemporalPatternsVisualization({
                     }}
                     formatter={(value: any, name: any) => [
                       value,
-                      name === 'visits' ? 'Visits' :
-                      name === 'avgEngagement' ? 'Avg Engagement' :
-                      name === 'performanceScore' ? 'Performance Score' : name
+                      name === 'visits' ? 'Visite' :
+                      name === 'avgEngagement' ? 'Coinv. Medio' :
+                      name === 'performanceScore' ? 'Punteggio Performance' : name
                     ]}
                     labelFormatter={(label, payload) => {
                       const data = payload?.[0]?.payload;
-                      return `${data?.dayName || label}`;
+                      return `${fullDayNameMap[data?.dayName] || data?.dayName || label}`;
                     }}
                   />
                   <Bar 
@@ -397,17 +421,17 @@ export default function TemporalPatternsVisualization({
               </ResponsiveContainer>
             </div>
 
-            {/* Top Days Table */}
+            {/* Tabella Giorni Top */}
             <div className="space-y-4">
-              <h4 className="text-base font-medium text-white">Top Performing Days</h4>
+              <h4 className="text-base font-medium text-white">Giorni con Migliori Performance</h4>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-zinc-800">
-                      <th className="text-left text-sm font-medium text-zinc-400 pb-3">Day</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Visits</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Avg Engagement</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Peak Hour</th>
+                      <th className="text-left text-sm font-medium text-zinc-400 pb-3">Giorno</th>
+                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Visite</th>
+                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Coinv. Medio</th>
+                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Ora di Punta</th>
                       <th className="text-right text-sm font-medium text-zinc-400 pb-3">Performance</th>
                     </tr>
                   </thead>
@@ -415,37 +439,37 @@ export default function TemporalPatternsVisualization({
                     {topDays.map((day, index) => (
                       <tr key={day.dayOfWeek} className="border-b border-zinc-800/50">
                         <td className="py-3 text-sm text-white font-medium">
-                          {day.dayName}
+                          {dayNameMap[day.dayName] || day.dayName || 'N/A'}
                           {index === 0 && <Award size={14} className="inline ml-2 text-yellow-500" />}
                         </td>
-                        <td className="py-3 text-sm text-white text-right">{day.visits || 0}</td>
-                        <td className="py-3 text-sm text-right">
-                          <span className={`${
-                            (day.avgEngagement || 0) >= 70 ? 'text-emerald-400' :
-                            (day.avgEngagement || 0) >= 40 ? 'text-yellow-400' :
-                            'text-red-400'
-                          }`}>
-                            {day.avgEngagement || 0}
-                          </span>
-                        </td>
-                        <td className="py-3 text-sm text-white text-right">
-                          {(day.peakHour || 0).toString().padStart(2, '0')}:00
-                        </td>
-                        <td className="py-3 text-sm text-right">
-                          <div className="flex items-center justify-end">
-                            <div className="w-16 h-2 bg-zinc-800 rounded-full mr-3">
-                              <div 
-                                className="h-full bg-orange-500 rounded-full"
-                                style={{ width: `${Math.min(100, ((day.performanceScore || 0) / Math.max(...topDays.map(d => d.performanceScore || 0), 1)) * 100)}%` }}
-                              />
-                            </div>
-                            <span className="text-orange-400 font-medium">
-                              {Math.round(day.performanceScore || 0)}
+                          <td className="py-3 text-sm text-white text-right">{day.visits || 0}</td>
+                          <td className="py-3 text-sm text-right">
+                            <span className={`${
+                              (day.avgEngagement || 0) >= 70 ? 'text-emerald-400' :
+                              (day.avgEngagement || 0) >= 40 ? 'text-yellow-400' :
+                              'text-red-400'
+                            }`}>
+                              {day.avgEngagement || 0}
                             </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="py-3 text-sm text-white text-right">
+                            {(day.peakHour || 0).toString().padStart(2, '0')}:00
+                          </td>
+                          <td className="py-3 text-sm text-right">
+                            <div className="flex items-center justify-end">
+                              <div className="w-16 h-2 bg-zinc-800 rounded-full mr-3">
+                                <div 
+                                  className="h-full bg-orange-500 rounded-full"
+                                  style={{ width: `${Math.min(100, ((day.performanceScore || 0) / Math.max(...topDays.map(d => d.performanceScore || 0), 1)) * 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-orange-400 font-medium">
+                                {Math.round(day.performanceScore || 0)}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -456,7 +480,10 @@ export default function TemporalPatternsVisualization({
 
       {/* Footer */}
       <div className="text-center text-sm text-zinc-500">
-        Analysis period: {timeframe} • Best performing time: {insights?.peakHour?.time || 'N/A'} on {insights?.peakDay?.day || 'N/A'}
+        Periodo di analisi: {timeframe === 'weekly' ? 'settimanale' : 
+                             timeframe === 'monthly' ? 'mensile' : 
+                             timeframe === 'quarterly' ? 'trimestrale' : timeframe} • 
+        Miglior orario: {insights?.peakHour?.time || 'N/A'} il {fullDayNameMap[insights?.peakDay?.day || ''] || 'N/A'}
       </div>
     </div>
   );

@@ -32,29 +32,29 @@ import {
 import { toast } from "@/components/ui/toaster";
 
 const TIMEFRAME_OPTIONS = [
-    { value: 'monthly', label: 'Monthly', days: 30 },
-    { value: 'quarterly', label: 'Quarterly', days: 90 },
-    { value: 'weekly', label: 'Weekly', days: 7 },
+    { value: 'monthly', label: 'Mensile', days: 30 },
+    { value: 'quarterly', label: 'Trimestrale', days: 90 },
+    { value: 'weekly', label: 'Settimanale', days: 7 },
   ];
 
 export default function AnalyticsPage() {
-  // Estados principales
+  // Stati principali
   const [dashboard, setDashboard] = useState<AnalyticsDashboard | null>(null);
   const [engagementData, setEngagementData] = useState<EngagementTrendData | null>(null);
   const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
   const [temporalData, setTemporalData] = useState<TemporalAnalysis | null>(null);
   
-  // UI States
+  // Stati UI
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Global timeframe
+  // Timeframe globale
   const [globalTimeframe, setGlobalTimeframe] = useState('monthly');
   const [activeTab, setActiveTab] = useState<'overview' | 'engagement' | 'behavior' | 'temporal'>('overview');
 
   const currentTimeframe = TIMEFRAME_OPTIONS.find(opt => opt.value === globalTimeframe);
 
-  // Load all data
+  // Carica tutti i dati
   useEffect(() => {
     loadAllData();
   }, [globalTimeframe]);
@@ -77,8 +77,8 @@ export default function AnalyticsPage() {
       if (temporalDataRes.status === 'fulfilled') setTemporalData(temporalDataRes.value);
 
     } catch (error) {
-      console.error("Error loading analytics:", error);
-      toast("error", "Error", "Unable to load analytics data");
+      console.error("Errore caricamento analytics:", error);
+      toast("error", "Errore", "Impossibile caricare i dati analytics");
     } finally {
       setIsLoading(false);
     }
@@ -89,10 +89,10 @@ export default function AnalyticsPage() {
       setIsRefreshing(true);
       await refreshCurrentAnalytics();
       await loadAllData();
-      toast("success", "Updated", "Analytics data refreshed");
+      toast("success", "Aggiornato", "Dati analytics aggiornati");
     } catch (error) {
-      console.error("Error refreshing:", error);
-      toast("error", "Error", "Unable to refresh data");
+      console.error("Errore aggiornamento:", error);
+      toast("error", "Errore", "Impossibile aggiornare i dati");
     } finally {
       setIsRefreshing(false);
     }
@@ -105,7 +105,7 @@ export default function AnalyticsPage() {
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
+        {/* Intestazione */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
@@ -113,12 +113,12 @@ export default function AnalyticsPage() {
               Analytics
             </h1>
             <p className="text-zinc-400 mt-1">
-              Behavioral insights and performance metrics
+              Insight comportamentali e metriche di performance
             </p>
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Global Timeframe Selector */}
+            {/* Selettore Timeframe Globale */}
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-zinc-400" />
               <select
@@ -134,26 +134,26 @@ export default function AnalyticsPage() {
               </select>
             </div>
             
-            {/* Refresh Button */}
+            {/* Bottone Aggiorna */}
             <button 
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg p-2 text-white transition-colors"
-              title="Refresh data"
+              title="Aggiorna dati"
             >
               <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
             </button>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Tab di Navigazione */}
         <div className="border-b border-zinc-800">
           <nav className="flex space-x-8">
             {[
-              { id: 'overview', label: 'Overview', icon: Activity },
-              { id: 'engagement', label: 'Engagement', icon: TrendingUp },
-              { id: 'behavior', label: 'Behavior', icon: MousePointer },
-              { id: 'temporal', label: 'Time Patterns', icon: Clock }
+              { id: 'overview', label: 'Panoramica', icon: Activity },
+              { id: 'engagement', label: 'Coinvolgimento', icon: TrendingUp },
+              { id: 'behavior', label: 'Comportamento', icon: MousePointer },
+              { id: 'temporal', label: 'Pattern Temporali', icon: Clock }
             ].map(tab => {
               const Icon = tab.icon;
               return (
@@ -174,7 +174,7 @@ export default function AnalyticsPage() {
           </nav>
         </div>
 
-        {/* Content */}
+        {/* Contenuto */}
         <div className="animate-fade-in">
           {activeTab === 'overview' && dashboard && (
             <AnalyticsDashboardComponent 
@@ -211,9 +211,9 @@ export default function AnalyticsPage() {
         {/* Footer */}
         {dashboard && (
           <div className="text-center text-sm text-zinc-500 border-t border-zinc-800 pt-4">
-            Last updated: {new Date(dashboard.lastUpdated).toLocaleString()} • 
-            Confidence: {dashboard.summary.confidence}% • 
-            Sample: {dashboard.summary.sampleSize.toLocaleString()} sessions
+            Ultimo aggiornamento: {new Date(dashboard.lastUpdated).toLocaleString('it-IT')} • 
+            Confidenza: {dashboard.summary.confidence}% • 
+            Campione: {dashboard.summary.sampleSize.toLocaleString()} sessioni
           </div>
         )}
       </div>

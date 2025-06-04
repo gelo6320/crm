@@ -73,7 +73,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
     }
   };
 
-  // Prepare chart data
+  // Prepara dati grafico
   const hotspotsChartData = hotspots?.slice(0, 10).map(hotspot => ({
     name: hotspot.elementId.length > 20 ? hotspot.elementId.substring(0, 20) + '...' : hotspot.elementId,
     heatScore: hotspot.heatScore,
@@ -96,19 +96,21 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Intestazione */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white flex items-center">
           <MousePointer className="w-6 h-6 text-orange-500 mr-3" />
-          Behavioral Heatmap
+          Mappa Termica Comportamentale
         </h2>
         
         <div className="text-sm text-zinc-400 capitalize">
-          {timeframe} • {summary?.totalHotspots || 0} hotspots
+          {timeframe === 'weekly' ? 'Settimanale' : 
+           timeframe === 'monthly' ? 'Mensile' : 
+           timeframe === 'quarterly' ? 'Trimestrale' : timeframe} • {summary?.totalHotspots || 0} punti caldi
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Schede Riassuntive */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <motion.div 
           className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
@@ -119,7 +121,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <MousePointer className="w-5 h-5 text-orange-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Hotspots</span>
+              <span className="text-sm font-medium text-zinc-400">Punti Caldi</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -141,7 +143,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Scroll className="w-5 h-5 text-blue-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Avg Scroll</span>
+              <span className="text-sm font-medium text-zinc-400">Scroll Medio</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -149,7 +151,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
               {summary?.avgScrollDepth || 0}%
             </div>
             <div className="text-xs text-zinc-500">
-              average depth
+              profondità media
             </div>
           </div>
         </motion.div>
@@ -163,7 +165,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Target className="w-5 h-5 text-green-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Completion</span>
+              <span className="text-sm font-medium text-zinc-400">Completamento</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -171,7 +173,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
               {scrollBehavior?.completionRate || 0}%
             </div>
             <div className="text-xs text-zinc-500">
-              full scroll
+              scroll completo
             </div>
           </div>
         </motion.div>
@@ -185,7 +187,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Navigation className="w-5 h-5 text-purple-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Top Pattern</span>
+              <span className="text-sm font-medium text-zinc-400">Pattern Top</span>
             </div>
           </div>
           <div className="space-y-2">
@@ -193,18 +195,18 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
               {summary?.topPattern || 'N/A'}
             </div>
             <div className="text-xs text-zinc-500">
-              most frequent
+              più frequente
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* View Toggle */}
+      {/* Toggle Vista */}
       <div className="flex bg-zinc-900 rounded-xl p-1 border border-zinc-800">
         {[
-          { id: 'hotspots', label: 'Hotspots', icon: MousePointer },
+          { id: 'hotspots', label: 'Punti Caldi', icon: MousePointer },
           { id: 'scroll', label: 'Scroll', icon: Scroll },
-          { id: 'navigation', label: 'Navigation', icon: Navigation }
+          { id: 'navigation', label: 'Navigazione', icon: Navigation }
         ].map(view => {
           const Icon = view.icon;
           return (
@@ -224,7 +226,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
         })}
       </div>
 
-      {/* Content */}
+      {/* Contenuto */}
       <motion.div 
         className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
         initial={{ opacity: 0, y: 20 }}
@@ -233,9 +235,9 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
       >
         {activeView === 'hotspots' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-white">Interaction Hotspots</h3>
+            <h3 className="text-lg font-semibold text-white">Punti Caldi di Interazione</h3>
             
-            {/* Chart */}
+            {/* Grafico */}
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={hotspotsChartData} layout="horizontal">
@@ -261,7 +263,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
                     }}
                     formatter={(value: any, name: any) => [
                       value,
-                      name === 'heatScore' ? 'Heat Score' : 'Interactions'
+                      name === 'heatScore' ? 'Punteggio Calore' : 'Interazioni'
                     ]}
                   />
                   <Bar 
@@ -272,7 +274,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
               </ResponsiveContainer>
             </div>
 
-            {/* Details */}
+            {/* Dettagli */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {hotspots?.slice(0, 8).map((hotspot, index) => (
                 <div key={index} className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
@@ -290,7 +292,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
                     <div className="text-right">
                       <div className="text-sm font-medium text-orange-400">{hotspot.heatScore}</div>
                       <div className="text-xs text-zinc-500">
-                        {hotspot.interactions} int. • {hotspot.uniqueUsers} users
+                        {hotspot.interactions} int. • {hotspot.uniqueUsers} utenti
                       </div>
                     </div>
                   </div>
@@ -302,15 +304,15 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
 
         {activeView === 'scroll' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-white">Scroll Behavior</h3>
+            <h3 className="text-lg font-semibold text-white">Comportamento di Scroll</h3>
             
-            {/* Scroll Stats */}
+            {/* Statistiche Scroll */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Avg Depth', value: `${scrollBehavior?.avgDepth || 0}%`, color: 'text-white' },
-                { label: 'Completion', value: `${scrollBehavior?.completionRate || 0}%`, color: 'text-emerald-400' },
-                { label: 'Fast Scrollers', value: `${scrollBehavior?.fastScrollers || 0}%`, color: 'text-red-400' },
-                { label: 'Slow Readers', value: `${scrollBehavior?.slowReaders || 0}%`, color: 'text-blue-400' }
+                { label: 'Prof. Media', value: `${scrollBehavior?.avgDepth || 0}%`, color: 'text-white' },
+                { label: 'Completamento', value: `${scrollBehavior?.completionRate || 0}%`, color: 'text-emerald-400' },
+                { label: 'Scroll Veloce', value: `${scrollBehavior?.fastScrollers || 0}%`, color: 'text-red-400' },
+                { label: 'Lettori Lenti', value: `${scrollBehavior?.slowReaders || 0}%`, color: 'text-blue-400' }
               ].map((stat, index) => (
                 <div key={index} className="bg-zinc-800 rounded-lg p-4 text-center border border-zinc-700">
                   <div className={`text-2xl font-bold ${stat.color} mb-1`}>
@@ -321,7 +323,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
               ))}
             </div>
 
-            {/* Drop-off Chart */}
+            {/* Grafico Drop-off */}
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={scrollDepthData}>
@@ -342,7 +344,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
                       borderRadius: '8px',
                       color: '#F3F4F6'
                     }}
-                    formatter={(value: any) => [`${value}%`, 'Drop-off Rate']}
+                    formatter={(value: any) => [`${value}%`, 'Tasso di Abbandono']}
                   />
                   <Bar 
                     dataKey="dropOffRate" 
@@ -352,10 +354,10 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
               </ResponsiveContainer>
             </div>
 
-            {/* Recommendations */}
+            {/* Raccomandazioni */}
             {scrollBehavior?.recommendations && scrollBehavior.recommendations.length > 0 && (
               <div className="space-y-3">
-                <h4 className="text-base font-medium text-white">Recommendations</h4>
+                <h4 className="text-base font-medium text-white">Raccomandazioni</h4>
                 <div className="space-y-3">
                   {scrollBehavior.recommendations.map((rec, index) => (
                     <div key={index} className={`p-4 rounded-lg border ${getPriorityColor(rec.priority)}`}>
@@ -365,7 +367,8 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
                          <CheckCircle size={16} className="mr-2" />}
                         <span className="font-medium text-sm capitalize">{rec.type}</span>
                         <span className="ml-auto px-2 py-1 text-xs rounded-full bg-current/10">
-                          {rec.priority}
+                          {rec.priority === 'high' ? 'alta' : 
+                           rec.priority === 'medium' ? 'media' : 'bassa'}
                         </span>
                       </div>
                       <p className="text-sm">{rec.message}</p>
@@ -379,9 +382,9 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
 
         {activeView === 'navigation' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-white">Navigation Patterns</h3>
+            <h3 className="text-lg font-semibold text-white">Pattern di Navigazione</h3>
             
-            {/* Chart */}
+            {/* Grafico */}
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={navigationChartData}>
@@ -405,7 +408,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
                       borderRadius: '8px',
                       color: '#F3F4F6'
                     }}
-                    formatter={(value: any) => [value, 'Frequency']}
+                    formatter={(value: any) => [value, 'Frequenza']}
                     labelFormatter={(label, payload) => {
                       const data = payload?.[0]?.payload;
                       return data?.fullPattern || label;
@@ -419,9 +422,9 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
               </ResponsiveContainer>
             </div>
 
-            {/* Pattern Details */}
+            {/* Dettagli Pattern */}
             <div className="space-y-3">
-              <h4 className="text-base font-medium text-white">Pattern Details</h4>
+              <h4 className="text-base font-medium text-white">Dettagli Pattern</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {navigationPatterns?.slice(0, 6).map((pattern, index) => (
                   <div key={index} className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
@@ -451,7 +454,7 @@ export default function HeatmapVisualization({ data, isLoading, timeframe }: Hea
 
       {/* Footer */}
       <div className="text-center text-sm text-zinc-500">
-        Last updated: {data.lastUpdated ? new Date(data.lastUpdated).toLocaleString() : 'N/A'}
+        Ultimo aggiornamento: {data.lastUpdated ? new Date(data.lastUpdated).toLocaleString('it-IT') : 'N/A'}
       </div>
     </div>
   );

@@ -40,7 +40,7 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
     return (
       <div className="text-center py-12 text-zinc-500">
         <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <p>No dashboard data available</p>
+        <p>Nessun dato dashboard disponibile</p>
       </div>
     );
   }
@@ -93,9 +93,9 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
 
   return (
     <div className="space-y-8">
-      {/* Main Metrics */}
+      {/* Metriche Principali */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Engagement Score */}
+        {/* Punteggio Coinvolgimento */}
         <motion.div 
           className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 hover:border-zinc-700 transition-all"
           initial={{ opacity: 0, y: 20 }}
@@ -105,7 +105,7 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Activity className="w-5 h-5 text-orange-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Engagement</span>
+              <span className="text-sm font-medium text-zinc-400">Coinvolgimento</span>
             </div>
           </div>
           
@@ -117,7 +117,7 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           </div>
         </motion.div>
 
-        {/* Confidence */}
+        {/* Confidenza */}
         <motion.div 
           className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 hover:border-zinc-700 transition-all"
           initial={{ opacity: 0, y: 20 }}
@@ -127,7 +127,7 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Target className="w-5 h-5 text-blue-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Confidence</span>
+              <span className="text-sm font-medium text-zinc-400">Confidenza</span>
             </div>
           </div>
           
@@ -139,7 +139,7 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           </div>
         </motion.div>
 
-        {/* Sample Size */}
+        {/* Dimensione Campione */}
         <motion.div 
           className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 hover:border-zinc-700 transition-all"
           initial={{ opacity: 0, y: 20 }}
@@ -149,7 +149,7 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Users className="w-5 h-5 text-green-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Sessions</span>
+              <span className="text-sm font-medium text-zinc-400">Sessioni</span>
             </div>
           </div>
           
@@ -173,7 +173,7 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           </div>
         </motion.div>
 
-        {/* Peak Hour */}
+        {/* Ora di Punta */}
         <motion.div 
           className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 hover:border-zinc-700 transition-all"
           initial={{ opacity: 0, y: 20 }}
@@ -183,7 +183,7 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Clock className="w-5 h-5 text-purple-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Peak Hour</span>
+              <span className="text-sm font-medium text-zinc-400">Ora di Punta</span>
             </div>
           </div>
           
@@ -198,7 +198,7 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
         </motion.div>
       </div>
 
-      {/* Insights */}
+      {/* Insight */}
       {insights && insights.length > 0 && (
         <motion.div 
           className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
@@ -207,9 +207,9 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           transition={{ delay: 0.5 }}
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-white">Key Insights</h3>
+            <h3 className="text-lg font-semibold text-white">Insight Principali</h3>
             <span className="text-sm text-zinc-400">
-              {insights.length} insights
+              {insights.length} insight
             </span>
           </div>
 
@@ -237,7 +237,8 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
                         insight.priority === 'medium' ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-800' :
                         'bg-green-900/30 text-green-400 border border-green-800'
                       }`}>
-                        {insight.priority}
+                        {insight.priority === 'high' ? 'alta' : 
+                         insight.priority === 'medium' ? 'media' : 'bassa'}
                       </span>
                     </div>
                     
@@ -253,7 +254,7 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
                     
                     {insight.value !== undefined && (
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="text-xs text-zinc-500">Value:</span>
+                        <span className="text-xs text-zinc-500">Valore:</span>
                         <div className="flex items-center">
                           <span className="text-sm font-medium text-orange-400">
                             {insight.value}
@@ -275,29 +276,29 @@ export default function AnalyticsDashboardComponent({ dashboard, isLoading }: An
           {insights.length > 8 && (
             <div className="text-center mt-4">
               <span className="text-sm text-zinc-500">
-                ... and {insights.length - 8} more insights
+                ... e altri {insights.length - 8} insight
               </span>
             </div>
           )}
         </motion.div>
       )}
 
-      {/* Period Info */}
+      {/* Informazioni Periodo */}
       <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <span className="text-zinc-500">Period:</span>
+            <span className="text-zinc-500">Periodo:</span>
             <div className="font-medium text-white">{dashboard.currentPeriod?.period || 'N/A'}</div>
             <div className="text-xs text-zinc-500">{dashboard.currentPeriod?.periodKey || 'N/A'}</div>
           </div>
           
           <div>
-            <span className="text-zinc-500">Top Source:</span>
+            <span className="text-zinc-500">Fonte Principale:</span>
             <div className="font-medium text-white">{summary?.topSource || 'N/A'}</div>
           </div>
           
           <div>
-            <span className="text-zinc-500">Last Updated:</span>
+            <span className="text-zinc-500">Ultimo Aggiornamento:</span>
             <div className="font-medium text-white">
               {dashboard.lastUpdated ? new Date(dashboard.lastUpdated).toLocaleString() : 'N/A'}
             </div>
