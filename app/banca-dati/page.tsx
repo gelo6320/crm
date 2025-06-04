@@ -149,9 +149,67 @@ export default function BancaDatiPage() {
   const [visitsPagination, setVisitsPagination] = useState({ page: 1, total: 0, pages: 1 });
   const [clientsPagination, setClientsPagination] = useState({ page: 1, total: 0, pages: 1 });
   const [audiencesPagination, setAudiencesPagination] = useState({ page: 1, total: 0, pages: 1 });
-  
-  // Stato per il caricamento
+
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const itemId = params.get('id');
+    
+    if (itemId && !isLoading) {
+      // Cerca l'item in tutte le tabs
+      let foundTab: ActiveTab | null = null;
+      let foundItem = false;
+      
+      // Cerca nelle visite
+      if (visits.find(v => v._id === itemId)) {
+        foundTab = "visits";
+        foundItem = true;
+      }
+      // Cerca nei clienti
+      else if (clients.find(c => c._id === itemId)) {
+        foundTab = "clients";
+        foundItem = true;
+      }
+      // Cerca nelle audiences
+      else if (audiences.find(a => a._id === itemId)) {
+        foundTab = "audiences";
+        foundItem = true;
+      }
+      
+      if (foundTab && foundItem) {
+        // Cambia tab se necessario
+        if (activeTab !== foundTab) {
+          setActiveTab(foundTab);
+        }
+        
+        // Evidenzia l'elemento
+        setHighlightedItemId(itemId);
+        
+        setTimeout(() => {
+          const element = document.getElementById(`banca-item-${itemId}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('bg-primary/10', 'ring-2', 'ring-primary');
+            
+            setTimeout(() => {
+              element.classList.remove('bg-primary/10', 'ring-2', 'ring-primary');
+              setHighlightedItemId(null);
+            }, 3000);
+          }
+        }, 500);
+        
+        // Pulisci URL
+        if (window.history.replaceState) {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('id');
+          window.history.replaceState({}, document.title, url.toString());
+        }
+      }
+    }
+  }, [visits, clients, audiences, activeTab, isLoading]);
   
   // Stato per la ricerca
   const [searchQuery, setSearchQuery] = useState("");

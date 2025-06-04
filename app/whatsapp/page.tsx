@@ -343,6 +343,40 @@ const WhatsAppChats: React.FC = () => {
     }
   }, [config, statusFilter]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const conversationId = params.get('id');
+    
+    if (conversationId && conversations.length > 0) {
+      const selectedConv = conversations.find(c => c.conversationId === conversationId);
+      
+      if (selectedConv) {
+        // Seleziona automaticamente la conversazione
+        fetchConversationDetails(conversationId);
+        
+        // Evidenzia temporaneamente la conversazione nella lista
+        setTimeout(() => {
+          const element = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('bg-primary/10', 'ring-2', 'ring-primary');
+            
+            setTimeout(() => {
+              element.classList.remove('bg-primary/10', 'ring-2', 'ring-primary');
+            }, 3000);
+          }
+        }, 500);
+        
+        // Pulisci l'URL
+        if (window.history.replaceState) {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('id');
+          window.history.replaceState({}, document.title, url.toString());
+        }
+      }
+    }
+  }, [conversations]);
+
   const fetchBotStatesForVisibleConversations = async (): Promise<void> => {
     // Evita richieste troppo frequenti
     const now = Date.now();

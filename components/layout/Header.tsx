@@ -284,6 +284,8 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   const getResultIcon = (result: SearchResult) => {
     if (result.section === "Contatti") {
       return <User size={12} className="text-primary" />;
+    } else if (result.section === "Sales Funnel") {
+      return <TrendingUp size={12} className="text-orange-500" />;
     } else if (result.section === "Calendario") {
       return <CalendarIcon size={12} className="text-blue-400" />;
     } else if (result.section === "Progetti") {
@@ -306,6 +308,8 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   const getSecondaryInfo = (result: SearchResult) => {
     if (result.section === "Contatti") {
       return result.email || result.phone || '';
+    } else if (result.section === "Sales Funnel") {
+      return `${result.email || result.phone || ''} • ${result.status || 'new'}`;
     } else if (result.section === "Calendario" && result.start) {
       return `${new Date(result.start).toLocaleDateString('it-IT')} ${new Date(result.start).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
     } else if (result.section === "Progetti" && result.client) {
@@ -527,7 +531,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
                 }
               }}
               className="bg-zinc-900 border border-zinc-700 text-white text-xs rounded-full w-full py-1.5 pl-8 pr-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              placeholder="Cerca contatti, eventi, progetti, chat..."
+              placeholder="Cerca in tutto il CRM..."
             />
             
             {searchQuery && (
