@@ -307,6 +307,18 @@ export default function Dashboard() {
           >
             {getGreeting()}, <span className="font-semibold text-primary">{userData.name}</span>!
           </motion.h1>
+          
+          {/* Sottotitolo profilo aziendale */}
+          {userData.company && userData.company.trim() !== '' && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+              className="text-sm text-zinc-400 font-montserrat font-medium mt-2"
+            >
+              Profilo di {userData.company}
+            </motion.p>
+          )}
         </motion.div>
 
         {/* Main Content */}
