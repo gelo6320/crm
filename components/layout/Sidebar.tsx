@@ -151,6 +151,14 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
   
     return (
       <>
+        {/* Mobile overlay */}
+        {isMobile && open && (
+          <div 
+            className="fixed inset-0 bg-black/60 z-30"
+            onClick={() => setOpen(false)}
+          />
+        )}
+        
         {/* Sidebar */}
         <div 
           className={`

@@ -123,7 +123,7 @@ export default function RootLayout({
               <Header setSidebarOpen={setSidebarOpen} />
               
               {/* Main container below header */}
-              <div className="flex flex-1 overflow-hidden pt-[1px] relative">
+              <div className="flex flex-1 overflow-hidden relative">
                 {/* Sidebar with hover detection */}
                 <div
                   onMouseEnter={() => !isMobile && setSidebarHovered(true)}
@@ -149,14 +149,6 @@ export default function RootLayout({
                     {children}
                   </div>
                 </main>
-
-                {/* Optional: Content overlay for mobile when sidebar is open */}
-                {isMobile && sidebarOpen && (
-                  <div 
-                    className="absolute inset-0 bg-black/20 z-20 pointer-events-none"
-                    style={{ left: '256px' }} // Width of expanded sidebar
-                  />
-                )}
               </div>
             </div>
           )}
