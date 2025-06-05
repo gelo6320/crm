@@ -279,52 +279,62 @@ export default function ContactsPage() {
         
         console.log('Element found:', element);
         if (element) {
-          // Controlla se l'elemento è in viewport
-          const rect = element.getBoundingClientRect();
-          const isInViewport = (
-            rect.top >= 0 &&
-            rect.left >= 0 &&
-            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-          );
-          
-          console.log('Element position:', {
-            top: rect.top,
-            bottom: rect.bottom,
-            isInViewport: isInViewport,
-            windowHeight: window.innerHeight
-          });
-          
-          // Se l'elemento non è in viewport, forza lo scroll
-          if (!isInViewport) {
-            console.log('Element not in viewport, scrolling...');
+          // Funzione per controllare se l'elemento è effettivamente renderizzato
+          const waitForElementToBeVisible = (maxAttempts = 10) => {
+            let attempts = 0;
             
-            // Prova due metodi di scroll per essere sicuri
-            element.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center',
-              inline: 'nearest'
-            });
-            
-            // Fallback con scroll alternativo dopo un momento
-            setTimeout(() => {
-              const newRect = element.getBoundingClientRect();
-              if (newRect.top < 0 || newRect.bottom > window.innerHeight) {
-                console.log('First scroll failed, trying alternative method');
-                const elementTop = element.offsetTop;
-                const elementHeight = element.offsetHeight;
-                const windowHeight = window.innerHeight;
-                const scrollTop = elementTop - (windowHeight / 2) + (elementHeight / 2);
+            const checkVisibility = () => {
+              const rect = element.getBoundingClientRect();
+              const isVisible = rect.width > 0 && rect.height > 0;
+              
+              console.log(`Attempt ${attempts + 1}: Element rect:`, {
+                width: rect.width,
+                height: rect.height,
+                top: rect.top,
+                bottom: rect.bottom,
+                isVisible: isVisible
+              });
+              
+              if (isVisible) {
+                // Elemento è visibile, ora controlla se è in viewport
+                const isInViewport = (
+                  rect.top >= 0 &&
+                  rect.left >= 0 &&
+                  rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                  rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+                );
                 
-                window.scrollTo({
-                  top: scrollTop,
-                  behavior: 'smooth'
-                });
+                console.log('Element is visible. Is in viewport?', isInViewport);
+                
+                // Se non è in viewport, fai scroll
+                if (!isInViewport) {
+                  console.log('Scrolling to element...');
+                  element.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center',
+                    inline: 'nearest'
+                  });
+                } else {
+                  console.log('Element already in viewport');
+                }
+                
+                return true; // Elemento visibile, stop checking
+              } else if (attempts < maxAttempts) {
+                // Elemento non ancora visibile, riprova
+                attempts++;
+                setTimeout(checkVisibility, 50);
+                return false;
+              } else {
+                console.log('Element never became visible after', maxAttempts, 'attempts');
+                return true; // Stop checking dopo max attempts
               }
-            }, 100);
-          } else {
-            console.log('Element already in viewport');
-          }
+            };
+            
+            return checkVisibility();
+          };
+          
+          // Avvia il controllo di visibilità
+          waitForElementToBeVisible();
           
           // Remove the highlight after 800ms e apri la modale
           setTimeout(() => {
