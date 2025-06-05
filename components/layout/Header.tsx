@@ -379,7 +379,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   };
   
   return (
-    <header className="bg-black/50 backdrop-blur-sm sticky top-0 z-50 w-full shadow-lg">
+    <header className="bg-black/70 backdrop-blur-sm sticky top-0 z-50 w-full shadow-lg">
       <div className="flex items-center justify-between px-4 py-2.5">
         {/* Left section with logo and title */}
         <div className="flex items-center space-x-4 z-10">
@@ -517,7 +517,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
               {isSearching ? (
                 <Loader2 size={16} className="text-zinc-300 animate-spin" />
               ) : (
-                <Search size={16} className="text-zinc-300" />
+                <Search size={16} className="text-primary" />
               )}
             </div>
             <input
@@ -551,7 +551,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
           
           {/* Search results dropdown */}
           {showSearchResults && (
-            <div className="absolute z-50 mt-1 w-full bg-zinc-800/95 backdrop-blur-sm rounded-md shadow-lg max-h-80 overflow-auto">
+            <div className="absolute z-50 mt-1 w-full bg-zinc-800/97 backdrop-blur-sm rounded-md shadow-lg max-h-80 overflow-auto">
               {searchResults.length === 0 ? (
                 <div className="py-3 px-4 text-sm text-zinc-400">
                   {isSearching ? (
