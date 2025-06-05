@@ -110,7 +110,7 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
   const renderCreative = () => {
     return (
       <motion.div 
-        className="bg-zinc-800 rounded-lg overflow-hidden h-full"
+        className="bg-zinc-800 rounded-lg overflow-hidden h-full w-full"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
@@ -123,7 +123,7 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
           <div className="text-xs truncate max-w-32">{ad.name}</div>
         </div>
         
-        <div className={`${layout === 'mobile' ? 'p-3' : 'p-4'}`}>
+        <div className={`${layout === 'mobile' ? 'p-3' : 'p-4'} w-full`}>
           {isLoading ? (
             <div className="h-80 flex items-center justify-center">
               <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
@@ -136,10 +136,10 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
               </div>
             </div>
           ) : creative ? (
-            <div className="space-y-4">
+            <div className="space-y-4 w-full">
               {/* Immagine o Video */}
               {creative.image_url && (
-                <div className={`${
+                <div className={`w-full ${
                   layout === 'mobile' 
                     ? 'space-y-4' 
                     : 'flex gap-4 items-start'
@@ -172,7 +172,7 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
                   </div>
                   
                   {/* Contenuto testuale - A destra su desktop, sotto su mobile */}
-                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3'}`}>
+                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3 min-w-0'}`}>
                     {creative.title && (
                       <div>
                         <h3 className={`font-semibold text-white mb-1 ${
@@ -235,7 +235,7 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
               
               {/* Se c'è solo video_id senza image_url, mostra un placeholder */}
               {!creative.image_url && creative.video_id && (
-                <div className={`${
+                <div className={`w-full ${
                   layout === 'mobile' 
                     ? 'space-y-4' 
                     : 'flex gap-4 items-start'
@@ -254,7 +254,7 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
                   </div>
                   
                   {/* Contenuto testuale per video */}
-                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3'}`}>
+                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3 min-w-0'}`}>
                     {creative.title && (
                       <div>
                         <h3 className={`font-semibold text-white mb-1 ${
@@ -280,7 +280,7 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
               
               {/* Se c'è solo thumbnail_url, usalo come fallback */}
               {!creative.image_url && !creative.video_id && creative.thumbnail_url && (
-                <div className={`${
+                <div className={`w-full ${
                   layout === 'mobile' 
                     ? 'space-y-4' 
                     : 'flex gap-4 items-start'
@@ -305,7 +305,7 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
                   </div>
                   
                   {/* Contenuto testuale per thumbnail */}
-                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3'}`}>
+                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3 min-w-0'}`}>
                     {creative.title && (
                       <div>
                         <h3 className={`font-semibold text-white mb-1 ${
@@ -331,7 +331,7 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
               
               {/* Solo contenuto testuale se non ci sono media */}
               {!creative.image_url && !creative.video_id && !creative.thumbnail_url && (
-                <div className="space-y-3">
+                <div className="space-y-3 w-full">
                   {creative.title && (
                     <div>
                       <h3 className={`font-semibold text-white mb-1 ${
@@ -478,15 +478,15 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
         <div className="text-sm text-zinc-400">ID: {ad.id}</div>
       </motion.div>
       
-      {/* Layout responsive: su desktop side-by-side, su mobile stack */}
+      {/* Layout responsive: su desktop side-by-side con full width, su mobile stack */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Griglia delle metriche */}
         <div className="order-2 lg:order-1">
           {renderStats()}
         </div>
         
-        {/* Creative inserzione */}
-        <div className="order-1 lg:order-2">
+        {/* Creative inserzione - full width disponibile */}
+        <div className="order-1 lg:order-2 w-full">
           {renderCreative()}
         </div>
       </div>
