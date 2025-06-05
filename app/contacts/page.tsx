@@ -226,7 +226,6 @@ export default function ContactsPage() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [highlightedContactId, setHighlightedContactId] = useState<string | null>(null);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-  const [isFilterDropdownClosing, setIsFilterDropdownClosing] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -234,7 +233,7 @@ export default function ContactsPage() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
-        handleFilterDropdownClose();
+        setIsFilterDropdownOpen(false);
       }
     };
     
@@ -243,15 +242,6 @@ export default function ContactsPage() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  // Funzione per gestire la chiusura graduale del dropdown
-  const handleFilterDropdownClose = () => {
-    setIsFilterDropdownClosing(true);
-    setTimeout(() => {
-      setIsFilterDropdownOpen(false);
-      setIsFilterDropdownClosing(false);
-    }, 200);
-  };
 
   // Carica i contatti all'avvio e quando cambiano i filtri
   useEffect(() => {
@@ -418,23 +408,15 @@ export default function ContactsPage() {
         <div className="px-4 py-4 sm:px-6">
           <div className="relative" ref={filterDropdownRef}>
             <button
-              onClick={() => {
-                if (isFilterDropdownOpen) {
-                  handleFilterDropdownClose();
-                } else {
-                  setIsFilterDropdownOpen(true);
-                }
-              }}
+              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
               className="w-full sm:w-auto bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-left flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
             >
               <span className="text-sm font-medium text-zinc-900 dark:text-white">{getActiveFilterLabel()}</span>
               <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             
-            {(isFilterDropdownOpen || isFilterDropdownClosing) && (
-              <div className={`absolute top-full left-0 right-0 sm:right-auto sm:w-64 mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-20 transition-all duration-200 origin-top ${
-                isFilterDropdownClosing ? 'opacity-0 scale-y-95' : 'opacity-100 scale-y-100'
-              }`}>
+            {isFilterDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 sm:right-auto sm:w-64 mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-20 animate-fade-in">
                 <div className="p-2">
                   {statusFilters.map((filter) => (
                     <button
@@ -442,7 +424,7 @@ export default function ContactsPage() {
                       onClick={() => {
                         setSelectedStatus(filter.key);
                         setCurrentPage(1);
-                        handleFilterDropdownClose();
+                        setIsFilterDropdownOpen(false);
                       }}
                       className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         selectedStatus === filter.key
