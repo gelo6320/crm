@@ -1,8 +1,8 @@
 // app/contacts/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { Users, Phone, MessageCircle, Globe } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Users, Phone, MessageCircle, Globe, ChevronDown } from "lucide-react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 import { useRouter } from "next/navigation";
@@ -55,6 +55,15 @@ function formatSource(source: string, formType: string): string {
 
 // Componente modale per i dettagli di un contatto
 function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+    }, 300);
+  };
+
   const handleCall = () => {
     if (contact.phone) {
       window.location.href = `tel:${contact.phone}`;
@@ -76,27 +85,27 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        handleClose();
       }
     };
     
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [onClose]);
+  }, []);
 
   const message = contact.extendedData?.formData?.message || contact.message || "";
   const service = contact.service || contact.extendedData?.formData?.service || "";
   const value = contact.value !== undefined ? contact.value : (contact.extendedData?.value || 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in">
-      <div className="absolute inset-0" onClick={onClose}></div>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`}>
+      <div className="absolute inset-0" onClick={handleClose}></div>
       
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg mx-6 z-10 animate-scale-in overflow-hidden">
+      <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg mx-6 z-10 overflow-hidden transition-all duration-300 ${isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
           <h3 className="text-xl font-semibold text-zinc-900 dark:text-white">Dettagli contatto</h3>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -137,7 +146,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
           <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1">
               <p className="text-sm font-medium text-zinc-500">Email</p>
-              <p className="text-blue-600 dark:text-blue-400">{contact.email}</p>
+              <p className="text-primary">{contact.email}</p>
             </div>
             
             <div className="space-y-1">
@@ -205,16 +214,32 @@ export default function ContactsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [sourceFilter, setSourceFilter] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [highlightedContactId, setHighlightedContactId] = useState<string | null>(null);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Gestisci il click fuori dal dropdown per chiuderlo
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setIsFilterDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Carica i contatti all'avvio e quando cambiano i filtri
   useEffect(() => {
     loadContacts();
-  }, [currentPage, selectedStatus, sourceFilter]);
+  }, [currentPage, selectedStatus]);
 
+  // Gestisci l'highlight del contatto dalla URL
   useEffect(() => {
     if (!isLoading && contacts.length > 0) {
       const params = new URLSearchParams(window.location.search);
@@ -233,6 +258,29 @@ export default function ContactsPage() {
             url.searchParams.delete('id');
             window.history.replaceState({}, document.title, url.toString());
           }
+        } else {
+          // Set highlighted contact ID se il contatto è nella lista
+          setHighlightedContactId(contactId);
+          
+          // Schedule a scroll to the element
+          setTimeout(() => {
+            const element = document.getElementById(`contact-${contactId}`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              
+              // Remove the highlight after 3 seconds
+              setTimeout(() => {
+                setHighlightedContactId(null);
+                
+                // Clear the URL parameter
+                if (window.history.replaceState) {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete('id');
+                  window.history.replaceState({}, document.title, url.toString());
+                }
+              }, 3000);
+            }
+          }, 300);
         }
       }
     }
@@ -246,7 +294,6 @@ export default function ContactsPage() {
       const queryParams = new URLSearchParams();
       queryParams.append('page', currentPage.toString());
       if (selectedStatus) queryParams.append('status', selectedStatus);
-      if (sourceFilter) queryParams.append('source', sourceFilter);
       
       const response = await fetch(`${API_BASE_URL}/api/leads?${queryParams.toString()}`, {
         credentials: 'include'
@@ -313,6 +360,22 @@ export default function ContactsPage() {
     }
   };
 
+  // Ottiene l'etichetta del filtro attivo
+  const getActiveFilterLabel = () => {
+    if (selectedStatus) {
+      switch(selectedStatus) {
+        case "new": return "Nuovi";
+        case "contacted": return "Contattati";
+        case "qualified": return "Qualificati";
+        case "opportunity": return "Opportunità";
+        case "customer": return "Clienti";
+        case "lost": return "Persi";
+        default: return selectedStatus;
+      }
+    }
+    return "Tutti gli stati";
+  };
+
   // Definizioni dei filtri
   const statusFilters = [
     { key: "", label: "Tutti" },
@@ -330,52 +393,56 @@ export default function ContactsPage() {
   
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2">Contatti</h1>
-          <p className="text-zinc-600 dark:text-zinc-400">Gestisci i tuoi lead e contatti</p>
-        </div>
-
-        {/* Filtri semplificati */}
-        <div className="mb-6">
-          {/* Filtri stato */}
-          <div>
-            <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Stato</h3>
-            <div className="flex flex-wrap gap-1.5">
-              {statusFilters.map((filter) => (
-                <button
-                  key={filter.key}
-                  onClick={() => {
-                    setSelectedStatus(filter.key);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    selectedStatus === filter.key
-                      ? 'bg-primary text-white'
-                      : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
+      <div className="w-full">
+        {/* Dropdown filtro stato mobile-first */}
+        <div className="px-4 py-4 sm:px-6">
+          <div className="relative" ref={filterDropdownRef}>
+            <button
+              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+              className="w-full sm:w-auto bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-left flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+            >
+              <span className="text-sm font-medium text-zinc-900 dark:text-white">{getActiveFilterLabel()}</span>
+              <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isFilterDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 sm:right-auto sm:w-64 mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-20 animate-fade-in">
+                <div className="p-2">
+                  {statusFilters.map((filter) => (
+                    <button
+                      key={filter.key}
+                      onClick={() => {
+                        setSelectedStatus(filter.key);
+                        setCurrentPage(1);
+                        setIsFilterDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+                        selectedStatus === filter.key
+                          ? 'bg-primary text-white'
+                          : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-        
-        {/* Lista contatti */}
-        <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+
+        {/* Lista contatti - Mobile ottimizzato */}
+        <div className="w-full">
           {contacts.length === 0 ? (
             <div className="p-12 text-center text-zinc-500">
-              {sourceFilter || selectedStatus ? (
+              {selectedStatus ? (
                 <div className="space-y-4">
                   <p>Nessun contatto trovato con i filtri selezionati.</p>
                   <button 
                     onClick={() => {
-                      setSourceFilter("");
                       setSelectedStatus("");
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                    className="bg-primary hover:bg-primary-hover text-white font-medium py-2 px-4 rounded-lg transition-colors"
                   >
                     Cancella filtri
                   </button>
@@ -385,43 +452,84 @@ export default function ContactsPage() {
               )}
             </div>
           ) : (
-            <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
-              {contacts.map((contact) => (
-                <div 
-                  key={contact._id} 
-                  className="p-6 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer"
-                  onClick={() => handleContactClick(contact)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      {getSourceIcon(contact)}
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-lg font-semibold text-zinc-900 dark:text-white truncate">
-                          {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
-                        </h3>
-                        <div className="mt-1 space-y-1">
-                          <p className="text-sm text-blue-600 dark:text-blue-400">{contact.email}</p>
-                          <p className="text-sm text-zinc-500">{contact.phone}</p>
+            <>
+              {/* Mobile: Lista a card */}
+              <div className="sm:hidden">
+                <div className="space-y-2 px-4">
+                  {contacts.map((contact) => (
+                    <div 
+                      key={contact._id} 
+                      id={`contact-${contact._id}`}
+                      className={`bg-white dark:bg-zinc-800 rounded-lg p-4 transition-all duration-300 ${
+                        highlightedContactId === contact._id ? 'bg-primary/10 dark:bg-primary/10' : ''
+                      }`}
+                      onClick={() => handleContactClick(contact)}
+                    >
+                      <div className="flex items-start space-x-3">
+                        {getSourceIcon(contact)}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-zinc-900 dark:text-white truncate">
+                            {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
+                          </h3>
+                          <p className="text-sm text-primary mt-1">{contact.email}</p>
+                          <p className="text-sm text-zinc-500 mt-1">{contact.phone}</p>
+                          <div className="flex items-center justify-between mt-3">
+                            <p className="text-xs text-zinc-400">{formatDate(contact.createdAt)}</p>
+                            <StatusBadge status={contact.status} />
+                          </div>
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <p className="text-sm text-zinc-500">{formatSource(contact.source, contact.formType)}</p>
-                        <p className="text-sm text-zinc-400">{formatDate(contact.createdAt)}</p>
+                  ))}
+                </div>
+              </div>
+
+              {/* Desktop: Tabella scorrevole */}
+              <div className="hidden sm:block overflow-x-auto">
+                <div className="min-w-full bg-white dark:bg-zinc-800">
+                  <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
+                    {contacts.map((contact) => (
+                      <div 
+                        key={contact._id} 
+                        id={`contact-${contact._id}`}
+                        className={`p-6 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-all duration-300 cursor-pointer ${
+                          highlightedContactId === contact._id ? 'bg-primary/10 dark:bg-primary/10' : ''
+                        }`}
+                        onClick={() => handleContactClick(contact)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            {getSourceIcon(contact)}
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white truncate">
+                                {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
+                              </h3>
+                              <div className="mt-1 space-y-1">
+                                <p className="text-sm text-primary">{contact.email}</p>
+                                <p className="text-sm text-zinc-500">{contact.phone}</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center space-x-4">
+                            <div className="text-right">
+                              <p className="text-sm text-zinc-500">{formatSource(contact.source, contact.formType)}</p>
+                              <p className="text-sm text-zinc-400">{formatDate(contact.createdAt)}</p>
+                            </div>
+                            <StatusBadge status={contact.status} />
+                          </div>
+                        </div>
                       </div>
-                      <StatusBadge status={contact.status} />
-                    </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            </>
           )}
           
           {/* Paginazione */}
           {contacts.length > 0 && totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-700">
+            <div className="px-4 sm:px-6 py-4">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
