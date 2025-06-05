@@ -379,7 +379,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   };
   
   return (
-    <header className="bg-black/90 backdrop-blur-md sticky top-0 z-[60] w-full shadow-lg">
+    <header className="bg-black backdrop-blur-md sticky top-0 z-[60] w-full shadow-lg">
       <div className="relative flex items-center px-4 py-2.5">
         {/* Left section with logo and title */}
         <div className="flex items-center space-x-4 z-10">
