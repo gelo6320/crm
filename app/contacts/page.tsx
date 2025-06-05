@@ -56,6 +56,15 @@ function formatSource(source: string, formType: string): string {
 // Componente modale per i dettagli di un contatto
 function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
+  const [isOpening, setIsOpening] = useState(true);
+
+  // Gestisci l'animazione di apertura
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsOpening(false);
+    }, 10);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -98,10 +107,10 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const value = contact.value !== undefined ? contact.value : (contact.extendedData?.value || 0);
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-opacity duration-300 ${isClosing || isOpening ? 'opacity-0' : 'opacity-100'}`}>
       <div className="absolute inset-0" onClick={handleClose}></div>
       
-      <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg mx-6 z-10 overflow-hidden transition-all duration-300 ${isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
+      <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-lg w-full max-w-lg mx-6 z-10 overflow-hidden transition-all duration-300 ${isClosing || isOpening ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
           <h3 className="text-xl font-semibold text-zinc-900 dark:text-white">Dettagli contatto</h3>
           <button
@@ -485,8 +494,8 @@ export default function ContactsPage() {
               </div>
 
               {/* Desktop: Tabella scorrevole */}
-              <div className="hidden sm:block overflow-x-auto">
-                <div className="min-w-full bg-white dark:bg-zinc-800">
+              <div className="hidden sm:block overflow-x-auto mx-4 sm:mx-6">
+                <div className="min-w-full bg-white dark:bg-zinc-800 rounded-xl shadow-sm">
                   <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
                     {contacts.map((contact) => (
                       <div 
