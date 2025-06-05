@@ -511,7 +511,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
         </div>
         
         {/* Center section with enhanced search */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-lg px-3" ref={searchRef}>
+        <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-lg px-3 z-20" ref={searchRef}>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
               {isSearching ? (
