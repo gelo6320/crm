@@ -48,6 +48,16 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
     return value.toLocaleString('it-IT');
   };
 
+  // Funzione per aprire il video di Facebook
+  const openFacebookVideo = (videoId: string, linkUrl?: string) => {
+    if (linkUrl) {
+      window.open(linkUrl, '_blank', 'noopener,noreferrer');
+    } else if (videoId) {
+      const facebookVideoUrl = `https://www.facebook.com/watch/?v=${videoId}`;
+      window.open(facebookVideoUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   // Metriche da visualizzare
   const metrics = [
     { icon: DollarSign, label: 'Spesa', value: formatCurrency(ad.spend) },
@@ -106,232 +116,74 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
     );
   };
 
-  // Renderizza il creative dell'inserzione (invece dell'anteprima HTML)
+  // Renderizza il creative dell'inserzione (senza container)
   const renderCreative = () => {
     return (
       <motion.div 
-        className="bg-zinc-800 rounded-lg overflow-hidden h-full w-full"
+        className={`${layout === 'mobile' ? 'p-3' : 'p-4'} w-full`}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="bg-zinc-700/30 text-xs text-zinc-400 font-medium p-3 border-b border-zinc-700/50 flex items-center justify-between">
-          <div className="flex items-center">
-            <FileBarChart size={16} className="mr-2 text-primary" />
-            CREATIVE INSERZIONE
+        {isLoading ? (
+          <div className="h-80 flex items-center justify-center">
+            <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
           </div>
-          <div className="text-xs truncate max-w-32">{ad.name}</div>
-        </div>
-        
-        <div className={`${layout === 'mobile' ? 'p-3' : 'p-4'} w-full`}>
-          {isLoading ? (
-            <div className="h-80 flex items-center justify-center">
-              <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
+        ) : error ? (
+          <div className="h-80 flex items-center justify-center">
+            <div className="text-center text-red-400">
+              <FileBarChart size={48} className="mx-auto mb-4 opacity-50" />
+              <p className="text-sm">{error}</p>
             </div>
-          ) : error ? (
-            <div className="h-80 flex items-center justify-center">
-              <div className="text-center text-red-400">
-                <FileBarChart size={48} className="mx-auto mb-4 opacity-50" />
-                <p className="text-sm">{error}</p>
-              </div>
-            </div>
-          ) : creative ? (
-            <div className="space-y-4 w-full">
-              {/* Immagine o Video */}
-              {creative.image_url && (
-                <div className={`w-full ${
+          </div>
+        ) : creative ? (
+          <div className="space-y-4 w-full">
+            {/* Immagine o Video */}
+            {creative.image_url && (
+              <div className={`w-full ${
+                layout === 'mobile' 
+                  ? 'space-y-4' 
+                  : 'flex gap-4 items-start'
+              }`}>
+                {/* Container Immagine/Video */}
+                <div className={`relative rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 ${
                   layout === 'mobile' 
-                    ? 'space-y-4' 
-                    : 'flex gap-4 items-start'
+                    ? 'w-full' 
+                    : 'w-full max-w-md'
                 }`}>
-                  {/* Container Immagine */}
-                  <div className={`relative rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 ${
-                    layout === 'mobile' 
-                      ? 'w-full' 
-                      : 'w-80'
-                  }`}>
-                    <img 
-                      src={creative.image_url} 
-                      alt={creative.title || 'Creative dell\'inserzione'}
-                      className={`w-full h-auto object-contain ${
-                        layout === 'mobile' 
-                          ? '' 
-                          : 'max-h-60'
-                      }`}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
+                  <img 
+                    src={creative.image_url} 
+                    alt={creative.title || 'Creative dell\'inserzione'}
+                    className={`w-full h-auto object-contain ${
+                      layout === 'mobile' 
+                        ? '' 
+                        : 'max-h-80'
+                    }`}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  {creative.video_id && (
+                    <div 
+                      className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 cursor-pointer hover:bg-opacity-40 transition-all duration-200"
+                      onClick={() => openFacebookVideo(creative.video_id!, creative.link_url)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          openFacebookVideo(creative.video_id!, creative.link_url);
+                        }
                       }}
-                    />
-                    {creative.video_id && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-                        <div className="bg-white bg-opacity-20 rounded-full p-3">
-                          <Play size={24} className="text-white ml-1" />
-                        </div>
+                    >
+                      <div className="bg-white bg-opacity-20 rounded-full p-4 hover:bg-opacity-30 transition-all duration-200">
+                        <Play size={32} className="text-white ml-1" />
                       </div>
-                    )}
-                  </div>
-                  
-                  {/* Contenuto testuale - A destra su desktop, sotto su mobile */}
-                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3 min-w-0'}`}>
-                    {creative.title && (
-                      <div>
-                        <h3 className={`font-semibold text-white mb-1 ${
-                          layout === 'mobile' ? 'text-lg' : 'text-xl'
-                        }`}>
-                          {creative.title}
-                        </h3>
-                      </div>
-                    )}
-                    
-                    {creative.body && (
-                      <div>
-                        <p className={`text-zinc-300 leading-relaxed ${
-                          layout === 'mobile' ? 'text-sm' : 'text-sm'
-                        }`}>
-                          {creative.body}
-                        </p>
-                      </div>
-                    )}
-                    
-                    {creative.link_description && (
-                      <div>
-                        <p className={`text-zinc-400 ${
-                          layout === 'mobile' ? 'text-xs' : 'text-xs'
-                        }`}>
-                          {creative.link_description}
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Call to Action e Link */}
-                    {(creative.call_to_action || creative.link_url) && (
-                      <div className="pt-2 border-t border-zinc-700/50">
-                        {creative.call_to_action && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-zinc-400">
-                              Call to Action: {creative.call_to_action.type}
-                            </span>
-                          </div>
-                        )}
-                        
-                        {creative.link_url && (
-                          <div className="mt-2">
-                            <a 
-                              href={creative.link_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center text-xs text-primary hover:text-primary/80 transition-colors"
-                            >
-                              <ExternalLink size={12} className="mr-1" />
-                              Visualizza link
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* Se c'è solo video_id senza image_url, mostra un placeholder */}
-              {!creative.image_url && creative.video_id && (
-                <div className={`w-full ${
-                  layout === 'mobile' 
-                    ? 'space-y-4' 
-                    : 'flex gap-4 items-start'
-                }`}>
-                  <div className={`relative rounded-lg overflow-hidden bg-zinc-900 flex items-center justify-center flex-shrink-0 ${
-                    layout === 'mobile' 
-                      ? 'h-60 w-full' 
-                      : 'h-48 w-80'
-                  }`}>
-                    <div className="text-center">
-                      <div className="bg-zinc-800 rounded-full p-4 mx-auto mb-3 w-16 h-16 flex items-center justify-center">
-                        <Play size={24} className="text-primary ml-1" />
-                      </div>
-                      <p className="text-sm text-zinc-400">Video ID: {creative.video_id}</p>
                     </div>
-                  </div>
-                  
-                  {/* Contenuto testuale per video */}
-                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3 min-w-0'}`}>
-                    {creative.title && (
-                      <div>
-                        <h3 className={`font-semibold text-white mb-1 ${
-                          layout === 'mobile' ? 'text-lg' : 'text-xl'
-                        }`}>
-                          {creative.title}
-                        </h3>
-                      </div>
-                    )}
-                    
-                    {creative.body && (
-                      <div>
-                        <p className={`text-zinc-300 leading-relaxed ${
-                          layout === 'mobile' ? 'text-sm' : 'text-sm'
-                        }`}>
-                          {creative.body}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
-              )}
-              
-              {/* Se c'è solo thumbnail_url, usalo come fallback */}
-              {!creative.image_url && !creative.video_id && creative.thumbnail_url && (
-                <div className={`w-full ${
-                  layout === 'mobile' 
-                    ? 'space-y-4' 
-                    : 'flex gap-4 items-start'
-                }`}>
-                  <div className={`relative rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 ${
-                    layout === 'mobile' 
-                      ? 'w-full' 
-                      : 'w-80'
-                  }`}>
-                    <img 
-                      src={creative.thumbnail_url} 
-                      alt={creative.title || 'Thumbnail dell\'inserzione'}
-                      className={`w-full h-auto object-contain ${
-                        layout === 'mobile' 
-                          ? '' 
-                          : 'max-h-60'
-                      }`}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  </div>
-                  
-                  {/* Contenuto testuale per thumbnail */}
-                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3 min-w-0'}`}>
-                    {creative.title && (
-                      <div>
-                        <h3 className={`font-semibold text-white mb-1 ${
-                          layout === 'mobile' ? 'text-lg' : 'text-xl'
-                        }`}>
-                          {creative.title}
-                        </h3>
-                      </div>
-                    )}
-                    
-                    {creative.body && (
-                      <div>
-                        <p className={`text-zinc-300 leading-relaxed ${
-                          layout === 'mobile' ? 'text-sm' : 'text-sm'
-                        }`}>
-                          {creative.body}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* Solo contenuto testuale se non ci sono media */}
-              {!creative.image_url && !creative.video_id && !creative.thumbnail_url && (
-                <div className="space-y-3 w-full">
+                
+                {/* Contenuto testuale - A destra su desktop, sotto su mobile */}
+                <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3 min-w-0'}`}>
                   {creative.title && (
                     <div>
                       <h3 className={`font-semibold text-white mb-1 ${
@@ -389,30 +241,217 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
                     </div>
                   )}
                 </div>
-              )}
-              
-              {/* Informazioni del Creative */}
-              <div className="mt-4 pt-3 border-t border-zinc-700/50">
-                <div className="text-xs text-zinc-500 space-y-1">
-                  <div>Creative ID: {creative.id}</div>
-                  {creative.object_type && (
-                    <div>Tipo: {creative.object_type}</div>
+              </div>
+            )}
+            
+            {/* Se c'è solo video_id senza image_url, mostra un placeholder cliccabile */}
+            {!creative.image_url && creative.video_id && (
+              <div className={`w-full ${
+                layout === 'mobile' 
+                  ? 'space-y-4' 
+                  : 'flex gap-4 items-start'
+              }`}>
+                <div 
+                  className={`relative rounded-lg overflow-hidden bg-zinc-900 flex items-center justify-center flex-shrink-0 cursor-pointer hover:bg-zinc-800 transition-all duration-200 ${
+                    layout === 'mobile' 
+                      ? 'h-60 w-full' 
+                      : 'h-64 w-full max-w-md'
+                  }`}
+                  onClick={() => openFacebookVideo(creative.video_id!, creative.link_url)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      openFacebookVideo(creative.video_id!, creative.link_url);
+                    }
+                  }}
+                >
+                  <div className="text-center">
+                    <div className="bg-zinc-800 rounded-full p-6 mx-auto mb-3 w-20 h-20 flex items-center justify-center hover:bg-zinc-700 transition-all duration-200">
+                      <Play size={32} className="text-primary ml-1" />
+                    </div>
+                    <p className="text-sm text-zinc-400">Clicca per visualizzare il video</p>
+                    <p className="text-xs text-zinc-500 mt-1">Video ID: {creative.video_id}</p>
+                  </div>
+                </div>
+                
+                {/* Contenuto testuale per video */}
+                <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3 min-w-0'}`}>
+                  {creative.title && (
+                    <div>
+                      <h3 className={`font-semibold text-white mb-1 ${
+                        layout === 'mobile' ? 'text-lg' : 'text-xl'
+                      }`}>
+                        {creative.title}
+                      </h3>
+                    </div>
                   )}
-                  {creative.video_id && (
-                    <div>Video ID: {creative.video_id}</div>
+                  
+                  {creative.body && (
+                    <div>
+                      <p className={`text-zinc-300 leading-relaxed ${
+                        layout === 'mobile' ? 'text-sm' : 'text-sm'
+                      }`}>
+                        {creative.body}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="h-80 flex items-center justify-center">
-              <div className="text-center text-zinc-400">
-                <FileBarChart size={48} className="mx-auto mb-4 opacity-50" />
-                <p>Nessun creative disponibile per questa inserzione</p>
+            )}
+            
+            {/* Se c'è solo thumbnail_url, usalo come fallback cliccabile */}
+            {!creative.image_url && !creative.video_id && creative.thumbnail_url && (
+              <div className={`w-full ${
+                layout === 'mobile' 
+                  ? 'space-y-4' 
+                  : 'flex gap-4 items-start'
+              }`}>
+                <div className={`relative rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 ${
+                  layout === 'mobile' 
+                    ? 'w-full' 
+                    : 'w-full max-w-md'
+                }`}>
+                  <img 
+                    src={creative.thumbnail_url} 
+                    alt={creative.title || 'Thumbnail dell\'inserzione'}
+                    className={`w-full h-auto object-contain ${
+                      layout === 'mobile' 
+                        ? '' 
+                        : 'max-h-80'
+                    }`}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  {/* Se abbiamo un link, rendiamo cliccabile anche il thumbnail */}
+                  {creative.link_url && (
+                    <div 
+                      className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-30 cursor-pointer transition-all duration-200"
+                      onClick={() => window.open(creative.link_url, '_blank', 'noopener,noreferrer')}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          window.open(creative.link_url!, '_blank', 'noopener,noreferrer');
+                        }
+                      }}
+                    >
+                      <div className="bg-white bg-opacity-20 rounded-full p-3 opacity-0 hover:opacity-100 transition-all duration-200">
+                        <ExternalLink size={24} className="text-white" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Contenuto testuale per thumbnail */}
+                <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3 min-w-0'}`}>
+                  {creative.title && (
+                    <div>
+                      <h3 className={`font-semibold text-white mb-1 ${
+                        layout === 'mobile' ? 'text-lg' : 'text-xl'
+                      }`}>
+                        {creative.title}
+                      </h3>
+                    </div>
+                  )}
+                  
+                  {creative.body && (
+                    <div>
+                      <p className={`text-zinc-300 leading-relaxed ${
+                        layout === 'mobile' ? 'text-sm' : 'text-sm'
+                      }`}>
+                        {creative.body}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Solo contenuto testuale se non ci sono media */}
+            {!creative.image_url && !creative.video_id && !creative.thumbnail_url && (
+              <div className="space-y-3 w-full">
+                {creative.title && (
+                  <div>
+                    <h3 className={`font-semibold text-white mb-1 ${
+                      layout === 'mobile' ? 'text-lg' : 'text-xl'
+                    }`}>
+                      {creative.title}
+                    </h3>
+                  </div>
+                )}
+                
+                {creative.body && (
+                  <div>
+                    <p className={`text-zinc-300 leading-relaxed ${
+                      layout === 'mobile' ? 'text-sm' : 'text-sm'
+                    }`}>
+                      {creative.body}
+                    </p>
+                  </div>
+                )}
+                
+                {creative.link_description && (
+                  <div>
+                    <p className={`text-zinc-400 ${
+                      layout === 'mobile' ? 'text-xs' : 'text-xs'
+                    }`}>
+                      {creative.link_description}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Call to Action e Link */}
+                {(creative.call_to_action || creative.link_url) && (
+                  <div className="pt-2 border-t border-zinc-700/50">
+                    {creative.call_to_action && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-zinc-400">
+                          Call to Action: {creative.call_to_action.type}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {creative.link_url && (
+                      <div className="mt-2">
+                        <a 
+                          href={creative.link_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-xs text-primary hover:text-primary/80 transition-colors"
+                        >
+                          <ExternalLink size={12} className="mr-1" />
+                          Visualizza link
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Informazioni del Creative */}
+            <div className="mt-4 pt-3 border-t border-zinc-700/50">
+              <div className="text-xs text-zinc-500 space-y-1">
+                <div>Creative ID: {creative.id}</div>
+                {creative.object_type && (
+                  <div>Tipo: {creative.object_type}</div>
+                )}
+                {creative.video_id && (
+                  <div>Video ID: {creative.video_id}</div>
+                )}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="h-80 flex items-center justify-center">
+            <div className="text-center text-zinc-400">
+              <FileBarChart size={48} className="mx-auto mb-4 opacity-50" />
+              <p>Nessun creative disponibile per questa inserzione</p>
+            </div>
+          </div>
+        )}
       </motion.div>
     );
   };
@@ -456,7 +495,7 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
     );
   }
   
-  // Solo creative (per layout desktop) - con dimensioni ottimizzate
+  // Solo creative (per layout desktop) - senza container
   if (layout === 'preview-only') {
     return (
       <div className="max-w">
