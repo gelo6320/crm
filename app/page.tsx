@@ -3,15 +3,13 @@
 
 import { useState, useEffect, ReactNode } from "react";
 import { 
-  Bell, Users, CheckCircle, ArrowRight, RefreshCw, 
-  Calendar, Bookmark, FileText, BarChart, ArrowUp, ArrowDown, 
-  ChevronRight, Clock, Facebook, LayoutDashboard, 
-  TrendingUp, Zap, BadgeCheck, UserPlus,
-  LucideIcon
+  Bell, CheckCircle, RefreshCw, 
+  Clock, FileText,
+  User, Settings
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { fetchDashboardStats, fetchRecentEvents, fetchNewContacts, markContactAsViewed } from "@/lib/api/dashboard";
+import { fetchNewContacts, markContactAsViewed, markAllContactsAsViewed, fetchUserConfig } from "@/lib/api/dashboard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -27,49 +25,10 @@ interface Contact {
   viewed: boolean;
 }
 
-interface Event {
-  _id: string;
-  eventName: string;
-  createdAt: string;
-  leadType: string;
-  success: boolean;
-  error?: string;
-}
-
-interface StatsData {
-  forms: {
-    total: number;
-    converted: number;
-    conversionRate: number;
-    trend: number;
-    thisWeek: number;
-    lastWeek: number;
-  };
-  bookings: {
-    total: number;
-    converted: number;
-    conversionRate: number;
-    trend: number;
-    thisWeek: number;
-    lastWeek: number;
-  };
-  facebook: {
-    total: number;
-    converted: number;
-    conversionRate: number;
-    trend: number;
-    thisWeek: number;
-    lastWeek: number;
-  };
-  events: {
-    total: number;
-    success: number;
-    successRate: number;
-  };
-  totalConversionRate: number;
-  totalTrend: number;
-  totalThisWeek: number;
-  totalLastWeek: number;
+interface UserData {
+  name: string;
+  companyLogo?: string;
+  company?: string;
 }
 
 // Card container props
@@ -77,17 +36,6 @@ interface AnimatedCardProps {
   children: ReactNode;
   delay?: number;
   className?: string;
-}
-
-// Stat Card props
-interface StatCardProps {
-  title: string;
-  value: number | string;
-  icon: LucideIcon;
-  trend?: number | null;
-  bgColor?: string;
-  iconColor?: string;
-  delay?: number;
 }
 
 // Notification Panel props
@@ -103,39 +51,12 @@ const AnimatedCard = ({ children, delay = 0, className = "" }: AnimatedCardProps
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5, delay: delay * 0.1 }}
-    className={`bg-zinc-800/90 backdrop-blur-sm rounded-xl border border-zinc-700/50 shadow-lg ${className}`}
+    transition={{ duration: 0.6, delay: delay * 0.1, ease: "easeOut" }}
+    className={`bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl ${className}`}
   >
     {children}
   </motion.div>
 );
-
-// Stat Card component
-const StatCard = ({ title, value, icon: Icon, trend = null, bgColor = "bg-zinc-800/50", iconColor = "text-primary", delay = 0 }: StatCardProps) => {  
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: delay * 0.1 }}
-      className={`${bgColor} rounded-xl p-4 flex flex-col`}
-      whileHover={{ y: -5, transition: { duration: 0.2 } }}
-    >
-      <div className="flex justify-between items-start mb-3">
-        <div className={`rounded-full p-2 ${iconColor.replace('text-', 'bg-')}/10`}>
-          <Icon size={20} className={iconColor} />
-        </div>
-        {trend !== null && (
-          <div className={`flex items-center text-xs font-medium ${trend > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-            {trend > 0 ? <ArrowUp size={14} className="mr-1" /> : <ArrowDown size={14} className="mr-1" />}
-            {Math.abs(trend)}%
-          </div>
-        )}
-      </div>
-      <div className="font-medium text-zinc-400 text-sm mb-1">{title}</div>
-      <div className="text-2xl font-bold">{value}</div>
-    </motion.div>
-  );
-};
 
 // Notifications panel component
 function NotificationsPanel({ 
@@ -144,7 +65,7 @@ function NotificationsPanel({
   onViewContact, 
   onViewAll 
 }: NotificationsPanelProps) {
-  // Format time ago
+  
   const getTimeAgo = (dateString: string): string => {
     const date = new Date(dateString);
     const now = new Date();
@@ -159,69 +80,70 @@ function NotificationsPanel({
     }
   };
   
-  // Source icon mapping
-  const getSourceIcon = (type: string) => {
-    switch (type) {
-      case 'form': return <FileText className="text-emerald-400" />;
-      case 'booking': return <Bookmark className="text-emerald-400" />;
-      case 'facebook': return <Facebook className="text-emerald-400" />;
-      default: return <FileText className="text-emerald-400" />;
-    }
+  const getSourceIcon = () => {
+    return <FileText size={16} className="text-emerald-400" />;
+  };
+
+  const getSourceColor = () => {
+    return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
   };
 
   return (
-    <AnimatedCard className="overflow-hidden h-full flex flex-col" delay={3}>
-      <div className="p-4 border-b border-zinc-700/50 bg-gradient-to-r from-emerald-900/40 to-emerald-700/20 flex justify-between items-center">
-        <h2 className="text-base font-semibold flex items-center">
-          <Bell size={18} className="mr-2 text-emerald-400" />
-          Notifiche
-          {viewedCount > 0 && (
-            <motion.span 
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="ml-2 bg-emerald-500 text-white text-xs rounded-full px-2 py-0.5"
-            >
-              {viewedCount} nuovi
-            </motion.span>
-          )}
-        </h2>
+    <AnimatedCard className="overflow-hidden" delay={2}>
+      <div className="p-6 border-b border-white/5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-montserrat font-semibold flex items-center text-white">
+            <Bell size={22} className="mr-3 text-emerald-400" />
+            Notifiche
+            {viewedCount > 0 && (
+              <motion.span 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="ml-3 bg-emerald-500 text-white text-xs font-medium rounded-full px-3 py-1"
+              >
+                {viewedCount} nuove
+              </motion.span>
+            )}
+          </h2>
+        </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-emerald-800 scrollbar-track-transparent">
+      <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         <AnimatePresence>
           {notifications.length > 0 ? (
-            <motion.div className="divide-y divide-zinc-800/50">
+            <motion.div>
               {notifications.map((contact, index) => (
                 <motion.div 
                   key={contact._id}
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className={`p-4 hover:bg-zinc-700/20 transition-all cursor-pointer
-                    ${!contact.viewed ? 
-                      "bg-emerald-900/10 border-l-2 border-emerald-500" : 
-                      "hover:border-l-2 hover:border-emerald-500/50"}
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className={`p-5 border-b border-white/5 hover:bg-white/5 transition-all duration-300 cursor-pointer
+                    ${!contact.viewed ? "bg-emerald-500/5" : ""}
                   `}
                   onClick={() => onViewContact(contact)}
-                  whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.99 }}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="bg-emerald-900/60 rounded-full p-2 mt-0.5">
-                      {getSourceIcon(contact.type)}
+                  <div className="flex items-start gap-4">
+                    <div className="bg-white/10 rounded-xl p-3 mt-1">
+                      {getSourceIcon()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-white">{contact.name}</div>
-                      <div className="text-sm text-zinc-400 truncate">{contact.email}</div>
-                      <div className="flex items-center justify-between mt-2">
+                      <div className="font-montserrat font-medium text-white text-base mb-1">
+                        {contact.name}
+                      </div>
+                      <div className="text-sm text-zinc-400 truncate mb-3">
+                        {contact.email}
+                      </div>
+                      <div className="flex items-center justify-between">
                         <div className="text-xs text-zinc-500 flex items-center">
                           <Clock size={12} className="mr-1" />
                           {getTimeAgo(contact.createdAt)}
                         </div>
-                        <div className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-400">
-                          {contact.type === 'form' ? 'Form' : 
-                           contact.type === 'booking' ? 'Prenotazione' : 'Facebook'}
+                        <div className={`text-xs px-3 py-1 rounded-full ${getSourceColor()}`}>
+                          Nuovo contatto
                         </div>
                       </div>
                     </div>
@@ -233,119 +155,81 @@ function NotificationsPanel({
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="p-8 text-center text-zinc-500 h-full flex flex-col items-center justify-center"
+              className="p-12 text-center text-zinc-400 h-full flex flex-col items-center justify-center"
             >
-              <Bell size={30} className="mx-auto mb-3 text-emerald-700 opacity-60" />
-              <p className="text-sm">Nessuna notifica</p>
+              <Bell size={32} className="mx-auto mb-4 text-zinc-600 opacity-60" />
+              <p className="text-base font-montserrat">Nessuna notifica</p>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
       
-      <div className="p-3 border-t border-zinc-700/50 bg-emerald-900/10">
-        <motion.button 
-          onClick={onViewAll}
-          className="w-full inline-flex items-center justify-center py-2.5 px-4 rounded-lg border border-emerald-600/50 text-emerald-400 hover:bg-emerald-900/40 hover:text-emerald-300 text-sm font-medium transition-all"
-          whileHover={{ scale: 1.02, backgroundColor: "rgba(16, 185, 129, 0.2)" }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <CheckCircle size={16} className="mr-2" />
-          Segna tutte come viste
-        </motion.button>
-      </div>
+      {notifications.length > 0 && (
+        <div className="p-4 border-t border-white/5">
+          <motion.button 
+            onClick={onViewAll}
+            className="w-full inline-flex items-center justify-center py-3 px-6 rounded-xl border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/50 text-sm font-medium font-montserrat transition-all duration-300"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <CheckCircle size={16} className="mr-2" />
+            Segna tutte come viste
+          </motion.button>
+        </div>
+      )}
     </AnimatedCard>
   );
 }
 
-// Calculate trends based on previous period
-const calculateTrend = (current: number, previous: number): number => {
-  if (previous === 0) return current > 0 ? 100 : 0;
-  return Math.round(((current - previous) / previous) * 100);
-};
-
 export default function Dashboard() {
-  const [stats, setStats] = useState<StatsData>({
-    forms: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
-    bookings: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
-    facebook: { total: 0, converted: 0, conversionRate: 0, trend: 0, thisWeek: 0, lastWeek: 0 },
-    events: { total: 0, success: 0, successRate: 0 },
-    totalConversionRate: 0,
-    totalTrend: 0,
-    totalThisWeek: 0,
-    totalLastWeek: 0
-  });
-  
-  const [recentEvents, setRecentEvents] = useState<Event[]>([]);
   const [notifications, setNotifications] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [viewedCount, setViewedCount] = useState<number>(0);
+  const [userData, setUserData] = useState<UserData>({ name: 'Utente' });
   const router = useRouter();
 
   useEffect(() => {
     loadData();
   }, []);
 
-  // Function to calculate real trends instead of using mock data
-  const processTrendData = (data: StatsData): StatsData => {
-    // Calculate trends for each channel
-    const processedData = { ...data };
-    
-    // Calculate form trends based on weeks
-    processedData.forms.trend = calculateTrend(data.forms.thisWeek, data.forms.lastWeek);
-    
-    // Calculate booking trends
-    processedData.bookings.trend = calculateTrend(data.bookings.thisWeek, data.bookings.lastWeek);
-    
-    // Calculate facebook trends
-    processedData.facebook.trend = calculateTrend(data.facebook.thisWeek, data.facebook.lastWeek);
-    
-    // Calculate total trend
-    processedData.totalTrend = calculateTrend(data.totalThisWeek, data.totalLastWeek);
-    
-    return processedData;
-  };
-
   const loadData = async (): Promise<void> => {
     try {
       setIsLoading(true);
       
-      const [statsData, eventsData, newContactsData] = await Promise.all([
-        fetchDashboardStats(),
-        fetchRecentEvents(),
-        fetchNewContacts()
+      const [newContactsData, userConfigData] = await Promise.all([
+        fetchNewContacts(),
+        fetchUserConfig()
       ]);
       
-      // Process trends with real calculations
-      const processedStats = processTrendData(statsData as StatsData);
-      setStats(processedStats);
-      setRecentEvents(eventsData as Event[]);
-      
-      // Only keep unviewed contacts for notifications
+      // Solo contatti non visti per le notifiche
       const unviewedContacts = (newContactsData as Contact[]).filter((contact: Contact) => !contact.viewed);
       setNotifications(unviewedContacts);
       setViewedCount(unviewedContacts.length);
+      
+      // Dati utente
+      setUserData({
+        name: userConfigData.name || userConfigData.username || 'Utente',
+        companyLogo: userConfigData.companyLogo,
+        company: userConfigData.company
+      });
+      
     } catch (error) {
       console.error("Error loading dashboard data:", error);
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleViewContact = async (contact: Contact): Promise<void> => {
     try {
-      // Mark as viewed in the backend
       await markContactAsViewed(contact._id);
       
-      // Remove this contact from notifications list
       setNotifications(prevNotifications => 
         prevNotifications.filter((item: Contact) => item._id !== contact._id)
       );
       
-      // Update the count
       setViewedCount(prev => Math.max(0, prev - 1));
       
-      // Reindirizza alla pagina contatti con entrambi gli ID per massima compatibilità
-      // Uso leadId come principale se disponibile, altrimenti uso _id come fallback
       const idToUse = contact.leadId || contact._id;
       router.push(`/contacts?id=${idToUse}`);
       
@@ -354,18 +238,11 @@ export default function Dashboard() {
     }
   };
   
-  // Marks all contacts as viewed
   const handleViewAllContacts = async (): Promise<void> => {
     try {
-      // Mark each contact as viewed
-      await Promise.all(
-        notifications.map((contact: Contact) => markContactAsViewed(contact._id))
-      );
+      await markAllContactsAsViewed();
       
-      // Clear the notifications list entirely
       setNotifications([]);
-      
-      // Reset unviewed count
       setViewedCount(0);
     } catch (error) {
       console.error("Error marking all contacts as viewed:", error);
@@ -374,11 +251,12 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.5 }}
         >
           <LoadingSpinner />
         </motion.div>
@@ -386,197 +264,161 @@ export default function Dashboard() {
     );
   }
 
-  // Format date
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('it-IT', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric' 
-    });
+  const currentHour = new Date().getHours();
+  const getGreeting = () => {
+    if (currentHour < 12) return 'Buongiorno';
+    if (currentHour < 18) return 'Buon pomeriggio';
+    return 'Buonasera';
   };
 
   return (
-    <div className="max-w-full px-0 sm:px-4 py-4 space-y-4 sm:space-y-6">
-      {/* Header with refresh button only */}
-      <div className="flex justify-end px-4 sm:px-0">
-        <motion.button 
-          onClick={loadData}
-          className="btn flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700 hover:border-primary hover:bg-primary/10 text-sm"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          title="Aggiorna dati"
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="max-w-6xl mx-auto px-6 py-12 space-y-12">
+        
+        {/* Header Welcome Section */}
+        <motion.div
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="text-center space-y-6"
         >
-          <RefreshCw size={16} />
-          Aggiorna
-        </motion.button>
-      </div>
-      
-      {/* Notifications panel (moved to top) */}
-      <div className="w-full md:px-4">
-        <NotificationsPanel 
-          notifications={notifications} 
-          viewedCount={viewedCount}
-          onViewContact={handleViewContact}
-          onViewAll={handleViewAllContacts}
-        />
-      </div>
-      
-      {/* Conversion Overview */}
-      <AnimatedCard className="p-4 sm:p-6 md:mx-4" delay={1}>
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex flex-col items-center text-center md:text-left md:items-start">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-2 rounded-full bg-primary/10">
-                <TrendingUp size={20} className="text-primary" />
-              </div>
-              <h2 className="text-base font-semibold">Conversione Globale</h2>
-            </div>
-            <div className="text-4xl font-bold text-primary mb-1">{stats.totalConversionRate}%</div>
-            <div className="flex items-center text-sm">
-              <span className={`flex items-center ${stats.totalTrend >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {stats.totalTrend >= 0 ? <ArrowUp size={14} className="mr-1" /> : <ArrowDown size={14} className="mr-1" />}
-                {Math.abs(stats.totalTrend)}%
-              </span>
-              <span className="text-zinc-500 ml-2">rispetto alla settimana precedente</span>
-            </div>
-          </div>
-          
-          <div className="h-20 w-px bg-zinc-700 hidden md:block"></div>
-          
-          {/* Conversion funnel */}
-          <div className="flex-1 flex flex-row items-center gap-4">
-            <motion.div 
-              whileHover={{ scale: 1.02 }}
-              className="rounded-xl bg-zinc-800/70 p-4 text-center flex-1 w-full"
+          {/* Logo aziendale */}
+          {userData.companyLogo && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="flex justify-center mb-8"
             >
-              <div className="text-3xl font-bold mb-1">
-                {stats.forms.total + stats.bookings.total + stats.facebook.total}
-              </div>
-              <div className="text-sm text-zinc-400">Lead totali</div>
-            </motion.div>
-            
-            <div className="hidden sm:flex items-center justify-center">
-              <motion.div
-                animate={{
-                  x: [0, 5, 0],
-                  transition: { repeat: Infinity, duration: 1.5 }
-                }}
-              >
-                <ArrowRight size={24} className="text-zinc-600" />
-              </motion.div>
-            </div>
-            
-            <motion.div 
-              whileHover={{ scale: 1.02 }}
-              className="rounded-xl bg-emerald-900/20 p-4 text-center flex-1 w-full"
-            >
-              <div className="text-3xl font-bold text-emerald-400 mb-1">
-                {stats.forms.converted + stats.bookings.converted + stats.facebook.converted}
-              </div>
-              <div className="text-sm text-zinc-400">Clienti acquisiti</div>
-            </motion.div>
-          </div>
-        </div>
-      </AnimatedCard>
-      
-      {/* Weekly trends */}
-      <AnimatedCard className="p-4 sm:p-6 md:mx-4" delay={2}>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 rounded-full bg-blue-500/10">
-            <BarChart size={18} className="text-blue-400" />
-          </div>
-          <h2 className="text-base font-semibold">Andamento Settimanale</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-zinc-800/50 rounded-xl p-4">
-            <div className="text-sm text-zinc-400 mb-1">Questa settimana</div>
-            <div className="flex items-end justify-between">
-              <div className="text-3xl font-bold">{stats.totalThisWeek}</div>
-              <div className="text-xs text-zinc-500">nuovi contatti</div>
-            </div>
-            
-            <div className="mt-4 h-2 bg-zinc-700/50 rounded-full">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, (stats.totalThisWeek / (stats.totalLastWeek || 1)) * 100)}%` }}
-                transition={{ duration: 1, delay: 0.5 }}
-                className="h-2 bg-primary rounded-full"
+              <img 
+                src={userData.companyLogo} 
+                alt={userData.company || 'Logo aziendale'}
+                className="h-16 w-auto object-contain"
               />
-            </div>
-          </div>
-          
-          <div className="bg-zinc-800/50 rounded-xl p-4">
-            <div className="text-sm text-zinc-400 mb-1">Settimana precedente</div>
-            <div className="flex items-end justify-between">
-              <div className="text-3xl font-bold">{stats.totalLastWeek}</div>
-              <div className="text-xs text-zinc-500">nuovi contatti</div>
-            </div>
-            
-            <div className="mt-4 h-2 bg-zinc-700/50 rounded-full">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, (stats.totalLastWeek / (stats.totalThisWeek || 1)) * 100)}%` }}
-                transition={{ duration: 1, delay: 0.5 }}
-                className="h-2 bg-zinc-600 rounded-full"
-              />
-            </div>
-          </div>
-        </div>
-      </AnimatedCard>
-      
-      {/* Recent activity */}
-      <AnimatedCard className="overflow-hidden md:mx-4" delay={5}>
-        <div className="flex items-center justify-between p-4 border-b border-zinc-700/50 bg-gradient-to-r from-zinc-800 to-zinc-800/50">
-          <h2 className="text-base font-semibold flex items-center">
-            <Clock size={18} className="mr-2 text-primary" />
-            Attività recenti
-          </h2>
-          <Link href="/events" passHref>
-            <motion.div 
-              className="p-2 rounded-lg hover:bg-zinc-700/30 transition-all"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <ChevronRight size={18} />
             </motion.div>
-          </Link>
-        </div>
-        
-        <div className="p-4">
-          {recentEvents.length > 0 ? (
-            <div className="space-y-3">
-              {recentEvents.slice(0, 5).map((event, index) => (
-                <motion.div 
-                  key={event._id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="flex items-center justify-between rounded-lg hover:bg-zinc-800/50 p-3 transition-all"
-                  whileHover={{ backgroundColor: "rgba(255,255,255,0.03)" }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${event.success ? 'bg-emerald-400' : 'bg-red-400'}`}></div>
-                    <div>
-                      <div className="font-medium text-sm">{event.eventName}</div>
-                      <div className="text-xs text-zinc-400">{event.leadType === 'form' ? 'Form contatto' : 'Prenotazione'}</div>
-                    </div>
-                  </div>
-                  <div className="text-xs text-zinc-500 bg-zinc-800/80 px-2 py-1 rounded-full">
-                    {formatDate(event.createdAt)}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-8 text-center text-zinc-500">
-              <Clock size={24} className="mx-auto mb-3 text-zinc-600" />
-              <p className="text-sm">Nessuna attività recente</p>
-            </div>
           )}
+          
+          {/* Messaggio di benvenuto */}
+          <div className="space-y-3">
+            <motion.h1 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="text-5xl md:text-6xl font-montserrat font-light text-white tracking-tight"
+            >
+              {getGreeting()}, <span className="font-semibold text-emerald-400">{userData.name}</span>!
+            </motion.h1>
+            
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+              className="text-xl text-zinc-400 font-montserrat font-light max-w-2xl mx-auto"
+            >
+              Ecco una panoramica delle tue attività più recenti
+            </motion.p>
+          </div>
+        </motion.div>
+
+        {/* Refresh Button */}
+        <div className="flex justify-center">
+          <motion.button 
+            onClick={loadData}
+            className="inline-flex items-center gap-3 px-6 py-3 rounded-xl border border-white/20 hover:border-emerald-500/50 bg-white/5 hover:bg-emerald-500/10 text-white hover:text-emerald-400 text-sm font-montserrat font-medium transition-all duration-300"
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+          >
+            <RefreshCw size={16} />
+            Aggiorna dati
+          </motion.button>
         </div>
-      </AnimatedCard>
+
+        {/* Notifications Section */}
+        <div className="max-w-2xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+            className="text-center mb-8"
+          >
+            <h2 className="text-2xl font-montserrat font-medium text-white mb-2">
+              Notifiche recenti
+            </h2>
+            <p className="text-zinc-400 font-montserrat font-light">
+              {viewedCount > 0 ? 
+                `Hai ${viewedCount} nuove notifiche da controllare` :
+                'Tutte le notifiche sono state visualizzate'
+              }
+            </p>
+          </motion.div>
+          
+          <NotificationsPanel 
+            notifications={notifications} 
+            viewedCount={viewedCount}
+            onViewContact={handleViewContact}
+            onViewAll={handleViewAllContacts}
+          />
+        </div>
+
+        {/* Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2 }}
+          className="max-w-4xl mx-auto"
+        >
+          <h3 className="text-xl font-montserrat font-medium text-white text-center mb-8">
+            Azioni rapide
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Link href="/contacts">
+              <motion.div
+                className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                whileHover={{ scale: 1.02, y: -4 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <User size={24} className="mx-auto mb-3 text-emerald-400" />
+                <h4 className="font-montserrat font-medium text-white mb-2">Contatti</h4>
+                <p className="text-sm text-zinc-400 font-montserrat font-light">
+                  Gestisci i tuoi lead e clienti
+                </p>
+              </motion.div>
+            </Link>
+            
+            <Link href="/calendar">
+              <motion.div
+                className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                whileHover={{ scale: 1.02, y: -4 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Clock size={24} className="mx-auto mb-3 text-blue-400" />
+                <h4 className="font-montserrat font-medium text-white mb-2">Calendario</h4>
+                <p className="text-sm text-zinc-400 font-montserrat font-light">
+                  Visualizza i tuoi appuntamenti
+                </p>
+              </motion.div>
+            </Link>
+            
+            <Link href="/settings">
+              <motion.div
+                className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                whileHover={{ scale: 1.02, y: -4 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Settings size={24} className="mx-auto mb-3 text-purple-400" />
+                <h4 className="font-montserrat font-medium text-white mb-2">Impostazioni</h4>
+                <p className="text-sm text-zinc-400 font-montserrat font-light">
+                  Configura la tua piattaforma
+                </p>
+              </motion.div>
+            </Link>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }

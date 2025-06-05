@@ -459,7 +459,7 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
   // Solo creative (per layout desktop) - con dimensioni ottimizzate
   if (layout === 'preview-only') {
     return (
-      <div className="max-w-lg mx-auto">
+      <div className="max-w">
         {renderCreative()}
       </div>
     );

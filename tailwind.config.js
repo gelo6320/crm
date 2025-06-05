@@ -26,11 +26,15 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        montserrat: ['Montserrat', 'Inter', 'sans-serif'], // Aggiunto Montserrat
       },
       animation: {
         "fade-in": "fadeIn 0.3s ease-in-out",
         "slide-in": "slideIn 0.3s ease-in-out",
         "scale-in": "scaleIn 0.3s ease-in-out",
+        // Animazioni aggiuntive per la dashboard moderna
+        "float": "float 6s ease-in-out infinite",
+        "glow": "glow 2s ease-in-out infinite alternate",
       },
       keyframes: {
         fadeIn: {
@@ -45,6 +49,25 @@ module.exports = {
           "0%": { transform: "scale(0.9)", opacity: 0 },
           "100%": { transform: "scale(1)", opacity: 1 },
         },
+        // Nuove animazioni per la dashboard
+        float: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        glow: {
+          "0%": { boxShadow: "0 0 20px rgba(16, 185, 129, 0.3)" },
+          "100%": { boxShadow: "0 0 30px rgba(16, 185, 129, 0.6)" },
+        },
+      },
+      // Aggiunto backdrop blur personalizzati
+      backdropBlur: {
+        xs: '2px',
+      },
+      // Aggiunto spacing personalizzati per la dashboard
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem',
+        '128': '32rem',
       },
     },
   },
