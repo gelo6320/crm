@@ -286,7 +286,7 @@ export default function ContactsPage() {
         setTimeout(() => {
           setHighlightedContactId(null);
           setSelectedContact(targetContact);
-        }, 1200);
+        }, 400);
       }, 100);
     } else {
       console.log('Contact not found in current list');
