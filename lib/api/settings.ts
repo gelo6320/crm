@@ -5,9 +5,15 @@ import axios from "axios";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
 /**
- * Interfaccia per le impostazioni utente
+ * Interfaccia per le impostazioni utente aggiornata
  */
 export interface UserSettings {
+  // Nuovi campi personali/aziendali
+  name: string;
+  company: string;
+  companyLogo: string; // Base64 encoded image or URL
+  
+  // Campi esistenti
   mongoDbUri: string;
   apiKeys: {
     facebookAccessToken: string;      // Per Facebook Conversion API (CAPI)
@@ -45,6 +51,12 @@ export async function fetchUserSettings(): Promise<UserSettings> {
       
       // Trasforma i dati dal formato backend al formato frontend
       return {
+        // Nuovi campi personali
+        name: serverConfig.name || "",
+        company: serverConfig.company || "",
+        companyLogo: serverConfig.companyLogo || "",
+        
+        // Campi esistenti
         mongoDbUri: serverConfig.mongodb_uri || "",
         apiKeys: {
           facebookAccessToken: serverConfig.access_token || "",  // Per CAPI
@@ -71,6 +83,9 @@ export async function fetchUserSettings(): Promise<UserSettings> {
     console.error("Errore durante il recupero delle impostazioni:", error);
     // Restituisci un oggetto ben formattato con tutti i campi inizializzati
     return {
+      name: "",
+      company: "",
+      companyLogo: "",
       mongoDbUri: "",
       apiKeys: {
         facebookAccessToken: "",
@@ -104,6 +119,12 @@ export async function saveUserSettings(settings: UserSettings): Promise<{
   try {
     // Trasforma i dati dal formato frontend al formato backend
     const backendSettings = {
+      // Nuovi campi personali
+      name: settings.name,
+      company: settings.company,
+      companyLogo: settings.companyLogo,
+      
+      // Campi esistenti
       mongodb_uri: settings.mongoDbUri,
       access_token: settings.apiKeys.facebookAccessToken,        // Per CAPI
       marketing_api_token: settings.apiKeys.facebookMarketingToken, // Per Marketing API
@@ -138,4 +159,33 @@ export async function saveUserSettings(settings: UserSettings): Promise<{
       message: "Errore durante il salvataggio delle impostazioni"
     };
   }
+}
+
+/**
+ * Utility function per validare un'immagine
+ */
+export function validateImage(file: File): { isValid: boolean; error?: string } {
+  // Verifica tipo file
+  if (!file.type.startsWith('image/')) {
+    return { isValid: false, error: 'Il file deve essere un\'immagine' };
+  }
+  
+  // Verifica dimensione (5MB max)
+  if (file.size > 5 * 1024 * 1024) {
+    return { isValid: false, error: 'L\'immagine deve essere inferiore a 5MB' };
+  }
+  
+  return { isValid: true };
+}
+
+/**
+ * Utility function per convertire file in base64
+ */
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+    reader.readAsDataURL(file);
+  });
 }

@@ -1,27 +1,31 @@
-// app/settings/page.tsx
+// app/settings/page.tsx - Versione con componente riutilizzabile
 "use client";
 
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, Info, Save, Database, Key, MessageCircle } from "lucide-react";
+import { Eye, EyeOff, Info, Save, Database, Key, MessageCircle, User, Building } from "lucide-react";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import ImageUpload from "@/components/ui/ImageUpload";
 import { fetchUserSettings, saveUserSettings, UserSettings } from "@/lib/api/settings";
 import { toast } from "@/components/ui/toaster";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<UserSettings>({
+    name: "",
+    company: "",
+    companyLogo: "",
     mongoDbUri: "",
     apiKeys: {
-      facebookAccessToken: "",           // Per Facebook Conversion API (CAPI)
-      facebookMarketingToken: "",        // Per Facebook Marketing API
+      facebookAccessToken: "",
+      facebookMarketingToken: "",
       googleApiKey: "",
       facebookPixelId: "",
       facebookAccountId: ""
     },
     whatsapp: {
-      accessToken: "",                   // Token di accesso WhatsApp Business API
-      phoneNumberId: "",                 // ID del numero di telefono WhatsApp Business
-      webhookToken: "",                  // Token per autenticare i webhook WhatsApp
-      verifyToken: ""                    // Token di verifica per setup webhook
+      accessToken: "",
+      phoneNumberId: "",
+      webhookToken: "",
+      verifyToken: ""
     },
     webhooks: {
       callbackUrl: ""
@@ -33,7 +37,6 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showToken, setShowToken] = useState(false);
   
-  // Carica le impostazioni utente all'avvio
   useEffect(() => {
     loadUserSettings();
   }, []);
@@ -56,11 +59,9 @@ export default function SettingsPage() {
     const checked = (e.target as HTMLInputElement).type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
     const type = (e.target as HTMLInputElement).type;
     
-    // Gestisci campi nidificati (es. apiKeys.facebookAccessToken, whatsapp.accessToken)
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
       
-      // Utilizziamo un tipizzazione sicura verificando che parent sia una chiave valida di UserSettings
       if (parent === 'apiKeys' || parent === 'webhooks' || parent === 'whatsapp') {
         setSettings(prev => ({
           ...prev,
@@ -71,14 +72,24 @@ export default function SettingsPage() {
         }));
       }
     } else {
-      // Gestisci campi normali utilizzando tipizzazione specifica
       if (name === 'mongoDbUri') {
         setSettings(prev => ({ ...prev, mongoDbUri: value }));
       } else if (name === 'isDevelopment') {
         setSettings(prev => ({ ...prev, isDevelopment: checked || false }));
+      } else if (name === 'name') {
+        setSettings(prev => ({ ...prev, name: value }));
+      } else if (name === 'company') {
+        setSettings(prev => ({ ...prev, company: value }));
       }
-      // Aggiungi altri campi diretti se necessario
     }
+  };
+
+  const handleLogoChange = (logo: string) => {
+    setSettings(prev => ({ ...prev, companyLogo: logo }));
+  };
+
+  const handleLogoRemove = () => {
+    setSettings(prev => ({ ...prev, companyLogo: "" }));
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,7 +124,91 @@ export default function SettingsPage() {
         </div>
         <div className="p-4">
           <form onSubmit={handleSubmit} className="space-y-6">
+            
+            {/* Sezione Profilo */}
+            <div className="pt-2 pb-1 border-t border-b border-zinc-700 mb-2">
+              <h3 className="text-sm font-medium text-zinc-300 flex items-center">
+                <User size={16} className="mr-2" />
+                Informazioni Personali e Aziendali
+              </h3>
+            </div>
+
+            {/* Nome */}
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium mb-1">
+                Nome
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User size={16} className="text-zinc-500" />
+                </div>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={settings.name || ""}
+                  onChange={handleChange}
+                  className="input w-full pl-10"
+                  placeholder="Il tuo nome"
+                />
+              </div>
+              <p className="mt-1 text-xs text-zinc-400">
+                Nome che apparirà nel messaggio di benvenuto della dashboard
+              </p>
+            </div>
+
+            {/* Nome Azienda */}
+            <div>
+              <label htmlFor="company" className="block text-sm font-medium mb-1">
+                Nome Azienda
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Building size={16} className="text-zinc-500" />
+                </div>
+                <input
+                  type="text"
+                  id="company"
+                  name="company"
+                  value={settings.company || ""}
+                  onChange={handleChange}
+                  className="input w-full pl-10"
+                  placeholder="Nome della tua azienda"
+                />
+              </div>
+              <p className="mt-1 text-xs text-zinc-400">
+                Nome dell'azienda (opzionale)
+              </p>
+            </div>
+
+            {/* Logo Aziendale */}
+            <div>
+              <label className="block text-sm font-medium mb-3">
+                Logo Aziendale
+              </label>
+              
+              <ImageUpload
+                value={settings.companyLogo}
+                onChange={handleLogoChange}
+                onRemove={handleLogoRemove}
+                maxSize={5}
+                placeholder="Trascina qui il logo aziendale o clicca per selezionare"
+                className="mb-2"
+              />
+              
+              <p className="text-xs text-zinc-400">
+                Logo che apparirà nella dashboard (formato quadrato consigliato, max 5MB)
+              </p>
+            </div>
+            
             {/* MongoDB URI */}
+            <div className="pt-2 pb-1 border-t border-zinc-700 mb-2">
+              <h3 className="text-sm font-medium text-zinc-300 flex items-center">
+                <Database size={16} className="mr-2" />
+                Configurazione Database
+              </h3>
+            </div>
+
             <div>
               <label htmlFor="mongoDbUri" className="block text-sm font-medium mb-1">
                 MongoDB URI
@@ -209,10 +304,6 @@ export default function SettingsPage() {
               <p className="mt-1 text-xs text-zinc-400">
                 Token di accesso a Facebook Marketing API (per dati campagne)
               </p>
-              <p className="text-xs text-info mt-1">
-                <Info size={12} className="inline mr-1" />
-                Questo token è diverso da quello CAPI e richiede permessi specifici (ads_management, ads_read)
-              </p>
             </div>
             
             {/* Facebook Account ID */}
@@ -236,10 +327,6 @@ export default function SettingsPage() {
               </div>
               <p className="mt-1 text-xs text-zinc-400">
                 ID dell'account pubblicitario di Facebook (senza il prefisso 'act_')
-              </p>
-              <p className="text-xs text-info mt-1">
-                <Info size={12} className="inline mr-1" />
-                Puoi trovare questo ID nella dashboard di Facebook Ads Manager nell'URL o nelle impostazioni dell'account
               </p>
             </div>
             
@@ -304,10 +391,6 @@ export default function SettingsPage() {
               <p className="mt-1 text-xs text-zinc-400">
                 Token di accesso per WhatsApp Business API (gestione messaggi)
               </p>
-              <p className="text-xs text-info mt-1">
-                <Info size={12} className="inline mr-1" />
-                Genera questo token dalle impostazioni della tua app Facebook per sviluppatori
-              </p>
             </div>
             
             {/* WhatsApp Phone Number ID */}
@@ -331,10 +414,6 @@ export default function SettingsPage() {
               </div>
               <p className="mt-1 text-xs text-zinc-400">
                 ID del numero di telefono WhatsApp Business registrato
-              </p>
-              <p className="text-xs text-info mt-1">
-                <Info size={12} className="inline mr-1" />
-                Trovi questo ID nella dashboard di WhatsApp Business (non è il numero di telefono)
               </p>
             </div>
             
@@ -397,10 +476,6 @@ export default function SettingsPage() {
               </div>
               <p className="mt-1 text-xs text-zinc-400">
                 Token di verifica per il setup iniziale dei webhook WhatsApp
-              </p>
-              <p className="text-xs text-info mt-1">
-                <Info size={12} className="inline mr-1" />
-                Usato una sola volta durante la configurazione del webhook URL
               </p>
             </div>
             
@@ -474,18 +549,6 @@ export default function SettingsPage() {
                   Attiva per abilitare il debug e utilizzare ambienti di test
                 </p>
               </div>
-            </div>
-            
-            <div className="flex items-start p-3 bg-info/10 text-info rounded mb-4">
-              <Info size={18} className="flex-shrink-0 mt-0.5 mr-2" />
-              <p className="text-sm">
-                Le impostazioni di configurazione vengono caricate all'avvio dell'applicazione
-                e vengono utilizzate per la connessione al database e l'autenticazione con servizi esterni.
-                <br/><br/>
-                <strong>Facebook Marketing API:</strong> Per accedere ai dati delle campagne pubblicitarie sono necessari sia il token specifico per Marketing API che l'ID dell'account pubblicitario.
-                <br/><br/>
-                <strong>WhatsApp Business API:</strong> Per l'integrazione WhatsApp sono richiesti tutti i token specifici. Il verify token viene usato solo per la configurazione iniziale dei webhook.
-              </p>
             </div>
             
             <div className="pt-2">
