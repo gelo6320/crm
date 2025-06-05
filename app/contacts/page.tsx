@@ -279,12 +279,52 @@ export default function ContactsPage() {
         
         console.log('Element found:', element);
         if (element) {
-          // Assicurati che l'elemento sia visibile e fai scroll
-          element.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center',
-            inline: 'nearest'
+          // Controlla se l'elemento è in viewport
+          const rect = element.getBoundingClientRect();
+          const isInViewport = (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+          );
+          
+          console.log('Element position:', {
+            top: rect.top,
+            bottom: rect.bottom,
+            isInViewport: isInViewport,
+            windowHeight: window.innerHeight
           });
+          
+          // Se l'elemento non è in viewport, forza lo scroll
+          if (!isInViewport) {
+            console.log('Element not in viewport, scrolling...');
+            
+            // Prova due metodi di scroll per essere sicuri
+            element.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            });
+            
+            // Fallback con scroll alternativo dopo un momento
+            setTimeout(() => {
+              const newRect = element.getBoundingClientRect();
+              if (newRect.top < 0 || newRect.bottom > window.innerHeight) {
+                console.log('First scroll failed, trying alternative method');
+                const elementTop = element.offsetTop;
+                const elementHeight = element.offsetHeight;
+                const windowHeight = window.innerHeight;
+                const scrollTop = elementTop - (windowHeight / 2) + (elementHeight / 2);
+                
+                window.scrollTo({
+                  top: scrollTop,
+                  behavior: 'smooth'
+                });
+              }
+            }, 100);
+          } else {
+            console.log('Element already in viewport');
+          }
           
           // Remove the highlight after 800ms e apri la modale
           setTimeout(() => {
