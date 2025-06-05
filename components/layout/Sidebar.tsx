@@ -101,8 +101,8 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
             group relative flex items-center rounded-lg text-sm font-medium transition-all duration-200 w-full px-2 py-1.5
             ${isActive 
               ? 'bg-primary/10 text-primary' 
-              : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}
-            ${link.adminOnly ? 'border-r-2 border-primary' : ''}
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}
+            ${link.adminOnly ? 'border-r-2 border-primary/50' : ''}
           `}
         >
           {/* Icon container - reduced size */}
@@ -133,9 +133,9 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
           {/* Tooltip per minimized state */}
           {!isExpanded && (
             <div className="
-              absolute left-full ml-2 px-2 py-1 bg-zinc-900 text-white text-xs rounded-md
+              absolute left-full ml-2 px-2 py-1 bg-zinc-900/95 backdrop-blur-sm text-white text-xs rounded-md
               opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50
-              pointer-events-none whitespace-nowrap border border-zinc-700 flex items-center
+              pointer-events-none whitespace-nowrap flex items-center
             ">
               {link.name}
               {link.hasNewBadge && (
@@ -162,7 +162,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
         {/* Sidebar */}
         <div 
           className={`
-            fixed top-0 left-0 z-40 h-full bg-black border-r border-zinc-800 
+            fixed top-0 left-0 z-40 h-full bg-black/95 backdrop-blur-sm
             transition-all duration-300 ease-in-out 
             ${isMobile ? 
               `transform ${open ? 'translate-x-0' : '-translate-x-full'} w-64` : 
@@ -174,16 +174,16 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
           {/* Sidebar content */}
           <div className="py-2 h-[calc(100vh-57px)] flex flex-col">
             {/* Navigation links */}
-            <nav className="px-2 space-y-0.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+            <nav className={`px-2 space-y-0.5 flex-1 ${isExpanded ? 'overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700/50 scrollbar-track-transparent' : 'overflow-hidden'}`}>
               {links.map(renderLink)}
             </nav>
             
             {/* Logout button */}
             <div className="mt-4 px-2">
-              <div className="border-t border-zinc-800 pt-3">
+              <div className="border-t border-zinc-800/50 pt-3">
                 <button 
                   onClick={handleLogout} 
-                  className="group relative flex items-center text-sm font-medium text-zinc-400 rounded-lg hover:text-white hover:bg-zinc-800 transition-all duration-200 w-full px-2 py-1.5"
+                  className="group relative flex items-center text-sm font-medium text-zinc-400 rounded-lg hover:text-white hover:bg-zinc-800/50 transition-all duration-200 w-full px-2 py-1.5"
                 >
                   {/* Icon container - reduced size */}
                   <div className="flex items-center justify-center w-6 h-6 shrink-0">
@@ -201,9 +201,9 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
                   {/* Tooltip for minimized state */}
                   {!isExpanded && (
                     <div className="
-                      absolute left-full ml-2 px-2 py-1 bg-zinc-900 text-white text-xs rounded-md
+                      absolute left-full ml-2 px-2 py-1 bg-zinc-900/95 backdrop-blur-sm text-white text-xs rounded-md
                       opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50
-                      pointer-events-none whitespace-nowrap border border-zinc-700
+                      pointer-events-none whitespace-nowrap
                     ">
                       Logout
                     </div>

@@ -379,7 +379,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   };
   
   return (
-    <header className="bg-black border-b border-zinc-800 sticky top-0 z-50 w-full shadow-lg">
+    <header className="bg-black/95 backdrop-blur-sm sticky top-0 z-50 w-full shadow-lg">
       <div className="flex items-center justify-between px-4 py-2.5">
         {/* Left section with logo and title */}
         <div className="flex items-center space-x-4 z-10">
@@ -415,8 +415,8 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
                 </button>
 
                 {showUserSwitcher && (
-                  <div className="absolute left-0 mt-2 w-64 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg z-50">
-                    <div className="p-3 border-b border-zinc-700">
+                  <div className="absolute left-0 mt-2 w-64 bg-zinc-800/95 backdrop-blur-sm rounded-md shadow-lg z-50">
+                    <div className="p-3 border-b border-zinc-700/50">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-zinc-400 uppercase tracking-wide">
                           Gestione Utenti
@@ -458,9 +458,9 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
                               key={user._id}
                               onClick={() => handleUserSwitch(user.username)}
                               disabled={currentUser?.username === user.username}
-                              className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-700 transition-colors ${
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-700/50 transition-colors ${
                                 currentUser?.username === user.username
-                                  ? 'bg-zinc-700 text-white'
+                                  ? 'bg-zinc-700/50 text-white'
                                   : 'text-zinc-300'
                               }`}
                             >
@@ -502,7 +502,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
             </Link>
             
             {/* Separatore verticale */}
-            <div className="h-6 w-px bg-zinc-700 hidden md:block"></div>
+            <div className="h-6 w-px bg-zinc-700/50 hidden md:block"></div>
             
             <span className="font-semibold text-sm md:text-base hidden md:block">
               {getHeaderTitle()}
@@ -531,7 +531,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
                   setShowSearchResults(true);
                 }
               }}
-              className="bg-zinc-900 border border-zinc-700 text-white text-xs rounded-full w-full py-1.5 pl-8 pr-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="bg-zinc-900/90 backdrop-blur-sm text-white text-xs rounded-full w-full py-1.5 pl-8 pr-3 focus:outline-none focus:ring-1 focus:ring-primary/50"
               placeholder="Cerca in tutto il CRM..."
             />
             
@@ -551,7 +551,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
           
           {/* Search results dropdown */}
           {showSearchResults && (
-            <div className="absolute z-50 mt-1 w-full bg-zinc-800 border border-zinc-700 rounded-md shadow-lg max-h-80 overflow-auto">
+            <div className="absolute z-50 mt-1 w-full bg-zinc-800/95 backdrop-blur-sm rounded-md shadow-lg max-h-80 overflow-auto">
               {searchResults.length === 0 ? (
                 <div className="py-3 px-4 text-sm text-zinc-400">
                   {isSearching ? (
@@ -565,7 +565,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
                 </div>
               ) : (
                 <div>
-                  <div className="px-4 py-2 text-xs text-zinc-400 border-b border-zinc-700 bg-zinc-900/50">
+                  <div className="px-4 py-2 text-xs text-zinc-400 bg-zinc-900/50">
                     {searchResults.length} risultati trovati per "{searchQuery}"
                   </div>
                   <ul className="divide-y divide-zinc-700/30">
@@ -579,8 +579,8 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
                           id={`search-result-${index}`}
                           className={`cursor-pointer p-3 text-sm transition-colors group ${
                             selectedResultIndex === index 
-                              ? 'bg-zinc-700' 
-                              : 'hover:bg-zinc-700/70'
+                              ? 'bg-zinc-700/70' 
+                              : 'hover:bg-zinc-700/50'
                           }`}
                           onClick={() => handleSearchResultClick(result)}
                           onMouseEnter={() => setSelectedResultIndex(index)}
@@ -617,7 +617,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
                             
                             {/* Section badge and status */}
                             <div className="flex flex-col items-end space-y-1 flex-shrink-0 ml-2">
-                              <div className="text-xs text-zinc-400 px-2 py-0.5 bg-zinc-700 rounded-full flex items-center gap-1">
+                              <div className="text-xs text-zinc-400 px-2 py-0.5 bg-zinc-700/50 rounded-full flex items-center gap-1">
                                 {getResultIcon(result)}
                                 <span className="max-w-20 truncate">{result.section}</span>
                               </div>

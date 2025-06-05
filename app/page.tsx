@@ -314,23 +314,6 @@ export default function Dashboard() {
           
           {/* Notifications Section - Takes 2 columns */}
           <div className="lg:col-span-2 flex flex-col">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1 }}
-              className="text-center mb-6"
-            >
-              <h2 className="text-2xl font-montserrat font-semibold text-white mb-2">
-                Notifiche recenti
-              </h2>
-              <p className="text-zinc-300 font-montserrat font-medium">
-                {viewedCount > 0 ? 
-                  `Hai ${viewedCount} nuove notifiche da controllare` :
-                  'Tutte le notifiche sono state visualizzate'
-                }
-              </p>
-            </motion.div>
-            
             <div className="flex-1 min-h-0">
               <NotificationsPanel 
                 notifications={notifications} 
