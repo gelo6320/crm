@@ -157,7 +157,7 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
                     className={`w-full h-auto object-contain ${
                       layout === 'mobile' 
                         ? '' 
-                        : 'max-h-80'
+                        : 'max-h-120vh'
                     }`}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';

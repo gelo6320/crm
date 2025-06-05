@@ -5,7 +5,7 @@ import { useState, useEffect, ReactNode } from "react";
 import { 
   Bell, CheckCircle, RefreshCw, 
   Clock, FileText,
-  User, Settings
+  User, Settings, BarChart3, DollarSign
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -99,7 +99,7 @@ function NotificationsPanel({
               <motion.span 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="ml-3 bg-primary text-white text-xs font-medium rounded-full px-3 py-1"
+                className="ml-3 bg-primary text-white text-xs font-semibold rounded-full px-3 py-1"
               >
                 {viewedCount} nuove
               </motion.span>
@@ -131,18 +131,18 @@ function NotificationsPanel({
                       {getSourceIcon()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-montserrat font-medium text-white text-base mb-1">
+                      <div className="font-montserrat font-semibold text-white text-base mb-1">
                         {contact.name}
                       </div>
-                      <div className="text-sm text-zinc-400 truncate mb-3">
+                      <div className="text-sm text-zinc-300 truncate mb-3 font-medium">
                         {contact.email}
                       </div>
                       <div className="flex items-center justify-between">
-                        <div className="text-xs text-zinc-500 flex items-center">
+                        <div className="text-xs text-zinc-400 flex items-center font-medium">
                           <Clock size={12} className="mr-1" />
                           {getTimeAgo(contact.createdAt)}
                         </div>
-                        <div className={`text-xs px-3 py-1 rounded-full ${getSourceColor()}`}>
+                        <div className={`text-xs px-3 py-1 rounded-full font-semibold ${getSourceColor()}`}>
                           Nuovo contatto
                         </div>
                       </div>
@@ -158,7 +158,7 @@ function NotificationsPanel({
               className="h-full flex flex-col items-center justify-center p-12 text-center text-zinc-400"
             >
               <Bell size={32} className="mx-auto mb-4 text-zinc-600 opacity-60" />
-              <p className="text-base font-montserrat">Nessuna notifica</p>
+              <p className="text-base font-montserrat font-medium">Nessuna notifica</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -168,7 +168,7 @@ function NotificationsPanel({
         <div className="p-4 border-t border-white/5">
           <motion.button 
             onClick={onViewAll}
-            className="w-full inline-flex items-center justify-center py-3 px-6 rounded-xl border border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 text-sm font-medium font-montserrat transition-all duration-300"
+            className="w-full inline-flex items-center justify-center py-3 px-6 rounded-xl border border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 text-sm font-semibold font-montserrat transition-all duration-300"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -273,7 +273,7 @@ export default function Dashboard() {
 
   return (
     <div className="h-screen bg-zinc-900 overflow-hidden">
-      <div className="h-full flex flex-col max-w-6xl mx-auto px-6 py-8">
+      <div className="h-full flex flex-col max-w-6xl px-2 py-8">
         
         {/* Header Welcome Section */}
         <motion.div
@@ -303,43 +303,27 @@ export default function Dashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-4xl md:text-5xl font-montserrat font-light text-white tracking-tight"
+            className="text-4xl md:text-5xl font-montserrat font-medium text-white tracking-tight"
           >
             {getGreeting()}, <span className="font-semibold text-primary">{userData.name}</span>!
           </motion.h1>
         </motion.div>
 
-        {/* Refresh Button */}
-        <div className="flex justify-center mb-8">
-          <motion.button 
-            onClick={loadData}
-            className="inline-flex items-center gap-3 px-6 py-3 rounded-xl border border-white/20 hover:border-primary/50 bg-white/5 hover:bg-primary/10 text-white hover:text-primary text-sm font-montserrat font-medium transition-all duration-300"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-          >
-            <RefreshCw size={16} />
-            Aggiorna dati
-          </motion.button>
-        </div>
-
         {/* Main Content */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8 min-h-0">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 min-h-0">
           
-          {/* Notifications Section */}
-          <div className="flex flex-col">
+          {/* Notifications Section - Takes 2 columns */}
+          <div className="lg:col-span-2 flex flex-col">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1 }}
               className="text-center mb-6"
             >
-              <h2 className="text-2xl font-montserrat font-medium text-white mb-2">
+              <h2 className="text-2xl font-montserrat font-semibold text-white mb-2">
                 Notifiche recenti
               </h2>
-              <p className="text-zinc-400 font-montserrat font-light">
+              <p className="text-zinc-300 font-montserrat font-medium">
                 {viewedCount > 0 ? 
                   `Hai ${viewedCount} nuove notifiche da controllare` :
                   'Tutte le notifiche sono state visualizzate'
@@ -357,56 +341,56 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Quick Actions */}
+          {/* Quick Actions - Takes 1 column */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.2 }}
             className="flex flex-col"
           >
-            <h3 className="text-2xl font-montserrat font-medium text-white text-center mb-6">
+            <h3 className="text-xl font-montserrat font-semibold text-white text-center mb-6">
               Azioni rapide
             </h3>
             
-            <div className="flex-1 grid grid-cols-1 gap-6">
+            <div className="flex-1 grid grid-cols-1 gap-4">
               <Link href="/contacts">
                 <motion.div
-                  className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer h-full flex flex-col items-center justify-center"
-                  whileHover={{ scale: 1.02, y: -4 }}
+                  className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                  whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <User size={32} className="mx-auto mb-4 text-primary" />
-                  <h4 className="font-montserrat font-medium text-white mb-2 text-lg">Contatti</h4>
-                  <p className="text-sm text-zinc-400 font-montserrat font-light">
-                    Gestisci i tuoi lead e clienti
+                  <User size={24} className="mx-auto mb-3 text-primary" />
+                  <h4 className="font-montserrat font-semibold text-white mb-1 text-base">Contatti</h4>
+                  <p className="text-xs text-zinc-300 font-montserrat font-medium">
+                    Gestisci i tuoi lead
                   </p>
                 </motion.div>
               </Link>
               
-              <Link href="/calendar">
+              <Link href="/tracciamento">
                 <motion.div
-                  className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer h-full flex flex-col items-center justify-center"
-                  whileHover={{ scale: 1.02, y: -4 }}
+                  className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                  whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <Clock size={32} className="mx-auto mb-4 text-blue-400" />
-                  <h4 className="font-montserrat font-medium text-white mb-2 text-lg">Calendario</h4>
-                  <p className="text-sm text-zinc-400 font-montserrat font-light">
-                    Visualizza i tuoi appuntamenti
+                  <BarChart3 size={24} className="mx-auto mb-3 text-blue-400" />
+                  <h4 className="font-montserrat font-semibold text-white mb-1 text-base">Dati</h4>
+                  <p className="text-xs text-zinc-300 font-montserrat font-medium">
+                    Analisi e metriche
                   </p>
                 </motion.div>
               </Link>
               
-              <Link href="/settings">
+              <Link href="/sales-funnel">
                 <motion.div
-                  className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer h-full flex flex-col items-center justify-center"
-                  whileHover={{ scale: 1.02, y: -4 }}
+                  className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                  whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <Settings size={32} className="mx-auto mb-4 text-purple-400" />
-                  <h4 className="font-montserrat font-medium text-white mb-2 text-lg">Impostazioni</h4>
-                  <p className="text-sm text-zinc-400 font-montserrat font-light">
-                    Configura la tua piattaforma
+                  <DollarSign size={24} className="mx-auto mb-3 text-green-400" />
+                  <h4 className="font-montserrat font-semibold text-white mb-1 text-base">Vendita</h4>
+                  <p className="text-xs text-zinc-300 font-montserrat font-medium">
+                    Funnel di vendita
                   </p>
                 </motion.div>
               </Link>
