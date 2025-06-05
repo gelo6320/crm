@@ -154,7 +154,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
         {/* Mobile overlay */}
         {isMobile && open && (
           <div 
-            className="fixed inset-0 bg-black/60 z-40"
+            className="fixed inset-0 bg-black/60 z-30"
             onClick={() => setOpen(false)}
           />
         )}
@@ -162,7 +162,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
         {/* Sidebar */}
         <div 
           className={`
-            fixed top-0 left-0 z-40 h-full bg-black/80 backdrop-blur-sm
+            fixed top-0 left-0 z-50 h-full bg-black/70 backdrop-blur-sm
             transition-all duration-300 ease-in-out 
             ${isMobile ? 
               `transform ${open ? 'translate-x-0' : '-translate-x-full'} w-64` : 

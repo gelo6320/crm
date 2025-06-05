@@ -379,7 +379,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   };
   
   return (
-    <header className="bg-black/80 backdrop-blur-sm sticky top-0 z-50 w-full shadow-lg">
+    <header className="bg-black/50 backdrop-blur-sm sticky top-0 z-50 w-full shadow-lg">
       <div className="flex items-center justify-between px-4 py-2.5">
         {/* Left section with logo and title */}
         <div className="flex items-center space-x-4 z-10">
@@ -515,9 +515,9 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
               {isSearching ? (
-                <Loader2 size={16} className="text-zinc-500 animate-spin" />
+                <Loader2 size={16} className="text-zinc-300 animate-spin" />
               ) : (
-                <Search size={16} className="text-zinc-500" />
+                <Search size={16} className="text-zinc-300" />
               )}
             </div>
             <input
