@@ -551,7 +551,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
           
           {/* Search results dropdown */}
           {showSearchResults && (
-            <div className="absolute z-50 mt-1 w-full bg-zinc-800/97 backdrop-blur-sm rounded-md shadow-lg max-h-80 overflow-auto">
+            <div className="absolute z-50 mt-1 w-full bg-zinc-800 backdrop-blur-sm rounded-md shadow-lg max-h-80 overflow-auto">
               {searchResults.length === 0 ? (
                 <div className="py-3 px-4 text-sm text-zinc-400">
                   {isSearching ? (
