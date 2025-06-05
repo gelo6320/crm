@@ -74,7 +74,11 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
           Statistiche
         </h2>
         
-        <div className={`grid ${layout === 'mobile' ? 'grid-cols-2 gap-2' : 'grid-cols-2 gap-3'}`}>
+        <div className={`grid ${
+          layout === 'mobile' 
+            ? 'grid-cols-2 gap-2' 
+            : 'grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3'
+        }`}>
           {metrics.map((metric, index) => {
             const Icon = metric.icon;
             const isMobile = layout === 'mobile';
@@ -116,10 +120,10 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
             <FileBarChart size={16} className="mr-2 text-primary" />
             CREATIVE INSERZIONE
           </div>
-          <div className="text-xs">{ad.name}</div>
+          <div className="text-xs truncate max-w-32">{ad.name}</div>
         </div>
         
-        <div className="p-4">
+        <div className={`${layout === 'mobile' ? 'p-3' : 'p-4'}`}>
           {isLoading ? (
             <div className="h-80 flex items-center justify-center">
               <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
@@ -128,18 +132,26 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
             <div className="h-80 flex items-center justify-center">
               <div className="text-center text-red-400">
                 <FileBarChart size={48} className="mx-auto mb-4 opacity-50" />
-                <p>{error}</p>
+                <p className="text-sm">{error}</p>
               </div>
             </div>
           ) : creative ? (
             <div className="space-y-4">
               {/* Immagine o Video */}
               {creative.image_url && (
-                <div className="relative rounded-lg overflow-hidden bg-zinc-900">
+                <div className={`relative rounded-lg overflow-hidden bg-zinc-900 ${
+                  layout === 'mobile' 
+                    ? 'w-full' 
+                    : 'w-full max-w-md mx-auto'
+                }`}>
                   <img 
                     src={creative.image_url} 
                     alt={creative.title || 'Creative dell\'inserzione'}
-                    className="w-full h-auto max-h-80 object-cover"
+                    className={`w-full h-auto object-cover ${
+                      layout === 'mobile' 
+                        ? 'max-h-80' 
+                        : 'max-h-64'
+                    }`}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
@@ -156,7 +168,11 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
               
               {/* Se c'è solo video_id senza image_url, mostra un placeholder */}
               {!creative.image_url && creative.video_id && (
-                <div className="relative rounded-lg overflow-hidden bg-zinc-900 h-60 flex items-center justify-center">
+                <div className={`relative rounded-lg overflow-hidden bg-zinc-900 flex items-center justify-center ${
+                  layout === 'mobile' 
+                    ? 'h-60 w-full' 
+                    : 'h-48 w-full max-w-md mx-auto'
+                }`}>
                   <div className="text-center">
                     <div className="bg-zinc-800 rounded-full p-4 mx-auto mb-3 w-16 h-16 flex items-center justify-center">
                       <Play size={24} className="text-primary ml-1" />
@@ -168,11 +184,19 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
               
               {/* Se c'è solo thumbnail_url, usalo come fallback */}
               {!creative.image_url && !creative.video_id && creative.thumbnail_url && (
-                <div className="relative rounded-lg overflow-hidden bg-zinc-900">
+                <div className={`relative rounded-lg overflow-hidden bg-zinc-900 ${
+                  layout === 'mobile' 
+                    ? 'w-full' 
+                    : 'w-full max-w-md mx-auto'
+                }`}>
                   <img 
                     src={creative.thumbnail_url} 
                     alt={creative.title || 'Thumbnail dell\'inserzione'}
-                    className="w-full h-auto max-h-80 object-cover"
+                    className={`w-full h-auto object-cover ${
+                      layout === 'mobile' 
+                        ? 'max-h-80' 
+                        : 'max-h-64'
+                    }`}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
@@ -184,7 +208,9 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
               <div className="space-y-3">
                 {creative.title && (
                   <div>
-                    <h3 className="text-lg font-semibold text-white mb-1">
+                    <h3 className={`font-semibold text-white mb-1 ${
+                      layout === 'mobile' ? 'text-lg' : 'text-base'
+                    }`}>
                       {creative.title}
                     </h3>
                   </div>
@@ -192,7 +218,9 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
                 
                 {creative.body && (
                   <div>
-                    <p className="text-zinc-300 text-sm leading-relaxed">
+                    <p className={`text-zinc-300 leading-relaxed ${
+                      layout === 'mobile' ? 'text-sm' : 'text-xs'
+                    }`}>
                       {creative.body}
                     </p>
                   </div>
@@ -200,7 +228,9 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
                 
                 {creative.link_description && (
                   <div>
-                    <p className="text-zinc-400 text-xs">
+                    <p className={`text-zinc-400 ${
+                      layout === 'mobile' ? 'text-xs' : 'text-xs'
+                    }`}>
                       {creative.link_description}
                     </p>
                   </div>
@@ -299,9 +329,13 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
     );
   }
   
-  // Solo creative (per layout desktop)
+  // Solo creative (per layout desktop) - con dimensioni ottimizzate
   if (layout === 'preview-only') {
-    return renderCreative();
+    return (
+      <div className="max-w-lg mx-auto">
+        {renderCreative()}
+      </div>
+    );
   }
   
   // Layout completo predefinito
@@ -317,11 +351,18 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
         <div className="text-sm text-zinc-400">ID: {ad.id}</div>
       </motion.div>
       
-      {/* Griglia delle metriche */}
-      {renderStats()}
-      
-      {/* Creative inserzione */}
-      {renderCreative()}
+      {/* Layout responsive: su desktop side-by-side, su mobile stack */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Griglia delle metriche */}
+        <div className="order-2 lg:order-1">
+          {renderStats()}
+        </div>
+        
+        {/* Creative inserzione */}
+        <div className="order-1 lg:order-2">
+          {renderCreative()}
+        </div>
+      </div>
     </div>
   );
 }
