@@ -89,7 +89,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const value = contact.value !== undefined ? contact.value : (contact.extendedData?.value || 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in">
       <div className="absolute inset-0" onClick={onClose}></div>
       
       <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg mx-6 z-10 animate-scale-in overflow-hidden">
@@ -112,8 +112,10 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
             <div className="flex items-center space-x-3">
               {contact.source === "facebook" ? (
                 <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M22.675 0H1.325C.593 0 0 .593 0 1.325v21.351C0 23.407.593 24 1.325 24H12.82v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116c.73 0 1.323-.593 1.323-1.325V1.325C24 .593 23.407 0 22.675 0z"/>
+                  <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 287.56 191">
+                    <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
+                    <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
+                    <path fill="#0082fb" d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
                   </svg>
                 </div>
               ) : (
@@ -177,7 +179,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
           <div className="flex gap-3 pt-2">
             <button 
               onClick={handleCall} 
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
+              className="flex-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white border border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500 font-medium py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
             >
               <Phone className="w-4 h-4" />
               Chiama
@@ -185,7 +187,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
             
             <button 
               onClick={handleWhatsApp} 
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
+              className="flex-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white border border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500 font-medium py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
             >
               <MessageCircle className="w-4 h-4" />
               WhatsApp
@@ -295,8 +297,10 @@ export default function ContactsPage() {
     if (contact.source === 'facebook') {
       return (
         <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-          <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M22.675 0H1.325C.593 0 0 .593 0 1.325v21.351C0 23.407.593 24 1.325 24H12.82v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116c.73 0 1.323-.593 1.323-1.325V1.325C24 .593 23.407 0 22.675 0z"/>
+          <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 287.56 191">
+            <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
+            <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
+            <path fill="#0082fb" d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
           </svg>
         </div>
       );
@@ -319,14 +323,6 @@ export default function ContactsPage() {
     { key: "customer", label: "Clienti" },
     { key: "lost", label: "Persi" }
   ];
-
-  const sourceFilters = [
-    { key: "", label: "Tutte" },
-    { key: "facebook", label: "Facebook" },
-    { key: "direct", label: "Diretto" },
-    { key: "google", label: "Google" },
-    { key: "other", label: "Altro" }
-  ];
   
   if (isLoading && contacts.length === 0) {
     return <LoadingSpinner />;
@@ -342,11 +338,11 @@ export default function ContactsPage() {
         </div>
 
         {/* Filtri semplificati */}
-        <div className="mb-8 space-y-6">
+        <div className="mb-6">
           {/* Filtri stato */}
           <div>
-            <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">Stato</h3>
-            <div className="flex flex-wrap gap-2">
+            <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Stato</h3>
+            <div className="flex flex-wrap gap-1.5">
               {statusFilters.map((filter) => (
                 <button
                   key={filter.key}
@@ -354,32 +350,9 @@ export default function ContactsPage() {
                     setSelectedStatus(filter.key);
                     setCurrentPage(1);
                   }}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                     selectedStatus === filter.key
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Filtri fonte */}
-          <div>
-            <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">Fonte</h3>
-            <div className="flex flex-wrap gap-2">
-              {sourceFilters.map((filter) => (
-                <button
-                  key={filter.key}
-                  onClick={() => {
-                    setSourceFilter(filter.key);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    sourceFilter === filter.key
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-primary text-white'
                       : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700'
                   }`}
                 >
