@@ -486,7 +486,8 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
             )}
             
             {/* Logo che ora è sempre visibile */}
-            <Link href="/" className="flex items-center space-x-2 text-white hover:text-primary transition">
+            <Link href="/" className="flex items-center space-x-2 text-white hover:text-primary transition hidden md:flex">
+
               <Image 
                 src="/logosito.webp" 
                 width={30} 
@@ -503,14 +504,14 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
             {/* Separatore verticale */}
             <div className="h-6 w-px bg-zinc-700 hidden md:block"></div>
             
-            <span className="font-semibold text-sm md:text-base">
+            <span className="font-semibold text-sm md:text-base hidden md:block">
               {getHeaderTitle()}
             </span>
           </div>
         </div>
         
         {/* Center section with enhanced search */}
-        <div className="relative flex-1 max-w-md mx-3" ref={searchRef}>
+        <div className="relative flex-1 mx-3 md:max-w-md" ref={searchRef}>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
               {isSearching ? (

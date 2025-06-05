@@ -89,8 +89,8 @@ function NotificationsPanel({
   };
 
   return (
-    <AnimatedCard className="overflow-hidden h-full flex flex-col" delay={2}>
-      <div className="p-6 border-b border-white/5">
+    <AnimatedCard className="overflow-hidden h-full flex flex-col max-h-[500px]" delay={2}>
+      <div className="p-6 border-b border-white/5 flex-shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-montserrat font-semibold flex items-center text-white">
             <Bell size={22} className="mr-3 text-primary" />
@@ -108,7 +108,7 @@ function NotificationsPanel({
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <AnimatePresence>
           {notifications.length > 0 ? (
             <motion.div>
@@ -165,7 +165,7 @@ function NotificationsPanel({
       </div>
       
       {notifications.length > 0 && (
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 border-t border-white/5 flex-shrink-0">
           <motion.button 
             onClick={onViewAll}
             className="w-full inline-flex items-center justify-center py-3 px-6 rounded-xl border border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 text-sm font-semibold font-montserrat transition-all duration-300"
@@ -273,7 +273,7 @@ export default function Dashboard() {
 
   return (
     <div className="h-screen bg-zinc-900 overflow-hidden">
-      <div className="h-full flex flex-col max-w-6xl px-2 py-8">
+      <div className="h-full flex flex-col max-w-7xl mx-auto px-4 py-8">
         
         {/* Header Welcome Section */}
         <motion.div
@@ -331,7 +331,7 @@ export default function Dashboard() {
               </p>
             </motion.div>
             
-            <div className="flex-1">
+            <div className="flex-1 min-h-0">
               <NotificationsPanel 
                 notifications={notifications} 
                 viewedCount={viewedCount}
@@ -352,10 +352,11 @@ export default function Dashboard() {
               Azioni rapide
             </h3>
             
-            <div className="flex-1 grid grid-cols-1 gap-4">
+            {/* Desktop Layout */}
+            <div className="hidden md:flex flex-col flex-1 space-y-0">
               <Link href="/contacts">
                 <motion.div
-                  className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                  className="bg-white/5 backdrop-blur-xl rounded-t-xl border border-white/10 border-b-0 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -369,7 +370,7 @@ export default function Dashboard() {
               
               <Link href="/tracciamento">
                 <motion.div
-                  className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                  className="bg-white/5 backdrop-blur-xl border border-white/10 border-b-0 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -383,7 +384,7 @@ export default function Dashboard() {
               
               <Link href="/sales-funnel">
                 <motion.div
-                  className="bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                  className="bg-white/5 backdrop-blur-xl rounded-b-xl border border-white/10 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -392,6 +393,42 @@ export default function Dashboard() {
                   <p className="text-xs text-zinc-300 font-montserrat font-medium">
                     Funnel di vendita
                   </p>
+                </motion.div>
+              </Link>
+            </div>
+
+            {/* Mobile Layout */}
+            <div className="md:hidden grid grid-cols-3 gap-0">
+              <Link href="/contacts">
+                <motion.div
+                  className="bg-white/5 backdrop-blur-xl rounded-l-xl border border-white/10 border-r-0 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <User size={20} className="mx-auto mb-2 text-primary" />
+                  <h4 className="font-montserrat font-semibold text-white text-sm">Contatti</h4>
+                </motion.div>
+              </Link>
+              
+              <Link href="/tracciamento">
+                <motion.div
+                  className="bg-white/5 backdrop-blur-xl border border-white/10 border-r-0 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <BarChart3 size={20} className="mx-auto mb-2 text-blue-400" />
+                  <h4 className="font-montserrat font-semibold text-white text-sm">Dati</h4>
+                </motion.div>
+              </Link>
+              
+              <Link href="/sales-funnel">
+                <motion.div
+                  className="bg-white/5 backdrop-blur-xl rounded-r-xl border border-white/10 p-4 text-center hover:bg-white/10 transition-all duration-300 cursor-pointer"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <DollarSign size={20} className="mx-auto mb-2 text-green-400" />
+                  <h4 className="font-montserrat font-semibold text-white text-sm">Vendita</h4>
                 </motion.div>
               </Link>
             </div>
