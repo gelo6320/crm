@@ -248,49 +248,85 @@ export default function ContactsPage() {
     loadContacts();
   }, [currentPage, selectedStatus]);
 
-  // Gestisci l'highlight del contatto dalla URL
+  // NUOVO: Funzione per gestire l'highlight e scroll del contatto
+  const highlightAndScrollToContact = (contactId: string) => {
+    // Cerca il contatto nella lista corrente
+    const targetContact = contacts.find(contact => 
+      contact._id === contactId || contact.leadId === contactId
+    );
+    
+    if (targetContact) {
+      // Se il contatto è nella lista, aprilo nella modale
+      setSelectedContact(targetContact);
+    } else {
+      // Se il contatto non è nella lista corrente, evidenzialo
+      setHighlightedContactId(contactId);
+      
+      // Schedule a scroll to the element
+      setTimeout(() => {
+        const element = document.getElementById(`contact-${contactId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Remove the highlight after 3 seconds
+          setTimeout(() => {
+            setHighlightedContactId(null);
+          }, 3000);
+        }
+      }, 300);
+    }
+    
+    // Clean up URL parameters
+    if (window.history.replaceState) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('id');
+      url.searchParams.delete('t'); // Remove timestamp too
+      window.history.replaceState({}, document.title, url.toString());
+    }
+  };
+
+  // NUOVO: Listener per l'evento custom dalla search bar
+  useEffect(() => {
+    const handleSearchResultSelected = (event: CustomEvent) => {
+      const { id } = event.detail;
+      if (id) {
+        highlightAndScrollToContact(id);
+      }
+    };
+
+    window.addEventListener('searchResultSelected', handleSearchResultSelected as EventListener);
+    
+    return () => {
+      window.removeEventListener('searchResultSelected', handleSearchResultSelected as EventListener);
+    };
+  }, [contacts]);
+
+  // NUOVO: Listener per i cambiamenti dell'URL (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const contactId = params.get('id');
+      
+      if (contactId && contacts.length > 0) {
+        highlightAndScrollToContact(contactId);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [contacts]);
+
+  // MODIFICATO: Gestisci l'highlight del contatto dalla URL - ora usa la nuova funzione
   useEffect(() => {
     if (!isLoading && contacts.length > 0) {
       const params = new URLSearchParams(window.location.search);
       const contactId = params.get('id');
       
       if (contactId) {
-        const targetContact = contacts.find(contact => 
-          contact._id === contactId || contact.leadId === contactId
-        );
-        
-        if (targetContact) {
-          setSelectedContact(targetContact);
-          
-          if (window.history.replaceState) {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('id');
-            window.history.replaceState({}, document.title, url.toString());
-          }
-        } else {
-          // Set highlighted contact ID se il contatto è nella lista
-          setHighlightedContactId(contactId);
-          
-          // Schedule a scroll to the element
-          setTimeout(() => {
-            const element = document.getElementById(`contact-${contactId}`);
-            if (element) {
-              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              
-              // Remove the highlight after 3 seconds
-              setTimeout(() => {
-                setHighlightedContactId(null);
-                
-                // Clear the URL parameter
-                if (window.history.replaceState) {
-                  const url = new URL(window.location.href);
-                  url.searchParams.delete('id');
-                  window.history.replaceState({}, document.title, url.toString());
-                }
-              }, 3000);
-            }
-          }, 300);
-        }
+        highlightAndScrollToContact(contactId);
       }
     }
   }, [contacts, isLoading]);
@@ -469,18 +505,28 @@ export default function ContactsPage() {
                     <div 
                       key={contact._id} 
                       id={`contact-${contact._id}`}
-                      className={`bg-white dark:bg-zinc-800 rounded-lg p-4 transition-all duration-300 ${
-                        highlightedContactId === contact._id ? 'bg-primary/10 dark:bg-primary/10' : ''
+                      className={`bg-white dark:bg-zinc-800 rounded-lg p-4 transition-all duration-500 cursor-pointer ${
+                        highlightedContactId === contact._id 
+                          ? 'bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-400/50 shadow-lg scale-[1.02]' 
+                          : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                       }`}
                       onClick={() => handleContactClick(contact)}
                     >
                       <div className="flex items-start space-x-3">
                         {getSourceIcon(contact)}
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-zinc-900 dark:text-white truncate">
+                          <h3 className={`font-semibold truncate transition-colors ${
+                            highlightedContactId === contact._id 
+                              ? 'text-orange-900 dark:text-orange-100' 
+                              : 'text-zinc-900 dark:text-white'
+                          }`}>
                             {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                           </h3>
-                          <p className="text-sm text-primary mt-1">{contact.email}</p>
+                          <p className={`text-sm mt-1 transition-colors ${
+                            highlightedContactId === contact._id 
+                              ? 'text-orange-700 dark:text-orange-300' 
+                              : 'text-primary'
+                          }`}>{contact.email}</p>
                           <p className="text-sm text-zinc-500 mt-1">{contact.phone}</p>
                           <div className="flex items-center justify-between mt-3">
                             <p className="text-xs text-zinc-400">{formatDate(contact.createdAt)}</p>
@@ -501,8 +547,10 @@ export default function ContactsPage() {
                       <div 
                         key={contact._id} 
                         id={`contact-${contact._id}`}
-                        className={`p-6 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-all duration-300 cursor-pointer ${
-                          highlightedContactId === contact._id ? 'bg-primary/10 dark:bg-primary/10' : ''
+                        className={`p-6 transition-all duration-500 cursor-pointer ${
+                          highlightedContactId === contact._id 
+                            ? 'bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-400/50 shadow-lg scale-[1.01]' 
+                            : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                         }`}
                         onClick={() => handleContactClick(contact)}
                       >
@@ -510,11 +558,19 @@ export default function ContactsPage() {
                           <div className="flex items-center space-x-4">
                             {getSourceIcon(contact)}
                             <div className="min-w-0 flex-1">
-                              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white truncate">
+                              <h3 className={`text-lg font-semibold truncate transition-colors ${
+                                highlightedContactId === contact._id 
+                                  ? 'text-orange-900 dark:text-orange-100' 
+                                  : 'text-zinc-900 dark:text-white'
+                              }`}>
                                 {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                               </h3>
                               <div className="mt-1 space-y-1">
-                                <p className="text-sm text-primary">{contact.email}</p>
+                                <p className={`text-sm transition-colors ${
+                                  highlightedContactId === contact._id 
+                                    ? 'text-orange-700 dark:text-orange-300' 
+                                    : 'text-primary'
+                                }`}>{contact.email}</p>
                                 <p className="text-sm text-zinc-500">{contact.phone}</p>
                               </div>
                             </div>

@@ -271,13 +271,34 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
     }
   };
 
-  // Handle clicking on a search result
+  // Handle clicking on a search result - MODIFIED FOR SAME PAGE NAVIGATION
   const handleSearchResultClick = (result: SearchResult) => {
     setShowSearchResults(false);
     setSearchQuery("");
     
-    // Navigate to the right section with the ID parameter
-    router.push(`${result.sectionPath}?id=${result.id}`);
+    // Check if we're already on the target page
+    const isAlreadyOnTargetPage = pathname === result.sectionPath;
+    
+    if (isAlreadyOnTargetPage) {
+      // If we're already on the same page, force a URL update and trigger the highlight
+      const url = new URL(window.location.href);
+      url.searchParams.set('id', result.id);
+      url.searchParams.set('t', Date.now().toString()); // Add timestamp to force update
+      
+      // Update the URL without causing a page reload
+      window.history.pushState({}, '', url.toString());
+      
+      // Dispatch a custom event to notify the page of the search result selection
+      window.dispatchEvent(new CustomEvent('searchResultSelected', {
+        detail: { id: result.id, result }
+      }));
+      
+      // Also trigger a popstate event to ensure useEffect hooks that listen to URL changes are triggered
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    } else {
+      // Navigate to different page normally
+      router.push(`${result.sectionPath}?id=${result.id}`);
+    }
   };
 
   // Helper functions for search results rendering
