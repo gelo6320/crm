@@ -380,7 +380,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   
   return (
     <header className="bg-black backdrop-blur-md sticky top-0 z-[60] w-full shadow-lg">
-      <div className="relative flex items-center px-4 py-2.5">
+      <div className="relative flex items-center justify-between px-4 py-2.5 md:justify-start">
         {/* Left section with logo and title */}
         <div className="flex items-center space-x-4 z-10">
           <button 
@@ -511,7 +511,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
         </div>
         
         {/* Center section with enhanced search */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-lg px-3 z-20" ref={searchRef}>
+        <div className="relative flex-1 mx-3 md:absolute md:left-1/2 md:transform md:-translate-x-1/2 md:w-full md:max-w-lg md:px-3" ref={searchRef}>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
               {isSearching ? (
