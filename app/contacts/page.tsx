@@ -260,10 +260,10 @@ export default function ContactsPage() {
     console.log('Target contact found:', targetContact);
     
     if (targetContact) {
-      // Se il contatto è nella lista, evidenzialo E poi aprilo nella modale dopo un momento
+      // Se il contatto è nella lista, evidenzialo
       setHighlightedContactId(contactId);
       
-      // Schedule a scroll to the element
+      // Schedule a scroll to the element con più tempo per il rendering
       setTimeout(() => {
         let element = document.getElementById(`contact-${contactId}`);
         
@@ -279,19 +279,32 @@ export default function ContactsPage() {
         
         console.log('Element found:', element);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Assicurati che l'elemento sia visibile e fai scroll
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+          
+          // Remove the highlight after 800ms e apri la modale
+          setTimeout(() => {
+            setHighlightedContactId(null);
+            setSelectedContact(targetContact);
+          }, 800);
+        } else {
+          console.log('Element not found in DOM, contact might be on a different page');
+          // Se l'elemento non è trovato, potrebbe essere in un'altra pagina
+          // Apri direttamente la modale senza scroll
+          setTimeout(() => {
+            setHighlightedContactId(null);
+            setSelectedContact(targetContact);
+          }, 200);
         }
-        
-        // Remove the highlight after 1.2 seconds e apri la modale
-        setTimeout(() => {
-          setHighlightedContactId(null);
-          setSelectedContact(targetContact);
-        }, 400);
-      }, 100);
+      }, 300); // Aumentato da 100ms a 300ms per dare più tempo al rendering
     } else {
-      console.log('Contact not found in current list');
-      // Se il contatto non è nella lista corrente, potrebbe essere in un'altra pagina
-      // Per ora non facciamo nulla, ma potremmo ricaricare o cercare
+      console.log('Contact not found in current list, might need to search in other pages');
+      // Il contatto non è nella lista corrente, potrebbe essere in un'altra pagina della paginazione
+      // TODO: Implementare ricerca nelle altre pagine o ricaricare con filtri
     }
     
     // Clean up URL parameters after a delay
@@ -302,7 +315,7 @@ export default function ContactsPage() {
         url.searchParams.delete('t'); // Remove timestamp too
         window.history.replaceState({}, document.title, url.toString());
       }
-    }, 500);
+    }, 1000); // Aumentato il timeout per evitare conflitti
   };
 
   // NUOVO: Listener per l'evento custom dalla search bar
