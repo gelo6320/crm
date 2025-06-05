@@ -1,7 +1,7 @@
-// app/contacts/page.tsx - File completo con auto-scroll robusto
+// app/contacts/page.tsx
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Users, Phone, MessageCircle, Globe, ChevronDown } from "lucide-react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
@@ -12,281 +12,7 @@ import Pagination from "@/components/ui/Pagination";
 import { formatDate } from "@/lib/utils/date";
 import { toast } from "@/components/ui/toaster";
 
-// ============= HOOKS PER AUTO-SCROLL ROBUSTO =============
-
-interface ScrollOptions {
-  behavior?: 'smooth' | 'instant';
-  block?: 'start' | 'center' | 'end' | 'nearest';
-  inline?: 'start' | 'center' | 'end' | 'nearest';
-  retryAttempts?: number;
-  retryDelay?: number;
-  offset?: number;
-}
-
-const useRobustScroll = () => {
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const observerRef = useRef<IntersectionObserver | undefined>(undefined);
-
-  const scrollToElement = useCallback(async (
-    elementId: string, 
-    options: ScrollOptions = {}
-  ) => {
-    const {
-      behavior = 'smooth',
-      block = 'center',
-      inline = 'nearest',
-      retryAttempts = 15,
-      retryDelay = 200,
-      offset = 0
-    } = options;
-
-    // Pulisci timeout precedenti
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-
-    // Disconnetti observer precedenti
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
-
-    const attemptScroll = (attempt: number = 0): Promise<boolean> => {
-      return new Promise((resolve) => {
-        // Cerca l'elemento con più strategie
-        let element = document.getElementById(elementId);
-        
-        if (!element) {
-          // Prova con data attribute
-          element = document.querySelector(`[data-lead-id="${elementId}"]`);
-        }
-        
-        if (!element) {
-          // Prova con pattern contact-{id}
-          element = document.getElementById(`contact-${elementId}`);
-        }
-
-        if (!element && attempt < retryAttempts) {
-          // Elemento non trovato, riprova dopo un delay
-          scrollTimeoutRef.current = setTimeout(() => {
-            attemptScroll(attempt + 1).then(resolve);
-          }, retryDelay);
-          return;
-        }
-
-        if (!element) {
-          console.warn(`Elemento con ID ${elementId} non trovato dopo ${retryAttempts} tentativi`);
-          resolve(false);
-          return;
-        }
-
-        // Verifica se l'elemento è visibile usando Intersection Observer
-        const checkVisibilityAndScroll = () => {
-          observerRef.current = new IntersectionObserver(
-            (entries) => {
-              const entry = entries[0];
-              if (entry.isIntersecting || attempt >= retryAttempts) {
-                observerRef.current?.disconnect();
-                performScroll(element!, offset, block, inline, behavior);
-                resolve(true);
-              }
-            },
-            {
-              root: null,
-              rootMargin: '50px',
-              threshold: 0.1
-            }
-          );
-
-          observerRef.current.observe(element);
-
-          // Timeout di sicurezza
-          setTimeout(() => {
-            if (observerRef.current) {
-              observerRef.current.disconnect();
-              performScroll(element!, offset, block, inline, behavior);
-              resolve(true);
-            }
-          }, 2000);
-        };
-
-        // Verifica immediata se l'elemento è già visibile
-        const rect = element.getBoundingClientRect();
-        const isVisible = rect.top >= 0 && rect.left >= 0 && 
-                         rect.bottom <= window.innerHeight && 
-                         rect.right <= window.innerWidth;
-
-        if (isVisible) {
-          performScroll(element, offset, block, inline, behavior);
-          resolve(true);
-        } else {
-          checkVisibilityAndScroll();
-        }
-      });
-    };
-
-    return attemptScroll();
-  }, []);
-
-  const performScroll = (
-    element: HTMLElement, 
-    offset: number, 
-    block: ScrollLogicalPosition, 
-    inline: ScrollLogicalPosition, 
-    behavior: ScrollBehavior
-  ) => {
-    try {
-      // Metodo 1: scrollIntoView
-      element.scrollIntoView({
-        behavior,
-        block,
-        inline
-      });
-
-      // Metodo 2: Scroll manuale con offset se specificato
-      if (offset !== 0) {
-        setTimeout(() => {
-          const elementTop = element.offsetTop;
-          const elementHeight = element.offsetHeight;
-          const windowHeight = window.innerHeight;
-          
-          let scrollTop;
-          switch (block) {
-            case 'start':
-              scrollTop = elementTop - offset;
-              break;
-            case 'center':
-              scrollTop = elementTop - (windowHeight / 2) + (elementHeight / 2) - offset;
-              break;
-            case 'end':
-              scrollTop = elementTop - windowHeight + elementHeight + offset;
-              break;
-            default:
-              scrollTop = elementTop - offset;
-          }
-
-          window.scrollTo({
-            top: Math.max(0, scrollTop),
-            behavior
-          });
-        }, 100);
-      }
-
-    } catch (error) {
-      console.error('Errore durante lo scroll:', error);
-      
-      // Fallback: scroll manuale
-      try {
-        const elementTop = element.offsetTop;
-        const elementHeight = element.offsetHeight;
-        const windowHeight = window.innerHeight;
-        const scrollTop = elementTop - (windowHeight / 2) + (elementHeight / 2);
-        
-        window.scrollTo({
-          top: Math.max(0, scrollTop),
-          behavior: 'smooth'
-        });
-      } catch (fallbackError) {
-        console.error('Anche il fallback scroll è fallito:', fallbackError);
-      }
-    }
-  };
-
-  const cleanup = useCallback(() => {
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
-  }, []);
-
-  return { scrollToElement, cleanup };
-};
-
-const useContactHighlight = () => {
-  const [highlightedContactId, setHighlightedContactId] = useState<string | null>(null);
-  const { scrollToElement, cleanup } = useRobustScroll();
-  const highlightTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
-
-  const highlightAndScrollToContact = useCallback(async (
-    contactId: string,
-    onContactFound?: (contact: any) => void
-  ) => {
-    console.log('Highlighting and scrolling to contact:', contactId);
-
-    // Pulisci timeout precedenti
-    if (highlightTimeoutRef.current) {
-      clearTimeout(highlightTimeoutRef.current);
-    }
-
-    // Imposta l'highlight immediatamente
-    setHighlightedContactId(contactId);
-
-    try {
-      // Attenta lo scroll con retry automatici
-      const scrollSuccess = await scrollToElement(contactId, {
-        behavior: 'smooth',
-        block: 'center',
-        retryAttempts: 15,
-        retryDelay: 200,
-        offset: 50
-      });
-
-      if (scrollSuccess) {
-        console.log('Scroll completato con successo');
-        
-        // Mantieni l'highlight per un tempo visibile
-        highlightTimeoutRef.current = setTimeout(() => {
-          setHighlightedContactId(null);
-          
-          // Se c'è un callback per quando il contatto è trovato, chiamalo
-          if (onContactFound) {
-            onContactFound(contactId);
-          }
-        }, 1500);
-      } else {
-        console.warn('Scroll fallito, rimuovo highlight');
-        setHighlightedContactId(null);
-      }
-
-    } catch (error) {
-      console.error('Errore durante highlight e scroll:', error);
-      setHighlightedContactId(null);
-    }
-
-    // Pulisci i parametri URL dopo un delay
-    setTimeout(() => {
-      if (window.history.replaceState) {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('id');
-        url.searchParams.delete('t');
-        window.history.replaceState({}, document.title, url.toString());
-      }
-    }, 2000);
-  }, [scrollToElement]);
-
-  const clearHighlight = useCallback(() => {
-    if (highlightTimeoutRef.current) {
-      clearTimeout(highlightTimeoutRef.current);
-    }
-    setHighlightedContactId(null);
-  }, []);
-
-  const cleanupHighlight = useCallback(() => {
-    clearHighlight();
-    cleanup();
-  }, [clearHighlight, cleanup]);
-
-  return {
-    highlightedContactId,
-    highlightAndScrollToContact,
-    clearHighlight,
-    cleanup: cleanupHighlight
-  };
-};
-
-// ============= INTERFACCE =============
-
+// Definizione dell'interfaccia per i contatti unificati basata sul nuovo schema
 interface Contact {
   _id: string;
   leadId?: string;
@@ -312,13 +38,13 @@ interface Contact {
   };
 }
 
+// Interfaccia per i dettagli di un contatto
 interface ContactDetailModalProps {
   contact: Contact;
   onClose: () => void;
 }
 
-// ============= FUNZIONI UTILITY =============
-
+// Funzione per ottenere la fonte in formato leggibile
 function formatSource(source: string, formType: string): string {
   if (source === "facebook") return "Facebook";
   if (formType === "booking") return "Prenotazione";
@@ -327,8 +53,7 @@ function formatSource(source: string, formType: string): string {
   return "Sconosciuto";
 }
 
-// ============= COMPONENTE MODALE =============
-
+// Componente modale per i dettagli di un contatto
 function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isOpening, setIsOpening] = useState(true);
@@ -492,8 +217,6 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   );
 }
 
-// ============= COMPONENTE PRINCIPALE =============
-
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -501,12 +224,10 @@ export default function ContactsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [highlightedContactId, setHighlightedContactId] = useState<string | null>(null);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
-  // Usa il hook per l'highlight e scroll robusto
-  const { highlightedContactId, highlightAndScrollToContact, cleanup } = useContactHighlight();
 
   // Gestisci il click fuori dal dropdown per chiuderlo
   useEffect(() => {
@@ -527,37 +248,70 @@ export default function ContactsPage() {
     loadContacts();
   }, [currentPage, selectedStatus]);
 
-  // Funzione migliorata per gestire la selezione del contatto
-  const handleContactSelection = useCallback((contactId: string) => {
-    console.log('handleContactSelection chiamata con ID:', contactId);
+  // NUOVO: Funzione per gestire l'highlight e scroll del contatto
+  const highlightAndScrollToContact = (contactId: string) => {
+    console.log('highlightAndScrollToContact called with ID:', contactId);
     
-    highlightAndScrollToContact(contactId, (foundContactId) => {
-      // Trova il contatto nei dati correnti
-      const targetContact = contacts.find(contact => 
-        contact._id === foundContactId || contact.leadId === foundContactId
-      );
+    // Cerca il contatto nella lista corrente
+    const targetContact = contacts.find(contact => 
+      contact._id === contactId || contact.leadId === contactId
+    );
+    
+    console.log('Target contact found:', targetContact);
+    
+    if (targetContact) {
+      // Se il contatto è nella lista, evidenzialo E poi aprilo nella modale dopo un momento
+      setHighlightedContactId(contactId);
       
-      console.log('Contatto trovato per modale:', targetContact);
-      
-      if (targetContact) {
-        // Apri la modale dopo un piccolo delay per permettere all'highlight di essere visibile
+      // Schedule a scroll to the element
+      setTimeout(() => {
+        let element = document.getElementById(`contact-${contactId}`);
+        
+        // Se non troviamo l'elemento con l'ID diretto, prova a cercarlo con leadId
+        if (!element && targetContact.leadId) {
+          element = document.getElementById(`contact-${targetContact.leadId}`);
+        }
+        
+        // Se ancora non lo troviamo, prova a cercare per data-lead-id
+        if (!element) {
+          element = document.querySelector(`[data-lead-id="${contactId}"]`);
+        }
+        
+        console.log('Element found:', element);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        // Remove the highlight after 800ms e apri la modale
         setTimeout(() => {
+          setHighlightedContactId(null);
           setSelectedContact(targetContact);
         }, 800);
-      } else {
-        console.warn('Contatto non trovato nei dati correnti:', foundContactId);
-        toast("info", "Contatto trovato", "Il contatto è stato localizzato ma potrebbe essere in un'altra pagina.");
+      }, 100);
+    } else {
+      console.log('Contact not found in current list');
+      // Se il contatto non è nella lista corrente, potrebbe essere in un'altra pagina
+      // Per ora non facciamo nulla, ma potremmo ricaricare o cercare
+    }
+    
+    // Clean up URL parameters after a delay
+    setTimeout(() => {
+      if (window.history.replaceState) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('id');
+        url.searchParams.delete('t'); // Remove timestamp too
+        window.history.replaceState({}, document.title, url.toString());
       }
-    });
-  }, [contacts, highlightAndScrollToContact]);
+    }, 500);
+  };
 
-  // Listener per l'evento custom dalla search bar
+  // NUOVO: Listener per l'evento custom dalla search bar
   useEffect(() => {
     const handleSearchResultSelected = (event: CustomEvent) => {
       console.log('Search result selected event received:', event.detail);
       const { id } = event.detail;
       if (id) {
-        handleContactSelection(id);
+        highlightAndScrollToContact(id);
       }
     };
 
@@ -568,9 +322,9 @@ export default function ContactsPage() {
       console.log('Removing search result listener');
       window.removeEventListener('searchResultSelected', handleSearchResultSelected as EventListener);
     };
-  }, [handleContactSelection]);
+  }, [contacts]);
 
-  // Listener per i cambiamenti dell'URL (popstate)
+  // NUOVO: Listener per i cambiamenti dell'URL (popstate)
   useEffect(() => {
     const handlePopState = () => {
       console.log('Pop state event received');
@@ -579,7 +333,7 @@ export default function ContactsPage() {
       
       console.log('Contact ID from URL:', contactId);
       if (contactId && contacts.length > 0) {
-        handleContactSelection(contactId);
+        highlightAndScrollToContact(contactId);
       }
     };
 
@@ -590,29 +344,19 @@ export default function ContactsPage() {
       console.log('Removing popstate listener');
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [contacts, handleContactSelection]);
+  }, [contacts]);
 
-  // Gestisci l'highlight del contatto dalla URL
+  // MODIFICATO: Gestisci l'highlight del contatto dalla URL - ora usa la nuova funzione
   useEffect(() => {
     if (!isLoading && contacts.length > 0) {
       const params = new URLSearchParams(window.location.search);
       const contactId = params.get('id');
       
       if (contactId) {
-        // Aggiungi un piccolo delay per assicurarti che il DOM sia completamente renderizzato
-        setTimeout(() => {
-          handleContactSelection(contactId);
-        }, 500);
+        highlightAndScrollToContact(contactId);
       }
     }
-  }, [contacts, isLoading, handleContactSelection]);
-
-  // Cleanup quando il componente si smonta
-  useEffect(() => {
-    return () => {
-      cleanup();
-    };
-  }, [cleanup]);
+  }, [contacts, isLoading]);
   
   // Funzione per caricare i contatti
   const loadContacts = async () => {
@@ -759,7 +503,7 @@ export default function ContactsPage() {
           </div>
         </div>
 
-        {/* Lista contatti */}
+        {/* Lista contatti - Mobile ottimizzato */}
         <div className="w-full">
           {contacts.length === 0 ? (
             <div className="p-12 text-center text-zinc-500">
@@ -788,10 +532,9 @@ export default function ContactsPage() {
                     <div 
                       key={contact._id} 
                       id={`contact-${contact._id}`}
-                      data-lead-id={contact.leadId}
-                      className={`bg-white dark:bg-zinc-800 rounded-lg p-4 transition-all duration-700 cursor-pointer ${
+                      className={`bg-white dark:bg-zinc-800 rounded-lg p-4 transition-all duration-500 cursor-pointer ${
                         (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
-                          ? 'bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/30 dark:to-yellow-900/30 ring-2 ring-orange-400/50 shadow-lg scale-[1.02] transform' 
+                          ? 'bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-300/40 shadow-md scale-[1.01]' 
                           : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                       }`}
                       onClick={() => handleContactClick(contact)}
@@ -799,14 +542,14 @@ export default function ContactsPage() {
                       <div className="flex items-start space-x-3">
                         {getSourceIcon(contact)}
                         <div className="flex-1 min-w-0">
-                          <h3 className={`font-semibold truncate transition-colors duration-500 ${
+                          <h3 className={`font-semibold truncate transition-colors ${
                             (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
                               ? 'text-orange-800 dark:text-orange-200' 
                               : 'text-zinc-900 dark:text-white'
                           }`}>
                             {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                           </h3>
-                          <p className={`text-sm mt-1 transition-colors duration-500 ${
+                          <p className={`text-sm mt-1 transition-colors ${
                             (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
                               ? 'text-orange-600 dark:text-orange-300' 
                               : 'text-primary'
@@ -832,9 +575,9 @@ export default function ContactsPage() {
                         key={contact._id} 
                         id={`contact-${contact._id}`}
                         data-lead-id={contact.leadId}
-                        className={`p-6 transition-all duration-700 cursor-pointer ${
+                        className={`p-6 transition-all duration-500 cursor-pointer ${
                           (highlightedContactId === contact._id || highlightedContactId === contact.leadId)
-                            ? 'bg-gradient-to-r from-orange-50 via-yellow-50 to-orange-50 dark:from-orange-900/30 dark:via-yellow-900/20 dark:to-orange-900/30 ring-2 ring-orange-400/50 shadow-lg scale-[1.002] transform' 
+                            ? 'bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-300/40 shadow-md scale-[1.005]' 
                             : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                         }`}
                         onClick={() => handleContactClick(contact)}
@@ -843,7 +586,7 @@ export default function ContactsPage() {
                           <div className="flex items-center space-x-4">
                             {getSourceIcon(contact)}
                             <div className="min-w-0 flex-1">
-                              <h3 className={`text-lg font-semibold truncate transition-colors duration-500 ${
+                              <h3 className={`text-lg font-semibold truncate transition-colors ${
                                 (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
                                   ? 'text-orange-800 dark:text-orange-200' 
                                   : 'text-zinc-900 dark:text-white'
@@ -851,7 +594,7 @@ export default function ContactsPage() {
                                 {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                               </h3>
                               <div className="mt-1 space-y-1">
-                                <p className={`text-sm transition-colors duration-500 ${
+                                <p className={`text-sm transition-colors ${
                                   (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
                                     ? 'text-orange-600 dark:text-orange-300' 
                                     : 'text-primary'
