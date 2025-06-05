@@ -566,49 +566,84 @@ export default function ContactsPage() {
                 </div>
               </div>
 
-              {/* Desktop: Tabella scorrevole */}
+              {/* Desktop: Tabella vera e propria */}
               <div className="hidden sm:block overflow-x-auto mx-4 sm:mx-6">
-                <div className="min-w-full bg-white dark:bg-zinc-800 rounded-xl shadow-sm">
+                <div className="min-w-full bg-white dark:bg-zinc-800 rounded-xl shadow-sm overflow-hidden">
+                  {/* Header della tabella */}
+                  <div className="bg-zinc-50 dark:bg-zinc-700/50 px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
+                    <div className="grid grid-cols-12 gap-4 items-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      <div className="col-span-3">Nome</div>
+                      <div className="col-span-3">Email</div>
+                      <div className="col-span-2">Telefono</div>
+                      <div className="col-span-2">Fonte</div>
+                      <div className="col-span-1">Data</div>
+                      <div className="col-span-1">Stato</div>
+                    </div>
+                  </div>
+
+                  {/* Righe della tabella */}
                   <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
                     {contacts.map((contact) => (
                       <div 
                         key={contact._id} 
                         id={`contact-${contact._id}`}
                         data-lead-id={contact.leadId}
-                        className={`p-6 transition-all duration-500 cursor-pointer ${
+                        className={`px-6 py-4 transition-all duration-500 cursor-pointer ${
                           (highlightedContactId === contact._id || highlightedContactId === contact.leadId)
-                            ? 'bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-300/40 shadow-md scale-[1.005]' 
+                            ? 'bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-300/40 shadow-md scale-[1.002]' 
                             : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                         }`}
                         onClick={() => handleContactClick(contact)}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
+                        <div className="grid grid-cols-12 gap-4 items-center">
+                          {/* Nome con icona */}
+                          <div className="col-span-3 flex items-center space-x-3">
                             {getSourceIcon(contact)}
                             <div className="min-w-0 flex-1">
-                              <h3 className={`text-lg font-semibold truncate transition-colors ${
+                              <h3 className={`font-semibold truncate transition-colors ${
                                 (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
                                   ? 'text-orange-800 dark:text-orange-200' 
                                   : 'text-zinc-900 dark:text-white'
                               }`}>
                                 {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                               </h3>
-                              <div className="mt-1 space-y-1">
-                                <p className={`text-sm transition-colors ${
-                                  (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
-                                    ? 'text-orange-600 dark:text-orange-300' 
-                                    : 'text-primary'
-                                }`}>{contact.email}</p>
-                                <p className="text-sm text-zinc-500">{contact.phone}</p>
-                              </div>
                             </div>
                           </div>
-                          
-                          <div className="flex items-center space-x-4">
-                            <div className="text-right">
-                              <p className="text-sm text-zinc-500">{formatSource(contact.source, contact.formType)}</p>
-                              <p className="text-sm text-zinc-400">{formatDate(contact.createdAt)}</p>
-                            </div>
+
+                          {/* Email */}
+                          <div className="col-span-3">
+                            <p className={`text-sm truncate transition-colors ${
+                              (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
+                                ? 'text-orange-600 dark:text-orange-300' 
+                                : 'text-primary'
+                            }`}>
+                              {contact.email}
+                            </p>
+                          </div>
+
+                          {/* Telefono */}
+                          <div className="col-span-2">
+                            <p className="text-sm text-zinc-900 dark:text-white truncate">
+                              {contact.phone || "Non disponibile"}
+                            </p>
+                          </div>
+
+                          {/* Fonte */}
+                          <div className="col-span-2">
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
+                              {formatSource(contact.source, contact.formType)}
+                            </p>
+                          </div>
+
+                          {/* Data */}
+                          <div className="col-span-1">
+                            <p className="text-xs text-zinc-500 truncate">
+                              {formatDate(contact.createdAt)}
+                            </p>
+                          </div>
+
+                          {/* Stato */}
+                          <div className="col-span-1 flex justify-end">
                             <StatusBadge status={contact.status} />
                           </div>
                         </div>
