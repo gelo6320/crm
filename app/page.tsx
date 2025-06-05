@@ -328,7 +328,7 @@ export default function Dashboard() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
             className="flex flex-col"
           >
             <h3 className="text-xl font-montserrat font-semibold text-white text-center mb-6">
