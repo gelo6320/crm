@@ -279,62 +279,57 @@ export default function ContactsPage() {
         
         console.log('Element found:', element);
         if (element) {
-          // Funzione per controllare se l'elemento è effettivamente renderizzato
-          const waitForElementToBeVisible = (maxAttempts = 10) => {
-            let attempts = 0;
-            
-            const checkVisibility = () => {
-              const rect = element.getBoundingClientRect();
-              const isVisible = rect.width > 0 && rect.height > 0;
+          // Approccio robusto per scroll - usa offsetTop invece di getBoundingClientRect
+          console.log('Using robust scroll approach with offsetTop');
+          
+          // Metodo 1: Scroll diretto con scrollIntoView (più affidabile)
+          try {
+            element.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            });
+            console.log('scrollIntoView executed successfully');
+          } catch (error) {
+            console.log('scrollIntoView failed:', error);
+          }
+          
+          // Metodo 2: Fallback con calcolo manuale dopo 200ms
+          setTimeout(() => {
+            try {
+              const elementTop = element.offsetTop;
+              const elementHeight = element.offsetHeight;
+              const windowHeight = window.innerHeight;
               
-              console.log(`Attempt ${attempts + 1}: Element rect:`, {
-                width: rect.width,
-                height: rect.height,
-                top: rect.top,
-                bottom: rect.bottom,
-                isVisible: isVisible
+              // Calcola la posizione per centrare l'elemento
+              const scrollTop = elementTop - (windowHeight / 2) + (elementHeight / 2);
+              
+              console.log('Manual scroll calculation:', {
+                elementTop,
+                elementHeight,
+                windowHeight,
+                scrollTop,
+                currentScrollY: window.scrollY
               });
               
-              if (isVisible) {
-                // Elemento è visibile, ora controlla se è in viewport
-                const isInViewport = (
-                  rect.top >= 0 &&
-                  rect.left >= 0 &&
-                  rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                  rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-                );
-                
-                console.log('Element is visible. Is in viewport?', isInViewport);
-                
-                // Se non è in viewport, fai scroll
-                if (!isInViewport) {
-                  console.log('Scrolling to element...');
-                  element.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center',
-                    inline: 'nearest'
-                  });
-                } else {
-                  console.log('Element already in viewport');
-                }
-                
-                return true; // Elemento visibile, stop checking
-              } else if (attempts < maxAttempts) {
-                // Elemento non ancora visibile, riprova
-                attempts++;
-                setTimeout(checkVisibility, 50);
-                return false;
+              // Se l'elemento non è centrato, fai scroll manuale
+              const currentCenter = window.scrollY + (windowHeight / 2);
+              const elementCenter = elementTop + (elementHeight / 2);
+              const distance = Math.abs(currentCenter - elementCenter);
+              
+              if (distance > 100) { // Se è più di 100px dal centro
+                console.log('Element not centered, scrolling manually');
+                window.scrollTo({
+                  top: Math.max(0, scrollTop),
+                  behavior: 'smooth'
+                });
               } else {
-                console.log('Element never became visible after', maxAttempts, 'attempts');
-                return true; // Stop checking dopo max attempts
+                console.log('Element already centered');
               }
-            };
-            
-            return checkVisibility();
-          };
-          
-          // Avvia il controllo di visibilità
-          waitForElementToBeVisible();
+            } catch (error) {
+              console.log('Manual scroll failed:', error);
+            }
+          }, 200);
           
           // Remove the highlight after 800ms e apri la modale
           setTimeout(() => {
