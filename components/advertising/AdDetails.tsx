@@ -139,130 +139,257 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
             <div className="space-y-4">
               {/* Immagine o Video */}
               {creative.image_url && (
-                <div className={`relative rounded-lg overflow-hidden bg-zinc-900 ${
+                <div className={`${
                   layout === 'mobile' 
-                    ? 'w-full' 
-                    : 'w-full max-w-md mx-auto'
+                    ? 'space-y-4' 
+                    : 'flex gap-4 items-start'
                 }`}>
-                  <img 
-                    src={creative.image_url} 
-                    alt={creative.title || 'Creative dell\'inserzione'}
-                    className={`w-full h-auto object-cover ${
-                      layout === 'mobile' 
-                        ? 'max-h-80' 
-                        : 'max-h-64'
-                    }`}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                  {creative.video_id && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-                      <div className="bg-white bg-opacity-20 rounded-full p-3">
-                        <Play size={24} className="text-white ml-1" />
+                  {/* Container Immagine */}
+                  <div className={`relative rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 ${
+                    layout === 'mobile' 
+                      ? 'w-full' 
+                      : 'w-80'
+                  }`}>
+                    <img 
+                      src={creative.image_url} 
+                      alt={creative.title || 'Creative dell\'inserzione'}
+                      className={`w-full h-auto object-contain ${
+                        layout === 'mobile' 
+                          ? '' 
+                          : 'max-h-60'
+                      }`}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    {creative.video_id && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
+                        <div className="bg-white bg-opacity-20 rounded-full p-3">
+                          <Play size={24} className="text-white ml-1" />
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  
+                  {/* Contenuto testuale - A destra su desktop, sotto su mobile */}
+                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3'}`}>
+                    {creative.title && (
+                      <div>
+                        <h3 className={`font-semibold text-white mb-1 ${
+                          layout === 'mobile' ? 'text-lg' : 'text-xl'
+                        }`}>
+                          {creative.title}
+                        </h3>
+                      </div>
+                    )}
+                    
+                    {creative.body && (
+                      <div>
+                        <p className={`text-zinc-300 leading-relaxed ${
+                          layout === 'mobile' ? 'text-sm' : 'text-sm'
+                        }`}>
+                          {creative.body}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {creative.link_description && (
+                      <div>
+                        <p className={`text-zinc-400 ${
+                          layout === 'mobile' ? 'text-xs' : 'text-xs'
+                        }`}>
+                          {creative.link_description}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Call to Action e Link */}
+                    {(creative.call_to_action || creative.link_url) && (
+                      <div className="pt-2 border-t border-zinc-700/50">
+                        {creative.call_to_action && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-zinc-400">
+                              Call to Action: {creative.call_to_action.type}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {creative.link_url && (
+                          <div className="mt-2">
+                            <a 
+                              href={creative.link_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center text-xs text-primary hover:text-primary/80 transition-colors"
+                            >
+                              <ExternalLink size={12} className="mr-1" />
+                              Visualizza link
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               
               {/* Se c'è solo video_id senza image_url, mostra un placeholder */}
               {!creative.image_url && creative.video_id && (
-                <div className={`relative rounded-lg overflow-hidden bg-zinc-900 flex items-center justify-center ${
+                <div className={`${
                   layout === 'mobile' 
-                    ? 'h-60 w-full' 
-                    : 'h-48 w-full max-w-md mx-auto'
+                    ? 'space-y-4' 
+                    : 'flex gap-4 items-start'
                 }`}>
-                  <div className="text-center">
-                    <div className="bg-zinc-800 rounded-full p-4 mx-auto mb-3 w-16 h-16 flex items-center justify-center">
-                      <Play size={24} className="text-primary ml-1" />
+                  <div className={`relative rounded-lg overflow-hidden bg-zinc-900 flex items-center justify-center flex-shrink-0 ${
+                    layout === 'mobile' 
+                      ? 'h-60 w-full' 
+                      : 'h-48 w-80'
+                  }`}>
+                    <div className="text-center">
+                      <div className="bg-zinc-800 rounded-full p-4 mx-auto mb-3 w-16 h-16 flex items-center justify-center">
+                        <Play size={24} className="text-primary ml-1" />
+                      </div>
+                      <p className="text-sm text-zinc-400">Video ID: {creative.video_id}</p>
                     </div>
-                    <p className="text-sm text-zinc-400">Video ID: {creative.video_id}</p>
+                  </div>
+                  
+                  {/* Contenuto testuale per video */}
+                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3'}`}>
+                    {creative.title && (
+                      <div>
+                        <h3 className={`font-semibold text-white mb-1 ${
+                          layout === 'mobile' ? 'text-lg' : 'text-xl'
+                        }`}>
+                          {creative.title}
+                        </h3>
+                      </div>
+                    )}
+                    
+                    {creative.body && (
+                      <div>
+                        <p className={`text-zinc-300 leading-relaxed ${
+                          layout === 'mobile' ? 'text-sm' : 'text-sm'
+                        }`}>
+                          {creative.body}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
               
               {/* Se c'è solo thumbnail_url, usalo come fallback */}
               {!creative.image_url && !creative.video_id && creative.thumbnail_url && (
-                <div className={`relative rounded-lg overflow-hidden bg-zinc-900 ${
+                <div className={`${
                   layout === 'mobile' 
-                    ? 'w-full' 
-                    : 'w-full max-w-md mx-auto'
+                    ? 'space-y-4' 
+                    : 'flex gap-4 items-start'
                 }`}>
-                  <img 
-                    src={creative.thumbnail_url} 
-                    alt={creative.title || 'Thumbnail dell\'inserzione'}
-                    className={`w-full h-auto object-cover ${
-                      layout === 'mobile' 
-                        ? 'max-h-80' 
-                        : 'max-h-64'
-                    }`}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
-              
-              {/* Contenuto testuale */}
-              <div className="space-y-3">
-                {creative.title && (
-                  <div>
-                    <h3 className={`font-semibold text-white mb-1 ${
-                      layout === 'mobile' ? 'text-lg' : 'text-base'
-                    }`}>
-                      {creative.title}
-                    </h3>
+                  <div className={`relative rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 ${
+                    layout === 'mobile' 
+                      ? 'w-full' 
+                      : 'w-80'
+                  }`}>
+                    <img 
+                      src={creative.thumbnail_url} 
+                      alt={creative.title || 'Thumbnail dell\'inserzione'}
+                      className={`w-full h-auto object-contain ${
+                        layout === 'mobile' 
+                          ? '' 
+                          : 'max-h-60'
+                      }`}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
                   </div>
-                )}
-                
-                {creative.body && (
-                  <div>
-                    <p className={`text-zinc-300 leading-relaxed ${
-                      layout === 'mobile' ? 'text-sm' : 'text-xs'
-                    }`}>
-                      {creative.body}
-                    </p>
-                  </div>
-                )}
-                
-                {creative.link_description && (
-                  <div>
-                    <p className={`text-zinc-400 ${
-                      layout === 'mobile' ? 'text-xs' : 'text-xs'
-                    }`}>
-                      {creative.link_description}
-                    </p>
-                  </div>
-                )}
-                
-                {/* Call to Action e Link */}
-                {(creative.call_to_action || creative.link_url) && (
-                  <div className="pt-2 border-t border-zinc-700/50">
-                    {creative.call_to_action && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-zinc-400">
-                          Call to Action: {creative.call_to_action.type}
-                        </span>
+                  
+                  {/* Contenuto testuale per thumbnail */}
+                  <div className={`${layout === 'mobile' ? 'space-y-3' : 'flex-1 space-y-3'}`}>
+                    {creative.title && (
+                      <div>
+                        <h3 className={`font-semibold text-white mb-1 ${
+                          layout === 'mobile' ? 'text-lg' : 'text-xl'
+                        }`}>
+                          {creative.title}
+                        </h3>
                       </div>
                     )}
                     
-                    {creative.link_url && (
-                      <div className="mt-2">
-                        <a 
-                          href={creative.link_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center text-xs text-primary hover:text-primary/80 transition-colors"
-                        >
-                          <ExternalLink size={12} className="mr-1" />
-                          Visualizza link
-                        </a>
+                    {creative.body && (
+                      <div>
+                        <p className={`text-zinc-300 leading-relaxed ${
+                          layout === 'mobile' ? 'text-sm' : 'text-sm'
+                        }`}>
+                          {creative.body}
+                        </p>
                       </div>
                     )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+              
+              {/* Solo contenuto testuale se non ci sono media */}
+              {!creative.image_url && !creative.video_id && !creative.thumbnail_url && (
+                <div className="space-y-3">
+                  {creative.title && (
+                    <div>
+                      <h3 className={`font-semibold text-white mb-1 ${
+                        layout === 'mobile' ? 'text-lg' : 'text-xl'
+                      }`}>
+                        {creative.title}
+                      </h3>
+                    </div>
+                  )}
+                  
+                  {creative.body && (
+                    <div>
+                      <p className={`text-zinc-300 leading-relaxed ${
+                        layout === 'mobile' ? 'text-sm' : 'text-sm'
+                      }`}>
+                        {creative.body}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {creative.link_description && (
+                    <div>
+                      <p className={`text-zinc-400 ${
+                        layout === 'mobile' ? 'text-xs' : 'text-xs'
+                      }`}>
+                        {creative.link_description}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Call to Action e Link */}
+                  {(creative.call_to_action || creative.link_url) && (
+                    <div className="pt-2 border-t border-zinc-700/50">
+                      {creative.call_to_action && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-zinc-400">
+                            Call to Action: {creative.call_to_action.type}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {creative.link_url && (
+                        <div className="mt-2">
+                          <a 
+                            href={creative.link_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center text-xs text-primary hover:text-primary/80 transition-colors"
+                          >
+                            <ExternalLink size={12} className="mr-1" />
+                            Visualizza link
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               
               {/* Informazioni del Creative */}
               <div className="mt-4 pt-3 border-t border-zinc-700/50">
