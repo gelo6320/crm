@@ -273,13 +273,16 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
 
   // Handle clicking on a search result - MODIFIED FOR SAME PAGE NAVIGATION
   const handleSearchResultClick = (result: SearchResult) => {
+    console.log('Search result clicked:', result);
     setShowSearchResults(false);
     setSearchQuery("");
     
     // Check if we're already on the target page
     const isAlreadyOnTargetPage = pathname === result.sectionPath;
+    console.log('Already on target page:', isAlreadyOnTargetPage, 'Current path:', pathname, 'Target path:', result.sectionPath);
     
     if (isAlreadyOnTargetPage) {
+      console.log('Same page navigation - dispatching custom event');
       // If we're already on the same page, force a URL update and trigger the highlight
       const url = new URL(window.location.href);
       url.searchParams.set('id', result.id);
@@ -289,13 +292,17 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
       window.history.pushState({}, '', url.toString());
       
       // Dispatch a custom event to notify the page of the search result selection
-      window.dispatchEvent(new CustomEvent('searchResultSelected', {
+      const customEvent = new CustomEvent('searchResultSelected', {
         detail: { id: result.id, result }
-      }));
+      });
+      console.log('Dispatching custom event:', customEvent);
+      window.dispatchEvent(customEvent);
       
       // Also trigger a popstate event to ensure useEffect hooks that listen to URL changes are triggered
+      console.log('Dispatching popstate event');
       window.dispatchEvent(new PopStateEvent('popstate'));
     } else {
+      console.log('Different page navigation');
       // Navigate to different page normally
       router.push(`${result.sectionPath}?id=${result.id}`);
     }

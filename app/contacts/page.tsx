@@ -250,53 +250,76 @@ export default function ContactsPage() {
 
   // NUOVO: Funzione per gestire l'highlight e scroll del contatto
   const highlightAndScrollToContact = (contactId: string) => {
+    console.log('highlightAndScrollToContact called with ID:', contactId);
+    
     // Cerca il contatto nella lista corrente
     const targetContact = contacts.find(contact => 
       contact._id === contactId || contact.leadId === contactId
     );
     
+    console.log('Target contact found:', targetContact);
+    
     if (targetContact) {
-      // Se il contatto è nella lista, aprilo nella modale
-      setSelectedContact(targetContact);
-    } else {
-      // Se il contatto non è nella lista corrente, evidenzialo
+      // Se il contatto è nella lista, evidenzialo E poi aprilo nella modale dopo un momento
       setHighlightedContactId(contactId);
       
       // Schedule a scroll to the element
       setTimeout(() => {
-        const element = document.getElementById(`contact-${contactId}`);
+        let element = document.getElementById(`contact-${contactId}`);
+        
+        // Se non troviamo l'elemento con l'ID diretto, prova a cercarlo con leadId
+        if (!element && targetContact.leadId) {
+          element = document.getElementById(`contact-${targetContact.leadId}`);
+        }
+        
+        // Se ancora non lo troviamo, prova a cercare per data-lead-id
+        if (!element) {
+          element = document.querySelector(`[data-lead-id="${contactId}"]`);
+        }
+        
+        console.log('Element found:', element);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          
-          // Remove the highlight after 3 seconds
-          setTimeout(() => {
-            setHighlightedContactId(null);
-          }, 3000);
         }
-      }, 300);
+        
+        // Remove the highlight after 3 seconds e apri la modale
+        setTimeout(() => {
+          setHighlightedContactId(null);
+          setSelectedContact(targetContact);
+        }, 2000);
+      }, 100);
+    } else {
+      console.log('Contact not found in current list');
+      // Se il contatto non è nella lista corrente, potrebbe essere in un'altra pagina
+      // Per ora non facciamo nulla, ma potremmo ricaricare o cercare
     }
     
-    // Clean up URL parameters
-    if (window.history.replaceState) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('id');
-      url.searchParams.delete('t'); // Remove timestamp too
-      window.history.replaceState({}, document.title, url.toString());
-    }
+    // Clean up URL parameters after a delay
+    setTimeout(() => {
+      if (window.history.replaceState) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('id');
+        url.searchParams.delete('t'); // Remove timestamp too
+        window.history.replaceState({}, document.title, url.toString());
+      }
+    }, 500);
   };
 
   // NUOVO: Listener per l'evento custom dalla search bar
   useEffect(() => {
     const handleSearchResultSelected = (event: CustomEvent) => {
+      console.log('Search result selected event received:', event.detail);
       const { id } = event.detail;
       if (id) {
         highlightAndScrollToContact(id);
       }
     };
 
+    console.log('Adding search result listener');
     window.addEventListener('searchResultSelected', handleSearchResultSelected as EventListener);
     
     return () => {
+      console.log('Removing search result listener');
       window.removeEventListener('searchResultSelected', handleSearchResultSelected as EventListener);
     };
   }, [contacts]);
@@ -304,17 +327,21 @@ export default function ContactsPage() {
   // NUOVO: Listener per i cambiamenti dell'URL (popstate)
   useEffect(() => {
     const handlePopState = () => {
+      console.log('Pop state event received');
       const params = new URLSearchParams(window.location.search);
       const contactId = params.get('id');
       
+      console.log('Contact ID from URL:', contactId);
       if (contactId && contacts.length > 0) {
         highlightAndScrollToContact(contactId);
       }
     };
 
+    console.log('Adding popstate listener');
     window.addEventListener('popstate', handlePopState);
     
     return () => {
+      console.log('Removing popstate listener');
       window.removeEventListener('popstate', handlePopState);
     };
   }, [contacts]);
@@ -506,7 +533,7 @@ export default function ContactsPage() {
                       key={contact._id} 
                       id={`contact-${contact._id}`}
                       className={`bg-white dark:bg-zinc-800 rounded-lg p-4 transition-all duration-500 cursor-pointer ${
-                        highlightedContactId === contact._id 
+                        (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
                           ? 'bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-400/50 shadow-lg scale-[1.02]' 
                           : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                       }`}
@@ -547,8 +574,9 @@ export default function ContactsPage() {
                       <div 
                         key={contact._id} 
                         id={`contact-${contact._id}`}
+                        data-lead-id={contact.leadId}
                         className={`p-6 transition-all duration-500 cursor-pointer ${
-                          highlightedContactId === contact._id 
+                          (highlightedContactId === contact._id || highlightedContactId === contact.leadId)
                             ? 'bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-400/50 shadow-lg scale-[1.01]' 
                             : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                         }`}
