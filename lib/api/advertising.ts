@@ -22,6 +22,25 @@ export interface Ad {
   cpm: number;
 }
 
+// Nuovo tipo per i dati del creative
+export interface AdCreative {
+  id: string;
+  name: string;
+  title?: string;
+  body?: string;
+  image_url?: string;
+  video_url?: string;
+  call_to_action?: {
+    type: string;
+    value?: {
+      link?: string;
+      link_title?: string;
+    };
+  };
+  link_url?: string;
+  link_description?: string;
+}
+
 // Helper per estrarre dati di lead dalle actions di Facebook
 function extractActionData(actions: any[] = []) {
   let leads = 0;
@@ -183,8 +202,120 @@ export async function fetchActiveAds(): Promise<Ad[]> {
   }
 }
 
-// Funzione per recuperare l'anteprima di un'inserzione
+// Nuova funzione per recuperare i dati del creative dell'inserzione
+export async function fetchAdCreative(adId: string): Promise<AdCreative | null> {
+  try {
+    // Prima facciamo una richiesta per ottenere la configurazione utente dal backend
+    const configResponse = await axios.get(
+      `${API_BASE_URL}/api/user/config`,
+      { withCredentials: true }
+    );
+    
+    // Estrai la configurazione dalla risposta
+    const userConfig = configResponse.data.config || {};
+    const FB_MARKETING_TOKEN = userConfig.marketing_api_token || '';
+    
+    // Se FB_MARKETING_TOKEN non è disponibile, restituisci un errore
+    if (!FB_MARKETING_TOKEN) {
+      console.error('ERRORE: Marketing API token mancante.');
+      throw new Error('Configurazione Facebook incompleta. Verifica le impostazioni di accesso.');
+    }
+    
+    // Step 1: Ottieni l'ad creative ID dall'annuncio
+    const adResponse = await axios.get(
+      `https://graph.facebook.com/${FB_API_VERSION}/${adId}`,
+      {
+        params: {
+          access_token: FB_MARKETING_TOKEN,
+          fields: 'creative'
+        }
+      }
+    );
+    
+    const creativeId = adResponse.data.creative?.id;
+    if (!creativeId) {
+      throw new Error('Creative ID non trovato per questa inserzione.');
+    }
+    
+    // Step 2: Ottieni i dettagli del creative
+    const creativeResponse = await axios.get(
+      `https://graph.facebook.com/${FB_API_VERSION}/${creativeId}`,
+      {
+        params: {
+          access_token: FB_MARKETING_TOKEN,
+          fields: 'id,name,title,body,image_url,video_url,object_story_spec,call_to_action_type,url_tags'
+        }
+      }
+    );
+    
+    const creative = creativeResponse.data;
+    
+    // Step 3: Estrai i dati dall'object_story_spec se presente
+    let extractedData: any = {};
+    
+    if (creative.object_story_spec) {
+      const spec = creative.object_story_spec;
+      
+      // Gestisci link_data (per i post con link)
+      if (spec.link_data) {
+        extractedData = {
+          title: spec.link_data.name,
+          body: spec.link_data.message,
+          link_description: spec.link_data.description,
+          link_url: spec.link_data.link,
+          call_to_action: spec.link_data.call_to_action,
+          image_url: spec.link_data.picture
+        };
+      }
+      
+      // Gestisci photo_data (per i post con foto)
+      else if (spec.photo_data) {
+        extractedData = {
+          title: spec.photo_data.name,
+          body: spec.photo_data.message,
+          link_url: spec.photo_data.url,
+          call_to_action: spec.photo_data.call_to_action,
+          image_url: spec.photo_data.picture || spec.photo_data.url
+        };
+      }
+      
+      // Gestisci video_data (per i post con video)
+      else if (spec.video_data) {
+        extractedData = {
+          title: spec.video_data.title,
+          body: spec.video_data.message,
+          video_url: spec.video_data.video_id,
+          call_to_action: spec.video_data.call_to_action,
+          image_url: spec.video_data.image_url
+        };
+      }
+    }
+    
+    // Costruisci l'oggetto AdCreative
+    const adCreative: AdCreative = {
+      id: creative.id,
+      name: creative.name || `Creative ${creative.id}`,
+      title: extractedData.title || creative.title,
+      body: extractedData.body || creative.body,
+      image_url: extractedData.image_url || creative.image_url,
+      video_url: extractedData.video_url || creative.video_url,
+      call_to_action: extractedData.call_to_action,
+      link_url: extractedData.link_url,
+      link_description: extractedData.link_description
+    };
+    
+    return adCreative;
+    
+  } catch (error) {
+    console.error("Errore durante il recupero del creative dell'inserzione:", error);
+    throw error;
+  }
+}
+
+// Funzione legacy mantenuta per compatibilità (ora deprecated)
 export async function fetchAdPreview(adId: string): Promise<string> {
+  console.warn('fetchAdPreview è deprecata. Usa fetchAdCreative per evitare popup di cookie.');
+  
   try {
     // Prima facciamo una richiesta per ottenere la configurazione utente dal backend
     const configResponse = await axios.get(
