@@ -282,11 +282,11 @@ export default function ContactsPage() {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         
-        // Remove the highlight after 3 seconds e apri la modale
+        // Remove the highlight after 1.2 seconds e apri la modale
         setTimeout(() => {
           setHighlightedContactId(null);
           setSelectedContact(targetContact);
-        }, 2000);
+        }, 1200);
       }, 100);
     } else {
       console.log('Contact not found in current list');
@@ -534,7 +534,7 @@ export default function ContactsPage() {
                       id={`contact-${contact._id}`}
                       className={`bg-white dark:bg-zinc-800 rounded-lg p-4 transition-all duration-500 cursor-pointer ${
                         (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
-                          ? 'bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-400/50 shadow-lg scale-[1.02]' 
+                          ? 'bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-300/40 shadow-md scale-[1.01]' 
                           : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                       }`}
                       onClick={() => handleContactClick(contact)}
@@ -543,15 +543,15 @@ export default function ContactsPage() {
                         {getSourceIcon(contact)}
                         <div className="flex-1 min-w-0">
                           <h3 className={`font-semibold truncate transition-colors ${
-                            highlightedContactId === contact._id 
-                              ? 'text-orange-900 dark:text-orange-100' 
+                            (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
+                              ? 'text-orange-800 dark:text-orange-200' 
                               : 'text-zinc-900 dark:text-white'
                           }`}>
                             {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                           </h3>
                           <p className={`text-sm mt-1 transition-colors ${
-                            highlightedContactId === contact._id 
-                              ? 'text-orange-700 dark:text-orange-300' 
+                            (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
+                              ? 'text-orange-600 dark:text-orange-300' 
                               : 'text-primary'
                           }`}>{contact.email}</p>
                           <p className="text-sm text-zinc-500 mt-1">{contact.phone}</p>
@@ -577,7 +577,7 @@ export default function ContactsPage() {
                         data-lead-id={contact.leadId}
                         className={`p-6 transition-all duration-500 cursor-pointer ${
                           (highlightedContactId === contact._id || highlightedContactId === contact.leadId)
-                            ? 'bg-orange-100 dark:bg-orange-900/30 ring-2 ring-orange-400/50 shadow-lg scale-[1.01]' 
+                            ? 'bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-300/40 shadow-md scale-[1.005]' 
                             : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                         }`}
                         onClick={() => handleContactClick(contact)}
@@ -587,16 +587,16 @@ export default function ContactsPage() {
                             {getSourceIcon(contact)}
                             <div className="min-w-0 flex-1">
                               <h3 className={`text-lg font-semibold truncate transition-colors ${
-                                highlightedContactId === contact._id 
-                                  ? 'text-orange-900 dark:text-orange-100' 
+                                (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
+                                  ? 'text-orange-800 dark:text-orange-200' 
                                   : 'text-zinc-900 dark:text-white'
                               }`}>
                                 {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                               </h3>
                               <div className="mt-1 space-y-1">
                                 <p className={`text-sm transition-colors ${
-                                  highlightedContactId === contact._id 
-                                    ? 'text-orange-700 dark:text-orange-300' 
+                                  (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
+                                    ? 'text-orange-600 dark:text-orange-300' 
                                     : 'text-primary'
                                 }`}>{contact.email}</p>
                                 <p className="text-sm text-zinc-500">{contact.phone}</p>
