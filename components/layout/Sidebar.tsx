@@ -98,7 +98,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
           href={link.href}
           onClick={closeSidebar}
           className={`
-            group relative flex items-center rounded-lg text-sm font-medium transition-all duration-200 w-full px-2 py-1.5
+            group relative flex items-center rounded-lg text-sm font-medium transition-all duration-300 ease-out w-full px-2 py-1.5
             ${isActive 
               ? 'bg-primary/10 text-primary' 
               : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'}
@@ -117,7 +117,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
           
           {/* Text container with smooth expand/collapse */}
           <div className={`
-            ml-2 whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden text-sm flex items-center flex-1
+            ml-2 whitespace-nowrap transition-all duration-400 ease-out overflow-hidden text-sm flex items-center flex-1
             ${isExpanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}
           `}>
             <span>{link.name}</span>
@@ -134,7 +134,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
           {!isExpanded && (
             <div className="
               absolute left-full ml-2 px-2 py-1 bg-zinc-900/95 backdrop-blur-sm text-white text-xs rounded-md
-              opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50
+              opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out z-50
               pointer-events-none whitespace-nowrap flex items-center
             ">
               {link.name}
@@ -151,10 +151,13 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
   
     return (
       <>
-        {/* Mobile overlay */}
-        {isMobile && open && (
+        {/* Mobile overlay con transizione graduale */}
+        {isMobile && (
           <div 
-            className="fixed inset-0 bg-black/60 z-30"
+            className={`
+              fixed inset-0 bg-black/60 z-30 transition-all duration-400 ease-out
+              ${open ? 'opacity-100 visible' : 'opacity-0 invisible'}
+            `}
             onClick={() => setOpen(false)}
           />
         )}
@@ -163,7 +166,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
         <div 
           className={`
             fixed top-0 left-0 z-50 h-full bg-black/70 backdrop-blur-sm
-            transition-all duration-300 ease-in-out 
+            transition-all duration-500 ease-out
             ${isMobile ? 
               `transform ${open ? 'translate-x-0' : '-translate-x-full'} w-64` : 
               `${isHovered ? 'w-64' : 'w-16'}`
@@ -174,7 +177,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
           {/* Sidebar content */}
           <div className="py-2 h-[calc(100vh-57px)] flex flex-col">
             {/* Navigation links */}
-            <nav className={`px-2 space-y-0.5 flex-1 ${isExpanded ? 'overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700/50 scrollbar-track-transparent' : 'overflow-hidden'}`}>
+            <nav className={`px-2 space-y-0.5 flex-1 transition-all duration-400 ease-out ${isExpanded ? 'overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700/50 scrollbar-track-transparent' : 'overflow-hidden'}`}>
               {links.map(renderLink)}
             </nav>
             
@@ -183,7 +186,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
               <div className="border-t border-zinc-800/50 pt-3">
                 <button 
                   onClick={handleLogout} 
-                  className="group relative flex items-center text-sm font-medium text-zinc-400 rounded-lg hover:text-white hover:bg-zinc-800/50 transition-all duration-200 w-full px-2 py-1.5"
+                  className="group relative flex items-center text-sm font-medium text-zinc-400 rounded-lg hover:text-white hover:bg-zinc-800/50 transition-all duration-300 ease-out w-full px-2 py-1.5"
                 >
                   {/* Icon container - reduced size */}
                   <div className="flex items-center justify-center w-6 h-6 shrink-0">
@@ -192,7 +195,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
                   
                   {/* Text container */}
                   <div className={`
-                    ml-2 whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden text-sm
+                    ml-2 whitespace-nowrap transition-all duration-400 ease-out overflow-hidden text-sm
                     ${isExpanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}
                   `}>
                     Logout
@@ -202,7 +205,7 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
                   {!isExpanded && (
                     <div className="
                       absolute left-full ml-2 px-2 py-1 bg-zinc-900/95 backdrop-blur-sm text-white text-xs rounded-md
-                      opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50
+                      opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out z-50
                       pointer-events-none whitespace-nowrap
                     ">
                       Logout
