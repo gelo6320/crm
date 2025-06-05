@@ -107,15 +107,15 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const value = contact.value !== undefined ? contact.value : (contact.extendedData?.value || 0);
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-opacity duration-300 ${isClosing || isOpening ? 'opacity-0' : 'opacity-100'}`}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/25 transition-opacity duration-300 ${isClosing || isOpening ? 'opacity-0' : 'opacity-100'}`}>
       <div className="absolute inset-0" onClick={handleClose}></div>
       
-      <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-lg w-full max-w-lg mx-6 z-10 overflow-hidden transition-all duration-300 ${isClosing || isOpening ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
+      <div className={`bg-white dark:bg-zinc-800 rounded-2xl shadow-xl w-full max-w-lg mx-6 z-10 overflow-hidden transition-all duration-300 ${isClosing || isOpening ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
           <h3 className="text-xl font-semibold text-zinc-900 dark:text-white">Dettagli contatto</h3>
           <button
             onClick={handleClose}
-            className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+            className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -226,6 +226,7 @@ export default function ContactsPage() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [highlightedContactId, setHighlightedContactId] = useState<string | null>(null);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [isFilterDropdownClosing, setIsFilterDropdownClosing] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -233,7 +234,7 @@ export default function ContactsPage() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
-        setIsFilterDropdownOpen(false);
+        handleFilterDropdownClose();
       }
     };
     
@@ -242,6 +243,15 @@ export default function ContactsPage() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Funzione per gestire la chiusura graduale del dropdown
+  const handleFilterDropdownClose = () => {
+    setIsFilterDropdownClosing(true);
+    setTimeout(() => {
+      setIsFilterDropdownOpen(false);
+      setIsFilterDropdownClosing(false);
+    }, 200);
+  };
 
   // Carica i contatti all'avvio e quando cambiano i filtri
   useEffect(() => {
@@ -302,6 +312,7 @@ export default function ContactsPage() {
       
       const queryParams = new URLSearchParams();
       queryParams.append('page', currentPage.toString());
+      queryParams.append('limit', '20'); // Limite di 20 risultati per pagina
       if (selectedStatus) queryParams.append('status', selectedStatus);
       
       const response = await fetch(`${API_BASE_URL}/api/leads?${queryParams.toString()}`, {
@@ -407,15 +418,23 @@ export default function ContactsPage() {
         <div className="px-4 py-4 sm:px-6">
           <div className="relative" ref={filterDropdownRef}>
             <button
-              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+              onClick={() => {
+                if (isFilterDropdownOpen) {
+                  handleFilterDropdownClose();
+                } else {
+                  setIsFilterDropdownOpen(true);
+                }
+              }}
               className="w-full sm:w-auto bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-left flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
             >
               <span className="text-sm font-medium text-zinc-900 dark:text-white">{getActiveFilterLabel()}</span>
               <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             
-            {isFilterDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 sm:right-auto sm:w-64 mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-20 animate-fade-in">
+            {(isFilterDropdownOpen || isFilterDropdownClosing) && (
+              <div className={`absolute top-full left-0 right-0 sm:right-auto sm:w-64 mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-20 transition-all duration-200 origin-top ${
+                isFilterDropdownClosing ? 'opacity-0 scale-y-95' : 'opacity-100 scale-y-100'
+              }`}>
                 <div className="p-2">
                   {statusFilters.map((filter) => (
                     <button
@@ -423,7 +442,7 @@ export default function ContactsPage() {
                       onClick={() => {
                         setSelectedStatus(filter.key);
                         setCurrentPage(1);
-                        setIsFilterDropdownOpen(false);
+                        handleFilterDropdownClose();
                       }}
                       className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
                         selectedStatus === filter.key
@@ -464,27 +483,31 @@ export default function ContactsPage() {
             <>
               {/* Mobile: Lista a card */}
               <div className="sm:hidden">
-                <div className="space-y-2 px-4">
+                <div className="space-y-2 px-1">
                   {contacts.map((contact) => (
                     <div 
                       key={contact._id} 
                       id={`contact-${contact._id}`}
-                      className={`bg-white dark:bg-zinc-800 rounded-lg p-4 transition-all duration-300 ${
-                        highlightedContactId === contact._id ? 'bg-primary/10 dark:bg-primary/10' : ''
-                      }`}
+                      className="relative"
                       onClick={() => handleContactClick(contact)}
                     >
-                      <div className="flex items-start space-x-3">
-                        {getSourceIcon(contact)}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-zinc-900 dark:text-white truncate">
-                            {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
-                          </h3>
-                          <p className="text-sm text-primary mt-1">{contact.email}</p>
-                          <p className="text-sm text-zinc-500 mt-1">{contact.phone}</p>
-                          <div className="flex items-center justify-between mt-3">
-                            <p className="text-xs text-zinc-400">{formatDate(contact.createdAt)}</p>
-                            <StatusBadge status={contact.status} />
+                      {/* Highlight overlay con angoli curvi */}
+                      {highlightedContactId === contact._id && (
+                        <div className="absolute inset-0 bg-primary/10 dark:bg-primary/10 rounded-lg pointer-events-none z-10" />
+                      )}
+                      <div className="bg-white dark:bg-zinc-800 rounded-lg p-4 transition-all duration-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700 relative z-20">
+                        <div className="flex items-start space-x-3">
+                          {getSourceIcon(contact)}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-zinc-900 dark:text-white truncate">
+                              {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
+                            </h3>
+                            <p className="text-sm text-primary mt-1">{contact.email}</p>
+                            <p className="text-sm text-zinc-500 mt-1">{contact.phone}</p>
+                            <div className="flex items-center justify-between mt-3">
+                              <p className="text-xs text-zinc-400">{formatDate(contact.createdAt)}</p>
+                              <StatusBadge status={contact.status} />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -501,31 +524,35 @@ export default function ContactsPage() {
                       <div 
                         key={contact._id} 
                         id={`contact-${contact._id}`}
-                        className={`p-6 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-all duration-300 cursor-pointer ${
-                          highlightedContactId === contact._id ? 'bg-primary/10 dark:bg-primary/10' : ''
-                        }`}
+                        className="relative"
                         onClick={() => handleContactClick(contact)}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            {getSourceIcon(contact)}
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white truncate">
-                                {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
-                              </h3>
-                              <div className="mt-1 space-y-1">
-                                <p className="text-sm text-primary">{contact.email}</p>
-                                <p className="text-sm text-zinc-500">{contact.phone}</p>
+                        {/* Highlight overlay con angoli curvi */}
+                        {highlightedContactId === contact._id && (
+                          <div className="absolute inset-0 bg-primary/10 dark:bg-primary/10 rounded-xl pointer-events-none z-10" />
+                        )}
+                        <div className="p-6 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700 transition-all duration-200 cursor-pointer relative z-20">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              {getSourceIcon(contact)}
+                              <div className="min-w-0 flex-1">
+                                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white truncate">
+                                  {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
+                                </h3>
+                                <div className="mt-1 space-y-1">
+                                  <p className="text-sm text-primary">{contact.email}</p>
+                                  <p className="text-sm text-zinc-500">{contact.phone}</p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-4">
-                            <div className="text-right">
-                              <p className="text-sm text-zinc-500">{formatSource(contact.source, contact.formType)}</p>
-                              <p className="text-sm text-zinc-400">{formatDate(contact.createdAt)}</p>
+                            
+                            <div className="flex items-center space-x-4">
+                              <div className="text-right">
+                                <p className="text-sm text-zinc-500">{formatSource(contact.source, contact.formType)}</p>
+                                <p className="text-sm text-zinc-400">{formatDate(contact.createdAt)}</p>
+                              </div>
+                              <StatusBadge status={contact.status} />
                             </div>
-                            <StatusBadge status={contact.status} />
                           </div>
                         </div>
                       </div>
