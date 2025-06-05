@@ -144,13 +144,39 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
-                  {creative.video_url && (
+                  {creative.video_id && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
                       <div className="bg-white bg-opacity-20 rounded-full p-3">
                         <Play size={24} className="text-white ml-1" />
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+              
+              {/* Se c'è solo video_id senza image_url, mostra un placeholder */}
+              {!creative.image_url && creative.video_id && (
+                <div className="relative rounded-lg overflow-hidden bg-zinc-900 h-60 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="bg-zinc-800 rounded-full p-4 mx-auto mb-3 w-16 h-16 flex items-center justify-center">
+                      <Play size={24} className="text-primary ml-1" />
+                    </div>
+                    <p className="text-sm text-zinc-400">Video ID: {creative.video_id}</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Se c'è solo thumbnail_url, usalo come fallback */}
+              {!creative.image_url && !creative.video_id && creative.thumbnail_url && (
+                <div className="relative rounded-lg overflow-hidden bg-zinc-900">
+                  <img 
+                    src={creative.thumbnail_url} 
+                    alt={creative.title || 'Thumbnail dell\'inserzione'}
+                    className="w-full h-auto max-h-80 object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
                 </div>
               )}
               
@@ -210,8 +236,14 @@ export default function AdDetails({ ad, layout = 'full' }: AdDetailsProps) {
               
               {/* Informazioni del Creative */}
               <div className="mt-4 pt-3 border-t border-zinc-700/50">
-                <div className="text-xs text-zinc-500">
-                  Creative ID: {creative.id}
+                <div className="text-xs text-zinc-500 space-y-1">
+                  <div>Creative ID: {creative.id}</div>
+                  {creative.object_type && (
+                    <div>Tipo: {creative.object_type}</div>
+                  )}
+                  {creative.video_id && (
+                    <div>Video ID: {creative.video_id}</div>
+                  )}
                 </div>
               </div>
             </div>

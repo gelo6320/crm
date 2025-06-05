@@ -29,7 +29,9 @@ export interface AdCreative {
   title?: string;
   body?: string;
   image_url?: string;
-  video_url?: string;
+  video_id?: string;
+  thumbnail_url?: string;
+  object_type?: string;
   call_to_action?: {
     type: string;
     value?: {
@@ -243,7 +245,7 @@ export async function fetchAdCreative(adId: string): Promise<AdCreative | null> 
       {
         params: {
           access_token: FB_MARKETING_TOKEN,
-          fields: 'id,name,title,body,image_url,video_url,object_story_spec,call_to_action_type,url_tags'
+          fields: 'id,name,title,body,image_url,object_story_spec,call_to_action_type,url_tags,thumbnail_url,object_type,link_url'
         }
       }
     );
@@ -284,9 +286,10 @@ export async function fetchAdCreative(adId: string): Promise<AdCreative | null> 
         extractedData = {
           title: spec.video_data.title,
           body: spec.video_data.message,
-          video_url: spec.video_data.video_id,
+          video_id: spec.video_data.video_id,
           call_to_action: spec.video_data.call_to_action,
-          image_url: spec.video_data.image_url
+          image_url: spec.video_data.image_url,
+          link_description: spec.video_data.link_description
         };
       }
     }
@@ -297,10 +300,12 @@ export async function fetchAdCreative(adId: string): Promise<AdCreative | null> 
       name: creative.name || `Creative ${creative.id}`,
       title: extractedData.title || creative.title,
       body: extractedData.body || creative.body,
-      image_url: extractedData.image_url || creative.image_url,
-      video_url: extractedData.video_url || creative.video_url,
+      image_url: extractedData.image_url || creative.image_url || creative.thumbnail_url,
+      video_id: extractedData.video_id,
+      thumbnail_url: creative.thumbnail_url,
+      object_type: creative.object_type,
       call_to_action: extractedData.call_to_action,
-      link_url: extractedData.link_url,
+      link_url: extractedData.link_url || creative.link_url,
       link_description: extractedData.link_description
     };
     
