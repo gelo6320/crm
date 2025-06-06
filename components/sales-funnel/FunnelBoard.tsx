@@ -816,7 +816,7 @@ export default function CustomFunnelBoard({
         }}
       >
         <div 
-          className="funnel-board min-w-max flex gap-4 p-2 h-full"
+          className="funnel-board min-w-max flex gap-4 h-full"
           style={{ 
             willChange: 'transform', 
             contain: 'layout style'
