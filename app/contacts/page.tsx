@@ -199,7 +199,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
         />
         
         {/* Modal frosted glass background - CAMBIATO A GRIGIO CHIARO */}
-        <div className="relative bg-zinc-50/80 dark:bg-zinc-100/10 backdrop-blur-xl rounded-[24px] border border-white/30 dark:border-white/20 shadow-2xl overflow-hidden">
+        <div className={`relative bg-zinc-50/60 dark:bg-zinc-100/5 ${isClosing || isOpening ? 'backdrop-blur-none' : 'backdrop-blur-xl'} rounded-[24px] border border-white/30 dark:border-white/20 shadow-2xl overflow-hidden transition-all duration-300`}>
           {/* Content */}
           <div className="relative">
             {/* Header */}
@@ -379,10 +379,10 @@ export default function ContactsPage() {
           // smoothScrollToElement(element, 1000);
           
           // Opzione 2: Motion per controllo avanzato (se preferisci Motion)
-          motionSmoothScrollToElement(element, 1000);
+          // motionSmoothScrollToElement(element, 1000);
           
           // Opzione 3: Controllo totale personalizzato (se hai bisogni specifici)
-          // customSmoothScrollToElement(element, 1000);
+          customSmoothScrollToElement(element, 1000);
           
         } else {
           console.warn('Element not found for scroll animation');
