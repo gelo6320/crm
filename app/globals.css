@@ -990,4 +990,138 @@ header.sticky {
   .status-cancelled {
     background-color: #ef4444;
   }
+  
+  /* Add to calendar button - make it float and more prominent */
+  .add-event-btn {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    background-color: #FF6B00;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+    z-index: 20;
+  }
+  
+  .add-event-btn:active {
+    transform: scale(0.95);
+    background-color: #FF8C38;
+  }
+}
+
+/* Better tap feedback for all mobile interactions */
+@media (max-width: 768px) {
+  button, 
+  .btn,
+  [role="button"],
+  .clickable {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .tap-highlight:active {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Swipe hint animation */
+  @keyframes swipeHint {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(0); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+  }
+  
+  .swipe-hint {
+    animation: swipeHint 2s ease-in-out;
+  }
+  
+  /* Optimize scroll performance */
+  .mobile-optimized-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    scroll-padding-bottom: 5rem;
+  }
+}
+
+/* Aggiungi questo al tuo file globals.css */
+
+/* 1. Imposta dimensione font minima di 16px per tutti gli input */
+input, 
+textarea, 
+select {
+  font-size: 16px !important;  /* Minimo 16px previene zoom automatico su iOS */
+  max-height: none !important;  /* Previene comportamenti strani di altezza su alcuni dispositivi */
+}
+
+/* 3. Proprietà specifiche per iOS */
+@media screen and (-webkit-min-device-pixel-ratio: 0) { 
+  select:focus,
+  textarea:focus,
+  input:focus {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100%;  /* Previene aggiustamento testo */
+  }
+}
+
+/* 4. Previene zoom su focus per dispositivi mobili */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Fix per comportamento zoom su Samsung browser */
+  input:not([type="checkbox"]):not([type="radio"]) {
+    transform: scale(1);  /* Trucco per forzare il rendering corretto */
+  }
+}
+
+/* 5. Fix specifico per iOS */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea {
+    -webkit-appearance: none;  /* Rimuove lo stile nativo iOS che può causare zoom */
+    border-radius: 0;  /* Previene arrotondamenti che possono creare inconsistenze */
+  }
+}
+
+/* 6. Previene cambio automatico di scale su orientamento */
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Reset dei bordi di default */
+*, *::before, *::after {
+  box-sizing: border-box;
+  border: 0 solid transparent;
+}
+
+/* Variabili CSS per il design squircle */
+:root {
+  --squircle-radius: 12px;
+  --squircle-small: 8px;
+  --squircle-large: 16px;
+}
+
+/* Override per tutti i container principali */
+.card,
+.bg-zinc-900,
+.bg-zinc-800,
+.bg-zinc-700 {
+  border-radius: var(--squircle-radius) !important;
+  border: none !important;
+}
+
+/* Bottoni con squircle */
+.btn,
+button {
+  border-radius: var(--squircle-small) !important;
+  border: none !important;
+  transition: all 0.2s ease;
 }
