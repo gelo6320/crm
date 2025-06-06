@@ -14,12 +14,14 @@ import Pagination from "@/components/ui/Pagination";
 import { formatDate } from "@/lib/utils/date";
 import { toast } from "@/components/ui/toaster";
 
-// SPOSTATA FUORI DAL COMPONENTE - Funzione di scroll animato con Framer Motion
+// SPOSTATA FUORI DAL COMPONENTE - Funzione di scroll animato con Framer Motion (CORRETTA)
 function smoothScrollToElement(element: HTMLElement, duration: number = 0.8) {
-  const targetPosition = element.offsetTop - (window.innerHeight / 2) + (element.offsetHeight / 2);
-  const startPosition = window.pageYOffset;
+  // Calcolo corretto della posizione usando getBoundingClientRect + window.scrollY
+  const elementRect = element.getBoundingClientRect();
+  const absoluteElementTop = elementRect.top + window.scrollY;
+  const middle = absoluteElementTop - (window.innerHeight / 2) + (elementRect.height / 2);
   
-  animate(startPosition, targetPosition, {
+  animate(window.scrollY, middle, {
     duration,
     ease: [0.25, 0.46, 0.45, 0.94], // Accelerazione veloce, decelerazione lenta
     onUpdate: (value) => window.scrollTo(0, value),
@@ -125,25 +127,24 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${isClosing || isOpening ? 'opacity-0' : 'opacity-100'}`}>
-      {/* Backdrop con blur */}
+      {/* Backdrop normale (senza blur) */}
       <div 
-        className="absolute inset-0 bg-black/20 backdrop-blur-md" 
+        className="absolute inset-0 bg-black/40" 
         onClick={handleClose}
       ></div>
       
-      {/* Modal con frosted glass e superellipse */}
-      <div className={`relative z-10 w-full max-w-lg mx-6 overflow-hidden transition-all duration-300 ${isClosing || isOpening ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
+      {/* Modal con frosted glass come background principale */}
+      <div className={`relative z-10 w-full max-w-lg mx-6 transition-all duration-300 ${isClosing || isOpening ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
+        {/* SmoothCorners per i superellipse */}
         <SmoothCorners 
           corners="2.5"
           borderRadius="24"
         />
-        <div className="absolute inset-0 bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-[24px]"></div>
         
-        {/* Subtle border */}
-        <div className="absolute inset-0 border border-white/30 dark:border-white/10 rounded-[24px]"></div>
-        
-        {/* Content */}
-        <div className="relative">
+        {/* Modal frosted glass background */}
+        <div className="relative bg-gray-100/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-[24px] border border-white/20 dark:border-white/10 shadow-2xl overflow-hidden">
+          {/* Content */}
+          <div className="relative">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/20 dark:border-white/10">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Dettagli contatto</h3>
@@ -229,38 +230,27 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
               
               {/* Pulsanti azione con frosted glass */}
               <div className="flex gap-3 pt-2">
-                <div className="flex-1 relative">
-                  <SmoothCorners 
-                    corners="1.8"
-                    borderRadius="16"
-                  />
-                  <button
-                    onClick={handleCall}
-                    className="relative w-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/10 hover:bg-white/60 dark:hover:bg-white/20 backdrop-blur-sm border border-white/30 dark:border-white/20 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
-                  >
-                    <Phone className="w-4 h-4" />
-                    Chiama
-                  </button>
-                </div>
+                <button
+                  onClick={handleCall}
+                  className="flex-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-white/30 dark:bg-white/10 hover:bg-white/50 dark:hover:bg-white/20 backdrop-blur-sm border border-white/30 dark:border-white/20 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
+                >
+                  <Phone className="w-4 h-4" />
+                  Chiama
+                </button>
                 
-                <div className="flex-1 relative">
-                  <SmoothCorners 
-                    corners="1.8"
-                    borderRadius="16"
-                  />
-                  <button
-                    onClick={handleWhatsApp}
-                    className="relative w-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/10 hover:bg-white/60 dark:hover:bg-white/20 backdrop-blur-sm border border-white/30 dark:border-white/20 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    WhatsApp
-                  </button>
-                </div>
+                <button
+                  onClick={handleWhatsApp}
+                  className="flex-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-white/30 dark:bg-white/10 hover:bg-white/50 dark:hover:bg-white/20 backdrop-blur-sm border border-white/30 dark:border-white/20 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  WhatsApp
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
   );
 }
 
