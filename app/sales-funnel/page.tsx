@@ -153,16 +153,6 @@ export default function SalesFunnelPage() {
       <DeviceDetectionInitializer />
       
       <div className="space-y-4 animate-fade-in">
-        <div className="flex items-center justify-end">
-          <button 
-            onClick={loadFunnelData}
-            className="btn btn-outline p-1.5"
-            disabled={isLoading}
-          >
-            <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-          </button>
-        </div>
-        
         <div className="flex flex-col gap-4">
           <div className="w-full shrink-0">
             <FunnelStats stats={funnelStats} />

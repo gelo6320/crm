@@ -10,9 +10,11 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzione
 export interface MarketingOverview {
   dates: string[];
   leads: number[];
+  realLeads: number[]; // Aggiunto per i lead reali
   conversions: number[];
   roas: number[];
   totalLeads: number;
+  totalRealLeads: number; // Aggiunto per il totale dei lead reali
   totalConversions: number;
   averageRoas: number;
 }

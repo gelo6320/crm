@@ -72,19 +72,32 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
     if (timeRange === '7d') {
       // Per 7 giorni, usa i dati giornalieri originali
       processedDates = [...data.dates];
-      processedLeads = [...data.leads];
+      // Usa realLeads invece di leads
+      processedLeads = data.realLeads ? [...data.realLeads] : [...data.leads];
       processedConversions = [...data.conversions];
       processedRoas = [...data.roas];
       
-      // Calcola l'indice di performance come media intelligente
+      // Calcola l'indice di performance con protezione dai valori zero
       processedPerformance = data.dates.map((_, index) => {
-        // Normalizza i valori tra 0 e 1 per leads e conversions
-        const leadsNorm = data.leads[index] / Math.max(...data.leads);
-        const convNorm = data.conversions[index] / Math.max(...data.conversions);
-        const roasValue = data.roas[index];
+        const leadValue = processedLeads[index] || 0;
+        const convValue = processedConversions[index] || 0;
+        const roasValue = data.roas[index] || 0;
         
-        // Media ponderata che dà più peso al ROAS
-        return ((leadsNorm * 0.3) + (convNorm * 0.3) + (roasValue * 0.4)) * 10;
+        // Trova i valori massimi, evitando divisione per zero
+        const maxLeads = Math.max(...processedLeads, 1); // Almeno 1 per evitare divisione per 0
+        const maxConversions = Math.max(...processedConversions, 1);
+        
+        // Normalizza i valori tra 0 e 1
+        const leadsNorm = leadValue / maxLeads;
+        const convNorm = convValue / maxConversions;
+        
+        // Se non ci sono dati significativi, usa solo i lead come metrica base
+        if (maxLeads === 1 && maxConversions === 1 && roasValue === 0) {
+          return leadValue; // Restituisce direttamente il numero di lead
+        }
+        
+        // Media ponderata che dà più peso al ROAS, ma considera anche lead senza conversioni
+        return ((leadsNorm * 0.4) + (convNorm * 0.3) + (roasValue * 0.3)) * 10;
       });
     } else {
       // Per 30 o 90 giorni, aggrega i dati settimanalmente
@@ -111,10 +124,12 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         let weekRoas = 0;
         let daysInThisWeek = 0;
         
+        const realLeadsData = data.realLeads || data.leads;
+        
         for (let j = i; j <= endIndex; j++) {
-          weekLeads += data.leads[j];
-          weekConversions += data.conversions[j];
-          weekRoas += data.roas[j];
+          weekLeads += realLeadsData[j] || 0;
+          weekConversions += data.conversions[j] || 0;
+          weekRoas += data.roas[j] || 0;
           daysInThisWeek++;
         }
         
@@ -123,12 +138,20 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         weeklyData.conversions.push(weekConversions);
         weeklyData.roas.push(Number((weekRoas / daysInThisWeek).toFixed(2))); // Media ROAS
         
-        // Calcola l'indice di performance
-        const leadsNorm = weekLeads / Math.max(...data.leads) * 7;
-        const convNorm = weekConversions / Math.max(...data.conversions) * 7;
+        // Calcola l'indice di performance con protezione dai valori zero
+        const maxLeadsInPeriod = Math.max(...realLeadsData, 1);
+        const maxConversionsInPeriod = Math.max(...data.conversions, 1);
+        
+        const leadsNorm = weekLeads / maxLeadsInPeriod * 7;
+        const convNorm = weekConversions / maxConversionsInPeriod * 7;
         const roasValue = weekRoas / daysInThisWeek;
         
-        weeklyData.performance.push(((leadsNorm * 0.3) + (convNorm * 0.3) + (roasValue * 0.4)) * 10);
+        // Se non ci sono dati significativi, usa solo i lead
+        if (maxLeadsInPeriod === 1 && maxConversionsInPeriod === 1 && roasValue === 0) {
+          weeklyData.performance.push(weekLeads);
+        } else {
+          weeklyData.performance.push(((leadsNorm * 0.4) + (convNorm * 0.3) + (roasValue * 0.3)) * 10);
+        }
       }
       
       processedDates = weeklyData.dates;
@@ -412,7 +435,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       }] : []),
       
       ...(activeMetric === 'all' || activeMetric === 'leads' ? [{
-        label: 'Lead generati',
+        label: 'Lead reali generati',
         data: processedData.leads,
         borderColor: '#3b82f6', // blue-500
         backgroundColor: 'rgba(59, 130, 246, 0.5)',
@@ -462,8 +485,8 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
     },
     {
       id: 'leads',
-      label: 'Lead totali',
-      value: data.totalLeads,
+      label: 'Lead reali',
+      value: data.totalRealLeads || data.totalLeads, // Usa totalRealLeads se disponibile
       color: 'text-blue-500',
       bgColor: 'bg-blue-500/20',
       icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -541,7 +564,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           >
             {metric === 'performance' ? 'Performance' :
              metric === 'all' ? 'Tutte' : 
-             metric === 'leads' ? 'Lead' :
+             metric === 'leads' ? 'Lead reali' :
              metric === 'conversions' ? 'Conv.' : 'ROAS'}
           </button>
         ))}
