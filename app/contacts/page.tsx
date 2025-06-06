@@ -14,7 +14,7 @@ import Pagination from "@/components/ui/Pagination";
 import { formatDate } from "@/lib/utils/date";
 import { toast } from "@/components/ui/toaster";
 
-// Funzione di scroll animato con Framer Motion
+// Funzione di scroll animato con Framer Motion (SISTEMATA)
 function smoothScrollToElement(element: HTMLElement, duration: number = 0.8) {
   // Calcolo corretto della posizione usando getBoundingClientRect + window.scrollY
   const elementRect = element.getBoundingClientRect();
@@ -29,9 +29,12 @@ function smoothScrollToElement(element: HTMLElement, duration: number = 0.8) {
     currentScroll: window.scrollY
   });
   
-  animate(window.scrollY, middle, {
+  // SISTEMATO: Usa un valore numerico invece di window.scrollY
+  const startPosition = window.scrollY;
+  
+  animate(startPosition, middle, {
     duration,
-    ease: "easeInOut", // Sistemato: era [0.25, 0.46, 0.45, 0.94], ora usa easing standard
+    ease: "easeInOut",
     onUpdate: (value) => {
       window.scrollTo(0, value);
     },
@@ -82,7 +85,7 @@ function formatSource(source: string, formType: string): string {
   return "Sconosciuto";
 }
 
-// Componente modale aggiornato con frosted glass e superellipse
+// Componente modale aggiornato con frosted glass e animazione blur sincronizzata
 function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isOpening, setIsOpening] = useState(true);
@@ -137,9 +140,13 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${isClosing || isOpening ? 'opacity-0' : 'opacity-100'}`}>
-      {/* Backdrop normale (senza blur) */}
+      {/* Backdrop con blur animato - SISTEMATO */}
       <div 
-        className="absolute inset-0 bg-black/40" 
+        className={`absolute inset-0 bg-black/40 transition-all duration-300 ${
+          isClosing || isOpening 
+            ? 'backdrop-blur-none' 
+            : 'backdrop-blur-sm'
+        }`}
         onClick={handleClose}
       ></div>
       
@@ -151,7 +158,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
           borderRadius="24"
         />
         
-        {/* Modal frosted glass background - CAMBIATO A GRIGIO CHIARO */}
+        {/* Modal frosted glass background - GRIGIO CHIARO */}
         <div className="relative bg-zinc-50/80 dark:bg-zinc-100/10 backdrop-blur-xl rounded-[24px] border border-white/30 dark:border-white/20 shadow-2xl overflow-hidden">
           {/* Content */}
           <div className="relative">
@@ -273,6 +280,7 @@ export default function ContactsPage() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [highlightedContactId, setHighlightedContactId] = useState<string | null>(null);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false); // Flag per prevenire doppi scroll
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -295,9 +303,15 @@ export default function ContactsPage() {
     loadContacts();
   }, [currentPage, selectedStatus]);
 
-  // FUNZIONE per gestire l'highlight e scroll del contatto
+  // FUNZIONE per gestire l'highlight e scroll del contatto - COMPLETAMENTE SISTEMATA
   const highlightAndScrollToContact = (contactId: string) => {
     console.log('highlightAndScrollToContact called with ID:', contactId);
+    
+    // PREVENZIONE DOPPIA CHIAMATA: Se è già in corso uno scroll, ignora
+    if (isScrolling) {
+      console.log('Scroll already in progress, ignoring call');
+      return;
+    }
     
     // Cerca il contatto nella lista corrente
     const targetContact = contacts.find(contact => 
@@ -309,6 +323,7 @@ export default function ContactsPage() {
     if (targetContact) {
       // Se il contatto è nella lista, evidenzialo
       setHighlightedContactId(contactId);
+      setIsScrolling(true); // Imposta il flag di scroll
       
       // Schedule a scroll to the element con un timing migliore
       setTimeout(() => {
@@ -326,7 +341,7 @@ export default function ContactsPage() {
         
         console.log('Element found for scroll:', element);
         if (element) {
-          // SISTEMATO: Ora usa easeInOut invece del cubic-bezier personalizzato
+          // SISTEMATO: Ora usa easeInOut con valore numerico fisso
           smoothScrollToElement(element, 1.2); // Durata più lunga per essere più smooth
         } else {
           console.warn('Element not found for scroll animation');
@@ -336,10 +351,12 @@ export default function ContactsPage() {
         setTimeout(() => {
           setHighlightedContactId(null);
           setSelectedContact(targetContact);
+          setIsScrolling(false); // Reset del flag di scroll
         }, 1200);
       }, 150); // Aumentato il timing per dar tempo al DOM
     } else {
       console.log('Contact not found in current list');
+      setIsScrolling(false); // Reset del flag anche se il contatto non è trovato
     }
     
     // Clean up URL parameters after a delay
