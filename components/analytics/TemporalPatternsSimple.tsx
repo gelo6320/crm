@@ -1,4 +1,6 @@
-// components/analytics/TemporalPatternsVisualization.tsx
+// components/analytics/TemporalPatternsSimple.tsx
+"use client";
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -25,24 +27,22 @@ import {
   Eye,
   Target
 } from 'lucide-react';
-import { TemporalAnalysis } from '@/types/analytics';
+import { TemporalAnalysis } from '@/lib/api/analytics'; // Fixed: import from API types
 
-interface TemporalPatternsVisualizationProps {
+interface TemporalPatternsSimpleProps {
   data: TemporalAnalysis | null;
   isLoading: boolean;
-  timeframe: string;
 }
 
-export default function TemporalPatternsVisualization({ 
+export default function TemporalPatternsSimple({ 
   data, 
-  isLoading, 
-  timeframe 
-}: TemporalPatternsVisualizationProps) {
+  isLoading
+}: TemporalPatternsSimpleProps) {
   const [activeView, setActiveView] = useState<'hourly' | 'weekly'>('hourly');
 
   if (isLoading || !data) {
     return (
-      <div className="space-y-6">
+      <div className="p-6 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="bg-zinc-900 rounded-xl p-6 animate-pulse">
@@ -59,7 +59,7 @@ export default function TemporalPatternsVisualization({
     );
   }
 
-  const { hourlyDistribution, weeklyDistribution, insights } = data;
+  const { hourlyDistribution, weeklyDistribution, summary, insights } = data;
 
   // Mappa nomi giorni
   const dayNameMap: { [key: string]: string } = {
@@ -87,14 +87,14 @@ export default function TemporalPatternsVisualization({
   const hourlyChartData = hourlyDistribution?.map(hour => ({
     ...hour,
     hourLabel: `${hour.hour.toString().padStart(2, '0')}:00`,
-    combinedMetric: (hour.visits || 0) * 0.4 + (hour.engagement || 0) * 0.6 // FIX: Protezione valori undefined
+    combinedMetric: (hour.visits || 0) * 0.4 + (hour.engagement || 0) * 0.6
   })) || [];
 
   // Prepara dati grafico settimanale
   const weeklyChartData = weeklyDistribution?.map(day => ({
     ...day,
     dayLabel: dayNameMap[day.dayName] || (day.dayName?.substring(0, 3) || 'N/A'),
-    performanceScore: (day.visits || 0) * 0.3 + (day.avgEngagement || 0) * 0.7 // FIX: Protezione valori undefined
+    performanceScore: (day.visits || 0) * 0.3 + (day.avgEngagement || 0) * 0.7
   })) || [];
 
   // Ottieni ore con migliori performance (visite non zero)
@@ -109,7 +109,7 @@ export default function TemporalPatternsVisualization({
     .sort((a, b) => (b.performanceScore || 0) - (a.performanceScore || 0))
     .slice(0, 3);
 
-  // Calcola totali - FIX: Protezione valori undefined
+  // Calcola totali
   const totalVisits = hourlyChartData.reduce((sum, hour) => sum + (hour.visits || 0), 0);
   const totalPageViews = hourlyChartData.reduce((sum, hour) => sum + (hour.pageViews || 0), 0);
   const totalConversions = hourlyChartData.reduce((sum, hour) => sum + (hour.conversions || 0), 0);
@@ -118,7 +118,7 @@ export default function TemporalPatternsVisualization({
     : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="p-6 space-y-8">
       {/* Intestazione */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white flex items-center">
@@ -126,10 +126,8 @@ export default function TemporalPatternsVisualization({
           Analisi Performance Temporale
         </h2>
         
-        <div className="text-sm text-zinc-400 capitalize">
-          {timeframe === 'weekly' ? 'Settimanale' : 
-           timeframe === 'monthly' ? 'Mensile' : 
-           timeframe === 'quarterly' ? 'Trimestrale' : timeframe} • {(data.recordsAnalyzed || 0).toLocaleString()} record analizzati
+        <div className="text-sm text-zinc-400">
+          {(data.recordsAnalyzed || 0).toLocaleString()} record analizzati
         </div>
       </div>
 
@@ -152,7 +150,7 @@ export default function TemporalPatternsVisualization({
               {totalVisits.toLocaleString()}
             </div>
             <div className="text-xs text-zinc-500">
-              Picco: {insights?.peakHour?.time || 'N/A'} ({(insights?.peakHour?.visits || 0)} visite)
+              Picco: {summary?.peakHour?.time || 'N/A'} ({(summary?.peakHour?.visits || 0)} visite)
             </div>
           </div>
         </motion.div>
@@ -196,7 +194,7 @@ export default function TemporalPatternsVisualization({
               {Math.round(avgEngagement || 0)}
             </div>
             <div className="text-xs text-zinc-500">
-              Giorno migliore: {fullDayNameMap[insights?.peakDay?.day || ''] || 'N/A'}
+              Giorno migliore: {fullDayNameMap[summary?.peakDay?.day || ''] || 'N/A'}
             </div>
           </div>
         </motion.div>
@@ -262,15 +260,11 @@ export default function TemporalPatternsVisualization({
             {/* Grafico Orario */}
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={hourlyChartData}>
+                <ComposedChart data={hourlyChartData}>
                   <defs>
                     <linearGradient id="visitsGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
                       <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="engagementGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#FF6B00" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#FF6B00" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -313,7 +307,7 @@ export default function TemporalPatternsVisualization({
                     strokeWidth={2}
                     dot={false}
                   />
-                </AreaChart>
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
 
@@ -442,34 +436,34 @@ export default function TemporalPatternsVisualization({
                           {dayNameMap[day.dayName] || day.dayName || 'N/A'}
                           {index === 0 && <Award size={14} className="inline ml-2 text-yellow-500" />}
                         </td>
-                          <td className="py-3 text-sm text-white text-right">{day.visits || 0}</td>
-                          <td className="py-3 text-sm text-right">
-                            <span className={`${
-                              (day.avgEngagement || 0) >= 70 ? 'text-emerald-400' :
-                              (day.avgEngagement || 0) >= 40 ? 'text-yellow-400' :
-                              'text-red-400'
-                            }`}>
-                              {day.avgEngagement || 0}
-                            </span>
-                          </td>
-                          <td className="py-3 text-sm text-white text-right">
-                            {(day.peakHour || 0).toString().padStart(2, '0')}:00
-                          </td>
-                          <td className="py-3 text-sm text-right">
-                            <div className="flex items-center justify-end">
-                              <div className="w-16 h-2 bg-zinc-800 rounded-full mr-3">
-                                <div 
-                                  className="h-full bg-orange-500 rounded-full"
-                                  style={{ width: `${Math.min(100, ((day.performanceScore || 0) / Math.max(...topDays.map(d => d.performanceScore || 0), 1)) * 100)}%` }}
-                                />
-                              </div>
-                              <span className="text-orange-400 font-medium">
-                                {Math.round(day.performanceScore || 0)}
-                              </span>
+                        <td className="py-3 text-sm text-white text-right">{day.visits || 0}</td>
+                        <td className="py-3 text-sm text-right">
+                          <span className={`${
+                            (day.avgEngagement || 0) >= 70 ? 'text-emerald-400' :
+                            (day.avgEngagement || 0) >= 40 ? 'text-yellow-400' :
+                            'text-red-400'
+                          }`}>
+                            {day.avgEngagement || 0}
+                          </span>
+                        </td>
+                        <td className="py-3 text-sm text-white text-right">
+                          {(day.peakHour || 0).toString().padStart(2, '0')}:00
+                        </td>
+                        <td className="py-3 text-sm text-right">
+                          <div className="flex items-center justify-end">
+                            <div className="w-16 h-2 bg-zinc-800 rounded-full mr-3">
+                              <div 
+                                className="h-full bg-orange-500 rounded-full"
+                                style={{ width: `${Math.min(100, ((day.performanceScore || 0) / Math.max(...topDays.map(d => d.performanceScore || 0), 1)) * 100)}%` }}
+                              />
                             </div>
-                          </td>
-                        </tr>
-                      ))}
+                            <span className="text-orange-400 font-medium">
+                              {Math.round(day.performanceScore || 0)}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -480,10 +474,8 @@ export default function TemporalPatternsVisualization({
 
       {/* Footer */}
       <div className="text-center text-sm text-zinc-500">
-        Periodo di analisi: {timeframe === 'weekly' ? 'settimanale' : 
-                             timeframe === 'monthly' ? 'mensile' : 
-                             timeframe === 'quarterly' ? 'trimestrale' : timeframe} • 
-        Miglior orario: {insights?.peakHour?.time || 'N/A'} il {fullDayNameMap[insights?.peakDay?.day || ''] || 'N/A'}
+        Periodo di analisi: {data.period} • 
+        Miglior orario: {summary?.peakHour?.time || 'N/A'} il {fullDayNameMap[summary?.peakDay?.day || ''] || 'N/A'}
       </div>
     </div>
   );
