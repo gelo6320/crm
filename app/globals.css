@@ -1125,3 +1125,104 @@ button {
   border: none !important;
   transition: all 0.2s ease;
 }
+
+.btn:hover,
+button:hover {
+  transform: translateY(-1px);
+}
+
+/* Input e select con squircle */
+input,
+select,
+textarea {
+  border-radius: var(--squircle-small) !important;
+  border: none !important;
+  outline: none !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  ring: 1px solid rgba(255, 107, 0, 0.3);
+  ring-offset: 2px;
+}
+
+/* Badge e tag con squircle piccolo */
+.badge,
+.tag,
+.px-2.py-1 {
+  border-radius: 6px !important;
+}
+
+/* Container principali */
+.rounded-lg,
+.rounded-md {
+  border-radius: var(--squircle-radius) !important;
+}
+
+.rounded-xl {
+  border-radius: var(--squircle-large) !important;
+}
+
+.rounded {
+  border-radius: var(--squircle-small) !important;
+}
+
+/* Rimozione di tutti i bordi esistenti */
+.border,
+.border-zinc-700,
+.border-zinc-800,
+.border-t,
+.border-b,
+.border-l,
+.border-r {
+  border: none !important;
+}
+
+/* Override per i container del layout */
+.animate-fade-in > div {
+  border-radius: var(--squircle-radius) !important;
+  border: none !important;
+}
+
+/* Tabelle senza bordi */
+table {
+  border: none !important;
+}
+
+table th,
+table td {
+  border: none !important;
+}
+
+.divide-y > * {
+  border-top: 1px solid rgba(113, 113, 122, 0.1) !important;
+}
+
+/* Cards hover effect */
+.card:hover,
+.bg-zinc-800:hover,
+.hover\:bg-zinc-700\/50:hover {
+  background-color: rgba(63, 63, 70, 0.3) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Scrollbar personalizzata */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Miglioramenti per il responsive */
+@media (max-width: 768px) {
+  :root {
+    --squircle-radius: 10px;
+    --squircle-small: 6px;
+    --squircle-large: 14px;
+  }
+}
