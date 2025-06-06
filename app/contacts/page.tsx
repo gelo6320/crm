@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Users, Phone, MessageCircle, Globe, ChevronDown } from "lucide-react";
+import { animate } from "framer-motion";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 import { useRouter } from "next/navigation";
@@ -279,7 +280,7 @@ export default function ContactsPage() {
         
         console.log('Element found:', element);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          smoothScrollToElement(element, 0.8);
         }
         
         // Remove the highlight after 800ms e apri la modale
@@ -304,6 +305,21 @@ export default function ContactsPage() {
       }
     }, 500);
   };
+
+  function smoothScrollToElement(element: HTMLElement, duration: number = 0.8) {
+    const targetPosition = element.offsetTop - (window.innerHeight / 2) + (element.offsetHeight / 2);
+    const startPosition = window.pageYOffset;
+    
+    animate(startPosition, targetPosition, {
+      duration,
+      ease: [0.25, 0.46, 0.45, 0.94], // Accelerazione veloce, decelerazione lenta
+      onUpdate: (value) => window.scrollTo(0, value),
+      onComplete: () => {
+        // Opzionale: callback quando l'animazione è completata
+        console.log('Scroll animation completed');
+      }
+    });
+  }
 
   // NUOVO: Listener per l'evento custom dalla search bar
   useEffect(() => {
