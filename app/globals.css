@@ -15,6 +15,9 @@
   --danger: #e74c3c;
   --info: #3498db;
   --border: rgba(255, 255, 255, 0.1);
+  --squircle-radius: 12px;
+  --squircle-small: 8px;
+  --squircle-large: 16px;
 }
 
 @layer base {
@@ -32,430 +35,57 @@
   }
   
   ::-webkit-scrollbar-thumb {
-    @apply bg-primary/50 rounded-full;
+    @apply bg-orange-500/50 rounded-full;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-primary;
+    @apply bg-orange-500;
   }
 }
 
-@layer components {
-  .btn {
-    @apply px-3 py-1.5 rounded font-medium text-sm transition-all duration-200;
-  }
-  
-  .btn-primary {
-    @apply bg-primary text-white hover:bg-primary-hover;
-  }
-  
-  .btn-outline {
-    @apply border border-zinc-700 hover:border-primary hover:bg-primary/10;
-  }
-  
-  .btn-success {
-    @apply bg-success/90 text-white hover:bg-success;
-  }
-  
-  .btn-danger {
-    @apply bg-danger/90 text-white hover:bg-danger;
-  }
-  
-  .card {
-    @apply bg-zinc-800 rounded-lg border border-zinc-700 shadow transition-all;
-  }
-  
-  .card-hover {
-    @apply hover:shadow-lg hover:-translate-y-1 hover:border-zinc-600;
-  }
-  
-  .input {
-    @apply bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary;
-  }
-  
-  .badge {
-    @apply px-2 py-0.5 text-xs font-medium rounded;
-  }
-  
-  .table-row {
-    @apply border-b border-zinc-800 hover:bg-zinc-800/50;
-  }
-  
-  /* Common status badges */
-  .badge-new { @apply bg-zinc-600 text-white; }
-  .badge-contacted { @apply bg-info text-white; }
-  .badge-qualified { @apply bg-primary text-white; }
-  .badge-opportunity { @apply bg-warning text-white; }
-  .badge-customer { @apply bg-success text-white; }
-  .badge-lost { @apply bg-danger text-white; }
-  .badge-pending { @apply bg-zinc-600 text-white; }
-  .badge-confirmed { @apply bg-primary text-white; }
-  .badge-completed { @apply bg-success text-white; }
-  .badge-cancelled { @apply bg-danger text-white; }
-  
-  /* Calendar styles */
-  .calendar-container {
-    @apply flex flex-col h-full;
-  }
-  
-  .day-cell {
-    @apply min-h-[5rem] border border-zinc-800 p-1 relative;
-  }
-  
-  .day-selected {
-    @apply bg-primary/10 border-primary;
-  }
-  
-  .day-today {
-    @apply bg-primary/5;
-  }
-  
-  .calendar-event {
-    @apply text-xs rounded px-1 py-0.5 mb-1 truncate cursor-pointer;
-  }
-  
-  /* Modal styles */
-  .modal {
-    @apply fixed inset-0 z-50 flex items-center justify-center;
-  }
-  
-  .modal-overlay {
-    @apply fixed inset-0 bg-black/60;
-  }
-  
-  .modal-content {
-    @apply bg-zinc-800 rounded-lg border border-zinc-700 shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto;
-  }
-  
-  /* Transitions */
-  .fade-in {
-    animation: fadeIn 0.3s ease-in-out;
-  }
-  
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+/* ====================================
+   BROWSER CONFIGURATIONS & FIXES
+==================================== */
+
+/* Prevent browser zoom on iOS when focusing inputs */
+input, 
+textarea, 
+select {
+  font-size: 16px !important;
+}
+
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea {
+    -webkit-appearance: none;
+    border-radius: 0;
   }
 }
 
-* {
-  touch-action: pan-y;
+/* Prevent auto text size adjustment */
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
+/* Touch behavior configuration */
 html, body {
-  overscroll-behavior-y: none;
-}
-
-/* Aggiunte da inserire nel file globals.css */
-
-/* Animazioni fluide */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(1); opacity: 0.8; }
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.animate-slide-in {
-  animation: slideIn 0.3s ease-in-out;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.3s ease-in-out;
-}
-
-.animate-pulse {
-  animation: pulse 2s infinite ease-in-out;
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.3s ease-in-out;
-}
-
-/* Nascondere scrollbar ma mantenere funzionalità */
-.scrollbar-none {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-
-.scrollbar-none::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
-}
-
-/* Transizioni fluide */
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
-}
-
-.transition-colors {
-  transition-property: color, background-color, border-color;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
-}
-
-.transition-opacity {
-  transition-property: opacity;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
-}
-
-/* Stili per eventi del calendario nella vista mensile */
-.calendar-event {
-  font-size: 0.75rem;
-  padding: 0.125rem 0.25rem;
-  margin-bottom: 0.125rem;
-  border-radius: 0.25rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.calendar-event:hover {
-  filter: brightness(1.1);
-}
-
-/* Stile per celle del calendario */
-.day-cell {
-  min-height: 5rem;
-  transition: background-color 0.2s ease;
-}
-
-.day-cell:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-/* Media query per dispositivi mobili */
-@media (max-width: 768px) {
-  .day-cell {
-    min-height: 4rem;
-  }
-  
-  .calendar-event {
-    font-size: 0.65rem;
-    padding: 0.1rem 0.2rem;
-  }
-}
-
-/* Stili aggiuntivi per funzionalità touch su mobile - da aggiungere a globals.css */
-
-/* Touch handling */
-.touch-pan-x {
-  touch-action: pan-x;
-}
-
-.touch-pan-y {
-  touch-action: pan-y;
-}
-
-.touch-none {
   touch-action: none;
-}
-
-/* Resize styling */
-.resize-active {
-  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.7);
-  z-index: 30 !important;
-}
-
-/* Rimuove il ritardo sul touch per migliorare reattività */
-@media (pointer: coarse) {
-  a, button, [role="button"], input, label, select, textarea {
-    touch-action: manipulation;
-  }
-}
-
-/* Fix per header fullscreen su mobile */
-.calendar-header-fullwidth {
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
-}
-
-/* Adatta la visualizzazione alla larghezza dello schermo su mobile */
-@media (max-width: 768px) {
-  .calendar-fullscreen {
-    margin-left: -0.5rem;
-    margin-right: -0.5rem;
-    width: calc(100% + 1rem);
-  }
-  
-  .time-cell {
-    width: 36px !important;
-    flex-shrink: 0;
-  }
-  
-  .time-content {
-    flex: 1;
-    min-width: 0;
-  }
-  
-  /* Stile per il dragging di eventi */
-  .event-dragging {
-    opacity: 0.7;
-    transform: scale(1.02);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  }
-}
-
-/* Animazioni migliorata per gli eventi del calendario */
-@keyframes eventAppear {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.event-appear {
-  animation: eventAppear 0.3s ease forwards;
-}
-
-/* Indicatore di long-press */
-@keyframes longpress {
-  0% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-}
-
-.longpress-indicator {
-  position: absolute;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: rgba(255, 107, 0, 0.3);
-  pointer-events: none;
-  z-index: 100;
-  animation: longpress 1s infinite;
-}
-
-/* Stile per la maniglia di ridimensionamento */
-.resize-handle {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 12px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: ns-resize;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-}
-
-.resize-handle:hover,
-.resize-handle:active {
-  opacity: 1;
-}
-
-.resize-handle::after {
-  content: "";
-  width: 20px;
-  height: 3px;
-  border-radius: 3px;
-  background-color: rgba(255, 255, 255, 0.5);
-}
-
-/* Miglioramento per la vista giornaliera */
-.day-view-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  background-color: #000;
-}
-
-/* Per le visualizzazioni a schermo intero */
-.full-height {
-  height: 100vh;
-  max-height: 100vh;
-  overflow: hidden;
-}
-
-/* Fix per evitare problemi di overflow su iOS */
-html, body {
-  position: relative;
+  -ms-touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  overscroll-behavior-y: none;
   overflow-x: hidden;
   max-width: 100vw;
+  position: relative;
 }
 
-/* Previeni selezione testo su touch */
-.day-view-container, 
-.calendar-event, 
-.time-cell,
-.calendar-header-days {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-/* Disabilita comportamenti predefiniti di touch su elementi chiave */
-.calendar-hour-cell,
-.calendar-header-days {
-  touch-action: none;
-}
-
-/* Disabilita effetto "pull to refresh" su iOS */
-body {
-  overscroll-behavior-y: none;
-}
-
-@media (max-width: 768px) {
-  .mobile-calendar-container {
-    width: calc(100% + 4%);
-    margin-left: -2%;
-  }
-}
-
-/* Aggiungi questi stili a globals.css */
-*, *::before, *::after {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
-
-/* Riabilita la selezione solo dove necessario (input, textarea) */
+/* Re-enable text selection for inputs */
 input, textarea {
   -webkit-user-select: text;
   -moz-user-select: text;
@@ -463,68 +93,9 @@ input, textarea {
   user-select: text;
 }
 
-/* Animazione per il long press */
-@keyframes longPressExpand {
-  0% { transform: scale(0.95); opacity: 0.5; }
-  50% { transform: scale(1.02); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.long-press-active {
-  animation: longPressExpand 0.3s ease-out forwards;
-  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.5);
-}
-
-/* Miglioramento dell'animazione di selezione dei giorni */
-.day-item {
-  transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
-}
-
-.day-item:active {
-  transform: scale(0.95);
-}
-
-.day-item.selected {
-  transform: scale(1.05);
-  box-shadow: 0 0 10px rgba(255, 107, 0, 0.3);
-  transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
-}
-
-/* Aggiungi queste classi al tuo file globals.css */
-
-/* Animazione per fade-in degli elementi */
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Animazione per slide-down dei sottomenu */
-.animate-slide-down {
-  animation: slideDown 0.3s ease-in-out;
-  transform-origin: top;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: scaleY(0);
-  }
-  to {
-    opacity: 1;
-    transform: scaleY(1);
-  }
-}
-
-/* Migliora l'aspetto nel tema scuro */
-input[type="date"] {
+/* Dark mode color scheme for native inputs */
+input[type="date"],
+input[type="time"] {
   color-scheme: dark;
 }
 
@@ -541,64 +112,35 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
 
-input[type="date"],
-input[type="time"] {
-  color-scheme: dark;
-}
-
-html, body {
-  touch-action: none;  /* Disabilita tutte le azioni touch native */
-  -ms-touch-action: none;  /* Per supporto IE */
-  -webkit-touch-callout: none;  /* Previene il menu contestuale su iOS */
-  -webkit-user-select: none;  /* Previene la selezione del testo */
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-/* Aggiungi questi stili in globals.css */
-
-/* Stile per l'ombra glow arancione */
-.header-glow-effect {
-  box-shadow: 0 0 10px 2px rgba(255, 107, 0, 0.4);
-}
-
-/* Modifica la transizione del sidebar per renderla più fluida */
-.sidebar-transition {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Aggiorna l'altezza del wrapper contenuto tenendo conto dell'header */
-.content-wrapper {
-  height: calc(100vh - 57px);
-  margin-top: 57px;
-}
-
-/* Miglioramento dell'aspetto dell'header */
-header.sticky {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-/* Animazione per il logo durante l'hover */
-.logo-hover:hover img {
-  filter: drop-shadow(0 0 3px rgba(255, 107, 0, 0.7));
-  transition: filter 0.3s ease;
-}
-
-/* Layout migliorato per dispositivi mobili */
+/* Remove tap highlight on mobile */
 @media (max-width: 768px) {
-  .mobile-header {
-    padding-left: 1rem;
-    padding-right: 1rem;
+  button, 
+  .btn,
+  [role="button"],
+  a {
+    -webkit-tap-highlight-color: transparent;
   }
   
-  .sidebar-mobile {
-    width: 80%;
-    max-width: 280px;
+  /* Optimize scroll performance */
+  .mobile-optimized-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    scroll-padding-bottom: 5rem;
   }
 }
 
-/* Stile globale per ReactFlow */
+/* Remove default tap delay for better responsivity */
+@media (pointer: coarse) {
+  a, button, [role="button"], input, label, select, textarea {
+    touch-action: manipulation;
+  }
+}
+
+/* ====================================
+   EXTERNAL LIBRARIES CONFIGURATION
+==================================== */
+
+/* ReactFlow configuration */
 .react-flow {
   width: 100%;
   height: 100%;
@@ -621,7 +163,6 @@ header.sticky {
   position: absolute;
 }
 
-/* Stile per il wrapper del flow */
 .flow-wrapper {
   width: 100%;
   height: 600px;
@@ -632,543 +173,63 @@ header.sticky {
   background-color: #1a1a1a;
 }
 
-/* Stili per i diversi tipi di eventi (da aggiungere a globals.css) */
+/* ====================================
+   UTILITY CLASSES
+==================================== */
 
-/* Stile per i promemoria */
-.calendar-event.reminder {
-  border-left: 3px solid #9333ea; /* Viola per i promemoria */
+/* Hide scrollbar but maintain functionality */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* Stile per gli appuntamenti */
-.calendar-event.appointment {
-  border-left: 3px solid var(--primary); /* Colore primario per gli appuntamenti */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
-/* Stili per la vista lista ottimizzata per mobile */
-@media (max-width: 768px) {
-  /* Rendering compatto degli eventi nella lista */
-  .list-event-item {
-    padding: 0.5rem;
-    margin-bottom: 0.5rem;
-    border-radius: 0.375rem;
-  }
-  
-  /* Stile per tipo di evento sul mobile */
-  .event-type-badge {
-    font-size: 0.65rem;
-    padding: 0.1rem 0.5rem;
-    border-radius: 1rem;
-    display: inline-flex;
-    align-items: center;
-  }
-  
-  .event-type-badge.reminder {
-    background-color: rgba(147, 51, 234, 0.15);
-    color: #c084fc;
-  }
-  
-  .event-type-badge.appointment {
-    background-color: rgba(255, 107, 0, 0.15);
-    color: #ff8c38;
-  }
-  
-  /* Miglioramento selezione data su mobile */
-  .date-selector-mobile {
-    border-radius: 0.5rem;
-    overflow: hidden;
-    margin-bottom: 0.5rem;
-  }
+/* Touch action utilities */
+.touch-pan-x {
+  touch-action: pan-x;
 }
 
-/* Stili per il selettore di tipo nel modal */
-.event-type-selector {
-  display: flex;
-  gap: 0.25rem;
-  background-color: rgba(24, 24, 27, 0.6);
-  border-radius: 0.5rem;
-  padding: 0.25rem;
-  margin-bottom: 1rem;
+.touch-pan-y {
+  touch-action: pan-y;
 }
 
-.event-type-button {
-  flex: 1;
-  border-radius: 0.375rem;
-  padding: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
+.touch-none {
+  touch-action: none;
 }
 
-.event-type-button.active {
-  background-color: var(--primary);
-  color: white;
-}
+/* ====================================
+   DESIGN SYSTEM OVERRIDES
+==================================== */
 
-.event-type-button:not(.active) {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.event-type-button:not(.active):hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Modifica colori di sfondo e spaziature */
-.calendar-page-container {
-  /* Sostituisco il nero con il grigio scuro del tuo sito */
-  background-color: #18181b; /* zinc-900 */
-  color: #ffffff;
-}
-
-/* Intestazione data con stile più moderno */
-.calendar-date-header {
-  font-size: 1.25rem;
-  font-weight: 500;
-  padding: 1rem 0.75rem 0.75rem;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Giorno selezionato con migliori spaziature */
-.date-navigation {
-  display: flex;
-  align-items: center;
-  padding: 0.5rem 0.75rem;
-  background-color: #27272a; /* zinc-800 */
-  border-radius: 0.5rem;
-  margin: 0.75rem;
-}
-
-/* Miglioramento della navigazione */
-.date-nav-button {
-  padding: 0.5rem;
-  border-radius: 0.375rem;
-  background: transparent;
-  color: #a1a1aa; /* zinc-400 */
-}
-
-.date-nav-button:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
-}
-
-/* Spaziatura delle date */
-.date-divider {
-  font-size: 1rem;
-  font-weight: 500;
-  padding: 0.5rem 0.75rem;
-  background-color: #27272a; /* zinc-800 */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Stile degli eventi */
-.calendar-event-item {
-  padding: 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  align-items: flex-start;
-}
-
-.event-time {
-  width: 3.5rem;
-  min-width: 3.5rem;
-  color: #a1a1aa; /* zinc-400 */
-  text-align: right;
-  padding-right: 0.75rem;
-}
-
-.event-content {
-  flex: 1;
-  padding-left: 0.75rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.event-title {
-  font-weight: 500;
-  margin-bottom: 0.25rem;
-}
-
-.event-details {
-  font-size: 0.8125rem;
-  color: #a1a1aa; /* zinc-400 */
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
-}
-
-/* Status indicator per gli eventi */
-.status-indicator {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  margin-right: 0.5rem;
-}
-
-.status-pending {
-  background-color: #a1a1aa; /* grigio */
-}
-
-.status-confirmed {
-  background-color: #FF6B00; /* arancione - primary */
-}
-
-/* Miglioramento bottoni di azione */
-.view-toggle-group {
-  display: flex;
-  border-radius: 0.375rem;
-  overflow: hidden;
-  margin-right: 0.5rem;
-}
-
-.view-toggle-button {
-  padding: 0.5rem;
-  background-color: #27272a; /* zinc-800 */
-}
-
-.view-toggle-button.active {
-  background-color: #FF6B00; /* primary */
-}
-
-.add-event-button {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  background-color: #FF6B00; /* primary */
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-/* Add these styles to your globals.css file */
-
-/* Enhanced mobile list view styles */
-@media (max-width: 768px) {
-  /* Improved list view event cards */
-  .calendar-page-container {
-    background-color: #18181b;
-  }
-  
-  /* Enhanced list item appearance */
-  .list-event-item {
-    padding: 0.75rem;
-    margin-bottom: 0.5rem;
-    border-radius: 0.5rem;
-    background-color: #27272a;
-    border-left: 4px solid;
-    transition: transform 0.15s ease, background-color 0.15s ease;
-  }
-  
-  .list-event-item:active {
-    transform: scale(0.98);
-    background-color: #3f3f46;
-  }
-  
-  /* Date headers */
-  .date-header {
-    font-size: 0.875rem;
-    font-weight: 500;
-    padding-bottom: 0.5rem;
-    margin-bottom: 0.75rem;
-    margin-top: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  .date-header.today {
-    color: #FF6B00;
-  }
-  
-  /* Time display */
-  .time-display {
-    font-size: 0.75rem;
-    color: #a1a1aa;
-    margin-bottom: 0.25rem;
-  }
-  
-  /* Event details like location, type */
-  .event-detail {
-    display: flex;
-    align-items: center;
-    font-size: 0.75rem;
-    color: #a1a1aa;
-    margin-right: 0.75rem;
-  }
-  
-  .event-detail-icon {
-    margin-right: 0.375rem;
-  }
-  
-  /* Navigation in mobile list view */
-  .mobile-date-nav {
-    display: flex;
-    align-items: center;
-    padding: 0.5rem;
-    background-color: #27272a;
-    border-radius: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
-  
-  .date-nav-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 0.25rem;
-    color: #a1a1aa;
-  }
-  
-  .date-nav-btn:active {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white;
-  }
-  
-  .current-date-display {
-    flex: 1;
-    text-align: center;
-    font-weight: 500;
-    font-size: 0.875rem;
-  }
-  
-  /* Empty state */
-  .empty-list-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    padding: 2rem;
-    text-align: center;
-  }
-  
-  .empty-list-icon {
-    margin-bottom: 1rem;
-    opacity: 0.7;
-  }
-  
-  /* Animation for new events */
-  @keyframes slideInRight {
-    from {
-      transform: translateX(20px);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-  
-  .new-event-animation {
-    animation: slideInRight 0.3s ease forwards;
-  }
-  
-  /* Event status indicators */
-  .status-dot {
-    width: 0.625rem;
-    height: 0.625rem;
-    border-radius: 50%;
-    margin-right: 0.5rem;
-    flex-shrink: 0;
-  }
-  
-  .status-pending {
-    background-color: #a3a3a3;
-  }
-  
-  .status-confirmed {
-    background-color: #FF6B00;
-  }
-  
-  .status-completed {
-    background-color: #22c55e;
-  }
-  
-  .status-cancelled {
-    background-color: #ef4444;
-  }
-  
-  /* Add to calendar button - make it float and more prominent */
-  .add-event-btn {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    width: 3.5rem;
-    height: 3.5rem;
-    border-radius: 50%;
-    background-color: #FF6B00;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
-    z-index: 20;
-  }
-  
-  .add-event-btn:active {
-    transform: scale(0.95);
-    background-color: #FF8C38;
-  }
-}
-
-/* Better tap feedback for all mobile interactions */
-@media (max-width: 768px) {
-  button, 
-  .btn,
-  [role="button"],
-  .clickable {
-    -webkit-tap-highlight-color: transparent;
-  }
-  
-  .tap-highlight:active {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  /* Swipe hint animation */
-  @keyframes swipeHint {
-    0% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    50% { transform: translateX(0); }
-    75% { transform: translateX(-5px); }
-    100% { transform: translateX(0); }
-  }
-  
-  .swipe-hint {
-    animation: swipeHint 2s ease-in-out;
-  }
-  
-  /* Optimize scroll performance */
-  .mobile-optimized-scroll {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-    scroll-padding-bottom: 5rem;
-  }
-}
-
-/* Aggiungi questo al tuo file globals.css */
-
-/* 1. Imposta dimensione font minima di 16px per tutti gli input */
-input, 
-textarea, 
-select {
-  font-size: 16px !important;  /* Minimo 16px previene zoom automatico su iOS */
-  max-height: none !important;  /* Previene comportamenti strani di altezza su alcuni dispositivi */
-}
-
-/* 3. Proprietà specifiche per iOS */
-@media screen and (-webkit-min-device-pixel-ratio: 0) { 
-  select:focus,
-  textarea:focus,
-  input:focus {
-    font-size: 16px !important;
-    -webkit-text-size-adjust: 100%;  /* Previene aggiustamento testo */
-  }
-}
-
-/* 4. Previene zoom su focus per dispositivi mobili */
-@media (max-width: 768px) {
-  input, select, textarea {
-    font-size: 16px !important;
-  }
-  
-  /* Fix per comportamento zoom su Samsung browser */
-  input:not([type="checkbox"]):not([type="radio"]) {
-    transform: scale(1);  /* Trucco per forzare il rendering corretto */
-  }
-}
-
-/* 5. Fix specifico per iOS */
-@supports (-webkit-touch-callout: none) {
-  input, select, textarea {
-    -webkit-appearance: none;  /* Rimuove lo stile nativo iOS che può causare zoom */
-    border-radius: 0;  /* Previene arrotondamenti che possono creare inconsistenze */
-  }
-}
-
-/* 6. Previene cambio automatico di scale su orientamento */
-html {
-  -webkit-text-size-adjust: 100%;
-  -moz-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
-/* Reset dei bordi di default */
-*, *::before, *::after {
-  box-sizing: border-box;
-  border: 0 solid transparent;
-}
-
-/* Variabili CSS per il design squircle */
-:root {
-  --squircle-radius: 12px;
-  --squircle-small: 8px;
-  --squircle-large: 16px;
-}
-
-/* Override per tutti i container principali */
+/* Squircle design system */
 .card,
 .bg-zinc-900,
 .bg-zinc-800,
-.bg-zinc-700 {
-  border-radius: var(--squircle-radius) !important;
-  border: none !important;
-}
-
-/* Bottoni con squircle */
-.btn,
-button {
-  border-radius: var(--squircle-small) !important;
-  border: none !important;
-  transition: all 0.2s ease;
-}
-
-.btn:hover,
-button:hover {
-  transform: translateY(-1px);
-}
-
-/* Input e select con squircle */
-input,
-select,
-textarea {
-  border-radius: var(--squircle-small) !important;
-  border: none !important;
-  outline: none !important;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  ring: 1px solid rgba(255, 107, 0, 0.3);
-  ring-offset: 2px;
-}
-
-/* Badge e tag con squircle piccolo */
-.badge,
-.tag,
-.px-2.py-1 {
-  border-radius: 6px !important;
-}
-
-/* Container principali */
+.bg-zinc-700,
 .rounded-lg,
 .rounded-md {
   border-radius: var(--squircle-radius) !important;
+  border: none !important;
 }
 
 .rounded-xl {
   border-radius: var(--squircle-large) !important;
 }
 
-.rounded {
+.rounded,
+.btn,
+button,
+input,
+select,
+textarea {
   border-radius: var(--squircle-small) !important;
+  border: none !important;
 }
 
-/* Rimozione di tutti i bordi esistenti */
+/* Remove all existing borders */
 .border,
 .border-zinc-700,
 .border-zinc-800,
@@ -1179,84 +240,11 @@ textarea:focus {
   border: none !important;
 }
 
-/* Override per i container del layout */
-.animate-fade-in > div {
-  border-radius: var(--squircle-radius) !important;
-  border: none !important;
-}
-
-/* Tabelle senza bordi */
-table {
-  border: none !important;
-}
-
-table th,
-table td {
-  border: none !important;
-}
-
-.divide-y > * {
-  border-top: 1px solid rgba(113, 113, 122, 0.1) !important;
-}
-
-/* Cards hover effect */
-.card:hover,
-.bg-zinc-800:hover,
-.hover\:bg-zinc-700\/50:hover {
-  background-color: rgba(63, 63, 70, 0.3) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-}
-
-/* Scrollbar personalizzata */
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
-
-.scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Miglioramenti per il responsive */
+/* Responsive adjustments */
 @media (max-width: 768px) {
   :root {
     --squircle-radius: 10px;
     --squircle-small: 6px;
     --squircle-large: 14px;
   }
-}
-
-/* Animazioni fluide */
-* {
-  transition: border-radius 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
-}
-
-/* Fix per ReactFlow e altri componenti esterni */
-.react-flow__node {
-  border-radius: var(--squircle-small) !important;
-  border: none !important;
-}
-
-.react-flow__edge {
-  stroke-width: 2px;
-}
-
-/* Override per i grafici Recharts */
-.recharts-wrapper {
-  border-radius: var(--squircle-radius) !important;
-}
-
-/* Dropdown e menu */
-.dropdown,
-.menu {
-  border-radius: var(--squircle-radius) !important;
-  border: none !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-}
-
-/* Tooltip personalizzati */
-.tooltip {
-  border-radius: var(--squircle-small) !important;
-  border: none !important;
 }
