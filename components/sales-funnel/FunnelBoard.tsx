@@ -43,15 +43,15 @@ import { formatMoney } from "@/lib/utils/format";
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
-// Columns configuration
+// Columns configuration with color mappings
 const COLUMNS = [
-  { id: "new", title: "Nuovi", color: "bg-zinc-700" },
-  { id: "contacted", title: "Contattati", color: "bg-info" },
-  { id: "qualified", title: "Qualificati", color: "bg-primary" },
-  { id: "opportunity", title: "Opportunità", color: "bg-warning" },
-  { id: "proposal", title: "Proposta", color: "bg-primary-hover" },
-  { id: "customer", title: "Clienti", color: "bg-success" },
-  { id: "lost", title: "Persi", color: "bg-danger" },
+  { id: "new", title: "Nuovi", color: "bg-zinc-700", borderColor: "#71717a", glowColor: "71, 113, 122" },
+  { id: "contacted", title: "Contattati", color: "bg-info", borderColor: "#3b82f6", glowColor: "59, 130, 246" },
+  { id: "qualified", title: "Qualificati", color: "bg-primary", borderColor: "#FF6B00", glowColor: "255, 107, 0" },
+  { id: "opportunity", title: "Opportunità", color: "bg-warning", borderColor: "#f59e0b", glowColor: "245, 158, 11" },
+  { id: "proposal", title: "Proposta", color: "bg-primary-hover", borderColor: "#FF8C38", glowColor: "255, 140, 56" },
+  { id: "customer", title: "Clienti", color: "bg-success", borderColor: "#10b981", glowColor: "16, 185, 129" },
+  { id: "lost", title: "Persi", color: "bg-danger", borderColor: "#ef4444", glowColor: "239, 68, 68" },
 ];
 
 // Configurazione dell'animazione di drop
@@ -63,6 +63,15 @@ const dropAnimation: DropAnimation = {
       },
     },
   }),
+};
+
+// Helper function to get column colors
+const getColumnColors = (columnId: string) => {
+  const column = COLUMNS.find(col => col.id === columnId);
+  return {
+    borderColor: column?.borderColor || "#71717a",
+    glowColor: column?.glowColor || "71, 113, 122"
+  };
 };
 
 interface CustomFunnelBoardProps {
@@ -622,18 +631,53 @@ export default function CustomFunnelBoard({
     }
   };
 
-  // Componente Card della Lead
+  // Componente Card della Lead con design moderno
   const LeadCard = React.memo(
-    ({ lead, isOverlay = false }: { lead: FunnelItem; isOverlay?: boolean }) => {
+    ({ lead, columnId, isOverlay = false }: { lead: FunnelItem; columnId?: string; isOverlay?: boolean }) => {
+      const colors = columnId ? getColumnColors(columnId) : { borderColor: "#71717a", glowColor: "71, 113, 122" };
+      
+      const cardStyle: React.CSSProperties = {
+        border: `1px solid ${colors.borderColor}`,
+        boxShadow: `0 0 8px rgba(${colors.glowColor}, 0.15)`,
+        background: 'rgba(39, 39, 42, 0.95)', // zinc-800 with transparency
+        backdropFilter: 'blur(8px)',
+        borderRadius: '8px',
+        padding: '12px',
+        margin: '4px 0',
+        cursor: isOverlay ? 'grabbing' : 'grab',
+        transition: 'all 0.2s ease',
+        position: 'relative' as const,
+      };
+
+      if (isOverlay) {
+        cardStyle.transform = 'rotate(3deg)';
+        cardStyle.boxShadow = `0 8px 32px rgba(${colors.glowColor}, 0.4)`;
+        cardStyle.zIndex = 1000;
+      }
+
       return (
         <div
-          className={`funnel-card ${isOverlay ? "is-overlay" : ""}`}
+          className="funnel-card"
+          style={cardStyle}
+          onMouseEnter={(e) => {
+            if (!isOverlay) {
+              e.currentTarget.style.boxShadow = `0 0 16px rgba(${colors.glowColor}, 0.3)`;
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isOverlay) {
+              e.currentTarget.style.boxShadow = `0 0 8px rgba(${colors.glowColor}, 0.15)`;
+              e.currentTarget.style.transform = 'translateY(0)';
+            }
+          }}
         >
-          <div className="flex justify-between items-center mb-1">
-            <div className="font-medium text-sm truncate pr-1">{lead.name}</div>
+          <div className="flex justify-between items-center mb-2">
+            <div className="font-medium text-sm text-white truncate pr-2">{lead.name}</div>
             {!isOverlay && (
               <button
-                className="p-1 rounded-full hover:bg-zinc-700 transition-colors edit-btn"
+                className="p-1.5 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+                style={{ color: colors.borderColor }}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleEditLead(lead);
@@ -645,12 +689,15 @@ export default function CustomFunnelBoard({
               </button>
             )}
           </div>
-          <div className="text-xs text-zinc-400">
-            <div>{formatDate(lead.createdAt)}</div>
+          
+          <div className="text-xs space-y-1">
+            <div className="text-zinc-400">{formatDate(lead.createdAt)}</div>
             {lead.value ? (
-              <div className="text-primary font-medium my-1">€{formatMoney(lead.value)}</div>
+              <div className="font-semibold text-white">€{formatMoney(lead.value)}</div>
             ) : null}
-            {lead.service ? <div className="italic">{lead.service}</div> : null}
+            {lead.service ? (
+              <div className="text-zinc-300 italic truncate">{lead.service}</div>
+            ) : null}
           </div>
         </div>
       );
@@ -676,10 +723,10 @@ export default function CustomFunnelBoard({
         ref={setNodeRef}
         {...attributes}
         {...listeners}
-        className={`funnel-draggable ${isDragging ? "opacity-0" : ""}`}
+        className={`${isDragging ? "opacity-0" : ""}`}
         style={{ touchAction: "none" }} // Importante per dispositivi touch
       >
-        <LeadCard lead={lead} />
+        <LeadCard lead={lead} columnId={columnId} />
       </div>
     );
   };
@@ -717,8 +764,12 @@ export default function CustomFunnelBoard({
   
         <div 
           ref={setNodeRef}
-          className={`funnel-body ${isOver ? "drag-over" : ""} flex-1 overflow-y-auto`}
+          className={`funnel-body ${isOver ? "drag-over" : ""} flex-1 overflow-y-auto p-2`}
           data-column-id={id}
+          style={{
+            background: isOver ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+            transition: 'background 0.2s ease'
+          }}
         >
           <SortableContext
             items={leads.map((lead) => `lead-${lead._id}:${id}`)}
@@ -729,7 +780,7 @@ export default function CustomFunnelBoard({
                 <DraggableLeadCard key={`lead-${lead._id}:${id}`} lead={lead} columnId={id} />
               ))
             ) : (
-              <div className="text-center text-zinc-500 text-xs italic py-4">Nessun lead</div>
+              <div className="text-center text-zinc-500 text-xs italic py-8">Nessun lead</div>
             )}
           </SortableContext>
         </div>
@@ -789,7 +840,13 @@ export default function CustomFunnelBoard({
         dropAnimation={dropAnimation}
         zIndex={999}
       >
-        {activeDrag ? <LeadCard lead={activeDrag.lead} isOverlay={true} /> : null}
+        {activeDrag ? (
+          <LeadCard 
+            lead={activeDrag.lead} 
+            columnId={activeDrag.sourceColumn}
+            isOverlay={true} 
+          />
+        ) : null}
       </DragOverlay>
 
       {/* Facebook Event Modal per lo spostamento delle Lead - Solo per lo stato "customer" */}
@@ -813,34 +870,4 @@ export default function CustomFunnelBoard({
       )}
     </DndContext>
   );
-}
-
-// Funzione di supporto per ottenere il colore del bordo
-function getBorderColor(status: string): string {
-  switch (status) {
-    case "new":
-      return "#71717a"; // zinc-500
-    case "contacted":
-      return "#3498db"; // info
-    case "qualified":
-      return "#FF6B00"; // primary
-    case "opportunity":
-      return "#e67e22"; // warning
-    case "proposal":
-      return "#FF8C38"; // primary-hover
-    case "customer":
-      return "#27ae60"; // success
-    case "lost":
-      return "#e74c3c"; // danger
-    case "pending":
-      return "#71717a"; // same as new
-    case "confirmed":
-      return "#3498db"; // same as contacted
-    case "completed":
-      return "#FF6B00"; // same as qualified
-    case "cancelled":
-      return "#e74c3c"; // same as lost
-    default:
-      return "#71717a"; // zinc-500
-  }
 }

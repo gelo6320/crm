@@ -30,7 +30,6 @@
   .funnel-board {
     display: flex;
     gap: 0.75rem;
-    padding: 0.5rem;
     min-width: max-content;
     will-change: transform;
     contain: layout style;
