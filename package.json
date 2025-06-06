@@ -37,6 +37,7 @@
     "react-dnd-touch-backend": "^16.0.1",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
+    "react-smooth-corners": "^1.0.4",
     "reactflow": "^11.11.4",
     "recharts": "^2.15.3",
     "tailwindcss-animate": "^1.0.7"
