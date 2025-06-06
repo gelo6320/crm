@@ -14,19 +14,29 @@ import Pagination from "@/components/ui/Pagination";
 import { formatDate } from "@/lib/utils/date";
 import { toast } from "@/components/ui/toaster";
 
-// SPOSTATA FUORI DAL COMPONENTE - Funzione di scroll animato con Framer Motion (CORRETTA)
+// Funzione di scroll animato con Framer Motion
 function smoothScrollToElement(element: HTMLElement, duration: number = 0.8) {
   // Calcolo corretto della posizione usando getBoundingClientRect + window.scrollY
   const elementRect = element.getBoundingClientRect();
   const absoluteElementTop = elementRect.top + window.scrollY;
   const middle = absoluteElementTop - (window.innerHeight / 2) + (elementRect.height / 2);
   
+  // Debug logs per capire cosa succede
+  console.log('Scroll animation started:', {
+    elementRect,
+    absoluteElementTop,
+    middle,
+    currentScroll: window.scrollY
+  });
+  
   animate(window.scrollY, middle, {
     duration,
-    ease: [0.25, 0.46, 0.45, 0.94], // Accelerazione veloce, decelerazione lenta
-    onUpdate: (value) => window.scrollTo(0, value),
+    ease: "easeInOut", // Sistemato: era [0.25, 0.46, 0.45, 0.94], ora usa easing standard
+    onUpdate: (value) => {
+      window.scrollTo(0, value);
+    },
     onComplete: () => {
-      console.log('Scroll animation completed');
+      console.log('Scroll animation completed, final position:', window.scrollY);
     }
   });
 }
@@ -133,7 +143,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
         onClick={handleClose}
       ></div>
       
-      {/* Modal con frosted glass come background principale */}
+      {/* Modal con frosted glass grigio chiaro come background principale */}
       <div className={`relative z-10 w-full max-w-lg mx-6 transition-all duration-300 ${isClosing || isOpening ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
         {/* SmoothCorners per i superellipse */}
         <SmoothCorners 
@@ -141,16 +151,16 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
           borderRadius="24"
         />
         
-        {/* Modal frosted glass background */}
-        <div className="relative bg-gray-100/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-[24px] border border-white/20 dark:border-white/10 shadow-2xl overflow-hidden">
+        {/* Modal frosted glass background - CAMBIATO A GRIGIO CHIARO */}
+        <div className="relative bg-zinc-50/80 dark:bg-zinc-100/10 backdrop-blur-xl rounded-[24px] border border-white/30 dark:border-white/20 shadow-2xl overflow-hidden">
           {/* Content */}
           <div className="relative">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/20 dark:border-white/10">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/30 dark:border-white/20">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Dettagli contatto</h3>
               <button
                 onClick={handleClose}
-                className="p-2 rounded-full hover:bg-white/20 dark:hover:bg-white/10 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -164,7 +174,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
               <div className="flex justify-between items-start">
                 <div className="flex items-center space-x-3">
                   {contact.source === "facebook" ? (
-                    <div className="w-10 h-10 rounded-full bg-blue-100/80 dark:bg-blue-900/30 flex items-center justify-center backdrop-blur-sm">
+                    <div className="w-10 h-10 rounded-full bg-blue-100/90 dark:bg-blue-900/40 flex items-center justify-center backdrop-blur-sm">
                       <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 287.56 191">
                         <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
                         <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
@@ -172,7 +182,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
                       </svg>
                     </div>
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-100/80 dark:bg-gray-800/80 flex items-center justify-center backdrop-blur-sm">
+                    <div className="w-10 h-10 rounded-full bg-gray-100/90 dark:bg-gray-800/90 flex items-center justify-center backdrop-blur-sm">
                       <Globe className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </div>
                   )}
@@ -180,7 +190,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
                     <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
                       {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                     </h2>
-                    <p className="text-sm text-gray-500">{formatSource(contact.source, contact.formType)}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{formatSource(contact.source, contact.formType)}</p>
                   </div>
                 </div>
                 <StatusBadge status={contact.status} />
@@ -189,30 +199,30 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
               {/* Info contatto */}
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Email</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Email</p>
                   <p className="text-primary">{contact.email}</p>
                 </div>
                 
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Telefono</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Telefono</p>
                   <p className="text-gray-900 dark:text-white">{contact.phone || "Non disponibile"}</p>
                 </div>
                 
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Data creazione</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Data creazione</p>
                   <p className="text-gray-900 dark:text-white">{formatDate(contact.createdAt)}</p>
                 </div>
                 
                 {service && (
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Servizio</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Servizio</p>
                     <p className="text-gray-900 dark:text-white">{service}</p>
                   </div>
                 )}
                 
                 {value !== undefined && value > 0 && (
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Valore</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Valore</p>
                     <p className="text-lg font-semibold text-green-600">€{value.toLocaleString('it-IT')}</p>
                   </div>
                 )}
@@ -221,8 +231,8 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
               {/* Messaggio */}
               {message && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-500">Messaggio</p>
-                  <div className="p-4 bg-white/30 dark:bg-black/20 backdrop-blur-sm rounded-2xl text-sm text-gray-700 dark:text-gray-300 border border-white/20 dark:border-white/10">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Messaggio</p>
+                  <div className="p-4 bg-white/40 dark:bg-black/30 backdrop-blur-sm rounded-2xl text-sm text-gray-700 dark:text-gray-300 border border-white/30 dark:border-white/20">
                     {message}
                   </div>
                 </div>
@@ -232,7 +242,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={handleCall}
-                  className="flex-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-white/30 dark:bg-white/10 hover:bg-white/50 dark:hover:bg-white/20 backdrop-blur-sm border border-white/30 dark:border-white/20 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
+                  className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
                 >
                   <Phone className="w-4 h-4" />
                   Chiama
@@ -240,7 +250,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
                 
                 <button
                   onClick={handleWhatsApp}
-                  className="flex-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-white/30 dark:bg-white/10 hover:bg-white/50 dark:hover:bg-white/20 backdrop-blur-sm border border-white/30 dark:border-white/20 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
+                  className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
                 >
                   <MessageCircle className="w-4 h-4" />
                   WhatsApp
@@ -297,10 +307,10 @@ export default function ContactsPage() {
     console.log('Target contact found:', targetContact);
     
     if (targetContact) {
-      // Se il contatto è nella lista, evidenzialo E poi aprilo nella modale dopo un momento
+      // Se il contatto è nella lista, evidenzialo
       setHighlightedContactId(contactId);
       
-      // Schedule a scroll to the element
+      // Schedule a scroll to the element con un timing migliore
       setTimeout(() => {
         let element = document.getElementById(`contact-${contactId}`);
         
@@ -311,20 +321,23 @@ export default function ContactsPage() {
         
         // Se ancora non lo troviamo, prova a cercare per data-lead-id
         if (!element) {
-          element = document.querySelector(`[data-lead-id="${contactId}"]`);
+          element = document.querySelector(`[data-lead-id="${contactId}"]`) as HTMLElement;
         }
         
-        console.log('Element found:', element);
+        console.log('Element found for scroll:', element);
         if (element) {
-          smoothScrollToElement(element, 0.8); // ORA FUNZIONA!
+          // SISTEMATO: Ora usa easeInOut invece del cubic-bezier personalizzato
+          smoothScrollToElement(element, 1.2); // Durata più lunga per essere più smooth
+        } else {
+          console.warn('Element not found for scroll animation');
         }
         
-        // Remove the highlight after 800ms e apri la modale
+        // Remove the highlight after 1200ms e apri la modale
         setTimeout(() => {
           setHighlightedContactId(null);
           setSelectedContact(targetContact);
-        }, 800);
-      }, 100);
+        }, 1200);
+      }, 150); // Aumentato il timing per dar tempo al DOM
     } else {
       console.log('Contact not found in current list');
     }
