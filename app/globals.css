@@ -1058,11 +1058,6 @@ select {
   max-height: none !important;  /* Previene comportamenti strani di altezza su alcuni dispositivi */
 }
 
-/* 2. Disabilita pinch zoom e doppio tap */
-* {
-  touch-action: manipulation;  /* Previene gesti di zoom conservando scroll/pan */
-}
-
 /* 3. Proprietà specifiche per iOS */
 @media screen and (-webkit-min-device-pixel-ratio: 0) { 
   select:focus,
