@@ -28,16 +28,12 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
       }
     };
     
-    // Verifica iniziale
     checkScrollButtons();
-    
-    // Aggiungi event listener per resize e scroll
     window.addEventListener('resize', checkScrollButtons);
     if (tableRef.current) {
       tableRef.current.addEventListener('scroll', checkScrollButtons);
     }
     
-    // Cleanup
     return () => {
       window.removeEventListener('resize', checkScrollButtons);
       if (tableRef.current) {
@@ -46,7 +42,6 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     };
   }, [campaigns, isLoading]);
 
-  // Funzioni di scorrimento
   const scrollLeft = () => {
     if (tableRef.current) {
       tableRef.current.scrollBy({ left: -200, behavior: 'smooth' });
@@ -59,7 +54,6 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     }
   };
   
-  // Toggle espansione campagna
   const toggleCampaign = (campaignId: string) => {
     setExpandedCampaigns(prev => ({
       ...prev,
@@ -67,7 +61,6 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     }));
   };
   
-  // Toggle espansione adset
   const toggleAdSet = (adSetId: string) => {
     setExpandedAdSets(prev => ({
       ...prev,
@@ -75,17 +68,11 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     }));
   };
   
-  // Formatta valuta
   const formatCurrency = (value: number) => {
-    // Aggiungi log per debug
-    console.log("Formattazione valore:", value);
-    
-    // Assicurati che il valore sia un numero valido
     if (value === undefined || value === null || isNaN(value)) {
       return "€0,00";
     }
     
-    // Forzare almeno 2 decimali anche per piccoli valori
     return new Intl.NumberFormat('it-IT', {
       style: 'currency',
       currency: 'EUR',
@@ -94,7 +81,6 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     }).format(value);
   };
   
-  // Ottieni la classe di stato
   const getStatusClass = (status: string) => {
     switch (status.toUpperCase()) {
       case 'ACTIVE':
@@ -109,12 +95,10 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     }
   };
 
-  // Sistema migliorato per l'abbreviazione dei nomi delle campagne
   const getSmartTruncatedName = (text: string, maxLength: number = 28) => {
     if (!text) return '';
     if (text.length <= maxLength) return text;
     
-    // Abbreviazioni comuni in italiano
     const abbreviations: Record<string, string> = {
       'Campagna': 'Camp.',
       'Lead': 'Ld',
@@ -137,13 +121,11 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
       'Vendite': 'Vnd'
     };
     
-    // Sostituisci parole intere (non parti di parole)
     let words = text.split(' ');
     words = words.map(word => abbreviations[word] || word);
     
     let result = words.join(' ');
     
-    // Se è ancora troppo lungo, tronca con ellipsis intelligente
     if (result.length > maxLength) {
       const halfLength = Math.floor(maxLength / 2) - 1;
       return result.substring(0, halfLength) + '...' + result.substring(result.length - halfLength);
@@ -152,14 +134,12 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     return result;
   };
 
-  // Ottieni class CSS per valori positivi/negativi
   const getValueColorClass = (value: number) => {
     if (value > 0) return 'text-emerald-400';
     if (value < 0) return 'text-red-400';
     return 'text-zinc-400';
   };
 
-  // Animazioni per framer-motion
   const tableRowVariants = {
     hidden: { opacity: 0, y: 8 },
     show: { 
@@ -182,7 +162,6 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
     }
   };
   
-  // Elementi visualizzabili su mobile vs desktop
   const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
 
   console.log("Campagne ricevute:", campaigns);
@@ -192,15 +171,15 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
   
   if (isLoading) {
     return (
-      <div className="rounded-lg p-3 md:p-4">
+      <div className="rounded-xl p-3 md:p-4" style={{ borderRadius: '12px' }}>
         <div className="flex justify-between items-center mb-3">
-          <div className="h-5 w-20 bg-zinc-700/50 rounded animate-pulse"></div>
-          <div className="h-5 w-32 bg-zinc-700/50 rounded animate-pulse"></div>
+          <div className="h-5 w-20 bg-zinc-700/50 rounded-lg animate-pulse"></div>
+          <div className="h-5 w-32 bg-zinc-700/50 rounded-lg animate-pulse"></div>
         </div>
         <div className="overflow-x-auto">
-          <div className="h-10 bg-zinc-700/50 rounded animate-pulse mb-3"></div>
+          <div className="h-10 bg-zinc-700/50 rounded-lg animate-pulse mb-3"></div>
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-14 bg-zinc-700/30 rounded animate-pulse mb-2"></div>
+            <div key={i} className="h-14 bg-zinc-700/30 rounded-lg animate-pulse mb-2" style={{ borderRadius: '8px' }}></div>
           ))}
         </div>
       </div>
@@ -209,10 +188,11 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
 
   return (
     <motion.div 
-      className="rounded-lg"
+      className="rounded-xl"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      style={{ borderRadius: '12px' }}
     >
       <div className="relative mb-1">
         {/* Pulsanti di scorrimento */}
@@ -221,7 +201,8 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
             <button 
               onClick={scrollLeft}
               disabled={!canScrollLeft}
-              className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-1.5 rounded-full shadow-lg ${!canScrollLeft ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
+              className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-1.5 rounded-full shadow-lg transition-all ${!canScrollLeft ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
+              style={{ borderRadius: '8px' }}
             >
               <ArrowLeft size={16} className="text-zinc-200" />
             </button>
@@ -229,14 +210,15 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
             <button 
               onClick={scrollRight}
               disabled={!canScrollRight}
-              className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-1.5 rounded-full shadow-lg ${!canScrollRight ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
+              className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-1.5 rounded-full shadow-lg transition-all ${!canScrollRight ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
+              style={{ borderRadius: '8px' }}
             >
               <ArrowRight size={16} className="text-zinc-200" />
             </button>
           </>
         )}
       
-        {/* Ombre di sfumatura per indicare lo scorrimento */}
+        {/* Ombre di sfumatura */}
         {canScrollLeft && (
           <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-zinc-800 to-transparent z-10"></div>
         )}
@@ -253,7 +235,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
         >
           <div className="min-w-[950px] md:w-full">
             {/* Header row */}
-            <div className="bg-zinc-700/30 text-xs text-zinc-400 font-medium grid grid-cols-9 gap-1 md:gap-2 p-2.5 rounded-t border-b border-zinc-700/50">
+            <div className="bg-zinc-700/30 text-xs text-zinc-400 font-medium grid grid-cols-9 gap-1 md:gap-2 p-2.5 rounded-xl" style={{ borderRadius: '10px' }}>
               <div className="col-span-2">CAMPAGNA</div>
               <div className="text-right">SPESA</div>
               <div className="text-right">LEAD (FB)</div>
@@ -283,8 +265,9 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                   <React.Fragment key={campaign.id}>
                     <motion.div
                       variants={tableRowVariants}
-                      className={`grid grid-cols-9 gap-1 md:gap-2 p-2.5 items-center cursor-pointer hover:bg-zinc-700/10 transition-colors ${isExpanded ? 'bg-zinc-700/10' : ''}`}
+                      className={`grid grid-cols-9 gap-1 md:gap-2 p-2.5 items-center cursor-pointer hover:bg-zinc-700/10 rounded-lg transition-all ${isExpanded ? 'bg-zinc-700/10' : ''}`}
                       onClick={() => toggleCampaign(campaign.id)}
+                      style={{ borderRadius: '8px' }}
                     >
                       <div className="col-span-2 flex items-center">
                         <motion.span
@@ -337,7 +320,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                         >
                           <div className="pl-6 pr-2 py-1 space-y-1">
                             {/* AdSet header */}
-                            <div className="bg-zinc-800/80 text-xs text-zinc-400 font-medium grid grid-cols-9 gap-1 md:gap-2 p-2 my-1 rounded">
+                            <div className="bg-zinc-800/80 text-xs text-zinc-400 font-medium grid grid-cols-9 gap-1 md:gap-2 p-2 my-1 rounded-lg" style={{ borderRadius: '8px' }}>
                               <div className="col-span-2">AD SET</div>
                               <div className="text-right">SPESA</div>
                               <div className="text-right">LEAD (FB)</div>
@@ -355,8 +338,9 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                               return (
                                 <React.Fragment key={adSet.id}>
                                   <div
-                                    className={`grid grid-cols-9 gap-1 md:gap-2 p-2 rounded items-center cursor-pointer hover:bg-zinc-700/10 transition-colors ${isAdSetExpanded ? 'bg-zinc-700/10' : ''}`}
+                                    className={`grid grid-cols-9 gap-1 md:gap-2 p-2 rounded-lg items-center cursor-pointer hover:bg-zinc-700/10 transition-all ${isAdSetExpanded ? 'bg-zinc-700/10' : ''}`}
                                     onClick={() => toggleAdSet(adSet.id)}
+                                    style={{ borderRadius: '6px' }}
                                   >
                                     <div className="col-span-2 flex items-center">
                                       <motion.span
@@ -409,7 +393,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                       >
                                         <div className="pl-5 pr-1 py-1">
                                           {/* Ad header */}
-                                          <div className="bg-zinc-700/20 text-xs text-zinc-500 font-medium grid grid-cols-9 gap-1 md:gap-2 p-1.5 my-1 rounded">
+                                          <div className="bg-zinc-700/20 text-xs text-zinc-500 font-medium grid grid-cols-9 gap-1 md:gap-2 p-1.5 my-1 rounded-lg" style={{ borderRadius: '6px' }}>
                                             <div className="col-span-2">ANNUNCIO</div>
                                             <div className="text-right">SPESA</div>
                                             <div className="text-right">LEAD (FB)</div>
@@ -424,7 +408,8 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                           {adSet.ads.map(ad => (
                                             <div
                                               key={ad.id}
-                                              className="grid grid-cols-9 gap-1 md:gap-2 p-1.5 rounded items-center hover:bg-zinc-700/10 transition-colors"
+                                              className="grid grid-cols-9 gap-1 md:gap-2 p-1.5 rounded-lg items-center hover:bg-zinc-700/10 transition-all"
+                                              style={{ borderRadius: '4px' }}
                                             >
                                               <div className="col-span-2 flex flex-col overflow-hidden">
                                                 <div className="text-xs opacity-90">

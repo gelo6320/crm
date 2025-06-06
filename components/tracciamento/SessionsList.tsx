@@ -1,6 +1,6 @@
 // components/tracciamento/SessionsList.tsx
 import { useState } from "react";
-import { Clock, ArrowLeft, Monitor, MapPin, ChevronRight, Calendar, Timer, MousePointer, Eye } from "lucide-react";
+import { Clock, ArrowLeft, Monitor, MapPin, ChevronRight, Timer, MousePointer, Eye } from "lucide-react";
 import { TrackedUser, UserSession } from "@/types/tracciamento";
 import { formatDateTime, formatRelativeTime } from "@/lib/utils/date";
 import { formatTime } from "@/lib/utils/format";
@@ -25,9 +25,9 @@ export default function SessionsList({
   // Funzione per formattare la durata in modo appropriato
   const formatDuration = (durationInSeconds: number): string => {
     if (durationInSeconds < 60) {
-      return `${durationInSeconds} sec`;
+      return `${durationInSeconds}s`;
     } else {
-      return `${formatTime(durationInSeconds)} min`;
+      return `${formatTime(durationInSeconds)}m`;
     }
   };
   
@@ -58,11 +58,12 @@ export default function SessionsList({
 
   return (
     <div>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700 bg-zinc-900/50">
+      <div className="flex items-center justify-between px-4 py-3 bg-zinc-800/50">
         <h2 className="text-base font-medium">Sessioni dell'Utente</h2>
         <button
           onClick={onBack}
-          className="btn btn-outline flex items-center space-x-1 py-1 px-2 text-xs"
+          className="bg-zinc-700 hover:bg-zinc-600 px-3 py-1.5 rounded-lg text-xs transition-all flex items-center space-x-1"
+          style={{ borderRadius: '8px' }}
         >
           <ArrowLeft size={14} />
           <span>Indietro</span>
@@ -70,7 +71,7 @@ export default function SessionsList({
       </div>
       
       {/* Riepilogo utente */}
-      <div className="p-4 border-b border-zinc-700 bg-zinc-800/30">
+      <div className="p-4 bg-zinc-800/30">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <h3 className="font-medium flex items-center">
@@ -97,123 +98,132 @@ export default function SessionsList({
       </div>
       
       {/* Opzioni di ordinamento */}
-      <div className="p-3 border-b border-zinc-700 bg-zinc-900/30 flex items-center">
+      <div className="p-3 bg-zinc-800/20 flex items-center">
         <span className="text-xs text-zinc-400 mr-2">Ordina per:</span>
         <div className="flex space-x-2">
           <button
             onClick={() => setSortBy("recent")}
-            className={`text-xs px-2 py-1 rounded ${
+            className={`text-xs px-3 py-1.5 rounded-lg transition-all ${
               sortBy === "recent" ? "bg-primary text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
             }`}
+            style={{ borderRadius: '8px' }}
           >
             Più recenti
           </button>
           <button
             onClick={() => setSortBy("duration")}
-            className={`text-xs px-2 py-1 rounded ${
+            className={`text-xs px-3 py-1.5 rounded-lg transition-all ${
               sortBy === "duration" ? "bg-primary text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
             }`}
+            style={{ borderRadius: '8px' }}
           >
             Durata
           </button>
           <button
             onClick={() => setSortBy("interactions")}
-            className={`text-xs px-2 py-1 rounded ${
+            className={`text-xs px-3 py-1.5 rounded-lg transition-all ${
               sortBy === "interactions" ? "bg-primary text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
             }`}
+            style={{ borderRadius: '8px' }}
           >
             Interazioni
           </button>
           <button
             onClick={() => setSortBy("pages")}
-            className={`text-xs px-2 py-1 rounded ${
+            className={`text-xs px-3 py-1.5 rounded-lg transition-all ${
               sortBy === "pages" ? "bg-primary text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
             }`}
+            style={{ borderRadius: '8px' }}
           >
             Pagine viste
           </button>
         </div>
       </div>
       
-      {isLoading ? (
-         <div className="p-8 text-center text-zinc-500">
-           <div className="animate-spin h-8 w-8 border-t-2 border-primary mx-auto mb-4"></div>
-           <p>Caricamento sessioni in corso...</p>
-         </div>
-       ) : sessions.length === 0 ? (
-         <div className="p-8 text-center text-zinc-500">
-           <p>Nessuna sessione disponibile per questo utente.</p>
-           <p className="mt-2 text-sm">
-             Identificativo utente: <span className="font-mono bg-zinc-800 px-2 py-0.5 rounded">{user.id}</span>
-           </p>
-           <button 
-             onClick={onBack} 
-             className="mt-4 btn btn-outline text-xs px-4 py-2"
-           >
-             Torna alla lista utenti
-           </button>
-         </div>
-       ) : (
+      {sessions.length === 0 ? (
+        <div className="p-8 text-center text-zinc-500">
+          <p>Nessuna sessione disponibile per questo utente.</p>
+          <p className="mt-2 text-sm">
+            Identificativo utente: <span className="font-mono bg-zinc-800 px-2 py-0.5 rounded-lg">{user.id}</span>
+          </p>
+          <button 
+            onClick={onBack} 
+            className="mt-4 bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-lg text-xs transition-all"
+            style={{ borderRadius: '8px' }}
+          >
+            Torna alla lista utenti
+          </button>
+        </div>
+      ) : (
         <div className="overflow-y-auto max-h-[600px]">
-          {sortedSessions.map(session => (
-            <div 
-              key={session.id}
-              onClick={() => onSelectSession(session)}
-              className="flex border-b border-zinc-700 hover:bg-zinc-800/70 transition-colors cursor-pointer p-4"
-            >
-              <div className="w-16 h-16 rounded-lg bg-zinc-900 flex items-center justify-center flex-shrink-0 mr-4">
-                <Calendar size={24} className="text-primary" />
-              </div>
-              
-              <div className="flex-1">
-                <div className="flex justify-between">
-                  <h3 className="font-medium">
-                    Sessione del {new Date(session.startTime).toLocaleDateString('it-IT')}
-                  </h3>
-                  <div className="text-xs">
-                    <span className={`px-2 py-1 rounded ${
-                      session.isConverted ? 'bg-success/20 text-success' : 'bg-zinc-700 text-zinc-300'
-                    }`}>
-                      {session.isConverted ? 'Convertito' : 'Non convertito'}
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase text-zinc-500 bg-zinc-800/30 sticky top-0">
+              <tr>
+                <th className="px-4 py-2 text-left">Data/Ora</th>
+                <th className="px-4 py-2 text-left">Durata</th>
+                <th className="px-4 py-2 text-left">Interazioni</th>
+                <th className="px-4 py-2 text-left">Pagine</th>
+                <th className="px-4 py-2 text-left">Conversione</th>
+                <th className="px-4 py-2 text-left">Uscita</th>
+                <th className="px-4 py-2 text-left"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-800">
+              {sortedSessions.map(session => (
+                <tr 
+                  key={session.id}
+                  onClick={() => onSelectSession(session)}
+                  className="hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {new Date(session.startTime).toLocaleDateString('it-IT')}
+                      </span>
+                      <span className="text-xs text-zinc-400">
+                        {new Date(session.startTime).toLocaleTimeString('it-IT')}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center">
+                      <Timer size={14} className="text-warning mr-1" />
+                      <span>{formatDuration(session.duration)}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center">
+                      <MousePointer size={14} className="text-success mr-1" />
+                      <span>{session.interactionsCount}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center">
+                      <Eye size={14} className="text-primary mr-1" />
+                      <span>{session.pagesViewed}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded-lg text-xs ${
+                      session.isConverted ? 'bg-success/20 text-success' : 'bg-zinc-700/30 text-zinc-400'
+                    }`} style={{ borderRadius: '6px' }}>
+                      {session.isConverted ? 'Sì' : 'No'}
                     </span>
-                  </div>
-                </div>
-                
-                <div className="mt-2 grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div className="flex items-center text-sm">
-                    <Clock size={14} className="text-info mr-2" />
-                    <span>{formatDateTime(session.startTime)}</span>
-                  </div>
-                  
-                  <div className="flex items-center text-sm">
-                    <Timer size={14} className="text-warning mr-2" />
-                    <span>{formatDuration(session.duration)}</span>
-                  </div>
-                  
-                  <div className="flex items-center text-sm">
-                    <MousePointer size={14} className="text-success mr-2" />
-                    <span>{session.interactionsCount} interazioni</span>
-                  </div>
-                  
-                  <div className="flex items-center text-sm">
-                    <Eye size={14} className="text-primary mr-2" />
-                    <span>{session.pagesViewed} pagine viste</span>
-                  </div>
-                </div>
-                
-                {session.exitUrl && (
-                  <div className="mt-3 text-sm text-zinc-400">
-                    <span className="mr-1">Uscita:</span>
-                    <span className="truncate inline-block max-w-md align-bottom">{session.exitUrl}</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex items-center ml-4">
-                <ChevronRight size={20} className="text-zinc-500" />
-              </div>
-            </div>
-          ))}
+                  </td>
+                  <td className="px-4 py-3">
+                    {session.exitUrl && (
+                      <span className="text-zinc-400 truncate max-w-xs block">
+                        {session.exitUrl}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <ChevronRight size={16} className="text-zinc-500" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

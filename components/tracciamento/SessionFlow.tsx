@@ -1,4 +1,4 @@
-// SessionFlow.tsx - Versione completa con layout migliorato
+// SessionFlow.tsx - Versione semplificata con design squircle
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import ReactFlow, {
   Background,
@@ -47,53 +47,45 @@ const nodeTypes = {
 
 // Funzione per applicare il layout Dagre ai nodi
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
-  // Determina la direzione in base alla larghezza dello schermo
   const isMobile = window.innerWidth < 768;
-  const direction = isMobile ? 'TB' : 'LR';  // TB = top to bottom per mobile
+  const direction = isMobile ? 'TB' : 'LR';
   
-  // Crea un nuovo grafo Dagre
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   
-  // Configura il layout con direzione
   dagreGraph.setGraph({ 
     rankdir: direction,
-    nodesep: isMobile ? 50 : 80,     // Spazio tra nodi
-    ranksep: isMobile ? 100 : 150,   // Spazio tra ranghi
+    nodesep: isMobile ? 50 : 80,
+    ranksep: isMobile ? 100 : 150,
     marginx: isMobile ? 20 : 50,
     marginy: isMobile ? 40 : 50,
-    align: 'UL'                     // Allineamento superiore sinistro per layout più compatto
+    align: 'UL'
   });
   
-  // Adatta la posizione dei nodi in base alla direzione
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { 
       width: 240, 
-      height: getNodeHeightEstimate(node) // Funzione che stima l'altezza
+      height: getNodeHeightEstimate(node)
     });
   });
   
-  // Aggiungi edges al grafo
   edges.forEach((edge) => {
     dagreGraph.setEdge(edge.source, edge.target);
   });
   
-  // Calcola il layout
   dagre.layout(dagreGraph);
   
-  // Aggiorna la posizione e le direzioni dei handle dei nodi
   return nodes.map((node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
     
-    // Imposta le posizioni dei connettori in base alla direzione
     const sourcePosition = isMobile ? Position.Bottom : Position.Right;
     const targetPosition = isMobile ? Position.Top : Position.Left;
     
     return {
       ...node,
       position: {
-        x: nodeWithPosition.x - 120, // Centra orizzontalmente
-        y: nodeWithPosition.y - 60,  // Centra verticalmente
+        x: nodeWithPosition.x - 120,
+        y: nodeWithPosition.y - 60,
       },
       sourcePosition,
       targetPosition,
@@ -101,22 +93,16 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   });
 };
 
-// Funzione ausiliaria per stimare l'altezza del nodo
 const getNodeHeightEstimate = (node: Node) => {
-  // Base height
   let height = 100;
   
-  // Aggiungi altezza in base al contenuto
   if (node.data?.detail?.data) {
-    // Stima basata sul numero di campi
     const fieldsCount = Object.keys(node.data.detail.data).length;
-    height += Math.min(fieldsCount * 10, 50); // Limita l'altezza massima aggiuntiva
+    height += Math.min(fieldsCount * 10, 50);
     
-    // Stima basata sulla lunghezza del testo
     const textContent = node.data.label || '';
     height += Math.min(textContent.length / 5, 30);
     
-    // Aggiungi spazio extra per formNode con formData
     if (node.type === 'formNode' && node.data.detail.data.formData) {
       height += 40;
     }
@@ -142,18 +128,15 @@ export default function SessionFlow({
   const flowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useRef<any>(null);
   
-  // Effetto per gestire il cambiamento di dimensione della finestra
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
       
-      // Solo se i nodi sono già stati creati, riapplica il layout
       if (nodes.length > 0) {
         const nodesWithLayout = getLayoutedElements(nodes, edges);
         setNodes(nodesWithLayout);
         
-        // Fit view after layout update
         setTimeout(() => {
           if (reactFlowInstance.current) {
             reactFlowInstance.current.fitView({ padding: 0.2 });
@@ -179,7 +162,6 @@ export default function SessionFlow({
       details: sessionDetails 
     });
     
-    // Check if there's enough data
     if (!sessionDetails || sessionDetails.length < 2) {
       console.warn("Insufficient data to display flow:", sessionDetails?.length || 0);
       setNoData(true);
@@ -188,29 +170,23 @@ export default function SessionFlow({
       setNoData(false);
     }
     
-    // Filtra gli eventi lead_facebook
     const filteredDetails = sessionDetails.filter(detail => 
       !(detail.type === 'form_interaction' && 
         detail.data?.interactionType === 'lead_facebook')
     );
     
-    // Verifica nuovamente se ci sono abbastanza dati dopo il filtraggio
     if (filteredDetails.length < 2) {
       setNoData(true);
       return;
     }
     
-    // Create initial nodes and edges without positions
     const initialNodes: Node[] = [];
     const newEdges: Edge[] = [];
     let lastVisibleNodeIndex = -1;
     
-    // Process each session detail to create nodes
     filteredDetails.forEach((detail, index) => {
-      // Determine the node type based on the event type and metadata
       let nodeType = determineNodeType(detail);
       
-      // Create the node (without position - will be set by layout algorithm)
       const node: Node = {
         id: detail.id,
         type: nodeType,
@@ -218,8 +194,7 @@ export default function SessionFlow({
           detail,
           label: getNodeLabel(detail)
         },
-        position: { x: 0, y: 0 }, // Temporary position
-        // Position dinamiche che verranno aggiornate dal layout
+        position: { x: 0, y: 0 },
         sourcePosition: isMobile ? Position.Bottom : Position.Right,
         targetPosition: isMobile ? Position.Top : Position.Left,
       };
@@ -227,7 +202,6 @@ export default function SessionFlow({
       initialNodes.push(node);
       lastVisibleNodeIndex++;
       
-      // Create edge to previous node
       if (lastVisibleNodeIndex > 0) {
         const timeBetween = getTimeDifference(
           new Date(filteredDetails[lastVisibleNodeIndex - 1].timestamp),
@@ -262,14 +236,11 @@ export default function SessionFlow({
       }
     });
     
-    // Applica il layout Dagre
     const nodesWithLayout = getLayoutedElements(initialNodes, newEdges);
     
-    // Imposta i nodi e gli archi
     setNodes(nodesWithLayout);
     setEdges(newEdges);
     
-    // Fit view after nodes are created
     setTimeout(() => {
       if (reactFlowInstance.current) {
         reactFlowInstance.current.fitView({ padding: 0.2 });
@@ -278,24 +249,19 @@ export default function SessionFlow({
     
   }, [sessionDetails, isLoading, isMobile, setNodes, setEdges]);
   
-  // Determina il tipo di nodo in base ai dati dell'evento
   const determineNodeType = (detail: SessionDetail) => {
-    // Page views
     if (detail.type === 'page_view' || detail.type === 'pageview') {
       return 'pageNode';
     } 
-    // Conversion events - Solo eventi di conversione effettiva
     else if (
       detail.type === 'conversion' || 
       (detail.data?.category === 'conversion')
     ) {
       return 'eventNode';
     }
-    // Form interactions
     else if (detail.type === 'form_interaction') {
       return 'formNode';
     }
-    // Navigation events
     else if (
       ['scroll', 'page_visibility', 'time_on_page', 'session_end'].includes(detail.type) ||
       (detail.data?.category === 'navigation') ||
@@ -303,7 +269,6 @@ export default function SessionFlow({
     ) {
       return 'navigationNode';
     }
-    // Click events
     else if (
       detail.type === 'click' || 
       (detail.data?.name && detail.data.name.includes('click'))
@@ -311,7 +276,7 @@ export default function SessionFlow({
       return 'actionNode';
     }
     
-    return 'actionNode'; // Default
+    return 'actionNode';
   };
   
   const getNodeLabel = (detail: SessionDetail) => {
@@ -323,9 +288,7 @@ export default function SessionFlow({
     }
     
     try {
-      // CORREZIONE: Aggiungi supporto per "pageview" (senza underscore)
       switch (detail.type) {
-        // Page views
         case 'page_view':
         case 'pageview':
           if (detail.data?.url) {
@@ -334,14 +297,12 @@ export default function SessionFlow({
           }
           return `Page View\n${detail.data?.title || 'Unknown page'}`;
         
-        // Click events
         case 'click':
           const elementText = detail.data?.elementText || detail.data?.metadata?.elementText || 
                              detail.data?.buttonName || detail.data?.text || '';
           const tagName = detail.data?.tagName || detail.data?.metadata?.tagName || 'element';
           return `Click on ${tagName}\n${elementText.substring(0, 20)}${elementText.length > 20 ? '...' : ''}`;
         
-        // Form interactions - improved handling
         case 'form_interaction':
           const interactionType = detail.data?.interactionType || 'interaction';
           
@@ -358,7 +319,6 @@ export default function SessionFlow({
           const fieldName = detail.data?.fieldName ? `\n${detail.data.fieldName}` : '';
           return `Form ${interactionType}\n${formName}${fieldName}`;
         
-        // Scroll events - improved with scrollTypes handling
         case 'scroll':
           if (detail.data?.scrollTypes && detail.data.scrollTypes.includes('bottom')) {
             return `Scroll to Bottom\n100%`;
@@ -368,13 +328,11 @@ export default function SessionFlow({
                             detail.data?.depth || detail.data?.scrollDepth || '0';
           return `Scroll\n${scrollDepth}%`;
         
-        // Time on page events
         case 'time_on_page':
           const seconds = detail.data?.totalTimeSeconds || detail.data?.timeOnPage || 
                         detail.data?.seconds || detail.data?.metadata?.timeOnPage || 0;
           return `Time on page\n${seconds}s`;
         
-        // Page visibility
         case 'page_visibility':
           const isVisible = detail.data?.isVisible !== undefined ? 
                           detail.data.isVisible : 
@@ -382,21 +340,17 @@ export default function SessionFlow({
                            detail.data.metadata.isVisible : false);
           return `Page ${isVisible ? 'visible' : 'hidden'}`;
         
-        // Session end
         case 'session_end':
           return `Session end\n${detail.data?.status || ''}`;
         
-        // Conversion events - improved with formData handling
         case 'conversion':
         case 'conversion_contact_form':
           const convType = detail.data?.conversionType || 'standard';
-          // Extract value and format it if available
           const value = detail.data?.value ? 
               `\n${typeof detail.data.value === 'object' && detail.data.value !== null && 
                 '$numberInt' in detail.data.value ? 
                 (detail.data.value as any).$numberInt : detail.data.value}€` : '';
           
-          // Check for lead form data
           if (detail.data?.isLeadForm || detail.data?.formData) {
             const email = detail.data.formData?.email || '';
             return `Lead Acquisition\n${email}`;
@@ -404,15 +358,12 @@ export default function SessionFlow({
           
           return `Conversion\n${convType}${value}`;
         
-        // Generic events - try to extract meaningful information
         default:
-          // Check for lead acquisition
           if (detail.data?.name && detail.data.name.includes('lead_acquisition')) {
             const email = detail.data.email || detail.data.formData?.email || '';
             return `Lead acquisition\n${email}`;
           }
           
-          // Check for other meaningful data
           if (detail.data?.name) {
             return `${detail.data.name}\n${detail.data.category || ''}`;
           }
@@ -426,46 +377,41 @@ export default function SessionFlow({
     }
   };
   
-  // Formatta la differenza di tempo tra due date
   const getTimeDifference = (date1: Date, date2: Date) => {
     try {
       const diffMs = Math.abs(date2.getTime() - date1.getTime());
       const diffSecs = Math.floor(diffMs / 1000);
       
       if (diffSecs < 60) {
-        return `${diffSecs}s`;  // Formato secondi
+        return `${diffSecs}s`;
       }
       
       const diffMins = Math.floor(diffSecs / 60);
       const remainingSecs = diffSecs % 60;
       
       if (diffMins < 60) {
-        return `${diffMins}m ${remainingSecs}s`;  // Formato minuti e secondi
+        return `${diffMins}m ${remainingSecs}s`;
       }
       
-      // Aggiungiamo il caso per ore se necessario
       const diffHours = Math.floor(diffMins / 60);
       const remainingMins = diffMins % 60;
       
-      return `${diffHours}h ${remainingMins}m`;  // Formato ore e minuti
+      return `${diffHours}h ${remainingMins}m`;
     } catch (error) {
       console.error("Errore nel calcolo della differenza di tempo:", error);
       return "?";
     }
   };
   
-  // Gestisci la connessione di bordi (se l'utente ne crea manualmente)
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
   
-  // Gestisci il click sui nodi
   const onNodeClick: NodeMouseHandler = useCallback((event, node) => {
     setSelectedNode(node);
   }, []);
   
-  // Gestisci lo zoom
   const handleZoomIn = () => {
     if (reactFlowInstance.current) {
       const zoom = Math.min(zoomLevel + 0.2, 2);
@@ -493,11 +439,12 @@ export default function SessionFlow({
   
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700 bg-zinc-900/50">
+      <div className="flex items-center justify-between px-4 py-3 bg-zinc-800/50">
         <h2 className="text-base font-medium">Percorso di Navigazione</h2>
         <button
           onClick={onBack}
-          className="btn btn-outline flex items-center space-x-1 py-1 px-2 text-xs"
+          className="bg-zinc-700 hover:bg-zinc-600 px-3 py-1.5 rounded-lg text-xs transition-all flex items-center space-x-1"
+          style={{ borderRadius: '8px' }}
         >
           <ArrowLeft size={14} />
           <span>Indietro</span>
@@ -505,7 +452,7 @@ export default function SessionFlow({
       </div>
       
       {/* Riepilogo sessione */}
-      <div className="p-4 border-b border-zinc-700 bg-zinc-800/30">
+      <div className="p-4 bg-zinc-800/30">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <h3 className="font-medium">
@@ -517,7 +464,7 @@ export default function SessionFlow({
             </p>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div className="text-center p-2 bg-zinc-900 rounded">
+            <div className="text-center p-2 bg-zinc-900 rounded-xl" style={{ borderRadius: '8px' }}>
               <div className="text-xs text-zinc-400">Durata</div>
               <div className="text-lg font-medium text-primary">
                 {session.duration < 60 ? 
@@ -525,11 +472,11 @@ export default function SessionFlow({
                   `${formatTime(session.duration)} min`}
               </div>
             </div>
-            <div className="text-center p-2 bg-zinc-900 rounded">
+            <div className="text-center p-2 bg-zinc-900 rounded-xl" style={{ borderRadius: '8px' }}>
               <div className="text-xs text-zinc-400">Interazioni</div>
               <div className="text-lg font-medium text-info">{session.interactionsCount}</div>
             </div>
-            <div className="text-center p-2 bg-zinc-900 rounded">
+            <div className="text-center p-2 bg-zinc-900 rounded-xl" style={{ borderRadius: '8px' }}>
               <div className="text-xs text-zinc-400">Pagine viste</div>
               <div className="text-lg font-medium text-success">{session.pagesViewed}</div>
             </div>
@@ -543,7 +490,8 @@ export default function SessionFlow({
           <p className="text-sm">Non sono state registrate interazioni o visualizzazioni di pagina sufficienti.</p>
           <button
             onClick={onBack}
-            className="mt-4 btn btn-outline flex items-center mx-auto space-x-1 py-1 px-3 text-xs"
+            className="mt-4 bg-zinc-700 hover:bg-zinc-600 px-4 py-2 rounded-lg text-xs transition-all flex items-center mx-auto space-x-1"
+            style={{ borderRadius: '8px' }}
           >
             <ArrowLeft size={14} />
             <span>Torna alle sessioni</span>
@@ -567,7 +515,6 @@ export default function SessionFlow({
             onInit={(instance) => {
               reactFlowInstance.current = instance;
               console.log("ReactFlow inizializzato");
-              // Importante: usa setTimeout per dare tempo al componente di renderizzare
               setTimeout(() => {
                 console.log("Esecuzione fitView");
                 if (instance && typeof instance.fitView === 'function') {
@@ -594,7 +541,7 @@ export default function SessionFlow({
                   case 'navigationNode':
                     return '#2ecc71';
                   case 'formNode':
-                    return '#9c27b0'; // Colore viola per formNode
+                    return '#9c27b0';
                   default:
                     return '#3498db';
                 }
@@ -607,22 +554,24 @@ export default function SessionFlow({
             <Panel position="top-right" className="space-x-2">
               <button 
                 onClick={handleZoomIn}
-                className="p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
+                className="p-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-all"
                 title="Zoom in"
+                style={{ borderRadius: '8px' }}
               >
                 <ZoomIn size={16} />
               </button>
               <button 
                 onClick={handleZoomOut}
-                className="p-2 bg-zinc-800 rounded hover:bg-zinc-700 transition-colors"
+                className="p-2 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-all"
                 title="Zoom out"
+                style={{ borderRadius: '8px' }}
               >
                 <ZoomOut size={16} />
               </button>
             </Panel>
             
             <Panel position="bottom-left">
-              <div className="bg-zinc-800 p-2 rounded border border-zinc-700">
+              <div className="bg-zinc-800 p-2 rounded-xl" style={{ borderRadius: '10px' }}>
                 <div className="text-xs mb-2">Legenda:</div>
                 <div className="grid grid-cols-1 gap-1">
                   <div className="flex items-center">
@@ -654,7 +603,7 @@ export default function SessionFlow({
       
       {/* Dettaglio nodo selezionato */}
       {selectedNode && (
-        <div className="p-4 border-t border-zinc-700 bg-zinc-900/50">
+        <div className="p-4 bg-zinc-900/50">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-medium flex items-center">
               {selectedNode.type === 'pageNode' ? (
@@ -676,7 +625,7 @@ export default function SessionFlow({
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-800 p-3 rounded">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-800 p-3 rounded-xl" style={{ borderRadius: '10px' }}>
             {selectedNode.data.detail.type === 'page_view' && (
               <>
                 <div>
@@ -718,7 +667,7 @@ export default function SessionFlow({
                 {selectedNode.data.detail.data?.selector && (
                   <div className="md:col-span-2">
                     <div className="text-xs text-zinc-400 mb-1">Selettore CSS</div>
-                    <div className="text-sm bg-zinc-900 p-1 rounded font-mono text-xs overflow-x-auto">
+                    <div className="text-sm bg-zinc-900 p-1 rounded-lg font-mono text-xs overflow-x-auto" style={{ borderRadius: '6px' }}>
                       {selectedNode.data.detail.data.selector}
                     </div>
                   </div>
@@ -752,7 +701,7 @@ export default function SessionFlow({
                 {selectedNode.data.detail.data?.formData && (
                   <div className="md:col-span-2">
                     <div className="text-xs text-zinc-400 mb-1">Dati Form</div>
-                    <div className="text-sm bg-zinc-900 p-2 rounded">
+                    <div className="text-sm bg-zinc-900 p-2 rounded-lg" style={{ borderRadius: '6px' }}>
                       <pre className="text-xs overflow-x-auto">
                         {JSON.stringify(selectedNode.data.detail.data.formData, null, 2)}
                       </pre>
@@ -777,7 +726,7 @@ export default function SessionFlow({
                 {selectedNode.data.detail.data?.formData && (
                   <div className="md:col-span-2">
                     <div className="text-xs text-zinc-400 mb-1">Dati Lead</div>
-                    <div className="text-sm bg-zinc-900 p-2 rounded">
+                    <div className="text-sm bg-zinc-900 p-2 rounded-lg" style={{ borderRadius: '6px' }}>
                       <pre className="text-xs overflow-x-auto">
                         {JSON.stringify(selectedNode.data.detail.data.formData, null, 2)}
                       </pre>

@@ -140,7 +140,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
     setError(null);
     
     try {
-      // Now we pass the timeRange directly to the API for server-side filtering
       const response = await axios.get(`${API_BASE_URL}/api/tracciamento/statistics`, {
         params: { timeRange },
         withCredentials: true,
@@ -161,7 +160,7 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
 
   useEffect(() => {
     fetchStatistics();
-  }, [isExpanded, timeRange]); // Reload whenever timeRange changes or panel expands
+  }, [isExpanded, timeRange]);
 
   // Calcola statistiche aggregate
   const getAggregatedStats = (): AggregatedStats | null => {
@@ -180,8 +179,8 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
         buttonClicks: {
           total: (agg.buttonClicks?.total || 0) + stat.buttonClicks.total
         },
-        avgTimeOnSite: stat.avgTimeOnSite, // Prendiamo l'ultimo valore come esempio
-        bounceRate: stat.bounceRate // Prendiamo l'ultimo valore come esempio
+        avgTimeOnSite: stat.avgTimeOnSite,
+        bounceRate: stat.bounceRate
       };
     }, {}) as AggregatedStats;
   };
@@ -192,7 +191,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
   const prepareSourcesData = (): ChartDataItem[] => {
     if (!statistics || statistics.length === 0) return [];
     
-    // Combiniamo i dati di tutte le date
     const combinedSources = statistics.reduce((acc: Record<string, number>, stat) => {
       if (!stat.sources) return acc;
       
@@ -203,14 +201,13 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
       return acc;
     }, {});
     
-    // Convertiamo in formato per il grafico
     return Object.entries(combinedSources).map(([name, value]) => ({
       name,
       value
     }));
   };
   
-  // Rileva se il dispositivo è mobile (larghezza schermo < 768px)
+  // Rileva se il dispositivo è mobile
   const [isMobile, setIsMobile] = useState<boolean>(false);
   
   useEffect(() => {
@@ -218,13 +215,9 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
       setIsMobile(window.innerWidth < 768);
     };
     
-    // Controlla all'inizio
     checkIfMobile();
-    
-    // Controlla quando la finestra viene ridimensionata
     window.addEventListener('resize', checkIfMobile);
     
-    // Cleanup
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
   
@@ -232,7 +225,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
   const prepareMobileDesktopData = (): ChartDataItem[] => {
     if (!statistics || statistics.length === 0) return [];
     
-    // Combiniamo i dati di tutte le date
     const combined = statistics.reduce((acc: { mobile: number, desktop: number }, stat) => {
       if (!stat.mobileVsDesktop) return acc;
       
@@ -242,7 +234,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
       return acc;
     }, { mobile: 0, desktop: 0 });
     
-    // Convertiamo in formato per il grafico
     return [
       { name: 'Mobile', value: combined.mobile },
       { name: 'Desktop', value: combined.desktop }
@@ -253,7 +244,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
   const prepareConversionsBySourceData = (): ChartDataItem[] => {
     if (!statistics || statistics.length === 0) return [];
     
-    // Combiniamo i dati di tutte le date
     const combinedConversions = statistics.reduce((acc: Record<string, number>, stat) => {
       if (!stat.conversions || !stat.conversions.bySource) return acc;
       
@@ -264,7 +254,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
       return acc;
     }, {});
     
-    // Convertiamo in formato per il grafico
     return Object.entries(combinedConversions).map(([name, value]) => ({
       name,
       value
@@ -275,11 +264,9 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
   const prepareButtonClicksData = (): ChartDataItem[] => {
     if (!statistics || statistics.length === 0) return [];
     
-    // Combiniamo i dati di tutte le date
     const combinedButtonClicks = statistics.reduce((acc: Record<string, number>, stat) => {
       if (!stat.buttonClicks || !stat.buttonClicks.byId) return acc;
       
-      // Converti da Map a oggetto regolare se necessario
       const byId = typeof stat.buttonClicks.byId === 'object' ? stat.buttonClicks.byId : {};
       
       Object.entries(byId).forEach(([buttonId, count]) => {
@@ -289,7 +276,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
       return acc;
     }, {});
     
-    // Converti in array, formatta i nomi e ordina per conteggio (decrescente)
     return Object.entries(combinedButtonClicks)
       .map(([buttonId, value]) => ({
         name: formatButtonId(buttonId),
@@ -299,15 +285,10 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
       .sort((a, b) => b.value - a.value);
   };
   
-  // Funzione helper per formattare gli ID dei pulsanti per la visualizzazione
+  // Funzione helper per formattare gli ID dei pulsanti
   const formatButtonId = (id: string): string => {
-    // Rimuovi prefissi comuni come 'btn-' o 'button-'
     let name = id.replace(/^(btn-|button-)/i, '');
-    
-    // Sostituisci trattini e underscore con spazi
     name = name.replace(/[-_]/g, ' ');
-    
-    // Metti in maiuscolo la prima lettera di ogni parola
     name = name.split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
@@ -319,7 +300,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
   const prepareTimeBySourceData = (): TimeSourceChartItem[] => {
     if (!statistics || statistics.length === 0) return [];
     
-    // Combiniamo i dati di tutte le date
     const combinedTimeBySource = statistics.reduce((acc: Record<string, { totalTime: number, pageViews: number }>, stat) => {
       if (!stat.timeBySource) return acc;
       
@@ -335,7 +315,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
       return acc;
     }, {});
     
-    // Calcoliamo il tempo medio e convertiamo in formato per il grafico
     return Object.entries(combinedTimeBySource).map(([name, data]) => ({
       name,
       avgTime: data.pageViews > 0 ? Math.round(data.totalTime / data.pageViews) : 0
@@ -352,7 +331,7 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
   // UI per stato di caricamento
   if (isExpanded && isLoading) {
     return (
-      <div className="bg-zinc-900 rounded-lg shadow-md mt-6 overflow-hidden">
+      <div className="bg-zinc-900 rounded-xl mt-6 overflow-hidden" style={{ borderRadius: '12px' }}>
         <div className="flex items-center justify-between p-4 bg-zinc-800">
           <div className="flex items-center gap-2">
             <BarChart3 className="text-primary w-5 h-5" />
@@ -368,7 +347,7 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
   }
 
   return (
-    <div className="bg-zinc-900 rounded-lg shadow-md mt-6 overflow-hidden transition-all duration-300">
+    <div className="bg-zinc-900 rounded-xl mt-6 overflow-hidden transition-all duration-300" style={{ borderRadius: '12px' }}>
       {/* Header sempre visibile */}
       <div 
         className="p-4 cursor-pointer hover:bg-zinc-800 transition-colors flex items-center justify-between bg-zinc-800/80"
@@ -405,17 +384,18 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
       {isExpanded && (
         <div className="p-4 md:p-6"> 
           {error && (
-            <div className="bg-red-900/20 text-red-400 p-3 rounded-md mb-4">
+            <div className="bg-red-900/20 text-red-400 p-3 rounded-xl mb-4" style={{ borderRadius: '12px' }}>
               {error}
             </div>
           )}
           
           {statistics.length === 0 && !isLoading && !error ? (
-            <div className="text-center py-8 text-zinc-400 bg-zinc-800/50 rounded-lg">
+            <div className="text-center py-8 text-zinc-400 bg-zinc-800/50 rounded-xl" style={{ borderRadius: '12px' }}>
               <p>Nessun dato statistico disponibile</p>
               <button 
-                className="mt-4 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-md transition-colors text-sm flex items-center justify-center mx-auto"
+                className="mt-4 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-xl transition-colors text-sm flex items-center justify-center mx-auto"
                 onClick={fetchStatistics}
+                style={{ borderRadius: '10px' }}
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Ricarica Statistiche
@@ -425,19 +405,19 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
             <>
               {/* Metriche principali */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-zinc-800 rounded-lg p-4 flex flex-col hover:bg-zinc-700/50 transition-colors">
+                <div className="bg-zinc-800 rounded-xl p-4 flex flex-col hover:bg-zinc-700/50 transition-colors" style={{ borderRadius: '12px' }}>
                   <span className="text-zinc-400 text-xs mb-1">Visite Totali</span>
                   <span className="text-2xl font-semibold">{aggregatedStats?.totalVisits || 0}</span>
                 </div>
-                <div className="bg-zinc-800 rounded-lg p-4 flex flex-col hover:bg-zinc-700/50 transition-colors">
+                <div className="bg-zinc-800 rounded-xl p-4 flex flex-col hover:bg-zinc-700/50 transition-colors" style={{ borderRadius: '12px' }}>
                   <span className="text-zinc-400 text-xs mb-1">Conversioni</span>
                   <span className="text-2xl font-semibold">{aggregatedStats?.conversions?.total || 0}</span>
                 </div>
-                <div className="bg-zinc-800 rounded-lg p-4 flex flex-col hover:bg-zinc-700/50 transition-colors">
+                <div className="bg-zinc-800 rounded-xl p-4 flex flex-col hover:bg-zinc-700/50 transition-colors" style={{ borderRadius: '12px' }}>
                   <span className="text-zinc-400 text-xs mb-1">Tempo medio</span>
                   <span className="text-2xl font-semibold">{formatTime(aggregatedStats?.avgTimeOnSite || 0)}</span>
                 </div>
-                <div className="bg-zinc-800 rounded-lg p-4 flex flex-col hover:bg-zinc-700/50 transition-colors">
+                <div className="bg-zinc-800 rounded-xl p-4 flex flex-col hover:bg-zinc-700/50 transition-colors" style={{ borderRadius: '12px' }}>
                   <span className="text-zinc-400 text-xs mb-1">Bounce Rate</span>
                   <span className="text-2xl font-semibold">{aggregatedStats?.bounceRate || 0}%</span>
                 </div>
@@ -446,7 +426,7 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
               {/* Grafici in grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {/* Grafico Sorgenti */}
-                <div className="bg-zinc-800 rounded-lg p-4 hover:bg-zinc-700/50 transition-colors">
+                <div className="bg-zinc-800 rounded-xl p-4 hover:bg-zinc-700/50 transition-colors" style={{ borderRadius: '12px' }}>
                   <h4 className="text-sm font-medium mb-2 text-zinc-300">Sorgenti di Traffico</h4>
                   <div className="h-52 w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -478,7 +458,7 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
                 </div>
                 
                 {/* Grafico Mobile vs Desktop */}
-                <div className="bg-zinc-800 rounded-lg p-4 hover:bg-zinc-700/50 transition-colors">
+                <div className="bg-zinc-800 rounded-xl p-4 hover:bg-zinc-700/50 transition-colors" style={{ borderRadius: '12px' }}>
                   <h4 className="text-sm font-medium mb-2 text-zinc-300">Mobile vs Desktop</h4>
                   <div className="h-52 w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -493,8 +473,8 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
                         labelLine={!isMobile}
                         label={isMobile ? false : ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                       >
-                        <Cell fill="#10b981" />  {/* Mobile */}
-                        <Cell fill="#0ea5e9" />  {/* Desktop */}
+                        <Cell fill="#10b981" />
+                        <Cell fill="#0ea5e9" />
                       </Pie>
                       <Tooltip formatter={(value) => [`${value} visite`, 'Dispositivi']} />
                       <Legend />
@@ -504,8 +484,8 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
                 </div>
               </div>
               
-              {/* Grafico tempo per sorgente */}
-              <div className="bg-zinc-800 rounded-lg p-4 mb-6 hover:bg-zinc-700/50 transition-colors">
+              {/* Altri grafici con stesso stile */}
+              <div className="bg-zinc-800 rounded-xl p-4 mb-6 hover:bg-zinc-700/50 transition-colors" style={{ borderRadius: '12px' }}>
                 <h4 className="text-sm font-medium mb-2 text-zinc-300">Tempo Medio per Sorgente (secondi)</h4>
                 <div className="h-52 w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -528,85 +508,13 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
                 </div>
               </div>
               
-              {/* Grafico conversioni per sorgente */}
-              <div className="bg-zinc-800 rounded-lg p-4 mb-6 hover:bg-zinc-700/50 transition-colors">
-                <h4 className="text-sm font-medium mb-2 text-zinc-300">Conversioni per Sorgente</h4>
-                <div className="h-52 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={prepareConversionsBySourceData()}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#444" strokeWidth={0.5} />
-                      <XAxis dataKey="name" tick={{ fill: '#9CA3AF', fontSize: 11 }} />
-                      <YAxis 
-                        tick={{ fill: '#9CA3AF', fontSize: 11 }} 
-                        domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.3)]}
-                      />
-                      <Tooltip 
-                        formatter={(value) => [`${value} conversioni`, 'Conversioni']}
-                        contentStyle={{ backgroundColor: '#27272A', borderColor: '#3F3F46' }}
-                        itemStyle={{ color: '#E4E4E7' }}
-                      />
-                      <Bar dataKey="value" maxBarSize={40}>
-                        {prepareConversionsBySourceData().map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={SOURCE_COLORS[entry.name] || COLORS[index % COLORS.length]} 
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              
-              {/* Grafico dei pulsanti più cliccati - MODIFICATO CON MARGINE SINISTRO RIDOTTO */}
-              <div className="bg-zinc-800 rounded-lg p-4 mb-6 hover:bg-zinc-700/50 transition-colors">
-                <h4 className="text-sm font-medium mb-2 text-zinc-300">Pulsanti Più Cliccati</h4>
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={prepareButtonClicksData().slice(0, 10)} 
-                      layout="vertical"
-                      margin={{ top: 5, right: 40, left: isMobile ? 60 : 80, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#444" strokeWidth={0.5} />
-                      <XAxis 
-                        type="number" 
-                        tick={{ fill: '#9CA3AF', fontSize: 11 }} 
-                        domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.3)]}
-                      />
-                      <YAxis 
-                        dataKey="name" 
-                        type="category" 
-                        tick={{ fill: '#9CA3AF', fontSize: 11 }} 
-                        width={isMobile ? 60 : 80}
-                      />
-                      <Tooltip 
-                        formatter={(value) => [`${value} click`, 'Click']}
-                        contentStyle={{ backgroundColor: '#27272A', borderColor: '#3F3F46' }}
-                        itemStyle={{ color: '#E4E4E7' }}
-                      />
-                      <Bar dataKey="value" fill="#FF6B00" maxBarSize={30}>
-                        {prepareButtonClicksData().slice(0, 10).map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                        <LabelList 
-                          dataKey="value" 
-                          position="right" 
-                          fill="#fff" 
-                          formatter={(value: number) => value} 
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              
               {/* Aggiornamento */}
               <div className="mt-6 text-center">
                 <button 
-                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors text-sm flex items-center justify-center mx-auto"
+                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors text-sm flex items-center justify-center mx-auto"
                   onClick={fetchStatistics}
                   disabled={isLoading}
+                  style={{ borderRadius: '10px' }}
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                   {isLoading ? 'Caricamento...' : 'Aggiorna Statistiche'}

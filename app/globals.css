@@ -1100,3 +1100,251 @@ html {
   -ms-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
+
+/* Reset dei bordi di default */
+*, *::before, *::after {
+  box-sizing: border-box;
+  border: 0 solid transparent;
+}
+
+/* Variabili CSS per il design squircle */
+:root {
+  --squircle-radius: 12px;
+  --squircle-small: 8px;
+  --squircle-large: 16px;
+}
+
+/* Override per tutti i container principali */
+.card,
+.bg-zinc-900,
+.bg-zinc-800,
+.bg-zinc-700 {
+  border-radius: var(--squircle-radius) !important;
+  border: none !important;
+}
+
+/* Bottoni con squircle */
+.btn,
+button {
+  border-radius: var(--squircle-small) !important;
+  border: none !important;
+  transition: all 0.2s ease;
+}
+
+.btn:hover,
+button:hover {
+  transform: translateY(-1px);
+}
+
+/* Input e select con squircle */
+input,
+select,
+textarea {
+  border-radius: var(--squircle-small) !important;
+  border: none !important;
+  outline: none !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  ring: 1px solid rgba(255, 107, 0, 0.3);
+  ring-offset: 2px;
+}
+
+/* Badge e tag con squircle piccolo */
+.badge,
+.tag,
+.px-2.py-1 {
+  border-radius: 6px !important;
+}
+
+/* Container principali */
+.rounded-lg,
+.rounded-md {
+  border-radius: var(--squircle-radius) !important;
+}
+
+.rounded-xl {
+  border-radius: var(--squircle-large) !important;
+}
+
+.rounded {
+  border-radius: var(--squircle-small) !important;
+}
+
+/* Rimozione di tutti i bordi esistenti */
+.border,
+.border-zinc-700,
+.border-zinc-800,
+.border-t,
+.border-b,
+.border-l,
+.border-r {
+  border: none !important;
+}
+
+/* Override per i container del layout */
+.animate-fade-in > div {
+  border-radius: var(--squircle-radius) !important;
+  border: none !important;
+}
+
+/* Tabelle senza bordi */
+table {
+  border: none !important;
+}
+
+table th,
+table td {
+  border: none !important;
+}
+
+.divide-y > * {
+  border-top: 1px solid rgba(113, 113, 122, 0.1) !important;
+}
+
+/* Cards hover effect */
+.card:hover,
+.bg-zinc-800:hover,
+.hover\:bg-zinc-700\/50:hover {
+  background-color: rgba(63, 63, 70, 0.3) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Scrollbar personalizzata */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Miglioramenti per il responsive */
+@media (max-width: 768px) {
+  :root {
+    --squircle-radius: 10px;
+    --squircle-small: 6px;
+    --squircle-large: 14px;
+  }
+}
+
+/* Animazioni fluide */
+* {
+  transition: border-radius 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+/* Fix per ReactFlow e altri componenti esterni */
+.react-flow__node {
+  border-radius: var(--squircle-small) !important;
+  border: none !important;
+}
+
+.react-flow__edge {
+  stroke-width: 2px;
+}
+
+/* Override per i grafici Recharts */
+.recharts-wrapper {
+  border-radius: var(--squircle-radius) !important;
+}
+
+/* Dropdown e menu */
+.dropdown,
+.menu {
+  border-radius: var(--squircle-radius) !important;
+  border: none !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* Tooltip personalizzati */
+.tooltip {
+  border-radius: var(--squircle-small) !important;
+  border: none !important;
+}
+
+/* Progress bars */
+.progress,
+.progress-bar {
+  border-radius: var(--squircle-small) !important;
+}
+
+/* Modali */
+.modal,
+.dialog {
+  border-radius: var(--squircle-large) !important;
+  border: none !important;
+}
+
+/* Loading spinner container */
+.loading-container {
+  border-radius: var(--squircle-radius) !important;
+}
+
+/* Rimozione bordi dai separatori */
+.divide-x > *,
+.divide-y > * {
+  border-color: rgba(113, 113, 122, 0.1) !important;
+}
+
+/* Header e footer */
+.header,
+.footer {
+  border-radius: 0 !important;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  border-radius: var(--squircle-small) !important;
+  background: rgba(39, 39, 42, 0.5) !important;
+  backdrop-filter: blur(10px);
+}
+
+/* Search input specifico */
+input[type="search"],
+input[type="text"] {
+  backdrop-filter: blur(10px);
+  background: rgba(39, 39, 42, 0.8) !important;
+}
+
+/* Container grid migliorati */
+.grid > * {
+  border-radius: var(--squircle-radius) !important;
+}
+
+/* Fix per chart containers */
+.chart-container,
+.recharts-surface {
+  border-radius: var(--squircle-radius) !important;
+  overflow: hidden;
+}
+
+/* Miglioramenti accessibilità */
+.focus\:ring-primary:focus {
+  ring: 2px solid rgba(255, 107, 0, 0.5);
+  ring-offset: 2px;
+  ring-offset-color: transparent;
+}
+
+/* Stati di errore e successo */
+.error {
+  border-radius: var(--squircle-radius) !important;
+  background: rgba(220, 38, 38, 0.1) !important;
+  color: rgb(248, 113, 113) !important;
+}
+
+.success {
+  border-radius: var(--squircle-radius) !important;
+  background: rgba(34, 197, 94, 0.1) !important;
+  color: rgb(74, 222, 128) !important;
+}
+
+/* Warning */
+.warning {
+  border-radius: var(--squircle-radius) !important;
+  background: rgba(245, 158, 11, 0.1) !important;
+  color: rgb(251, 191, 36) !important;
+}

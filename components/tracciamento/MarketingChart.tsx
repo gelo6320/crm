@@ -50,11 +50,8 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
     performance: number[];
   }>({ dates: [], leads: [], conversions: [], roas: [], performance: [] });
   
-  // Riferimento al contenitore del grafico
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<any>(null);
-  
-  // Aggiunto per risolvere il problema di rendering iniziale
   const [isChartInitialized, setIsChartInitialized] = useState(false);
   
   // Elabora i dati in base al timeRange
@@ -70,37 +67,29 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
     let processedPerformance: number[] = [];
     
     if (timeRange === '7d') {
-      // Per 7 giorni, usa i dati giornalieri originali
       processedDates = [...data.dates];
-      // Usa realLeads invece di leads
       processedLeads = data.realLeads ? [...data.realLeads] : [...data.leads];
       processedConversions = [...data.conversions];
       processedRoas = [...data.roas];
       
-      // Calcola l'indice di performance con protezione dai valori zero
       processedPerformance = data.dates.map((_, index) => {
         const leadValue = processedLeads[index] || 0;
         const convValue = processedConversions[index] || 0;
         const roasValue = data.roas[index] || 0;
         
-        // Trova i valori massimi, evitando divisione per zero
-        const maxLeads = Math.max(...processedLeads, 1); // Almeno 1 per evitare divisione per 0
+        const maxLeads = Math.max(...processedLeads, 1);
         const maxConversions = Math.max(...processedConversions, 1);
         
-        // Normalizza i valori tra 0 e 1
         const leadsNorm = leadValue / maxLeads;
         const convNorm = convValue / maxConversions;
         
-        // Se non ci sono dati significativi, usa solo i lead come metrica base
         if (maxLeads === 1 && maxConversions === 1 && roasValue === 0) {
-          return leadValue; // Restituisce direttamente il numero di lead
+          return leadValue;
         }
         
-        // Media ponderata che dà più peso al ROAS, ma considera anche lead senza conversioni
         return ((leadsNorm * 0.4) + (convNorm * 0.3) + (roasValue * 0.3)) * 10;
       });
     } else {
-      // Per 30 o 90 giorni, aggrega i dati settimanalmente
       const numDays = data.dates.length;
       const weeklyData: {
         dates: string[];
@@ -110,15 +99,12 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         performance: number[];
       } = { dates: [], leads: [], conversions: [], roas: [], performance: [] };
       
-      // Calcola il numero di giorni per settimana e aggrega
       const daysPerWeek = 7;
       for (let i = 0; i < numDays; i += daysPerWeek) {
-        // Usa l'ultimo giorno della settimana come etichetta
         const endIndex = Math.min(i + daysPerWeek - 1, numDays - 1);
         const dateLabel = data.dates[endIndex];
         weeklyData.dates.push(dateLabel);
         
-        // Calcola la media dei valori per la settimana
         let weekLeads = 0;
         let weekConversions = 0;
         let weekRoas = 0;
@@ -133,12 +119,10 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           daysInThisWeek++;
         }
         
-        // Salva i totali settimanali
         weeklyData.leads.push(weekLeads);
         weeklyData.conversions.push(weekConversions);
-        weeklyData.roas.push(Number((weekRoas / daysInThisWeek).toFixed(2))); // Media ROAS
+        weeklyData.roas.push(Number((weekRoas / daysInThisWeek).toFixed(2)));
         
-        // Calcola l'indice di performance con protezione dai valori zero
         const maxLeadsInPeriod = Math.max(...realLeadsData, 1);
         const maxConversionsInPeriod = Math.max(...data.conversions, 1);
         
@@ -146,7 +130,6 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         const convNorm = weekConversions / maxConversionsInPeriod * 7;
         const roasValue = weekRoas / daysInThisWeek;
         
-        // Se non ci sono dati significativi, usa solo i lead
         if (maxLeadsInPeriod === 1 && maxConversionsInPeriod === 1 && roasValue === 0) {
           weeklyData.performance.push(weekLeads);
         } else {
@@ -174,23 +157,19 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
   useEffect(() => {
     if (processedData.dates.length === 0) return;
     
-    // Trova il valore massimo delle serie di dati
     const maxLeads = Math.max(...processedData.leads);
     const maxConversions = Math.max(...processedData.conversions);
     const maxRoas = Math.max(...processedData.roas);
     const maxPerformance = Math.max(...processedData.performance);
     
-    // Aggiungi un 30% in più per lo spazio (ridotto da 40%)
     const yMaxLeads = Math.ceil(maxLeads * 1.3);
     const yMaxConversions = Math.ceil(maxConversions * 1.3);
     const yMaxRoas = Math.ceil(maxRoas * 1.3);
     const yMaxPerformance = Math.ceil(maxPerformance * 1.3);
     
-    // Configura le opzioni in base al timeRange
     let xAxisConfig = {};
     
     if (timeRange === '7d') {
-      // Base giornaliera per 7 giorni
       xAxisConfig = {
         type: 'category' as const,
         time: {
@@ -201,7 +180,6 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         }
       };
     } else if (timeRange === '30d' || timeRange === '90d') {
-      // Base settimanale per 30 e 90 giorni
       xAxisConfig = {
         type: 'category' as const,
         ticks: {
@@ -210,10 +188,8 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       };
     }
 
-    // Adatta configurazione per mobile
     const isMobile = window.innerWidth < 768;
     
-    // Aggiorna le opzioni del grafico
     setChartOptions({
       responsive: true,
       maintainAspectRatio: false,
@@ -227,17 +203,17 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           hoverRadius: isMobile ? 4 : 6,
         },
         line: {
-          borderWidth: activeMetric === 'performance' ? 2 : 1.5, // Linee più sottili
+          borderWidth: activeMetric === 'performance' ? 2 : 1.5,
         }
       },
       animation: {
-        duration: 800, // Ridotta per migliori performance
+        duration: 800,
         easing: 'easeOutQuart'
       },
       layout: {
         padding: {
-          top: 10, // Ridotto
-          right: isMobile ? 0 : 5, // Ridotto
+          top: 10,
+          right: isMobile ? 0 : 5,
           bottom: 0, 
           left: isMobile ? 0 : 0
         }
@@ -246,18 +222,18 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         x: {
           ...xAxisConfig,
           grid: {
-            color: 'rgba(255, 255, 255, 0.05)', // Assi più sottili
-            lineWidth: 0.5, // Assi più sottili
+            color: 'rgba(255, 255, 255, 0.05)',
+            lineWidth: 0.5,
           },
           border: {
-            width: 0.5, // Bordo più sottile
+            width: 0.5,
           },
           ticks: {
             color: 'rgba(255, 255, 255, 0.6)',
             autoSkip: true,
-            maxTicksLimit: isMobile ? 5 : 7, // Limita il numero di tick
+            maxTicksLimit: isMobile ? 5 : 7,
             font: {
-              size: isMobile ? 8 : 9 // Font più piccolo
+              size: isMobile ? 8 : 9
             }
           }
         },
@@ -265,23 +241,22 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           suggestedMax: activeMetric === 'performance' ? yMaxPerformance : yMaxLeads,
           beginAtZero: true,
           grid: {
-            color: 'rgba(255, 255, 255, 0.05)', // Assi più sottili
-            lineWidth: 0.5, // Assi più sottili
+            color: 'rgba(255, 255, 255, 0.05)',
+            lineWidth: 0.5,
           },
           border: {
-            width: 0.5, // Bordo più sottile
+            width: 0.5,
           },
           ticks: {
             color: 'rgba(255, 255, 255, 0.6)',
-            padding: isMobile ? 2 : 5, // Ridotto
+            padding: isMobile ? 2 : 5,
             precision: 0,
-            maxTicksLimit: isMobile ? 4 : 5, // Limita il numero di tick
+            maxTicksLimit: isMobile ? 4 : 5,
             font: {
-              size: isMobile ? 8 : 9 // Font più piccolo
+              size: isMobile ? 8 : 9
             }
           }
         },
-        // Scala secondaria per ROAS (se attivo)
         ...(activeMetric === 'all' || activeMetric === 'roas' ? {
           y1: {
             type: 'linear' as const,
@@ -291,19 +266,19 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
             beginAtZero: true,
             grid: {
               drawOnChartArea: false,
-              color: 'rgba(255, 255, 255, 0.05)', // Assi più sottili
-              lineWidth: 0.5, // Assi più sottili
+              color: 'rgba(255, 255, 255, 0.05)',
+              lineWidth: 0.5,
             },
             border: {
-              width: 0.5, // Bordo più sottile
+              width: 0.5,
             },
             ticks: {
               color: 'rgba(255, 255, 255, 0.6)',
-              padding: isMobile ? 2 : 5, // Ridotto
+              padding: isMobile ? 2 : 5,
               precision: 1,
-              maxTicksLimit: isMobile ? 4 : 5, // Limita il numero di tick
+              maxTicksLimit: isMobile ? 4 : 5,
               font: {
-                size: isMobile ? 8 : 9 // Font più piccolo
+                size: isMobile ? 8 : 9
               }
             }
           }
@@ -311,18 +286,18 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       },
       plugins: {
         legend: {
-          display: !isMobile, // Nascondi la legenda su mobile
+          display: !isMobile,
           position: 'top' as const,
           align: 'start' as const,
           labels: {
             color: 'rgba(255, 255, 255, 0.7)',
             usePointStyle: true,
             pointStyle: 'circle',
-            padding: isMobile ? 5 : 10, // Ridotto
-            boxWidth: 6, // Ridotto
-            boxHeight: 6, // Ridotto
+            padding: isMobile ? 5 : 10,
+            boxWidth: 6,
+            boxHeight: 6,
             font: {
-              size: isMobile ? 8 : 10 // Font più piccolo
+              size: isMobile ? 8 : 10
             }
           }
         },
@@ -332,7 +307,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
           bodyColor: 'rgba(255, 255, 255, 0.9)',
           borderColor: activeMetric === 'performance' ? 'rgba(34, 197, 94, 0.5)' : 'rgba(255, 107, 0, 0.5)',
           borderWidth: 1,
-          padding: isMobile ? 6 : 8, // Ridotto
+          padding: isMobile ? 6 : 8,
           displayColors: true,
           callbacks: {
             label: function(context) {
@@ -352,7 +327,6 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
               return label;
             },
             title: function(tooltipItems) {
-              // Formatta la data in base al timeRange
               if (timeRange === '30d' || timeRange === '90d') {
                 return 'Settimana del ' + tooltipItems[0].label;
               } 
@@ -363,11 +337,9 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
       },
     });
 
-    // Imposta che il grafico è stato inizializzato
     setIsChartInitialized(true);
   }, [processedData, timeRange, activeMetric]);
 
-  // Gestisci il resize della finestra
   useEffect(() => {
     const handleResize = () => {
       if (chartInstance.current) {
@@ -377,10 +349,9 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
 
     window.addEventListener('resize', handleResize);
     
-    // Forza un resize dopo il rendering iniziale
     const resizeTimeout = setTimeout(() => {
       handleResize();
-    }, 50); // Tempo ridotto
+    }, 50);
     
     return () => {
       window.removeEventListener('resize', handleResize);
@@ -388,88 +359,83 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
     };
   }, []);
 
-  // Forza un aggiornamento del grafico dopo il rendering
   useLayoutEffect(() => {
     if (isChartInitialized && chartInstance.current) {
       chartInstance.current.resize();
     }
   }, [isChartInitialized]);
   
-  // Ottieni e salva l'istanza del grafico
   const chartRef = (chart: any) => {
     if (chart !== null) {
       chartInstance.current = chart;
     }
   };
   
-  // Se i dati sono ancora in caricamento, mostra un placeholder
   if (isLoading) {
     return (
-      <div className="bg-zinc-800 rounded-lg p-3 h-60 flex items-center justify-center">
+      <div className="bg-zinc-800 rounded-xl p-3 h-60 flex items-center justify-center" style={{ borderRadius: '12px' }}>
         <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
       </div>
     );
   }
   
-  // Configura i dati del grafico in base alla metrica attiva
   const chartData = {
     labels: processedData.dates,
     datasets: [
       ...(activeMetric === 'performance' ? [{
         label: 'Performance',
         data: processedData.performance,
-        borderColor: '#10b981', // emerald-500
+        borderColor: '#10b981',
         backgroundColor: 'rgba(16, 185, 129, 0.3)',
         yAxisID: 'y',
         tension: 0.3,
-        borderWidth: 2, // Ridotto
+        borderWidth: 2,
         fill: true,
         pointBackgroundColor: '#10b981',
         pointBorderColor: '#ffffff',
-        pointBorderWidth: 1, // Ridotto
+        pointBorderWidth: 1,
         pointHoverBackgroundColor: '#ffffff',
         pointHoverBorderColor: '#10b981',
-        pointHoverBorderWidth: 2, // Ridotto
-        pointHoverRadius: 5, // Ridotto
+        pointHoverBorderWidth: 2,
+        pointHoverRadius: 5,
         borderJoinStyle: 'round' as const,
       }] : []),
       
       ...(activeMetric === 'all' || activeMetric === 'leads' ? [{
         label: 'Lead reali generati',
         data: processedData.leads,
-        borderColor: '#3b82f6', // blue-500
+        borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.5)',
         yAxisID: 'y',
         tension: 0.2,
-        borderWidth: 1.5, // Ridotto
+        borderWidth: 1.5,
         fill: false,
       }] : []),
       
       ...(activeMetric === 'all' || activeMetric === 'conversions' ? [{
         label: 'Conversioni',
         data: processedData.conversions,
-        borderColor: '#10b981', // emerald-500
+        borderColor: '#10b981',
         backgroundColor: 'rgba(16, 185, 129, 0.5)',
         yAxisID: 'y',
         tension: 0.2,
-        borderWidth: 1.5, // Ridotto
+        borderWidth: 1.5,
         fill: false,
       }] : []),
       
       ...(activeMetric === 'all' || activeMetric === 'roas' ? [{
         label: 'ROAS',
         data: processedData.roas,
-        borderColor: '#FF6B00', // primary
+        borderColor: '#FF6B00',
         backgroundColor: 'rgba(255, 107, 0, 0.5)',
         yAxisID: 'y1',
         tension: 0.2,
-        borderWidth: 1.5, // Ridotto
+        borderWidth: 1.5,
         fill: false,
       }] : []),
     ],
   };
   
-  // Calcola le metriche riepilogative
   const metricSummary = [
     {
       id: 'performance',
@@ -486,7 +452,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
     {
       id: 'leads',
       label: 'Lead reali',
-      value: data.totalRealLeads || data.totalLeads, // Usa totalRealLeads se disponibile
+      value: data.totalRealLeads || data.totalLeads,
       color: 'text-blue-500',
       bgColor: 'bg-blue-500/20',
       icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -523,20 +489,22 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
 
   return (
     <motion.div 
-      className="bg-zinc-800 rounded-lg p-3 sm:p-4 mb-3 w-full"
+      className="bg-zinc-800 rounded-xl p-3 sm:p-4 mb-3 w-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      style={{ borderRadius: '12px' }}
     >
-      {/* Riepilogo metriche - Stile a schede con padding ridotto */}
+      {/* Riepilogo metriche */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
         {metricSummary.map((metric) => (
           <button
             key={metric.id}
             onClick={() => setActiveMetric(metric.id as any)}
-            className={`p-2 rounded ${metric.bgColor} flex items-center ${activeMetric === metric.id ? 'ring-1 ring-white/30' : ''}`}
+            className={`p-2 rounded-xl ${metric.bgColor} flex items-center transition-all ${activeMetric === metric.id ? 'ring-1 ring-white/30 scale-105' : 'hover:scale-102'}`}
+            style={{ borderRadius: '10px' }}
           >
-            <div className={`rounded-full p-1.5 ${metric.color} bg-white/10 mr-2`}>
+            <div className={`rounded-full p-1.5 ${metric.color} bg-white/10 mr-2`} style={{ borderRadius: '8px' }}>
               {metric.icon}
             </div>
             <div className="text-left">
@@ -550,7 +518,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         ))}
       </div>
       
-      {/* Filtri metrica - versione mobile più compatta */}
+      {/* Filtri metrica */}
       <div className="flex flex-wrap gap-1.5 -mx-1 px-1 mb-3 overflow-x-auto scrollbar-none">
         {['performance', 'all', 'leads', 'conversions', 'roas'].map((metric) => (
           <button
@@ -559,8 +527,9 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
             className={`px-2.5 py-1 text-xs font-medium rounded-full transition-all ${
               activeMetric === metric
                 ? metric === 'performance' ? 'bg-emerald-500 text-white' : 'bg-primary text-white'
-                : 'bg-zinc-700 text-zinc-300'
+                : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
             }`}
+            style={{ borderRadius: '6px' }}
           >
             {metric === 'performance' ? 'Performance' :
              metric === 'all' ? 'Tutte' : 
@@ -570,7 +539,7 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
         ))}
       </div>
       
-      {/* Grafico a larghezza piena con spazio negativo orizzontale su mobile */}
+      {/* Grafico */}
       <div 
         ref={chartContainerRef}
         className="w-full h-56 md:h-64 -mx-3 sm:mx-0" 
@@ -587,8 +556,8 @@ export default function MarketingChart({ data, isLoading, timeRange }: Marketing
                 const { ctx } = chart;
                 if (activeMetric === 'performance' && chart.getDatasetMeta(0)?.visible) {
                   ctx.save();
-                  ctx.shadowColor = 'rgba(16, 185, 129, 0.4)'; // Ridotto
-                  ctx.shadowBlur = 4; // Ridotto
+                  ctx.shadowColor = 'rgba(16, 185, 129, 0.4)';
+                  ctx.shadowBlur = 4;
                 }
               },
               afterDatasetsDraw(chart) {

@@ -9,7 +9,6 @@ interface UsersListProps {
   onSelectUser: (user: TrackedUser) => void;
   onBack: () => void;
   isLoading: boolean;
-  searchQuery: string;
 }
 
 export default function UsersList({
@@ -17,18 +16,8 @@ export default function UsersList({
   landingPage,
   onSelectUser,
   onBack,
-  isLoading,
-  searchQuery
+  isLoading
 }: UsersListProps) {
-  // Filtra gli utenti in base alla query di ricerca
-  const filteredUsers = searchQuery
-    ? users.filter(user => 
-        user.fingerprint.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.ip.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (user.location && user.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (user.referrer && user.referrer.toLowerCase().includes(searchQuery.toLowerCase())))
-    : users;
-
   if (isLoading) {
     return (
       <div className="p-8 text-center text-zinc-500">
@@ -40,11 +29,12 @@ export default function UsersList({
 
   return (
     <div>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700 bg-zinc-900/50">
+      <div className="flex items-center justify-between px-4 py-3 bg-zinc-800/50">
         <h2 className="text-base font-medium">Utenti della Landing Page</h2>
         <button
           onClick={onBack}
-          className="btn btn-outline flex items-center space-x-1 py-1 px-2 text-xs"
+          className="bg-zinc-700 hover:bg-zinc-600 px-3 py-1.5 rounded-lg text-xs transition-all flex items-center space-x-1"
+          style={{ borderRadius: '8px' }}
         >
           <ArrowLeft size={14} />
           <span>Indietro</span>
@@ -52,7 +42,7 @@ export default function UsersList({
       </div>
       
       {/* Riepilogo landing page */}
-      <div className="p-4 border-b border-zinc-700 bg-zinc-800/30">
+      <div className="p-4 bg-zinc-800/30">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-medium truncate max-w-lg" title={landingPage.url}>
@@ -68,23 +58,18 @@ export default function UsersList({
         </div>
       </div>
       
-      {filteredUsers.length === 0 ? (
+      {users.length === 0 ? (
         <div className="p-8 text-center text-zinc-500">
-          {searchQuery ? (
-            <>
-              <p>Nessun utente trovato per "{searchQuery}"</p>
-            </>
-          ) : (
-            <p>Nessun utente disponibile per questa landing page.</p>
-          )}
+          <p>Nessun utente disponibile per questa landing page.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-          {filteredUsers.map(user => (
+          {users.map(user => (
             <div 
               key={user.id}
               onClick={() => onSelectUser(user)}
-              className="card bg-zinc-800 hover:bg-zinc-700/50 hover:border-primary transition-all duration-200 cursor-pointer p-4"
+              className="bg-zinc-800 hover:bg-zinc-700/50 hover:ring-1 hover:ring-primary/30 transition-all duration-200 cursor-pointer p-4 rounded-xl"
+              style={{ borderRadius: '12px' }}
             >
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center">

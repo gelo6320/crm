@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChartBar, RefreshCw, Search, Filter, ChevronRight } from "lucide-react";
+import { ChartBar, RefreshCw, Filter, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import LandingPageList from "@/components/tracciamento/LandingPageList";
@@ -40,7 +40,6 @@ export default function TracciamentoPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("7d"); // '24h', '7d', '30d', 'all'
   
   const router = useRouter();
@@ -120,19 +119,15 @@ export default function TracciamentoPage() {
       console.log(`Sessioni ricevute: ${data.length}`);
       setSessions(data);
       
-      // Se non ci sono sessioni trovate, visualizza un messaggio nella console
       if (data.length === 0) {
         console.log(`Nessuna sessione trovata per l'utente ${userId}.`);
       }
       
-      // Resetta la sessione selezionata
       setSelectedSession(null);
     } catch (error: unknown) {
       console.error("Errore dettagliato durante il caricamento delle sessioni:", error);
       console.error("URL richiesta:", `/api/tracciamento/sessions/${userId}?timeRange=${timeRange}`);
       
-      // 2. Correzione per il tipo 'unknown' di error
-      // Aggiunta di un controllo di tipo per accedere a error.message in modo sicuro
       const errorMessage = error instanceof Error ? error.message : 'Errore di rete';
       toast("error", "Errore", `Impossibile caricare le sessioni: ${errorMessage}`);
       setSessions([]);
@@ -156,23 +151,11 @@ export default function TracciamentoPage() {
     }
   };
 
-  // Gestione ricerca
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedLandingPage) {
-      loadUsers(selectedLandingPage.id);
-    } else {
-      loadLandingPages();
-    }
-  };
-
   // Gestione cambio intervallo di tempo
   const handleTimeRangeChange = (range: string) => {
-    // Mantieni il valore esatto selezionato dall'utente
     console.log(`Cambiando timeRange a: ${range}`);
     setTimeRange(range);
     
-    // Se necessario, forza un refresh immediato con il nuovo valore
     setTimeout(() => {
       loadLandingPages();
     }, 100);
@@ -227,27 +210,16 @@ export default function TracciamentoPage() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Header con titolo e controlli */}
-      <div className="flex items-center justify-end flex-wrap gap-4">
+      {/* Header con controlli semplificati */}
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-2">
-          {/* Barra di ricerca */}
-          <form onSubmit={handleSearch} className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={selectedLandingPage ? "Cerca utenti..." : "Cerca landing page..."}
-              className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 pl-9 text-sm w-full focus:ring-primary focus:border-primary"
-            />
-            <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-zinc-400" />
-          </form>
-          
           {/* Filtro intervallo di tempo */}
           <div className="relative">
             <select
               value={timeRange}
               onChange={(e) => handleTimeRangeChange(e.target.value)}
-              className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 text-sm appearance-none pr-8 focus:ring-primary focus:border-primary"
+              className="bg-zinc-800 rounded-xl px-3 py-2 text-sm appearance-none pr-8 focus:ring-primary focus:outline-none transition-all"
+              style={{ borderRadius: '12px' }}
             >
               <option value="24h">Ultime 24 ore</option>
               <option value="7d">Ultimi 7 giorni</option>
@@ -260,8 +232,9 @@ export default function TracciamentoPage() {
           {/* Refresh button */}
           <button 
             onClick={handleRefresh}
-            className="btn btn-outline p-1.5"
+            className="bg-zinc-800 hover:bg-zinc-700 p-2 rounded-xl transition-all"
             disabled={isLoading || isLoadingUsers || isLoadingSessions || isLoadingDetails}
+            style={{ borderRadius: '12px' }}
           >
             <RefreshCw size={16} className={isLoading || isLoadingUsers || isLoadingSessions || isLoadingDetails ? "animate-spin" : ""} />
           </button>
@@ -322,15 +295,14 @@ export default function TracciamentoPage() {
         </div>
       )}
       
-      {/* Contenuto principale - Landing Pages */}
-      <div className="card overflow-hidden">
+      {/* Contenuto principale */}
+      <div className="bg-zinc-900 rounded-xl overflow-hidden" style={{ borderRadius: '12px' }}>
         {/* Visualizzazione delle landing page */}
         {!selectedLandingPage && (
           <LandingPageList 
             landingPages={landingPages}
             onSelectLandingPage={handleSelectLandingPage}
             isLoading={isLoading}
-            searchQuery={searchQuery}
           />
         )}
         
@@ -342,7 +314,6 @@ export default function TracciamentoPage() {
             onSelectUser={handleSelectUser}
             onBack={handleBackFromLandingPage}
             isLoading={isLoadingUsers}
-            searchQuery={searchQuery}
           />
         )}
         
@@ -368,15 +339,15 @@ export default function TracciamentoPage() {
         )}
       </div>
       
-      {/* Statistiche Avanzate (solo quando non c'è una landing page selezionata) */}
+      {/* Statistiche Avanzate */}
       {!selectedLandingPage && (
         <AdvancedStatistics timeRange={timeRange} />
       )}
       
-      {/* Facebook Ads (solo visibile quando non ci sono landing page selezionate) */}
+      {/* Facebook Ads */}
       {!selectedLandingPage && (
         <div className="mt-8">
-          <div className="card">
+          <div className="bg-zinc-900 rounded-xl" style={{ borderRadius: '12px' }}>
             <MarketingApiOverview timeRange={timeRange as '7d' | '30d' | '90d'} />
           </div>
         </div>
