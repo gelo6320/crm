@@ -87,7 +87,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header compatto */}
         <div className="flex items-center justify-between p-6 border-b border-zinc-800">
