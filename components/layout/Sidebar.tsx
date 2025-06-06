@@ -154,10 +154,10 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
         {/* Mobile overlay con transizione graduale */}
         {isMobile && (
           <div 
-            className={`
-              fixed inset-0 bg-black/60 z-30 transition-all duration-400 ease-out
-              ${open ? 'opacity-100 visible' : 'opacity-0 invisible'}
-            `}
+          className={`
+            fixed inset-0 bg-black/60 z-30 transition-opacity duration-400 ease-out
+            ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+          `}
             onClick={() => setOpen(false)}
           />
         )}
