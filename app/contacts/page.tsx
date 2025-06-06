@@ -3,7 +3,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Users, Phone, MessageCircle, Globe, ChevronDown } from "lucide-react";
-import { animate } from "framer-motion";
+// AGGIORNATO: Nuovo import per Motion
+import { animate } from "motion/react";
 import { SmoothCorners } from 'react-smooth-corners';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
@@ -14,34 +15,77 @@ import Pagination from "@/components/ui/Pagination";
 import { formatDate } from "@/lib/utils/date";
 import { toast } from "@/components/ui/toaster";
 
-// Funzione di scroll animato con Framer Motion (SISTEMATA)
-function smoothScrollToElement(element: HTMLElement, duration: number = 0.8) {
-  // Calcolo corretto della posizione usando getBoundingClientRect + window.scrollY
+// METODO 1: Usando la moderna API scrollIntoView (RACCOMANDATO)
+function smoothScrollToElement(element: HTMLElement, duration: number = 800) {
+  console.log('Starting smooth scroll with scrollIntoView API');
+  
+  // Usa la moderna API scrollIntoView che è supportata da tutti i browser moderni
+  element.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center', // Centra l'elemento nel viewport
+    inline: 'nearest'
+  });
+  
+  console.log('Scroll completed using native scrollIntoView');
+}
+
+// METODO 2: Usando Motion con controllo personalizzato (se preferisci Motion)
+function motionSmoothScrollToElement(element: HTMLElement, duration: number = 800) {
   const elementRect = element.getBoundingClientRect();
   const absoluteElementTop = elementRect.top + window.scrollY;
   const middle = absoluteElementTop - (window.innerHeight / 2) + (elementRect.height / 2);
   
-  // Debug logs per capire cosa succede
-  console.log('Scroll animation started:', {
+  console.log('Motion scroll animation started:', {
     elementRect,
     absoluteElementTop,
     middle,
     currentScroll: window.scrollY
   });
   
-  // SISTEMATO: Usa un valore numerico invece di window.scrollY
-  const startPosition = window.scrollY;
-  
-  animate(startPosition, middle, {
-    duration,
-    ease: "easeInOut",
+  // SISTEMATO: Usa il nuovo animate da motion/react con parametri corretti
+  animate(window.scrollY, middle, {
+    duration: duration / 1000, // Motion usa secondi, non millisecondi
+    ease: "easeInOut", // Easing semplificato e più affidabile
     onUpdate: (value) => {
       window.scrollTo(0, value);
     },
     onComplete: () => {
-      console.log('Scroll animation completed, final position:', window.scrollY);
+      console.log('Motion scroll animation completed, final position:', window.scrollY);
     }
   });
+}
+
+// METODO 3: Implementazione personalizzata con requestAnimationFrame (controllo totale)
+function customSmoothScrollToElement(element: HTMLElement, duration: number = 800) {
+  const elementRect = element.getBoundingClientRect();
+  const absoluteElementTop = elementRect.top + window.scrollY;
+  const targetPosition = absoluteElementTop - (window.innerHeight / 2) + (elementRect.height / 2);
+  const startPosition = window.scrollY;
+  const distance = targetPosition - startPosition;
+  const startTime = performance.now();
+
+  function easeInOutCubic(t: number): number {
+    return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+  }
+
+  function animation(currentTime: number) {
+    const timeElapsed = currentTime - startTime;
+    const progress = Math.min(timeElapsed / duration, 1);
+    
+    const ease = easeInOutCubic(progress);
+    const currentPosition = startPosition + (distance * ease);
+    
+    window.scrollTo(0, currentPosition);
+    
+    if (progress < 1) {
+      requestAnimationFrame(animation);
+    } else {
+      console.log('Custom scroll animation completed');
+    }
+  }
+  
+  console.log('Custom scroll animation started');
+  requestAnimationFrame(animation);
 }
 
 // Definizione dell'interfaccia per i contatti unificati basata sul nuovo schema
@@ -85,7 +129,7 @@ function formatSource(source: string, formType: string): string {
   return "Sconosciuto";
 }
 
-// Componente modale aggiornato con frosted glass e animazione blur sincronizzata
+// Componente modale aggiornato con frosted glass e superellipse
 function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isOpening, setIsOpening] = useState(true);
@@ -140,13 +184,9 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${isClosing || isOpening ? 'opacity-0' : 'opacity-100'}`}>
-      {/* Backdrop con blur animato - SISTEMATO */}
+      {/* Backdrop normale (senza blur) */}
       <div 
-        className={`absolute inset-0 bg-black/40 transition-all duration-300 ${
-          isClosing || isOpening 
-            ? 'backdrop-blur-none' 
-            : 'backdrop-blur-sm'
-        }`}
+        className="absolute inset-0 bg-black/40" 
         onClick={handleClose}
       ></div>
       
@@ -158,7 +198,7 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
           borderRadius="24"
         />
         
-        {/* Modal frosted glass background - GRIGIO CHIARO */}
+        {/* Modal frosted glass background - CAMBIATO A GRIGIO CHIARO */}
         <div className="relative bg-zinc-50/80 dark:bg-zinc-100/10 backdrop-blur-xl rounded-[24px] border border-white/30 dark:border-white/20 shadow-2xl overflow-hidden">
           {/* Content */}
           <div className="relative">
@@ -280,7 +320,6 @@ export default function ContactsPage() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [highlightedContactId, setHighlightedContactId] = useState<string | null>(null);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-  const [isScrolling, setIsScrolling] = useState(false); // Flag per prevenire doppi scroll
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -303,15 +342,9 @@ export default function ContactsPage() {
     loadContacts();
   }, [currentPage, selectedStatus]);
 
-  // FUNZIONE per gestire l'highlight e scroll del contatto - COMPLETAMENTE SISTEMATA
+  // FUNZIONE SISTEMATA per gestire l'highlight e scroll del contatto
   const highlightAndScrollToContact = (contactId: string) => {
     console.log('highlightAndScrollToContact called with ID:', contactId);
-    
-    // PREVENZIONE DOPPIA CHIAMATA: Se è già in corso uno scroll, ignora
-    if (isScrolling) {
-      console.log('Scroll already in progress, ignoring call');
-      return;
-    }
     
     // Cerca il contatto nella lista corrente
     const targetContact = contacts.find(contact => 
@@ -323,9 +356,8 @@ export default function ContactsPage() {
     if (targetContact) {
       // Se il contatto è nella lista, evidenzialo
       setHighlightedContactId(contactId);
-      setIsScrolling(true); // Imposta il flag di scroll
       
-      // Schedule a scroll to the element con un timing migliore
+      // Schedule scroll con timing ottimizzato
       setTimeout(() => {
         let element = document.getElementById(`contact-${contactId}`);
         
@@ -341,8 +373,17 @@ export default function ContactsPage() {
         
         console.log('Element found for scroll:', element);
         if (element) {
-          // SISTEMATO: Ora usa easeInOut con valore numerico fisso
-          smoothScrollToElement(element, 1.2); // Durata più lunga per essere più smooth
+          // SCELTA IL METODO PREFERITO:
+          
+          // Opzione 1: API nativa moderna (RACCOMANDATO - più semplice e performante)
+          // smoothScrollToElement(element, 1000);
+          
+          // Opzione 2: Motion per controllo avanzato (se preferisci Motion)
+          motionSmoothScrollToElement(element, 1000);
+          
+          // Opzione 3: Controllo totale personalizzato (se hai bisogni specifici)
+          // customSmoothScrollToElement(element, 1000);
+          
         } else {
           console.warn('Element not found for scroll animation');
         }
@@ -351,12 +392,10 @@ export default function ContactsPage() {
         setTimeout(() => {
           setHighlightedContactId(null);
           setSelectedContact(targetContact);
-          setIsScrolling(false); // Reset del flag di scroll
         }, 1200);
-      }, 150); // Aumentato il timing per dar tempo al DOM
+      }, 100); // Timing ridotto per migliori performance
     } else {
       console.log('Contact not found in current list');
-      setIsScrolling(false); // Reset del flag anche se il contatto non è trovato
     }
     
     // Clean up URL parameters after a delay
