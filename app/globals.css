@@ -1226,3 +1226,37 @@ table td {
     --squircle-large: 14px;
   }
 }
+
+/* Animazioni fluide */
+* {
+  transition: border-radius 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+/* Fix per ReactFlow e altri componenti esterni */
+.react-flow__node {
+  border-radius: var(--squircle-small) !important;
+  border: none !important;
+}
+
+.react-flow__edge {
+  stroke-width: 2px;
+}
+
+/* Override per i grafici Recharts */
+.recharts-wrapper {
+  border-radius: var(--squircle-radius) !important;
+}
+
+/* Dropdown e menu */
+.dropdown,
+.menu {
+  border-radius: var(--squircle-radius) !important;
+  border: none !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* Tooltip personalizzati */
+.tooltip {
+  border-radius: var(--squircle-small) !important;
+  border: none !important;
+}
