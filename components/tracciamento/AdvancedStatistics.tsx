@@ -359,23 +359,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
         </div>
         
         <div className="flex items-center gap-2">
-          {!isExpanded && aggregatedStats && (
-            <div className="flex items-center gap-4 text-sm text-zinc-400">
-              <div className="flex items-center gap-1 hidden md:flex">
-                <Users className="w-4 h-4" />
-                <span>{aggregatedStats.totalVisits || 0} visite</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <MousePointer className="w-4 h-4" />
-                <span>{aggregatedStats.buttonClicks?.total || 0} click</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <ArrowRightLeft className="w-4 h-4" />
-                <span>{aggregatedStats.conversions?.total || 0} conv.</span>
-              </div>
-            </div>
-          )}
-          
           {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </div>
       </div>

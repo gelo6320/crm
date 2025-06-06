@@ -55,10 +55,26 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
   };
   
   const toggleCampaign = (campaignId: string) => {
+    const wasExpanded = expandedCampaigns[campaignId];
+    
     setExpandedCampaigns(prev => ({
       ...prev,
       [campaignId]: !prev[campaignId]
     }));
+    
+    // Se la campagna si sta espandendo, espandi automaticamente tutti i suoi ad set
+    if (!wasExpanded) {
+      const campaign = campaigns.find(c => c.id === campaignId);
+      if (campaign) {
+        setExpandedAdSets(prev => {
+          const newState = { ...prev };
+          campaign.adSets.forEach(adSet => {
+            newState[adSet.id] = true;
+          });
+          return newState;
+        });
+      }
+    }
   };
   
   const toggleAdSet = (adSetId: string) => {
@@ -195,13 +211,13 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
       style={{ borderRadius: '12px' }}
     >
       <div className="relative mb-1">
-        {/* Pulsanti di scorrimento */}
+        {/* Pulsanti di scorrimento - nascosti su mobile */}
         {showScrollButtons && (
           <>
             <button 
               onClick={scrollLeft}
               disabled={!canScrollLeft}
-              className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-1.5 rounded-full shadow-lg transition-all ${!canScrollLeft ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
+              className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-1.5 rounded-full shadow-lg transition-all hidden md:block ${!canScrollLeft ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
               style={{ borderRadius: '8px' }}
             >
               <ArrowLeft size={16} className="text-zinc-200" />
@@ -210,7 +226,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
             <button 
               onClick={scrollRight}
               disabled={!canScrollRight}
-              className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-1.5 rounded-full shadow-lg transition-all ${!canScrollRight ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
+              className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-zinc-900/80 p-1.5 rounded-full shadow-lg transition-all hidden md:block ${!canScrollRight ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-700'}`}
               style={{ borderRadius: '8px' }}
             >
               <ArrowRight size={16} className="text-zinc-200" />
@@ -292,19 +308,19 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                       <div className="text-right font-medium text-sm">
                         {campaign.leads.toLocaleString()}
                       </div>
-                      <div className="text-right font-medium text-sm">
+                      <div className="text-right font-medium text-sm relative pointer-events-none">
                         {campaign.realLeads.toLocaleString()}
                       </div>
                       <div className="text-right font-medium text-sm">
                         {formatCurrency(campaign.costPerLead)}
                       </div>
-                      <div className="text-right font-medium text-sm">
+                      <div className="text-right font-medium text-sm relative pointer-events-none">
                         {campaign.conversions.toLocaleString()}
                       </div>
                       <div className="text-right font-medium text-sm">
                         {formatCurrency(campaign.costPerConversion)}
                       </div>
-                      <div className={`text-right font-medium text-sm ${getValueColorClass(campaign.roas)}`}>
+                      <div className={`text-right font-medium text-sm relative pointer-events-none ${getValueColorClass(campaign.roas)}`}>
                         {campaign.roas.toFixed(2)}x
                       </div>
                     </motion.div>
@@ -365,19 +381,19 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                     <div className="text-right text-xs">
                                       {adSet.leads.toLocaleString()}
                                     </div>
-                                    <div className="text-right text-xs">
+                                    <div className="text-right text-xs relative pointer-events-none">
                                       {adSet.realLeads.toLocaleString()}
                                     </div>
                                     <div className="text-right text-xs">
                                       {formatCurrency(adSet.costPerLead)}
                                     </div>
-                                    <div className="text-right text-xs">
+                                    <div className="text-right text-xs relative pointer-events-none">
                                       {adSet.conversions.toLocaleString()}
                                     </div>
                                     <div className="text-right text-xs">
                                       {formatCurrency(adSet.costPerConversion)}
                                     </div>
-                                    <div className={`text-right text-xs ${getValueColorClass(adSet.roas)}`}>
+                                    <div className={`text-right text-xs relative pointer-events-none ${getValueColorClass(adSet.roas)}`}>
                                       {adSet.roas.toFixed(2)}x
                                     </div>
                                   </div>
@@ -425,19 +441,19 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                               <div className="text-right text-[10px]">
                                                 {ad.leads.toLocaleString()}
                                               </div>
-                                              <div className="text-right text-[10px]">
+                                              <div className="text-right text-[10px] relative pointer-events-none">
                                                 {ad.realLeads.toLocaleString()}
                                               </div>
                                               <div className="text-right text-[10px]">
                                                 {formatCurrency(ad.costPerLead)}
                                               </div>
-                                              <div className="text-right text-[10px]">
+                                              <div className="text-right text-[10px] relative pointer-events-none">
                                                 {ad.conversions.toLocaleString()}
                                               </div>
                                               <div className="text-right text-[10px]">
                                                 {formatCurrency(ad.costPerConversion)}
                                               </div>
-                                              <div className={`text-right text-[10px] ${getValueColorClass(ad.roas)}`}>
+                                              <div className={`text-right text-[10px] relative pointer-events-none ${getValueColorClass(ad.roas)}`}>
                                                 {ad.roas.toFixed(2)}x
                                               </div>
                                             </div>
@@ -460,16 +476,6 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
           </div>
         </div>
       </div>
-      
-      {/* Indicatore mobile di scorrimento orizzontale */}
-      {showScrollButtons && (
-        <div className="flex justify-center mt-2 mb-1 md:hidden">
-          <div className="flex items-center space-x-1">
-            <span className="text-xs text-zinc-400">Scorri per vedere tutti i dati</span>
-            <ArrowRight size={12} className="text-zinc-400" />
-          </div>
-        </div>
-      )}
     </motion.div>
   );
 }
