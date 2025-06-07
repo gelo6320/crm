@@ -53,11 +53,11 @@ export default function LandingPageList({
               <th className="px-4 py-2 text-left">Azioni</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody className="divide-y divide-zinc-700">
             {groupedLandingPages.map((landingPage) => (
               <tr 
                 key={landingPage.id} 
-                className="hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                className="hover:bg-zinc-700/40 transition-colors cursor-pointer"
                 onClick={() => onSelectLandingPage(landingPage)}
               >
                 <td className="px-4 py-3">
@@ -103,7 +103,7 @@ export default function LandingPageList({
                       e.stopPropagation();
                       window.open(landingPage.url, '_blank');
                     }}
-                    className="p-2 rounded-lg hover:bg-zinc-700 transition-colors"
+                    className="p-2 rounded-lg hover:bg-zinc-600 transition-colors"
                     title="Visita la pagina"
                     style={{ borderRadius: '8px' }}
                   >

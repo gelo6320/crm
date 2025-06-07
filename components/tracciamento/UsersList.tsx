@@ -68,7 +68,7 @@ export default function UsersList({
             <div 
               key={user.id}
               onClick={() => onSelectUser(user)}
-              className="bg-zinc-800 hover:bg-zinc-700/50 hover:ring-1 hover:ring-primary/30 transition-all duration-200 cursor-pointer p-4 rounded-xl"
+              className="bg-zinc-700/60 hover:bg-zinc-600/60 hover:ring-1 hover:ring-primary/30 transition-all duration-200 cursor-pointer p-4 rounded-xl"
               style={{ borderRadius: '12px' }}
             >
               <div className="flex justify-between items-start mb-3">
@@ -122,7 +122,7 @@ export default function UsersList({
                 )}
               </div>
               
-              <div className="flex items-center justify-between text-xs pt-2 border-t border-zinc-700">
+              <div className="flex items-center justify-between text-xs pt-2 border-t border-zinc-600">
                 <div className="flex items-center text-zinc-400">
                   <Clock size={12} className="mr-1" />
                   <span>Ultimo accesso: {formatDateTime(user.lastActivity)}</span>

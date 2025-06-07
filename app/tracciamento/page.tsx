@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChartBar, RefreshCw, Filter, ChevronRight } from "lucide-react";
+import { ChartBar, Filter, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import LandingPageList from "@/components/tracciamento/LandingPageList";
@@ -156,22 +156,7 @@ export default function TracciamentoPage() {
     console.log(`Cambiando timeRange a: ${range}`);
     setTimeRange(range);
     
-    setTimeout(() => {
-      loadLandingPages();
-    }, 100);
-  };
-
-  // Gestione refresh
-  const handleRefresh = () => {
-    if (selectedSession) {
-      loadSessionDetails(selectedSession.id);
-    } else if (selectedUser) {
-      loadSessions(selectedUser.id);
-    } else if (selectedLandingPage) {
-      loadUsers(selectedLandingPage.id);
-    } else {
-      loadLandingPages();
-    }
+    // Il caricamento verrà gestito automaticamente dall'useEffect
   };
 
   // Handler per la selezione di una landing page
@@ -228,16 +213,6 @@ export default function TracciamentoPage() {
             </select>
             <Filter size={14} className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-zinc-400 pointer-events-none" />
           </div>
-          
-          {/* Refresh button */}
-          <button 
-            onClick={handleRefresh}
-            className="bg-zinc-800 hover:bg-zinc-700 p-2 rounded-xl transition-all"
-            disabled={isLoading || isLoadingUsers || isLoadingSessions || isLoadingDetails}
-            style={{ borderRadius: '12px' }}
-          >
-            <RefreshCw size={16} className={isLoading || isLoadingUsers || isLoadingSessions || isLoadingDetails ? "animate-spin" : ""} />
-          </button>
         </div>
       </div>
       

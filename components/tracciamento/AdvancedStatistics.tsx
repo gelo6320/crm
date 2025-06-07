@@ -134,8 +134,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
 
   // Function to fetch statistics data directly from the server
   const fetchStatistics = async (): Promise<void> => {
-    if (!isExpanded) return;
-    
     setIsLoading(true);
     setError(null);
     
@@ -158,9 +156,17 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
     }
   };
 
+  // Carica i dati quando cambia il timeRange o quando la sezione viene espansa
+  useEffect(() => {
+    if (isExpanded) {
+      fetchStatistics();
+    }
+  }, [isExpanded]);
+
+  // Ricarica automaticamente quando cambia il timeRange (anche se non espanso)
   useEffect(() => {
     fetchStatistics();
-  }, [isExpanded, timeRange]);
+  }, [timeRange]);
 
   // Calcola statistiche aggregate
   const getAggregatedStats = (): AggregatedStats | null => {
@@ -375,14 +381,6 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
           {statistics.length === 0 && !isLoading && !error ? (
             <div className="text-center py-8 text-zinc-400 bg-zinc-800/50 rounded-xl" style={{ borderRadius: '12px' }}>
               <p>Nessun dato statistico disponibile</p>
-              <button 
-                className="mt-4 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-xl transition-colors text-sm flex items-center justify-center mx-auto"
-                onClick={fetchStatistics}
-                style={{ borderRadius: '10px' }}
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Ricarica Statistiche
-              </button>
             </div>
           ) : (
             <>
@@ -491,18 +489,9 @@ const AdvancedStatistics: React.FC<AdvancedStatisticsProps> = ({ timeRange }) =>
                 </div>
               </div>
               
-              {/* Aggiornamento */}
+              {/* Info aggiornamento */}
               <div className="mt-6 text-center">
-                <button 
-                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors text-sm flex items-center justify-center mx-auto"
-                  onClick={fetchStatistics}
-                  disabled={isLoading}
-                  style={{ borderRadius: '10px' }}
-                >
-                  <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                  {isLoading ? 'Caricamento...' : 'Aggiorna Statistiche'}
-                </button>
-                <p className="mt-2 text-xs text-zinc-500">
+                <p className="text-xs text-zinc-500">
                   {statistics.length} record statistici per {timeRange === '24h' ? 'le ultime 24 ore' : 
                     timeRange === '7d' ? 'gli ultimi 7 giorni' : 
                     timeRange === '30d' ? 'gli ultimi 30 giorni' : 'tutto il periodo'}

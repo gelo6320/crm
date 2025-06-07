@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { fetchMarketingOverview, fetchCampaigns, MarketingOverview, Campaign } from '@/lib/api/marketing';
 import MarketingChart from './MarketingChart';
 import CampaignList from './CampaignList';
-import { RefreshCw } from 'lucide-react';
 
 interface MarketingApiOverviewProps {
   timeRange: '7d' | '30d' | '90d';
@@ -50,18 +49,6 @@ export default function MarketingApiOverview({ timeRange }: MarketingApiOverview
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="pt-5 pr-5 flex items-center justify-end mb-3">
-        <button 
-          onClick={loadMarketingData}
-          className="bg-zinc-700 hover:bg-zinc-600 p-2 rounded-xl transition-all"
-          disabled={isLoadingOverview || isLoadingCampaigns}
-          aria-label="Aggiorna dati"
-          style={{ borderRadius: '8px' }}
-        >
-          <RefreshCw size={16} className={isLoadingOverview || isLoadingCampaigns ? "animate-spin" : ""} />
-        </button>
-      </div>
-      
       {/* Grafico delle metriche principali */}
       {overviewData && (
         <MarketingChart data={overviewData} isLoading={isLoadingOverview} timeRange={timeRange} />

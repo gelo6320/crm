@@ -104,7 +104,7 @@ export default function SessionsList({
           <button
             onClick={() => setSortBy("recent")}
             className={`text-xs px-3 py-1.5 rounded-lg transition-all ${
-              sortBy === "recent" ? "bg-primary text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              sortBy === "recent" ? "bg-primary text-white" : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
             }`}
             style={{ borderRadius: '8px' }}
           >
@@ -113,7 +113,7 @@ export default function SessionsList({
           <button
             onClick={() => setSortBy("duration")}
             className={`text-xs px-3 py-1.5 rounded-lg transition-all ${
-              sortBy === "duration" ? "bg-primary text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              sortBy === "duration" ? "bg-primary text-white" : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
             }`}
             style={{ borderRadius: '8px' }}
           >
@@ -122,7 +122,7 @@ export default function SessionsList({
           <button
             onClick={() => setSortBy("interactions")}
             className={`text-xs px-3 py-1.5 rounded-lg transition-all ${
-              sortBy === "interactions" ? "bg-primary text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              sortBy === "interactions" ? "bg-primary text-white" : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
             }`}
             style={{ borderRadius: '8px' }}
           >
@@ -131,7 +131,7 @@ export default function SessionsList({
           <button
             onClick={() => setSortBy("pages")}
             className={`text-xs px-3 py-1.5 rounded-lg transition-all ${
-              sortBy === "pages" ? "bg-primary text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+              sortBy === "pages" ? "bg-primary text-white" : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
             }`}
             style={{ borderRadius: '8px' }}
           >
@@ -168,12 +168,12 @@ export default function SessionsList({
                 <th className="px-4 py-2 text-left"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800">
+            <tbody className="divide-y divide-zinc-700">
               {sortedSessions.map(session => (
                 <tr 
                   key={session.id}
                   onClick={() => onSelectSession(session)}
-                  className="hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                  className="hover:bg-zinc-700/40 transition-colors cursor-pointer"
                 >
                   <td className="px-4 py-3">
                     <div className="flex flex-col">

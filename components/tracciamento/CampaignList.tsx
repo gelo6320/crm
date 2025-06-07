@@ -281,7 +281,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                   <React.Fragment key={campaign.id}>
                     <motion.div
                       variants={tableRowVariants}
-                      className={`grid grid-cols-9 gap-1 md:gap-2 p-2.5 items-center cursor-pointer hover:bg-zinc-700/10 rounded-lg transition-all ${isExpanded ? 'bg-zinc-700/10' : ''}`}
+                      className={`grid grid-cols-9 gap-1 md:gap-2 p-2.5 items-center cursor-pointer hover:bg-zinc-600/30 rounded-lg transition-all ${isExpanded ? 'bg-zinc-700/20' : ''}`}
                       onClick={() => toggleCampaign(campaign.id)}
                       style={{ borderRadius: '8px' }}
                     >
@@ -336,7 +336,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                         >
                           <div className="pl-6 pr-2 py-1 space-y-1">
                             {/* AdSet header */}
-                            <div className="bg-zinc-800/80 text-xs text-zinc-400 font-medium grid grid-cols-9 gap-1 md:gap-2 p-2 my-1 rounded-lg" style={{ borderRadius: '8px' }}>
+                            <div className="bg-zinc-700/40 text-xs text-zinc-400 font-medium grid grid-cols-9 gap-1 md:gap-2 p-2 my-1 rounded-lg" style={{ borderRadius: '8px' }}>
                               <div className="col-span-2">AD SET</div>
                               <div className="text-right">SPESA</div>
                               <div className="text-right">LEAD (FB)</div>
@@ -354,7 +354,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                               return (
                                 <React.Fragment key={adSet.id}>
                                   <div
-                                    className={`grid grid-cols-9 gap-1 md:gap-2 p-2 rounded-lg items-center cursor-pointer hover:bg-zinc-700/10 transition-all ${isAdSetExpanded ? 'bg-zinc-700/10' : ''}`}
+                                    className={`grid grid-cols-9 gap-1 md:gap-2 p-2 rounded-lg items-center cursor-pointer hover:bg-zinc-600/20 transition-all ${isAdSetExpanded ? 'bg-zinc-700/15' : ''}`}
                                     onClick={() => toggleAdSet(adSet.id)}
                                     style={{ borderRadius: '6px' }}
                                   >
@@ -409,7 +409,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                       >
                                         <div className="pl-5 pr-1 py-1">
                                           {/* Ad header */}
-                                          <div className="bg-zinc-700/20 text-xs text-zinc-500 font-medium grid grid-cols-9 gap-1 md:gap-2 p-1.5 my-1 rounded-lg" style={{ borderRadius: '6px' }}>
+                                          <div className="bg-zinc-600/20 text-xs text-zinc-500 font-medium grid grid-cols-9 gap-1 md:gap-2 p-1.5 my-1 rounded-lg" style={{ borderRadius: '6px' }}>
                                             <div className="col-span-2">ANNUNCIO</div>
                                             <div className="text-right">SPESA</div>
                                             <div className="text-right">LEAD (FB)</div>
@@ -424,7 +424,7 @@ export default function CampaignList({ campaigns, isLoading }: CampaignListProps
                                           {adSet.ads.map(ad => (
                                             <div
                                               key={ad.id}
-                                              className="grid grid-cols-9 gap-1 md:gap-2 p-1.5 rounded-lg items-center hover:bg-zinc-700/10 transition-all"
+                                              className="grid grid-cols-9 gap-1 md:gap-2 p-1.5 rounded-lg items-center hover:bg-zinc-600/15 transition-all"
                                               style={{ borderRadius: '4px' }}
                                             >
                                               <div className="col-span-2 flex flex-col overflow-hidden">
