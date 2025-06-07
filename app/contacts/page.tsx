@@ -183,12 +183,10 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
   const coords = getAnimationCoordinates();
 
   const handleClose = () => {
-    console.log('❌ Close triggered - setting isClosing to true');
+    console.log('❌ Close triggered - calling onClose immediately');
     setIsClosing(true);
-    setTimeout(() => {
-      console.log('⏰ Close timeout completed - calling onClose');
-      onClose();
-    }, 200); // Ridotto da 300ms a 200ms
+    // Chiama onClose immediatamente per liberare l'interfaccia
+    onClose();
   };
 
   // Configurazione spring per animazione naturale stile iOS
@@ -234,8 +232,10 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={handleClose}
+      className={`fixed inset-0 z-50 flex items-center justify-center ${
+        isClosing ? 'pointer-events-none' : ''
+      }`}
+      onClick={!isClosing ? handleClose : undefined}
     >
       {/* Background overlay animato */}
       <motion.div
@@ -251,11 +251,12 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
         className="relative z-10 w-full max-w-lg mx-6"
         onClick={(e) => e.stopPropagation()}
         initial={coords.initial}
-        animate={isClosing ? {
+        animate={coords.animate}
+        exit={{
           ...coords.initial,
           scale: 0.1,
-          opacity: 0, // Fade out durante la chiusura
-        } : coords.animate}
+          opacity: 0,
+        }}
         transition={springConfig}
         style={{
           transformOrigin: "center center"
