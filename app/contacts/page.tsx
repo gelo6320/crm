@@ -140,14 +140,22 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   useEffect(() => {
     console.log('🚀 Modal mounted - starting opening animation');
     
-    const frame = requestAnimationFrame(() => {
-      console.log('📱 RequestAnimationFrame executed - setting isOpening to false');
-      setIsOpening(false);
+    let frame2: number;
+    
+    const frame1 = requestAnimationFrame(() => {
+      console.log('📱 First frame - DOM updated, requesting second frame');
+      frame2 = requestAnimationFrame(() => {
+        console.log('🎬 Second frame - now starting animation');
+        setIsOpening(false);
+      });
     });
     
     return () => {
-      console.log('🧹 Cleanup - cancelling animation frame');
-      cancelAnimationFrame(frame);
+      console.log('🧹 Cleanup - cancelling animation frames');
+      cancelAnimationFrame(frame1);
+      if (frame2) {
+        cancelAnimationFrame(frame2);
+      }
     };
   }, []);
 
