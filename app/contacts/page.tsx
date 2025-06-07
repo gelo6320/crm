@@ -202,7 +202,13 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
         />
         
         {/* Modal background CON backdrop-blur (effetto frosted glass) */}
-        <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 backdrop-blur-xl rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden">
+        <div 
+          className="relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden"
+          style={{ 
+            backdropFilter: `blur(${isClosing || isOpening ? '0px' : '12px'})`,
+            transition: 'backdrop-filter 300ms ease-out'
+          }}
+        >
           {/* Content */}
           <div className="relative">
             {/* Header */}
