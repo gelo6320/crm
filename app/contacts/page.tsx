@@ -130,7 +130,6 @@ function formatSource(source: string, formType: string): string {
 }
 
 // Componente modale aggiornato con frosted glass e superellipse
-// Componente modale con FIX per il bug Webkit/Chrome
 function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isOpening, setIsOpening] = useState(true);
@@ -184,19 +183,19 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const value = contact.value !== undefined ? contact.value : (contact.extendedData?.value || 0);
 
   return (
-    // ✅ FIX WEBKIT BUG: Applica transizione e backdrop-blur allo STESSO elemento
+    // ✅ Backdrop schermo: SOLO overlay scuro, NESSUN blur
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-all duration-300 ${
-        isClosing || isOpening ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md'
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-opacity duration-300 ${
+        isClosing || isOpening ? 'opacity-0' : 'opacity-100'
       }`}
       onClick={handleClose}
     >
-      {/* Modal content */}
+      {/* Modal content: SOLO QUI il blur con transizione (FIX WEBKIT) */}
       <div 
         className={`relative z-10 w-full max-w-lg mx-6 transition-all duration-300 ${
-          isClosing || isOpening ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
+          isClosing || isOpening ? 'scale-95 opacity-0 backdrop-blur-none' : 'scale-100 opacity-100 backdrop-blur-xl'
         }`}
-        onClick={(e) => e.stopPropagation()} // Previeni chiusura quando si clicca sul contenuto
+        onClick={(e) => e.stopPropagation()}
       >
         {/* SmoothCorners per i superellipse */}
         <SmoothCorners 
@@ -204,8 +203,8 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
           borderRadius="24"
         />
         
-        {/* Modal frosted glass background */}
-        <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 backdrop-blur-xl rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden">
+        {/* Modal background SENZA backdrop-blur (spostato nel parent) */}
+        <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden">
           {/* Content */}
           <div className="relative">
             {/* Header */}
