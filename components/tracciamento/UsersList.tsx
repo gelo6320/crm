@@ -1,5 +1,5 @@
 // components/tracciamento/UsersList.tsx
-import { Clock, ArrowLeft, Monitor, MapPin, Globe, Activity, ChevronRight } from "lucide-react";
+import { Clock, ArrowLeft, Monitor, MapPin, Globe, Activity, ChevronRight, CheckCircle, XCircle, User } from "lucide-react";
 import { TrackedUser, LandingPage } from "@/types/tracciamento";
 import { formatDateTime } from "@/lib/utils/date";
 
@@ -52,7 +52,8 @@ export default function UsersList({
               {landingPage.title}
             </p>
           </div>
-          <div className="text-xs text-zinc-400">
+          {/* Nascondi le statistiche su mobile */}
+          <div className="text-xs text-zinc-400 hidden md:block">
             {landingPage.totalVisits.toLocaleString()} visite &middot; {landingPage.uniqueUsers.toLocaleString()} utenti unici
           </div>
         </div>
@@ -63,74 +64,98 @@ export default function UsersList({
           <p>Nessun utente disponibile per questa landing page.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-          {users.map(user => (
-            <div 
-              key={user.id}
-              onClick={() => onSelectUser(user)}
-              className="bg-zinc-700/60 hover:bg-zinc-600/60 hover:ring-1 hover:ring-primary/30 transition-all duration-200 cursor-pointer p-4 rounded-xl"
-              style={{ borderRadius: '12px' }}
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${
-                    user.isActive ? 'bg-success animate-pulse' : 'bg-zinc-500'
-                  }`}></div>
-                  <h3 className="font-medium text-sm">
-                    {user.isActive ? 'Attivo ora' : 'Inattivo'}
-                  </h3>
-                </div>
-                <div className="text-xs text-zinc-400 flex items-center">
-                  <Activity size={14} className="mr-1" />
-                  {user.sessionsCount} sessioni
-                </div>
-              </div>
-              
-              <div className="space-y-2 mb-4">
-                {/* Fingerprint */}
-                <div className="flex items-center text-sm">
-                  <Monitor size={14} className="text-primary mr-2 flex-shrink-0" />
-                  <div className="truncate" title={user.fingerprint}>
-                    {user.fingerprint}
-                  </div>
-                </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase text-zinc-500 bg-zinc-800/30">
+              <tr>
+                <th className="px-4 py-2 text-left">Utente</th>
+                <th className="px-4 py-2 text-left">Location</th>
+                <th className="px-4 py-2 text-left">Sessioni</th>
+                <th className="px-4 py-2 text-left">Conversione</th>
+                <th className="px-4 py-2 text-left">Ultimo accesso</th>
+                <th className="px-4 py-2 text-left"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-700">
+              {users.map(user => {
+                // Simuliamo la conversione per ora (in futuro da API)
+                const hasConversion = Math.random() > 0.7; // 30% conversione simulata
+                const userName = hasConversion ? `User ${user.fingerprint.substring(0, 8)}` : '';
                 
-                {/* IP Address */}
-                <div className="flex items-center text-sm">
-                  <Globe size={14} className="text-info mr-2 flex-shrink-0" />
-                  <div>{user.ip}</div>
-                </div>
-                
-                {/* Location */}
-                {user.location && (
-                  <div className="flex items-center text-sm">
-                    <MapPin size={14} className="text-warning mr-2 flex-shrink-0" />
-                    <div className="truncate" title={user.location}>
-                      {user.location}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Referrer */}
-                {user.referrer && (
-                  <div className="flex items-center text-sm">
-                    <ArrowLeft size={14} className="text-success mr-2 flex-shrink-0" />
-                    <div className="truncate" title={user.referrer}>
-                      {user.referrer}
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex items-center justify-between text-xs pt-2 border-t border-zinc-600">
-                <div className="flex items-center text-zinc-400">
-                  <Clock size={12} className="mr-1" />
-                  <span>Ultimo accesso: {formatDateTime(user.lastActivity)}</span>
-                </div>
-                <ChevronRight size={14} className="text-primary" />
-              </div>
-            </div>
-          ))}
+                return (
+                  <tr 
+                    key={user.id}
+                    onClick={() => onSelectUser(user)}
+                    className="hover:bg-zinc-700/40 transition-colors cursor-pointer"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center">
+                        <div className={`w-2 h-2 rounded-full mr-3 ${
+                          user.isActive ? 'bg-success animate-pulse' : 'bg-zinc-500'
+                        }`}></div>
+                        <div className="flex flex-col">
+                          <div className="flex items-center">
+                            <Monitor size={14} className="text-primary mr-2" />
+                            <span className="font-medium">
+                              {userName || user.fingerprint.substring(0, 12)}
+                            </span>
+                          </div>
+                          <div className="flex items-center mt-1 text-xs text-zinc-400">
+                            <Globe size={12} className="mr-1" />
+                            <span>{user.ip}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center">
+                        <MapPin size={14} className="text-warning mr-2" />
+                        <span>{user.location || "Sconosciuta"}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center">
+                        <Activity size={14} className="text-info mr-2" />
+                        <span>{user.sessionsCount}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center">
+                        {hasConversion ? (
+                          <>
+                            <CheckCircle size={14} className="text-success mr-2" />
+                            <div className="flex flex-col">
+                              <span className="text-success font-medium">Sì</span>
+                              {userName && (
+                                <span className="text-xs text-zinc-400">{userName}</span>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle size={14} className="text-zinc-500 mr-2" />
+                            <span className="text-zinc-500">No</span>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center text-zinc-400">
+                        <Clock size={14} className="mr-2" />
+                        <div className="flex flex-col">
+                          <span>{new Date(user.lastActivity).toLocaleDateString('it-IT')}</span>
+                          <span className="text-xs">{new Date(user.lastActivity).toLocaleTimeString('it-IT')}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <ChevronRight size={16} className="text-zinc-500" />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
