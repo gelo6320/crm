@@ -232,10 +232,8 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
 
   return (
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center ${
-        isClosing ? 'pointer-events-none' : ''
-      }`}
-      onClick={!isClosing ? handleClose : undefined}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onClick={handleClose}
     >
       {/* Background overlay animato */}
       <motion.div
@@ -412,6 +410,12 @@ export default function ContactsPage() {
   const highlightAndScrollToContact = (contactId: string) => {
     console.log('highlightAndScrollToContact called with ID:', contactId);
     
+    // Se c'è già un modal aperto, chiudilo immediatamente
+    if (selectedContact) {
+      setSelectedContact(null);
+      setContactTriggerRect(null);
+    }
+    
     // Cerca il contatto nella lista corrente
     const targetContact = contacts.find(contact => 
       contact._id === contactId || contact.leadId === contactId
@@ -459,8 +463,11 @@ export default function ContactsPage() {
           setHighlightedContactId(null);
           if (element) {
             const rect = element.getBoundingClientRect();
-            setContactTriggerRect(rect);
-            setSelectedContact(targetContact);
+            // Piccolo delay aggiuntivo per assicurarsi che il cleanup sia completato
+            setTimeout(() => {
+              setContactTriggerRect(rect);
+              setSelectedContact(targetContact);
+            }, 50);
           }
         }, 1200);
       }, 100); // Timing ridotto per migliori performance
@@ -582,15 +589,24 @@ export default function ContactsPage() {
   
   // FUNZIONE AGGIORNATA: Gestisce il click su un contatto con coordinate
   const handleContactClick = (contact: Contact, event: React.MouseEvent) => {
+    // Se c'è già un modal aperto, chiudilo immediatamente senza animazione
+    if (selectedContact) {
+      setSelectedContact(null);
+      setContactTriggerRect(null);
+    }
+    
     // Ottieni le coordinate dell'elemento cliccato
     const targetElement = event.currentTarget as HTMLElement;
     const rect = targetElement.getBoundingClientRect();
     
     console.log('Contact clicked:', contact.name, 'at coordinates:', rect);
     
-    // Imposta il contatto selezionato con le coordinate
-    setContactTriggerRect(rect);
-    setSelectedContact(contact);
+    // Piccolo delay per assicurarsi che il cleanup sia completato
+    setTimeout(() => {
+      // Imposta il nuovo contatto selezionato con le coordinate
+      setContactTriggerRect(rect);
+      setSelectedContact(contact);
+    }, 10);
   };
   
   // Ottiene l'icona appropriata per il tipo di fonte
@@ -851,9 +867,10 @@ export default function ContactsPage() {
       </div>
       
       {/* Modale dettagli contatto con AnimatePresence */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {selectedContact && (
           <ContactDetailModal 
+            key={selectedContact._id} // Key unica per ogni modal
             contact={selectedContact}
             onClose={() => {
               setSelectedContact(null);
