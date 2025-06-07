@@ -186,8 +186,8 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   return (
     // ✅ FIX WEBKIT BUG: Applica transizione e backdrop-blur allo STESSO elemento
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xl transition-all duration-300 ${
-        isClosing || isOpening ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-xl'
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-all duration-300 ${
+        isClosing || isOpening ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-md'
       }`}
       onClick={handleClose}
     >
