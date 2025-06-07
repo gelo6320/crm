@@ -114,10 +114,11 @@ interface Contact {
   };
 }
 
-// Interfaccia per i dettagli di un contatto
+// Interfaccia aggiornata per i dettagli di un contatto
 interface ContactDetailModalProps {
   contact: Contact;
   onClose: () => void;
+  triggerRect?: DOMRect | null; // Coordinate del contatto cliccato
 }
 
 // Funzione per ottenere la fonte in formato leggibile
@@ -129,43 +130,53 @@ function formatSource(source: string, formType: string): string {
   return "Sconosciuto";
 }
 
-// Componente modale aggiornato con frosted glass e superellipse
-function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
+// Componente modale aggiornato con animazione iOS-style
+function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
-  const [isOpening, setIsOpening] = useState(true);
 
-  console.log('🔄 Render - isOpening:', isOpening, 'isClosing:', isClosing);
+  console.log('🔄 Modal render - triggerRect:', triggerRect);
 
-  // Gestisci l'animazione di apertura
-  useEffect(() => {
-    console.log('🚀 Modal mounted - starting opening animation');
-    
-    let frame2: number;
-    
-    const frame1 = requestAnimationFrame(() => {
-      console.log('📱 First frame - DOM updated, requesting second frame');
-      frame2 = requestAnimationFrame(() => {
-        console.log('🎬 Second frame - now starting animation');
-        setIsOpening(false);
-      });
-    });
-    
-    return () => {
-      console.log('🧹 Cleanup - cancelling animation frames');
-      cancelAnimationFrame(frame1);
-      if (frame2) {
-        cancelAnimationFrame(frame2);
+  // Calcola le coordinate iniziali e finali per l'animazione
+  const getAnimationCoordinates = () => {
+    if (!triggerRect) {
+      // Fallback al centro dello schermo se non abbiamo coordinate
+      return {
+        initial: {
+          x: 0,
+          y: 0,
+          scale: 0.1,
+        },
+        animate: {
+          x: 0,
+          y: 0,
+          scale: 1,
+        }
+      };
+    }
+
+    // Coordinate del centro del contatto cliccato
+    const triggerCenterX = triggerRect.left + (triggerRect.width / 2);
+    const triggerCenterY = triggerRect.top + (triggerRect.height / 2);
+
+    // Coordinate finali (centro dello schermo)
+    const finalX = window.innerWidth / 2;
+    const finalY = window.innerHeight / 2;
+
+    return {
+      initial: {
+        x: triggerCenterX - finalX, // Offset dal centro
+        y: triggerCenterY - finalY, // Offset dal centro
+        scale: 0.1,
+      },
+      animate: {
+        x: 0, // Torna al centro
+        y: 0, // Torna al centro
+        scale: 1,
       }
     };
-  }, []);
+  };
 
-  useEffect(() => {
-    console.log('🎭 State change - isOpening:', isOpening);
-  }, [isOpening]);
-
-  useEffect(() => {
-    console.log('🚪 State change - isClosing:', isClosing);
-  }, [isClosing]);
+  const coords = getAnimationCoordinates();
 
   const handleClose = () => {
     console.log('❌ Close triggered - setting isClosing to true');
@@ -174,6 +185,14 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
       console.log('⏰ Close timeout completed - calling onClose');
       onClose();
     }, 300);
+  };
+
+  // Configurazione spring per animazione naturale stile iOS
+  const springConfig = {
+    type: "spring" as const,
+    damping: 25,
+    stiffness: 300,
+    mass: 0.8,
   };
 
   const handleCall = () => {
@@ -208,134 +227,145 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const message = contact.extendedData?.formData?.message || contact.message || "";
   const service = contact.service || contact.extendedData?.formData?.service || "";
   const value = contact.value !== undefined ? contact.value : (contact.extendedData?.value || 0);
+
   return (
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-all duration-300 ${
-        isClosing || isOpening ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-      }`}
+      className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={handleClose}
     >
-      <div 
+      {/* Background overlay animato */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="absolute inset-0 bg-black/40"
+      />
+      
+      {/* Modal container con animazione iOS */}
+      <motion.div 
         className="relative z-10 w-full max-w-lg mx-6"
         onClick={(e) => e.stopPropagation()}
+        initial={coords.initial}
+        animate={isClosing ? {
+          ...coords.initial,
+          scale: 0.1,
+        } : coords.animate}
+        transition={springConfig}
+        style={{
+          transformOrigin: "center center"
+        }}
       >
         <SmoothCorners 
           corners="2.5"
           borderRadius="24"
         />
         
-        <div 
-          className={`relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden ${
-            isClosing ? 'blur-animate-out' : isOpening ? '' : 'blur-animate-in'
-          }`}
-        >
-          {/* Content */}
-          <div className="relative">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/30 dark:border-white/20">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Dettagli contatto</h3>
-              <button
-                onClick={handleClose}
-                className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
+        <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden backdrop-blur-lg">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/30 dark:border-white/20">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Dettagli contatto</h3>
+            <button
+              onClick={handleClose}
+              className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          
+          <div className="p-6 space-y-6">
+            {/* Header con nome e stato */}
+            <div className="flex justify-between items-start">
+              <div className="flex items-center space-x-3">
+                {contact.source === "facebook" ? (
+                  <div className="w-10 h-10 rounded-full bg-blue-100/90 dark:bg-blue-900/40 flex items-center justify-center backdrop-blur-sm">
+                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 287.56 191">
+                      <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
+                      <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
+                      <path fill="#0082fb" d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gray-100/90 dark:bg-gray-800/90 flex items-center justify-center backdrop-blur-sm">
+                    <Globe className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                    {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{formatSource(contact.source, contact.formType)}</p>
+                </div>
+              </div>
+              <StatusBadge status={contact.status} />
             </div>
             
-            <div className="p-6 space-y-6">
-              {/* Header con nome e stato */}
-              <div className="flex justify-between items-start">
-                <div className="flex items-center space-x-3">
-                  {contact.source === "facebook" ? (
-                    <div className="w-10 h-10 rounded-full bg-blue-100/90 dark:bg-blue-900/40 flex items-center justify-center backdrop-blur-sm">
-                      <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 287.56 191">
-                        <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
-                        <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
-                        <path fill="#0082fb" d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-100/90 dark:bg-gray-800/90 flex items-center justify-center backdrop-blur-sm">
-                      <Globe className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                    </div>
-                  )}
-                  <div>
-                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
-                      {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
-                    </h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{formatSource(contact.source, contact.formType)}</p>
-                  </div>
-                </div>
-                <StatusBadge status={contact.status} />
+            {/* Info contatto */}
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Email</p>
+                <p className="text-primary">{contact.email}</p>
               </div>
               
-              {/* Info contatto */}
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Email</p>
-                  <p className="text-primary">{contact.email}</p>
-                </div>
-                
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Telefono</p>
-                  <p className="text-gray-900 dark:text-white">{contact.phone || "Non disponibile"}</p>
-                </div>
-                
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Data creazione</p>
-                  <p className="text-gray-900 dark:text-white">{formatDate(contact.createdAt)}</p>
-                </div>
-                
-                {service && (
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Servizio</p>
-                    <p className="text-gray-900 dark:text-white">{service}</p>
-                  </div>
-                )}
-                
-                {value !== undefined && value > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Valore</p>
-                    <p className="text-lg font-semibold text-green-600">€{value.toLocaleString('it-IT')}</p>
-                  </div>
-                )}
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Telefono</p>
+                <p className="text-gray-900 dark:text-white">{contact.phone || "Non disponibile"}</p>
               </div>
               
-              {/* Messaggio */}
-              {message && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Messaggio</p>
-                  <div className="p-4 bg-white/40 dark:bg-black/30 backdrop-blur-sm rounded-2xl text-sm text-gray-700 dark:text-gray-300 border border-white/30 dark:border-white/20">
-                    {message}
-                  </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Data creazione</p>
+                <p className="text-gray-900 dark:text-white">{formatDate(contact.createdAt)}</p>
+              </div>
+              
+              {service && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Servizio</p>
+                  <p className="text-gray-900 dark:text-white">{service}</p>
                 </div>
               )}
               
-              {/* Pulsanti azione con frosted glass */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={handleCall}
-                  className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
-                >
-                  <Phone className="w-4 h-4" />
-                  Chiama
-                </button>
-                
-                <button
-                  onClick={handleWhatsApp}
-                  className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  WhatsApp
-                </button>
+              {value !== undefined && value > 0 && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Valore</p>
+                  <p className="text-lg font-semibold text-green-600">€{value.toLocaleString('it-IT')}</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Messaggio */}
+            {message && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Messaggio</p>
+                <div className="p-4 bg-white/40 dark:bg-black/30 backdrop-blur-sm rounded-2xl text-sm text-gray-700 dark:text-gray-300 border border-white/30 dark:border-white/20">
+                  {message}
+                </div>
               </div>
+            )}
+            
+            {/* Pulsanti azione */}
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={handleCall}
+                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
+              >
+                <Phone className="w-4 h-4" />
+                Chiama
+              </button>
+              
+              <button
+                onClick={handleWhatsApp}
+                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
+              >
+                <MessageCircle className="w-4 h-4" />
+                WhatsApp
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -347,6 +377,7 @@ export default function ContactsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [contactTriggerRect, setContactTriggerRect] = useState<DOMRect | null>(null); // NUOVO STATO
   const [highlightedContactId, setHighlightedContactId] = useState<string | null>(null);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
@@ -420,7 +451,11 @@ export default function ContactsPage() {
         // Remove the highlight after 1200ms e apri la modale
         setTimeout(() => {
           setHighlightedContactId(null);
-          setSelectedContact(targetContact);
+          if (element) {
+            const rect = element.getBoundingClientRect();
+            setContactTriggerRect(rect);
+            setSelectedContact(targetContact);
+          }
         }, 1200);
       }, 100); // Timing ridotto per migliori performance
     } else {
@@ -539,8 +574,16 @@ export default function ContactsPage() {
     }
   };
   
-  // Gestisce il click su un contatto
-  const handleContactClick = (contact: Contact) => {
+  // FUNZIONE AGGIORNATA: Gestisce il click su un contatto con coordinate
+  const handleContactClick = (contact: Contact, event: React.MouseEvent) => {
+    // Ottieni le coordinate dell'elemento cliccato
+    const targetElement = event.currentTarget as HTMLElement;
+    const rect = targetElement.getBoundingClientRect();
+    
+    console.log('Contact clicked:', contact.name, 'at coordinates:', rect);
+    
+    // Imposta il contatto selezionato con le coordinate
+    setContactTriggerRect(rect);
     setSelectedContact(contact);
   };
   
@@ -670,7 +713,7 @@ export default function ContactsPage() {
                           ? 'bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-300/40 shadow-md scale-[1.01]' 
                           : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                       }`}
-                      onClick={() => handleContactClick(contact)}
+                      onClick={(e) => handleContactClick(contact, e)}
                     >
                       <div className="flex items-start space-x-3">
                         {getSourceIcon(contact)}
@@ -726,7 +769,7 @@ export default function ContactsPage() {
                             ? 'bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-300/40 shadow-md scale-[1.002]' 
                             : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                         }`}
-                        onClick={() => handleContactClick(contact)}
+                        onClick={(e) => handleContactClick(contact, e)}
                       >
                         <div className="grid grid-cols-12 gap-4 items-center">
                           {/* Nome con icona */}
@@ -801,13 +844,19 @@ export default function ContactsPage() {
         </div>
       </div>
       
-      {/* Modale dettagli contatto */}
-      {selectedContact && (
-        <ContactDetailModal 
-          contact={selectedContact}
-          onClose={() => setSelectedContact(null)}
-        />
-      )}
+      {/* Modale dettagli contatto con AnimatePresence */}
+      <AnimatePresence>
+        {selectedContact && (
+          <ContactDetailModal 
+            contact={selectedContact}
+            onClose={() => {
+              setSelectedContact(null);
+              setContactTriggerRect(null);
+            }}
+            triggerRect={contactTriggerRect}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
