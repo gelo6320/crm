@@ -186,15 +186,15 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   return (
     // ✅ FIX WEBKIT BUG: Applica transizione e backdrop-blur allo STESSO elemento
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-all duration-300 ${
-        isClosing || isOpening ? 'opacity-0' : 'opacity-100'
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xl transition-all duration-300 ${
+        isClosing || isOpening ? 'opacity-0 backdrop-blur-none' : 'opacity-100 backdrop-blur-xl'
       }`}
       onClick={handleClose}
     >
-      {/* Modal content con blur e transizione sullo STESSO elemento */}
+      {/* Modal content */}
       <div 
-        className={`relative z-10 w-full max-w-lg mx-6 backdrop-blur-lg transition-all duration-300 ${
-          isClosing || isOpening ? 'scale-95 opacity-0 backdrop-blur-none' : 'scale-100 opacity-100 backdrop-blur-lg'
+        className={`relative z-10 w-full max-w-lg mx-6 transition-all duration-300 ${
+          isClosing || isOpening ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
         }`}
         onClick={(e) => e.stopPropagation()} // Previeni chiusura quando si clicca sul contenuto
       >
