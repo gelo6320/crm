@@ -231,7 +231,8 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
           className="relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden"
           style={{ 
             backdropFilter: `blur(${blurValue})`,
-            transition: 'backdrop-filter 300ms ease-out'
+            transition: 'backdrop-filter 300ms ease-out',
+            willChange: 'backdrop-filter' // ← Aggiunge questo
           }}
         >
           {/* Content */}
