@@ -183,18 +183,16 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const value = contact.value !== undefined ? contact.value : (contact.extendedData?.value || 0);
 
   return (
-    // ✅ Backdrop schermo: SOLO overlay scuro, NESSUN blur
+    // ✅ APPROCCIO SEMPLIFICATO: Un solo div con una sola animazione, NESSUN blur
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-opacity duration-300 ${
-        isClosing || isOpening ? 'opacity-0' : 'opacity-100'
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-all duration-300 ${
+        isClosing || isOpening ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
       }`}
       onClick={handleClose}
     >
-      {/* Modal content: SOLO QUI il blur con transizione (FIX WEBKIT) */}
+      {/* Modal content senza blur */}
       <div 
-        className={`relative z-10 w-full max-w-lg mx-6 transition-all duration-300 ${
-          isClosing || isOpening ? 'scale-95 opacity-0 backdrop-blur-none' : 'scale-100 opacity-100 backdrop-blur-xl'
-        }`}
+        className="relative z-10 w-full max-w-lg mx-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* SmoothCorners per i superellipse */}
@@ -203,8 +201,8 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
           borderRadius="24"
         />
         
-        {/* Modal background SENZA backdrop-blur (spostato nel parent) */}
-        <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden">
+        {/* Modal background CON backdrop-blur (effetto frosted glass) */}
+        <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 backdrop-blur-xl rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden">
           {/* Content */}
           <div className="relative">
             {/* Header */}
