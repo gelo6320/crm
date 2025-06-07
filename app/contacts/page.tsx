@@ -134,17 +134,36 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isOpening, setIsOpening] = useState(true);
 
+  console.log('🔄 Render - isOpening:', isOpening, 'isClosing:', isClosing);
+
+  // Gestisci l'animazione di apertura
   useEffect(() => {
-    // Aspetta che il browser renderizzi il frame corrente
+    console.log('🚀 Modal mounted - starting opening animation');
+    
     const frame = requestAnimationFrame(() => {
+      console.log('📱 RequestAnimationFrame executed - setting isOpening to false');
       setIsOpening(false);
     });
-    return () => cancelAnimationFrame(frame);
+    
+    return () => {
+      console.log('🧹 Cleanup - cancelling animation frame');
+      cancelAnimationFrame(frame);
+    };
   }, []);
 
+  useEffect(() => {
+    console.log('🎭 State change - isOpening:', isOpening);
+  }, [isOpening]);
+
+  useEffect(() => {
+    console.log('🚪 State change - isClosing:', isClosing);
+  }, [isClosing]);
+
   const handleClose = () => {
+    console.log('❌ Close triggered - setting isClosing to true');
     setIsClosing(true);
     setTimeout(() => {
+      console.log('⏰ Close timeout completed - calling onClose');
       onClose();
     }, 300);
   };
@@ -182,30 +201,28 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const service = contact.service || contact.extendedData?.formData?.service || "";
   const value = contact.value !== undefined ? contact.value : (contact.extendedData?.value || 0);
 
+  const blurValue = isClosing || isOpening ? '0px' : '12px';
+  console.log('🌫️ Blur value calculated:', blurValue);
   return (
-    // ✅ APPROCCIO SEMPLIFICATO: Un solo div con una sola animazione, NESSUN blur
     <div 
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-all duration-300 ${
         isClosing || isOpening ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
       }`}
       onClick={handleClose}
     >
-      {/* Modal content senza blur */}
       <div 
         className="relative z-10 w-full max-w-lg mx-6"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* SmoothCorners per i superellipse */}
         <SmoothCorners 
           corners="2.5"
           borderRadius="24"
         />
         
-        {/* Modal background CON backdrop-blur (effetto frosted glass) */}
         <div 
           className="relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden"
           style={{ 
-            backdropFilter: `blur(${isClosing || isOpening ? '0px' : '12px'})`,
+            backdropFilter: `blur(${blurValue})`,
             transition: 'backdrop-filter 300ms ease-out'
           }}
         >
