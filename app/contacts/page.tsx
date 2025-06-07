@@ -208,9 +208,6 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const message = contact.extendedData?.formData?.message || contact.message || "";
   const service = contact.service || contact.extendedData?.formData?.service || "";
   const value = contact.value !== undefined ? contact.value : (contact.extendedData?.value || 0);
-
-  const blurValue = isClosing || isOpening ? '0px' : '12px';
-  console.log('🌫️ Blur value calculated:', blurValue);
   return (
     <div 
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-all duration-300 ${
@@ -228,12 +225,9 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
         />
         
         <div 
-          className={`relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden transition-all duration-300 ${
-            isClosing || isOpening ? 'opacity-0' : 'opacity-100'
+          className={`relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden ${
+            isClosing ? 'blur-animate-out' : isOpening ? '' : 'blur-animate-in'
           }`}
-          style={{ 
-            backdropFilter: 'blur(12px)'
-          }}
         >
           {/* Content */}
           <div className="relative">

@@ -248,3 +248,21 @@ textarea {
     --squircle-large: 14px;
   }
 }
+
+@keyframes blurIn {
+  from { backdrop-filter: blur(0px); }
+  to { backdrop-filter: blur(12px); }
+}
+
+@keyframes blurOut {
+  from { backdrop-filter: blur(12px); }
+  to { backdrop-filter: blur(0px); }
+}
+
+.blur-animate-in {
+  animation: blurIn 300ms ease-out forwards;
+}
+
+.blur-animate-out {
+  animation: blurOut 300ms ease-out forwards;
+}
