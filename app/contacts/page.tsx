@@ -134,12 +134,12 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isOpening, setIsOpening] = useState(true);
 
-  // Gestisci l'animazione di apertura
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Aspetta che il browser renderizzi il frame corrente
+    const frame = requestAnimationFrame(() => {
       setIsOpening(false);
-    }, 10);
-    return () => clearTimeout(timer);
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   const handleClose = () => {
