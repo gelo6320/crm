@@ -151,14 +151,19 @@ export default function Sidebar({ open, setOpen, isMobile, isHovered = false }: 
   
     return (
       <>
-        {/* Mobile overlay con transizione graduale */}
+        {/* Mobile overlay con transizione graduale - sempre presente quando mobile */}
         {isMobile && (
           <div 
-          className={`
-            fixed inset-0 bg-black/60 z-30 transition-opacity duration-400 ease-out
-            ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-          `}
+            className={`
+              fixed inset-0 bg-black/60 z-30 transition-all duration-400 ease-out
+              ${open ? 'opacity-100 visible' : 'opacity-0 invisible'}
+            `}
             onClick={() => setOpen(false)}
+            style={{
+              transitionProperty: 'opacity, visibility',
+              transitionDuration: '400ms',
+              transitionTimingFunction: 'ease-out'
+            }}
           />
         )}
         
