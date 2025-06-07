@@ -229,10 +229,10 @@ function ContactDetailModal({ contact, onClose }: ContactDetailModalProps) {
         
         <div 
           className={`relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden transition-all duration-300 ${
-            isClosing || isOpening ? '' : ''
+            isClosing || isOpening ? 'opacity-0' : 'opacity-100'
           }`}
           style={{ 
-            backdropFilter: `blur(12px) opacity(${isClosing || isOpening ? '0' : '1'})`,
+            backdropFilter: 'blur(12px)'
           }}
         >
           {/* Content */}
