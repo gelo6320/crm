@@ -145,11 +145,13 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
           x: 0,
           y: 0,
           scale: 0.1,
+          opacity: 1,
         },
         animate: {
           x: 0,
           y: 0,
           scale: 1,
+          opacity: 1,
         }
       };
     }
@@ -167,11 +169,13 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
         x: triggerCenterX - finalX, // Offset dal centro
         y: triggerCenterY - finalY, // Offset dal centro
         scale: 0.1,
+        opacity: 1,
       },
       animate: {
         x: 0, // Torna al centro
         y: 0, // Torna al centro
         scale: 1,
+        opacity: 1,
       }
     };
   };
@@ -184,14 +188,14 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
     setTimeout(() => {
       console.log('⏰ Close timeout completed - calling onClose');
       onClose();
-    }, 300);
+    }, 200); // Ridotto da 300ms a 200ms
   };
 
   // Configurazione spring per animazione naturale stile iOS
   const springConfig = {
     type: "spring" as const,
-    damping: 25,
-    stiffness: 300,
+    damping: isClosing ? 35 : 25,        // Chiusura più veloce
+    stiffness: isClosing ? 400 : 300,    // Chiusura più snappy
     mass: 0.8,
   };
 
@@ -250,6 +254,7 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
         animate={isClosing ? {
           ...coords.initial,
           scale: 0.1,
+          opacity: 0, // Fade out durante la chiusura
         } : coords.animate}
         transition={springConfig}
         style={{
