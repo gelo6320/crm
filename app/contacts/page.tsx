@@ -237,7 +237,13 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
       onClick={handleClose}
     >
       {/* Background overlay FISSO senza animazioni per evitare conflitti blur */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-xs backdrop-saturate-150" />
+      <motion.div 
+        className="absolute inset-0 bg-black/40 backdrop-blur-xs backdrop-saturate-150"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={springConfig}
+      />
       
       {/* Modal container con animazione iOS */}
       <motion.div 

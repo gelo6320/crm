@@ -241,7 +241,6 @@ textarea {
 }
 
 /* Responsive adjustments */
-/* Responsive adjustments */
 @media (max-width: 768px) {
   :root {
     --squircle-radius: 10px;
