@@ -230,13 +230,13 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={handleClose}
     >
-      {/* Background overlay con backdrop-blur Tailwind */}
+      {/* Background overlay SEMPLICE senza blur */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={blurConfig}
-        className="absolute inset-0 bg-black/40 backdrop-blur-md"
+        className="absolute inset-0 bg-black/40"
       />
       
       {/* Modal container responsivo */}
@@ -261,26 +261,31 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
           borderRadius="24"
         />
         
-        {/* Container del modale con backdrop-blur Tailwind */}
+        {/* Container del modale CON backdrop-blur */}
         <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 backdrop-blur-xl rounded-[24px] border border-white/30 dark:border-white/20 shadow-2xl overflow-hidden">
           
-          {/* Pulsante chiusura in alto a destra */}
-          <button
-            onClick={handleClose}
-            className="absolute top-4 right-4 z-10 p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
+          {/* Pulsante chiusura e stato */}
+          <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
+            <button
+              onClick={handleClose}
+              className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+            {/* StatusBadge ridotto e spostato */}
+            <div className="scale-75 origin-top-right">
+              <StatusBadge status={contact.status} />
+            </div>
+          </div>
           
           {/* CONTENUTO responsivo */}
           <div className="p-6 sm:p-8 space-y-6 sm:space-y-8 min-h-[400px] sm:min-h-[450px]">
             
-            {/* Header con nome e stato - Typography responsiva */}
-            <div className="flex justify-between items-start pr-12">
-              <div className="flex items-center space-x-3 sm:space-x-4">
+            {/* Header con nome - senza stato */}
+            <div className="flex items-center space-x-3 sm:space-x-4 pr-12">
                 {contact.source === "facebook" ? (
                   <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-100/90 dark:bg-blue-900/40 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
                     <svg 
@@ -311,10 +316,6 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
                     {formatSource(contact.source, contact.formType)}
                   </p>
                 </div>
-              </div>
-              <div className="flex-shrink-0 mt-1">
-                <StatusBadge status={contact.status} />
-              </div>
             </div>
             
             {/* Info contatto con spaziatura responsiva */}
