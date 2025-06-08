@@ -205,14 +205,33 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 ==================================== */
 
 /* Squircle design system */
-.card,
-.bg-zinc-900,
-.bg-zinc-800,
-.bg-zinc-700,
-.rounded-lg,
-.rounded-md {
+.sidebar .card,
+.content-area .bg-zinc-900,
+.content-area .bg-zinc-800,
+.sidebar .rounded-lg {
   border-radius: var(--squircle-radius) !important;
   border: none !important;
+}
+
+.card:not(.modal-backdrop),
+.bg-zinc-900:not(.modal-backdrop),
+.bg-zinc-800:not(.modal-backdrop),
+.rounded-lg:not(.modal-backdrop) {
+  border-radius: var(--squircle-radius) !important;
+  border: none !important;
+}
+
+/* SOLUZIONE 4: CSS specifico per il backdrop-blur del modale */
+.modal-backdrop {
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  background: rgba(250, 250, 250, 0.6) !important;
+}
+
+.dark .modal-backdrop {
+  background: rgba(39, 39, 42, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
 .rounded-xl {
@@ -230,13 +249,11 @@ textarea {
 }
 
 /* Remove all existing borders */
-.border,
-.border-zinc-700,
-.border-zinc-800,
-.border-t,
-.border-b,
-.border-l,
-.border-r {
+.sidebar .border,
+.sidebar .border-zinc-700,
+.sidebar .border-zinc-800,
+.card .border-t,
+.card .border-b {
   border: none !important;
 }
 
@@ -249,20 +266,32 @@ textarea {
   }
 }
 
-@keyframes blurIn {
-  from { backdrop-filter: blur(0px); }
-  to { backdrop-filter: blur(12px); }
+@keyframes modalBlurIn {
+  from { 
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to { 
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
 }
 
-@keyframes blurOut {
-  from { backdrop-filter: blur(12px); }
-  to { backdrop-filter: blur(0px); }
+@keyframes modalBlurOut {
+  from { 
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  to { 
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
 }
 
 .blur-animate-in {
-  animation: blurIn 300ms ease-out forwards;
+  animation: modalBlurIn 300ms ease-out forwards;
 }
 
 .blur-animate-out {
-  animation: blurOut 300ms ease-out forwards;
+  animation: modalBlurOut 300ms ease-out forwards;
 }

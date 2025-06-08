@@ -255,9 +255,9 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
           willChange: 'transform, opacity'
         }}
       >
-        {/* Container del modale con backdrop-blur */}
-        <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 backdrop-blur-xl rounded-[24px] border border-white/30 dark:border-white/20 shadow-2xl overflow-hidden">
-        
+        {/* Container del modale con classe CSS personalizzata */}
+        <div className="modal-backdrop rounded-[24px] shadow-2xl overflow-hidden">
+          
           {/* Pulsante chiusura e stato */}
           <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
             <button
