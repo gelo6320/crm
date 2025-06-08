@@ -1,4 +1,4 @@
-// components/analytics/TemporalPatternsSimple.tsx - Versione Raffinata
+// components/analytics/TemporalPatternsSimple.tsx - Versione Raffinata e Corretta
 "use client";
 
 import React, { useState } from 'react';
@@ -198,28 +198,49 @@ export default function TemporalPatternsSimple({
         <SmoothCorners corners="3" borderRadius="24" />
         <div className="relative bg-white/60 dark:bg-white/5 backdrop-blur-sm border border-white/40 dark:border-white/20 rounded-[24px] p-4 sm:p-6">
           <div className="h-64 sm:h-80">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer 
+              width="100%" 
+              height="100%"
+              // ✅ CORREZIONE: Rimuove margin e padding di default
+            >
               {activeView === 'hourly' ? (
-                <ComposedChart data={hourlyChartData}>
+                <ComposedChart 
+                  data={hourlyChartData}
+                  // ✅ CORREZIONE: Rimuove margin per eliminare spazio a sinistra
+                  margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
+                >
                   <defs>
                     <linearGradient id="visitsGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4}/>
                       <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.3} />
+                  {/* ✅ CORREZIONE: Riduce l'opacità delle linee tratteggiate */}
+                  <CartesianGrid 
+                    strokeDasharray="3 3" 
+                    stroke="#E5E7EB" 
+                    opacity={0.15} 
+                    horizontal={true}
+                    vertical={false}
+                  />
+                  {/* ✅ CORREZIONE: Rende gli assi solidi */}
                   <XAxis 
                     dataKey="hourLabel" 
-                    stroke="#9CA3AF"
+                    stroke="#6B7280"
+                    strokeWidth={1}
                     fontSize={11}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={true}
+                    tickLine={true}
+                    tickSize={4}
                   />
                   <YAxis 
-                    stroke="#9CA3AF"
+                    stroke="#6B7280"
+                    strokeWidth={1}
                     fontSize={11}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={true}
+                    tickLine={true}
+                    tickSize={4}
+                    width={30}
                   />
                   <Tooltip
                     contentStyle={{
@@ -253,20 +274,37 @@ export default function TemporalPatternsSimple({
                   />
                 </ComposedChart>
               ) : (
-                <BarChart data={weeklyChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.3} />
+                <BarChart 
+                  data={weeklyChartData}
+                  // ✅ CORREZIONE: Rimuove margin per eliminare spazio a sinistra
+                  margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
+                >
+                  {/* ✅ CORREZIONE: Riduce l'opacità delle linee tratteggiate */}
+                  <CartesianGrid 
+                    strokeDasharray="3 3" 
+                    stroke="#E5E7EB" 
+                    opacity={0.15}
+                    horizontal={true}
+                    vertical={false}
+                  />
+                  {/* ✅ CORREZIONE: Rende gli assi solidi */}
                   <XAxis 
                     dataKey="dayLabel" 
-                    stroke="#9CA3AF"
+                    stroke="#6B7280"
+                    strokeWidth={1}
                     fontSize={11}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={true}
+                    tickLine={true}
+                    tickSize={4}
                   />
                   <YAxis 
-                    stroke="#9CA3AF"
+                    stroke="#6B7280"
+                    strokeWidth={1}
                     fontSize={11}
-                    axisLine={false}
-                    tickLine={false}
+                    axisLine={true}
+                    tickLine={true}
+                    tickSize={4}
+                    width={30}
                   />
                   <Tooltip
                     contentStyle={{
