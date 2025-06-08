@@ -352,7 +352,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
     // L'animazione parte dal centro della search bar (altezza 0) e si espande verso il basso
     return {
       initial: {
-        y: -searchTriggerRect.height / 2, // Parte dal centro verticale della search bar
+        y: -(searchTriggerRect.height / 2 + 12), // Parte dal centro della search bar considerando il padding
         scaleY: 0.1,
         scaleX: 0.8,
         opacity: 0,
@@ -597,15 +597,17 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
             
             {/* Results container posizionato sotto la search bar */}
             <motion.div 
-              className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-md mx-4 sm:mx-6"
+              className="absolute w-full max-w-md"
               style={{
-                top: searchTriggerRect ? searchTriggerRect.bottom + 4 : '80px'
+                top: searchTriggerRect ? searchTriggerRect.bottom + 12 : '84px',
+                left: searchTriggerRect ? searchTriggerRect.left + (searchTriggerRect.width / 2) : '50%',
+                transform: 'translateX(-50%)'
               }}
               onClick={(e) => e.stopPropagation()}
               initial={getSearchAnimationCoordinates().initial}
               animate={getSearchAnimationCoordinates().animate}
               exit={{
-                y: -40,
+                y: -52, // -(searchTriggerRect.height / 2 + 12) approssimativo
                 scaleY: 0.1,
                 scaleX: 0.8,
                 opacity: 0,
@@ -619,27 +621,8 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
               />
               
               <div className="relative bg-white/85 dark:bg-zinc-800/85 backdrop-blur-xs rounded-[24px] shadow-lg overflow-hidden backdrop-saturate-150">
-                {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200/50 dark:border-zinc-700/50">
-                  <div className="flex items-center gap-2">
-                    <Search size={16} className="text-zinc-500" />
-                    <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                      "{searchQuery}"
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowSearchResults(false);
-                      setSearchTriggerRect(null);
-                    }}
-                    className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-                
                 {/* Results */}
-                <div className="py-2">
+                <div className="py-3">
                   {searchResults.length === 0 ? (
                     <div className="px-5 py-6 text-center text-sm text-zinc-500">
                       {isSearching ? (
