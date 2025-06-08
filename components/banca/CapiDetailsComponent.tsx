@@ -153,7 +153,7 @@ export const CapiDetailsModal: React.FC<CapiDetailsModalProps> = ({ capiData, on
           borderRadius="24"
         />
         
-        <div className="relative bg-zinc-200/85 dark:bg-zinc-500/80 rounded-[24px] shadow-lg overflow-hidden max-h-[80vh] flex flex-col">
+        <div className="relative bg-zinc-200/85 dark:bg-zinc-700/80 rounded-[24px] shadow-lg overflow-hidden max-h-[80vh] flex flex-col">
           {/* Header minimale */}
           <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center gap-3">
