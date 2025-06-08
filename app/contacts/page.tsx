@@ -131,7 +131,6 @@ function formatSource(source: string, formType: string): string {
 }
 
 // Componente modale aggiornato con animazione iOS-style
-// Componente modale aggiornato con animazione iOS-style e correzioni per Android
 function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -140,7 +139,6 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
 
   // Effetto per gestire il mounting del modale
   useEffect(() => {
-    // Piccolo delay per permettere al DOM di essere pronto
     const timer = setTimeout(() => {
       setIsMounted(true);
     }, 10);
@@ -151,44 +149,25 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
   // Calcola le coordinate iniziali e finali per l'animazione
   const getAnimationCoordinates = () => {
     if (!triggerRect) {
-      // Fallback al centro dello schermo se non abbiamo coordinate
       return {
-        initial: {
-          x: 0,
-          y: 0,
-          scale: 0.1,
-          opacity: 1,
-        },
-        animate: {
-          x: 0,
-          y: 0,
-          scale: 1,
-          opacity: 1,
-        }
+        initial: { x: 0, y: 0, scale: 0.1, opacity: 1 },
+        animate: { x: 0, y: 0, scale: 1, opacity: 1 }
       };
     }
 
-    // Coordinate del centro del contatto cliccato
     const triggerCenterX = triggerRect.left + (triggerRect.width / 2);
     const triggerCenterY = triggerRect.top + (triggerRect.height / 2);
-
-    // Coordinate finali (centro dello schermo)
     const finalX = window.innerWidth / 2;
     const finalY = window.innerHeight / 2;
 
     return {
       initial: {
-        x: triggerCenterX - finalX, // Offset dal centro
-        y: triggerCenterY - finalY, // Offset dal centro
+        x: triggerCenterX - finalX,
+        y: triggerCenterY - finalY,
         scale: 0.1,
         opacity: 1,
       },
-      animate: {
-        x: 0, // Torna al centro
-        y: 0, // Torna al centro
-        scale: 1,
-        opacity: 1,
-      }
+      animate: { x: 0, y: 0, scale: 1, opacity: 1 }
     };
   };
 
@@ -197,11 +176,10 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
   const handleClose = () => {
     console.log('❌ Close triggered - calling onClose immediately');
     setIsClosing(true);
-    // Chiama onClose immediatamente per liberare l'interfaccia
     onClose();
   };
 
-  // Configurazione spring ottimizzata per Android
+  // Configurazioni animate
   const springConfig = {
     type: "spring" as const,
     damping: isClosing ? 35 : 25,
@@ -209,9 +187,8 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
     mass: 0.8,
   };
 
-  // Configurazione separata per il blur background
   const blurConfig = {
-    duration: 0.15, // Durata più breve per il blur
+    duration: 0.15,
     ease: "easeOut" as const,
   };
 
@@ -232,7 +209,6 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
     }
   };
 
-  // Chiudi la modale quando si preme ESC
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -252,37 +228,21 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={handleClose}
-      style={{
-        // Aggiunge will-change per ottimizzare le performance su Android
-        willChange: 'backdrop-filter, opacity'
-      }}
     >
-      {/* Background overlay con gestione ottimizzata per Android */}
+      {/* Background overlay ottimizzato */}
       <motion.div
-        initial={{ 
-          opacity: 0,
-          backdropFilter: "blur(0px)" 
-        }}
-        animate={{ 
-          opacity: 1,
-          backdropFilter: isMounted ? "blur(8px)" : "blur(0px)"
-        }}
-        exit={{ 
-          opacity: 0,
-          backdropFilter: "blur(0px)"
-        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         transition={blurConfig}
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         style={{
-          // Fallback per browser che non supportano backdrop-filter
-          background: 'rgba(0, 0, 0, 0.4)',
-          willChange: 'backdrop-filter, opacity',
-          // Pre-compone il layer per migliori performance
+          willChange: 'opacity',
           transform: 'translateZ(0)',
         }}
       />
       
-      {/* Modal container con animazione iOS */}
+      {/* Modal container */}
       <motion.div 
         className="relative z-10 w-full max-w-lg mx-6"
         onClick={(e) => e.stopPropagation()}
@@ -296,7 +256,7 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
         transition={springConfig}
         style={{
           transformOrigin: "center center",
-          willChange: 'transform, opacity' // Ottimizzazione per le trasformazioni
+          willChange: 'transform, opacity'
         }}
       >
         <SmoothCorners 
@@ -304,16 +264,10 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
           borderRadius="24"
         />
         
-        <div 
-          className="relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden backdrop-blur-lg"
-          style={{
-            // Fallback per il backdrop-blur del container
-            background: 'rgba(250, 250, 250, 0.8)',
-            willChange: 'transform'
-          }}
-        >
+        {/* CORREZIONE: Container del modale senza fallback che sovrascrive */}
+        <div className="relative bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[24px] border border-white/20 dark:border-white/10 shadow-2xl overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/30 dark:border-white/20">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/20 dark:border-white/10 bg-white/50 dark:bg-zinc-800/50 backdrop-blur-sm">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Dettagli contatto</h3>
             <button
               onClick={handleClose}
