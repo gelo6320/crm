@@ -131,6 +131,7 @@ function formatSource(source: string, formType: string): string {
 }
 
 // Componente modale aggiornato con animazione iOS-style
+// Componente modale aggiornato con animazione iOS-style
 function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
 
@@ -235,14 +236,8 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
       className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={handleClose}
     >
-      {/* Background overlay animato */}
-      <motion.div
-        initial={{ opacity: 1 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="absolute inset-0 bg-black/40"
-      />
+      {/* Background overlay FISSO senza animazioni per evitare conflitti blur */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-md backdrop-saturate-150" />
       
       {/* Modal container con animazione iOS */}
       <motion.div 
@@ -265,7 +260,7 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
           borderRadius="24"
         />
         
-        <div className="relative bg-zinc-50/80 dark:bg-zinc-100/10 rounded-[24px] shadow-xl overflow-hidden backdrop-blur-md backdrop-saturate-150">
+        <div className="relative bg-zinc-50/80 dark:bg-zinc-100/10 rounded-[24px] shadow-xl overflow-hidden">
           {/* Header minimale con solo bottone chiudi e status */}
           <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
             <div className="w-6"></div> {/* Spacer per centrare il contenuto */}
@@ -352,7 +347,7 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
             )}
             
             {/* Pulsanti azione */}
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
+            <div className="flex gap-2 sm:gap-3 pt-2">
               <button
                 onClick={handleCall}
                 className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/50 dark:bg-white/20 hover:bg-white/70 dark:hover:bg-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 text-sm sm:text-base"
