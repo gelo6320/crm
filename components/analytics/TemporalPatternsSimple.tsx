@@ -1,8 +1,9 @@
-// components/analytics/TemporalPatternsSimple.tsx
+// components/analytics/TemporalPatternsSimple.tsx - Versione Raffinata
 "use client";
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { SmoothCorners } from 'react-smooth-corners';
 import {
   BarChart,
   Bar,
@@ -21,13 +22,11 @@ import {
   Clock, 
   Calendar, 
   TrendingUp, 
-  Activity,
-  Award,
   Users,
   Eye,
   Target
 } from 'lucide-react';
-import { TemporalAnalysis } from '@/lib/api/analytics'; // Fixed: import from API types
+import { TemporalAnalysis } from '@/lib/api/analytics';
 
 interface TemporalPatternsSimpleProps {
   data: TemporalAnalysis | null;
@@ -42,74 +41,49 @@ export default function TemporalPatternsSimple({
 
   if (isLoading || !data) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="space-y-6">
+        {/* Skeleton metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-zinc-900 rounded-xl p-6 animate-pulse">
-              <div className="h-4 bg-zinc-800 rounded mb-3"></div>
-              <div className="h-8 bg-zinc-800 rounded mb-2"></div>
-              <div className="h-3 bg-zinc-800 rounded w-3/4"></div>
+            <div key={i} className="relative">
+              <SmoothCorners corners="3" borderRadius="20" />
+              <div className="relative bg-white/40 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/20 rounded-[20px] p-4 sm:p-6 animate-pulse">
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded mb-3"></div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+              </div>
             </div>
           ))}
         </div>
-        <div className="bg-zinc-900 rounded-xl p-6 animate-pulse">
-          <div className="h-80 bg-zinc-800 rounded"></div>
+        
+        {/* Skeleton chart */}
+        <div className="relative">
+          <SmoothCorners corners="3" borderRadius="24" />
+          <div className="relative bg-white/40 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/20 rounded-[24px] p-6 animate-pulse">
+            <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+          </div>
         </div>
       </div>
     );
   }
 
-  const { hourlyDistribution, weeklyDistribution, summary, insights } = data;
+  const { hourlyDistribution, weeklyDistribution, summary } = data;
 
-  // Mappa nomi giorni
-  const dayNameMap: { [key: string]: string } = {
-    'Monday': 'Lun',
-    'Tuesday': 'Mar',
-    'Wednesday': 'Mer',
-    'Thursday': 'Gio',
-    'Friday': 'Ven',
-    'Saturday': 'Sab',
-    'Sunday': 'Dom'
-  };
-
-  // Mappa nomi giorni completi
-  const fullDayNameMap: { [key: string]: string } = {
-    'Monday': 'lunedì',
-    'Tuesday': 'martedì',
-    'Wednesday': 'mercoledì', 
-    'Thursday': 'giovedì',
-    'Friday': 'venerdì',
-    'Saturday': 'sabato',
-    'Sunday': 'domenica'
-  };
-
-  // Prepara dati grafico orario
+  // Prepara dati
   const hourlyChartData = hourlyDistribution?.map(hour => ({
     ...hour,
     hourLabel: `${hour.hour.toString().padStart(2, '0')}:00`,
-    combinedMetric: (hour.visits || 0) * 0.4 + (hour.engagement || 0) * 0.6
   })) || [];
 
-  // Prepara dati grafico settimanale
-  const weeklyChartData = weeklyDistribution?.map(day => ({
-    ...day,
-    dayLabel: dayNameMap[day.dayName] || (day.dayName?.substring(0, 3) || 'N/A'),
-    performanceScore: (day.visits || 0) * 0.3 + (day.avgEngagement || 0) * 0.7
-  })) || [];
+  const weeklyChartData = weeklyDistribution?.map(day => {
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+    return {
+      ...day,
+      dayLabel: dayNames[day.dayOfWeek] || 'N/A',
+    };
+  }) || [];
 
-  // Ottieni ore con migliori performance (visite non zero)
-  const topHours = hourlyChartData
-    .filter(hour => (hour.visits || 0) > 0)
-    .sort((a, b) => (b.combinedMetric || 0) - (a.combinedMetric || 0))
-    .slice(0, 5);
-
-  // Ottieni giorni con migliori performance
-  const topDays = weeklyChartData
-    .filter(day => (day.visits || 0) > 0)
-    .sort((a, b) => (b.performanceScore || 0) - (a.performanceScore || 0))
-    .slice(0, 3);
-
-  // Calcola totali
+  // Calcola metriche
   const totalVisits = hourlyChartData.reduce((sum, hour) => sum + (hour.visits || 0), 0);
   const totalPageViews = hourlyChartData.reduce((sum, hour) => sum + (hour.pageViews || 0), 0);
   const totalConversions = hourlyChartData.reduce((sum, hour) => sum + (hour.conversions || 0), 0);
@@ -117,181 +91,150 @@ export default function TemporalPatternsSimple({
     ? hourlyChartData.reduce((sum, hour) => sum + ((hour.engagement || 0) * (hour.visits || 0)), 0) / totalVisits 
     : 0;
 
+  const conversionRate = totalVisits > 0 ? (totalConversions / totalVisits) * 100 : 0;
+
+  const metrics = [
+    {
+      icon: Users,
+      value: totalVisits.toLocaleString(),
+      label: 'Visite',
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20'
+    },
+    {
+      icon: Eye,
+      value: totalPageViews.toLocaleString(),
+      label: 'Visualizzazioni',
+      color: 'text-green-500',
+      bgColor: 'bg-green-50 dark:bg-green-900/20'
+    },
+    {
+      icon: TrendingUp,
+      value: Math.round(avgEngagement).toString(),
+      label: 'Coinvolgimento',
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/20'
+    },
+    {
+      icon: Target,
+      value: `${conversionRate.toFixed(1)}%`,
+      label: 'Conversioni',
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/20'
+    }
+  ];
+
   return (
-    <div className="p-6 space-y-8">
-      {/* Intestazione */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white flex items-center">
-          <Clock className="w-6 h-6 text-orange-500 mr-3" />
-          Analisi Performance Temporale
-        </h2>
-        
-        <div className="text-sm text-zinc-400">
-          {(data.recordsAnalyzed || 0).toLocaleString()} record analizzati
-        </div>
-      </div>
-
-      {/* Schede Riassuntive */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <motion.div 
-          className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Users className="w-5 h-5 text-blue-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Visite Totali</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="text-3xl font-bold text-white">
-              {totalVisits.toLocaleString()}
-            </div>
-            <div className="text-xs text-zinc-500">
-              Picco: {summary?.peakHour?.time || 'N/A'} ({(summary?.peakHour?.visits || 0)} visite)
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Eye className="w-5 h-5 text-green-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Visualizzazioni</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="text-3xl font-bold text-white">
-              {totalPageViews.toLocaleString()}
-            </div>
-            <div className="text-xs text-zinc-500">
-              Media per visita: {totalVisits > 0 ? (totalPageViews / totalVisits).toFixed(1) : '0'}
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Activity className="w-5 h-5 text-orange-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Coinvolg. Medio</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="text-3xl font-bold text-white">
-              {Math.round(avgEngagement || 0)}
-            </div>
-            <div className="text-xs text-zinc-500">
-              Giorno migliore: {fullDayNameMap[summary?.peakDay?.day || ''] || 'N/A'}
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div 
-          className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Target className="w-5 h-5 text-purple-500 mr-2" />
-              <span className="text-sm font-medium text-zinc-400">Conversioni</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="text-3xl font-bold text-white">
-              {totalConversions.toLocaleString()}
-            </div>
-            <div className="text-xs text-zinc-500">
-              Tasso: {totalVisits > 0 ? ((totalConversions / totalVisits) * 100).toFixed(1) : '0'}%
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Toggle Vista */}
-      <div className="flex bg-zinc-900 rounded-xl p-1 border border-zinc-800">
-        {[
-          { id: 'hourly', label: 'Performance Oraria', icon: Clock },
-          { id: 'weekly', label: 'Performance Giornaliera', icon: Calendar }
-        ].map(view => {
-          const Icon = view.icon;
+    <div className="space-y-6">
+      {/* Metriche principali */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {metrics.map((metric, index) => {
+          const Icon = metric.icon;
           return (
-            <button
-              key={view.id}
-              onClick={() => setActiveView(view.id as any)}
-              className={`flex-1 px-4 py-3 text-sm rounded-lg transition-colors flex items-center justify-center ${
-                activeView === view.id 
-                  ? 'bg-orange-500 text-white' 
-                  : 'text-zinc-400 hover:text-white'
-              }`}
+            <motion.div
+              key={metric.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="relative group"
             >
-              <Icon size={16} className="mr-2" />
-              {view.label}
-            </button>
+              <SmoothCorners corners="3" borderRadius="20" />
+              <div className="relative bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 backdrop-blur-sm border border-white/40 dark:border-white/20 rounded-[20px] p-4 sm:p-6 transition-all duration-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full ${metric.bgColor} flex items-center justify-center`}>
+                    <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${metric.color}`} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    {metric.value}
+                  </div>
+                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                    {metric.label}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           );
         })}
       </div>
 
-      {/* Sezione Grafici */}
+      {/* Toggle vista */}
+      <div className="relative">
+        <SmoothCorners corners="2.5" borderRadius="16" />
+        <div className="relative bg-white/40 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/20 rounded-2xl p-1">
+          <div className="flex">
+            {[
+              { id: 'hourly', label: 'Orario', icon: Clock },
+              { id: 'weekly', label: 'Giornaliero', icon: Calendar }
+            ].map(view => {
+              const Icon = view.icon;
+              return (
+                <button
+                  key={view.id}
+                  onClick={() => setActiveView(view.id as any)}
+                  className={`relative flex-1 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2 ${
+                    activeView === view.id 
+                      ? 'bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-sm' 
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Icon size={16} />
+                  {view.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Grafico principale */}
       <motion.div 
-        className="bg-zinc-900 rounded-xl p-6 border border-zinc-800"
+        className="relative"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: 0.3 }}
       >
-        {activeView === 'hourly' ? (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-white">Distribuzione Performance Oraria</h3>
-            
-            {/* Grafico Orario */}
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
+        <SmoothCorners corners="3" borderRadius="24" />
+        <div className="relative bg-white/60 dark:bg-white/5 backdrop-blur-sm border border-white/40 dark:border-white/20 rounded-[24px] p-4 sm:p-6">
+          <div className="h-64 sm:h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              {activeView === 'hourly' ? (
                 <ComposedChart data={hourlyChartData}>
                   <defs>
                     <linearGradient id="visitsGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.3} />
                   <XAxis 
                     dataKey="hourLabel" 
                     stroke="#9CA3AF"
-                    fontSize={12}
+                    fontSize={11}
+                    axisLine={false}
+                    tickLine={false}
                   />
                   <YAxis 
                     stroke="#9CA3AF"
-                    fontSize={12}
+                    fontSize={11}
+                    axisLine={false}
+                    tickLine={false}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#1F2937',
-                      border: '1px solid #374151',
-                      borderRadius: '8px',
-                      color: '#F3F4F6'
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      color: '#374151',
+                      fontSize: '12px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                     }}
                     formatter={(value: any, name: any) => [
                       value,
                       name === 'visits' ? 'Visite' :
-                      name === 'pageViews' ? 'Visualizzazioni' :
-                      name === 'engagement' ? 'Coinvolgimento' :
-                      name === 'conversions' ? 'Conversioni' : name
+                      name === 'engagement' ? 'Coinvolgimento' : name
                     ]}
-                    labelFormatter={(label) => `Ora: ${label}`}
                   />
                   <Area
                     type="monotone"
@@ -306,177 +249,61 @@ export default function TemporalPatternsSimple({
                     stroke="#FF6B00"
                     strokeWidth={2}
                     dot={false}
+                    strokeDasharray="5 5"
                   />
                 </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Tabella Ore Top */}
-            <div className="space-y-4">
-              <h4 className="text-base font-medium text-white">Ore con Migliori Performance</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-zinc-800">
-                      <th className="text-left text-sm font-medium text-zinc-400 pb-3">Ora</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Visite</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Visualizzazioni</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Coinvolgimento</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Conversioni</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Performance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topHours.map((hour, index) => (
-                      <tr key={hour.hour} className="border-b border-zinc-800/50">
-                        <td className="py-3 text-sm text-white font-medium">
-                          {hour.hourLabel}
-                          {index === 0 && <Award size={14} className="inline ml-2 text-yellow-500" />}
-                        </td>
-                        <td className="py-3 text-sm text-white text-right">{hour.visits || 0}</td>
-                        <td className="py-3 text-sm text-white text-right">{hour.pageViews || 0}</td>
-                        <td className="py-3 text-sm text-right">
-                          <span className={`${
-                            (hour.engagement || 0) >= 70 ? 'text-emerald-400' :
-                            (hour.engagement || 0) >= 40 ? 'text-yellow-400' :
-                            'text-red-400'
-                          }`}>
-                            {hour.engagement || 0}
-                          </span>
-                        </td>
-                        <td className="py-3 text-sm text-white text-right">{hour.conversions || 0}</td>
-                        <td className="py-3 text-sm text-right">
-                          <div className="flex items-center justify-end">
-                            <div className="w-16 h-2 bg-zinc-800 rounded-full mr-3">
-                              <div 
-                                className="h-full bg-orange-500 rounded-full"
-                                style={{ width: `${Math.min(100, ((hour.combinedMetric || 0) / Math.max(...topHours.map(h => h.combinedMetric || 0), 1)) * 100)}%` }}
-                              />
-                            </div>
-                            <span className="text-orange-400 font-medium">
-                              {Math.round(hour.combinedMetric || 0)}
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-white">Distribuzione Performance Giornaliera</h3>
-            
-            {/* Grafico Settimanale */}
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
+              ) : (
                 <BarChart data={weeklyChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.3} />
                   <XAxis 
                     dataKey="dayLabel" 
                     stroke="#9CA3AF"
-                    fontSize={12}
+                    fontSize={11}
+                    axisLine={false}
+                    tickLine={false}
                   />
                   <YAxis 
                     stroke="#9CA3AF"
-                    fontSize={12}
+                    fontSize={11}
+                    axisLine={false}
+                    tickLine={false}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#1F2937',
-                      border: '1px solid #374151',
-                      borderRadius: '8px',
-                      color: '#F3F4F6'
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      color: '#374151',
+                      fontSize: '12px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                     }}
                     formatter={(value: any, name: any) => [
                       value,
-                      name === 'visits' ? 'Visite' :
-                      name === 'avgEngagement' ? 'Coinv. Medio' :
-                      name === 'performanceScore' ? 'Punteggio Performance' : name
+                      name === 'visits' ? 'Visite' : name
                     ]}
-                    labelFormatter={(label, payload) => {
-                      const data = payload?.[0]?.payload;
-                      return `${fullDayNameMap[data?.dayName] || data?.dayName || label}`;
-                    }}
                   />
                   <Bar 
                     dataKey="visits" 
                     fill="#3B82F6"
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar 
-                    dataKey="avgEngagement" 
-                    fill="#FF6B00"
-                    radius={[4, 4, 0, 0]}
+                    radius={[6, 6, 0, 0]}
                   />
                 </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Tabella Giorni Top */}
-            <div className="space-y-4">
-              <h4 className="text-base font-medium text-white">Giorni con Migliori Performance</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-zinc-800">
-                      <th className="text-left text-sm font-medium text-zinc-400 pb-3">Giorno</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Visite</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Coinv. Medio</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Ora di Punta</th>
-                      <th className="text-right text-sm font-medium text-zinc-400 pb-3">Performance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topDays.map((day, index) => (
-                      <tr key={day.dayOfWeek} className="border-b border-zinc-800/50">
-                        <td className="py-3 text-sm text-white font-medium">
-                          {dayNameMap[day.dayName] || day.dayName || 'N/A'}
-                          {index === 0 && <Award size={14} className="inline ml-2 text-yellow-500" />}
-                        </td>
-                        <td className="py-3 text-sm text-white text-right">{day.visits || 0}</td>
-                        <td className="py-3 text-sm text-right">
-                          <span className={`${
-                            (day.avgEngagement || 0) >= 70 ? 'text-emerald-400' :
-                            (day.avgEngagement || 0) >= 40 ? 'text-yellow-400' :
-                            'text-red-400'
-                          }`}>
-                            {day.avgEngagement || 0}
-                          </span>
-                        </td>
-                        <td className="py-3 text-sm text-white text-right">
-                          {(day.peakHour || 0).toString().padStart(2, '0')}:00
-                        </td>
-                        <td className="py-3 text-sm text-right">
-                          <div className="flex items-center justify-end">
-                            <div className="w-16 h-2 bg-zinc-800 rounded-full mr-3">
-                              <div 
-                                className="h-full bg-orange-500 rounded-full"
-                                style={{ width: `${Math.min(100, ((day.performanceScore || 0) / Math.max(...topDays.map(d => d.performanceScore || 0), 1)) * 100)}%` }}
-                              />
-                            </div>
-                            <span className="text-orange-400 font-medium">
-                              {Math.round(day.performanceScore || 0)}
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              )}
+            </ResponsiveContainer>
+          </div>
+          
+          {/* Info aggiuntive minimali */}
+          {summary && (
+            <div className="mt-4 pt-4 border-t border-white/30 dark:border-white/20">
+              <div className="flex justify-center items-center text-xs text-gray-500 dark:text-gray-400 space-x-4">
+                <span>Picco: {summary.peakHour?.time || '--'}</span>
+                <span>•</span>
+                <span>Giorno top: {summary.peakDay?.day || '--'}</span>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </motion.div>
-
-      {/* Footer */}
-      <div className="text-center text-sm text-zinc-500">
-        Periodo di analisi: {data.period} • 
-        Miglior orario: {summary?.peakHour?.time || 'N/A'} il {fullDayNameMap[summary?.peakDay?.day || ''] || 'N/A'}
-      </div>
     </div>
   );
 }
