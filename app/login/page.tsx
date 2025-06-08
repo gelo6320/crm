@@ -1,284 +1,112 @@
 // app/login/page.tsx
 "use client";
 
-import { useState, Suspense, useEffect, useCallback } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-// Tipi per il sistema di linee dinamiche
-interface Point {
-  x: number;
-  y: number;
-}
+// Componente per il pattern esagonale tecnologico animato
+function TechHexagonalPattern() {
+  const [activeCells, setActiveCells] = useState<Set<string>>(new Set());
 
-interface CircuitLine {
-  id: string;
-  startPoint: Point;
-  currentPoint: Point;
-  direction: number; // 0, 90, 180, 270 gradi
-  length: number;
-  maxLength: number;
-  speed: number;
-  phase: 'growing' | 'stable' | 'shrinking' | 'dead';
-  opacity: number;
-  thickness: number;
-  canBranch: boolean;
-  parentId?: string;
-  segments: Point[];
-}
-
-// Componente per le linee animate del circuito dinamiche
-function DynamicCircuitLines() {
-  const [lines, setLines] = useState<CircuitLine[]>([]);
-  const [nextId, setNextId] = useState(0);
-
-  // Funzione per creare una nuova linea
-  const createLine = useCallback((startPoint?: Point, direction?: number, parentId?: string): CircuitLine => {
-    const directions = [0, 45, 90, 135, 180, 225, 270, 315];
-    const randomDirection = direction ?? directions[Math.floor(Math.random() * directions.length)];
-    const randomStart = startPoint ?? {
-      x: Math.random() * 100,
-      y: Math.random() * 100
-    };
-
-    return {
-      id: `line-${nextId}`,
-      startPoint: randomStart,
-      currentPoint: randomStart,
-      direction: randomDirection,
-      length: 0,
-      maxLength: Math.random() * 30 + 10, // 10-40% dello schermo
-      speed: Math.random() * 0.5 + 0.3, // velocità variabile
-      phase: 'growing',
-      opacity: Math.random() * 0.6 + 0.4,
-      thickness: Math.random() * 2 + 1,
-      canBranch: Math.random() > 0.6, // 40% di possibilità di ramificarsi
-      parentId,
-      segments: [randomStart]
-    };
-  }, [nextId]);
-
-  // Funzione per aggiornare una linea
-  const updateLine = useCallback((line: CircuitLine): CircuitLine => {
-    if (line.phase === 'dead') return line;
-
-    const newLine = { ...line };
-    
-    if (line.phase === 'growing') {
-      // Calcola il nuovo punto basato su direzione e velocità
-      const radians = (line.direction * Math.PI) / 180;
-      const deltaX = Math.cos(radians) * line.speed;
-      const deltaY = Math.sin(radians) * line.speed;
-      
-      newLine.currentPoint = {
-        x: Math.max(0, Math.min(100, line.currentPoint.x + deltaX)),
-        y: Math.max(0, Math.min(100, line.currentPoint.y + deltaY))
-      };
-      
-      newLine.length += line.speed;
-      newLine.segments = [...line.segments, newLine.currentPoint];
-      
-      // Controlla se ha raggiunto la lunghezza massima o i bordi
-      if (newLine.length >= line.maxLength || 
-          newLine.currentPoint.x <= 0 || newLine.currentPoint.x >= 100 ||
-          newLine.currentPoint.y <= 0 || newLine.currentPoint.y >= 100) {
-        newLine.phase = 'stable';
-        setTimeout(() => {
-          setLines(prev => prev.map(l => 
-            l.id === line.id ? { ...l, phase: 'shrinking' } : l
-          ));
-        }, Math.random() * 2000 + 1000); // Rimane stabile per 1-3 secondi
-      }
-    } else if (line.phase === 'shrinking') {
-      newLine.length -= line.speed * 1.5; // Si accorcia più velocemente
-      newLine.opacity -= 0.02;
-      
-      // Rimuovi segmenti dal retro
-      if (newLine.segments.length > 1) {
-        newLine.segments = newLine.segments.slice(1);
-      }
-      
-      if (newLine.length <= 0 || newLine.opacity <= 0) {
-        newLine.phase = 'dead';
-      }
-    }
-    
-    return newLine;
-  }, []);
-
-  // Funzione per controllare le collisioni e interazioni
-  const checkInteractions = useCallback((lines: CircuitLine[]) => {
-    const newLines = [...lines];
-    let addedLines: CircuitLine[] = [];
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      
-      if (line.phase !== 'growing') continue;
-      
-      // Possibilità di ramificazione
-      if (line.canBranch && Math.random() < 0.003 && !line.parentId) { // 0.3% per frame
-        const branchDirections = [line.direction + 90, line.direction - 90].filter(dir => dir !== line.direction);
-        const branchDirection = branchDirections[Math.floor(Math.random() * branchDirections.length)];
-        
-        const branchLine = createLine(line.currentPoint, branchDirection, line.id);
-        addedLines.push(branchLine);
-        
-        // Disabilita ulteriori ramificazioni per questa linea
-        newLines[i] = { ...line, canBranch: false };
-        setNextId(prev => prev + 1);
-      }
-      
-      // Controlla collisioni con altre linee
-      for (let j = i + 1; j < lines.length; j++) {
-        const otherLine = lines[j];
-        if (otherLine.phase !== 'growing') continue;
-        
-        const distance = Math.sqrt(
-          Math.pow(line.currentPoint.x - otherLine.currentPoint.x, 2) +
-          Math.pow(line.currentPoint.y - otherLine.currentPoint.y, 2)
-        );
-        
-        // Se le linee si incontrano (distanza < 3%), cambiano direzione o si fermano
-        if (distance < 3 && line.id !== otherLine.id) {
-          if (Math.random() < 0.7) { // 70% di possibilità di cambio direzione
-            const newDirection = (line.direction + 90) % 360;
-            newLines[i] = { ...line, direction: newDirection };
-            
-            const otherNewDirection = (otherLine.direction - 90 + 360) % 360;
-            newLines[j] = { ...otherLine, direction: otherNewDirection };
-          } else { // 30% di possibilità di fermarsi
-            newLines[i] = { ...line, phase: 'stable' };
-            newLines[j] = { ...otherLine, phase: 'stable' };
-          }
-        }
-      }
-    }
-    
-    return [...newLines, ...addedLines];
-  }, [createLine]);
-
-  // Loop principale di animazione
+  // Genera le celle esagonali attive con animazione casuale
   useEffect(() => {
     const interval = setInterval(() => {
-      setLines(prevLines => {
-        // Rimuovi linee morte
-        let activeLines = prevLines.filter(line => line.phase !== 'dead');
+      setActiveCells(prev => {
+        const newActiveCells = new Set(prev);
         
-        // Aggiorna tutte le linee
-        activeLines = activeLines.map(updateLine);
-        
-        // Controlla interazioni
-        activeLines = checkInteractions(activeLines);
-        
-        // Aggiungi nuove linee casuali (max 4-6 linee simultanee)
-        if (activeLines.length < 4 && Math.random() < 0.02) { // 2% di possibilità per frame
-          const newLine = createLine();
-          activeLines.push(newLine);
-          setNextId(prev => prev + 1);
+        // Rimuovi alcune celle casuali (fade out)
+        if (newActiveCells.size > 0 && Math.random() < 0.3) {
+          const cellsArray = Array.from(newActiveCells);
+          const randomCell = cellsArray[Math.floor(Math.random() * cellsArray.length)];
+          newActiveCells.delete(randomCell);
         }
         
-        return activeLines;
+        // Aggiungi nuove celle casuali (fade in) - max 8-12 attive
+        if (newActiveCells.size < 10 && Math.random() < 0.4) {
+          const row = Math.floor(Math.random() * 20);
+          const col = Math.floor(Math.random() * 20);
+          newActiveCells.add(`${row}-${col}`);
+        }
+        
+        return newActiveCells;
       });
-    }, 50); // 20 FPS
+    }, 800 + Math.random() * 1200); // Intervallo variabile per naturalezza
     
     return () => clearInterval(interval);
-  }, [updateLine, checkInteractions, createLine]);
-
-  // Genera il path SVG per una linea
-  const generatePath = (line: CircuitLine): string => {
-    if (line.segments.length < 2) return '';
-    
-    let path = `M ${line.segments[0].x} ${line.segments[0].y}`;
-    for (let i = 1; i < line.segments.length; i++) {
-      path += ` L ${line.segments[i].x} ${line.segments[i].y}`;
-    }
-    return path;
-  };
+  }, []);
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <svg
-        className="absolute inset-0 w-full h-full"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-      >
-        <defs>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="0.5" result="coloredBlur"/>
-            <feMerge> 
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-        
-        {lines.map(line => (
-          <g key={line.id}>
-            {/* Linea principale */}
-            <path
-              d={generatePath(line)}
-              stroke="#FF6B00"
-              strokeWidth={line.thickness / 10}
-              fill="none"
-              opacity={line.opacity}
-              filter="url(#glow)"
-              className="transition-opacity duration-300"
-            />
-            
-            {/* Punti di connessione */}
-            {line.segments.map((point, index) => {
-              if (index === 0 || index === line.segments.length - 1) {
-                return (
-                  <circle
-                    key={`${line.id}-point-${index}`}
-                    cx={point.x}
-                    cy={point.y}
-                    r={line.thickness / 20}
-                    fill="#FF6B00"
-                    opacity={line.opacity * 1.5}
-                    filter="url(#glow)"
-                  >
-                    <animate
-                      attributeName="r"
-                      values={`${line.thickness / 20};${line.thickness / 10};${line.thickness / 20}`}
-                      dur="2s"
-                      repeatCount="indefinite"
-                    />
-                  </circle>
-                );
-              }
-              return null;
-            })}
-            
-            {/* Effetto di movimento sulla punta */}
-            {line.phase === 'growing' && line.segments.length > 0 && (
-              <circle
-                cx={line.currentPoint.x}
-                cy={line.currentPoint.y}
-                r="0.3"
-                fill="#FF6B00"
-                opacity="0.8"
-                filter="url(#glow)"
-              >
-                <animate
-                  attributeName="opacity"
-                  values="0.8;0.2;0.8"
-                  dur="0.5s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-            )}
-          </g>
-        ))}
-      </svg>
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+      {/* Pattern esagonale base con CSS */}
+      <div 
+        className="absolute inset-0 opacity-30"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 50% 50%, transparent 20%, transparent 80%),
+            conic-gradient(from 30deg, transparent 60deg, #FF6B00 60deg, #FF6B00 120deg, transparent 120deg, transparent 180deg, #FF6B00 180deg, #FF6B00 240deg, transparent 240deg, transparent 300deg, #FF6B00 300deg, #FF6B00 360deg, transparent 360deg)
+          `,
+          backgroundSize: '40px 35px, 40px 35px',
+          backgroundPosition: '0 0, 20px 17.5px',
+          mask: 'radial-gradient(circle at center, transparent 3px, black 4px)',
+          WebkitMask: 'radial-gradient(circle at center, transparent 3px, black 4px)'
+        }}
+      />
       
-      {/* Punti di riferimento fissi per dare contesto */}
-      <div className="absolute top-10 left-10 w-1 h-1 bg-[#FF6B00]/30 rounded-full animate-pulse"></div>
-      <div className="absolute top-20 right-20 w-1 h-1 bg-[#FF6B00]/30 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-      <div className="absolute bottom-20 left-20 w-1 h-1 bg-[#FF6B00]/30 rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
-      <div className="absolute bottom-10 right-10 w-1 h-1 bg-[#FF6B00]/30 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+      {/* Overlay con celle attive animate */}
+      <div className="absolute inset-0">
+        {Array.from({ length: 20 }, (_, row) => 
+          Array.from({ length: 20 }, (_, col) => {
+            const cellKey = `${row}-${col}`;
+            const isActive = activeCells.has(cellKey);
+            const offsetX = (col % 2) * 20; // Offset per pattern esagonale
+            
+            return (
+              <div
+                key={cellKey}
+                className={`absolute transition-all duration-1000 ${
+                  isActive ? 'opacity-80 scale-110' : 'opacity-0 scale-95'
+                }`}
+                style={{
+                  left: `${col * 40 + offsetX}px`,
+                  top: `${row * 35}px`,
+                  width: '40px',
+                  height: '35px',
+                  background: isActive
+                    ? `radial-gradient(circle at center, #FF6B00 0%, rgba(255, 107, 0, 0.3) 70%, transparent 100%)`
+                    : 'transparent',
+                  clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+                  filter: isActive ? 'drop-shadow(0 0 8px rgba(255, 107, 0, 0.6))' : 'none',
+                }}
+              />
+            );
+          })
+        )}
+      </div>
+      
+      {/* Pattern di connessione sottile */}
+      <div 
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: `
+            linear-gradient(60deg, transparent 45%, #FF6B00 50%, transparent 55%),
+            linear-gradient(-60deg, transparent 45%, #FF6B00 50%, transparent 55%)
+          `,
+          backgroundSize: '120px 104px',
+          backgroundPosition: '0 0, 60px 52px'
+        }}
+      />
+      
+      {/* Punti di riferimento tecnologici */}
+      <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-[#FF6B00]/40 rounded-full animate-pulse" 
+           style={{ animationDelay: '0s', animationDuration: '3s' }} />
+      <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-[#FF6B00]/60 rounded-full animate-pulse" 
+           style={{ animationDelay: '1s', animationDuration: '2s' }} />
+      <div className="absolute bottom-1/3 left-1/3 w-1.5 h-1.5 bg-[#FF6B00]/50 rounded-full animate-pulse" 
+           style={{ animationDelay: '2s', animationDuration: '4s' }} />
+      <div className="absolute bottom-1/4 right-1/3 w-1 h-1 bg-[#FF6B00]/70 rounded-full animate-pulse" 
+           style={{ animationDelay: '0.5s', animationDuration: '2.5s' }} />
     </div>
   );
 }
@@ -389,8 +217,8 @@ export default function LoginPage() {
       {/* Background dotted pattern */}
       <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#FF6B00_1px,transparent_1px)]" style={{ backgroundSize: '30px 30px' }}></div>
       
-      {/* Sistema di linee dinamiche */}
-      <DynamicCircuitLines />
+      {/* Pattern esagonale tecnologico */}
+      <TechHexagonalPattern />
       
       {/* Gradiente radiale per effetto depth */}
       <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black/20"></div>
