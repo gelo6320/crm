@@ -237,7 +237,7 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
       onClick={handleClose}
     >
       {/* Background overlay FISSO senza animazioni per evitare conflitti blur */}
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-xs backdrop-saturate-150" />
       
       {/* Modal container con animazione iOS */}
       <motion.div 
@@ -248,6 +248,7 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
         exit={{
           ...coords.initial,
           scale: 0.1,
+          opacity: 0,
         }}
         transition={springConfig}
         style={{
@@ -259,7 +260,7 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
           borderRadius="24"
         />
         
-        <div className="relative bg-zinc-50/80 dark:bg-zinc-100/10 rounded-[24px] shadow-xl overflow-hidden backdrop-blur-md backdrop-saturate-150">
+        <div className="relative bg-zinc-50/80 dark:bg-zinc-100/10 rounded-[24px] shadow-xl overflow-hidden">
           {/* Header minimale con solo bottone chiudi e status */}
           <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
             <div className="w-6"></div> {/* Spacer per centrare il contenuto */}
