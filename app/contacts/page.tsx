@@ -248,7 +248,6 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
         exit={{
           ...coords.initial,
           scale: 0.1,
-          opacity: 0,
         }}
         transition={springConfig}
         style={{
