@@ -133,41 +133,50 @@ function formatSource(source: string, formType: string): string {
 // Componente modale aggiornato con animazione iOS-style
 function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
   console.log('🔄 Modal render - triggerRect:', triggerRect);
-
-  // Effetto per gestire il mounting del modale
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsMounted(true);
-    }, 10);
-    
-    return () => clearTimeout(timer);
-  }, []);
 
   // Calcola le coordinate iniziali e finali per l'animazione
   const getAnimationCoordinates = () => {
     if (!triggerRect) {
+      // Fallback al centro dello schermo se non abbiamo coordinate
       return {
-        initial: { x: 0, y: 0, scale: 0.1, opacity: 1 },
-        animate: { x: 0, y: 0, scale: 1, opacity: 1 }
+        initial: {
+          x: 0,
+          y: 0,
+          scale: 0.1,
+          opacity: 1,
+        },
+        animate: {
+          x: 0,
+          y: 0,
+          scale: 1,
+          opacity: 1,
+        }
       };
     }
 
+    // Coordinate del centro del contatto cliccato
     const triggerCenterX = triggerRect.left + (triggerRect.width / 2);
     const triggerCenterY = triggerRect.top + (triggerRect.height / 2);
+
+    // Coordinate finali (centro dello schermo)
     const finalX = window.innerWidth / 2;
     const finalY = window.innerHeight / 2;
 
     return {
       initial: {
-        x: triggerCenterX - finalX,
-        y: triggerCenterY - finalY,
+        x: triggerCenterX - finalX, // Offset dal centro
+        y: triggerCenterY - finalY, // Offset dal centro
         scale: 0.1,
         opacity: 1,
       },
-      animate: { x: 0, y: 0, scale: 1, opacity: 1 }
+      animate: {
+        x: 0, // Torna al centro
+        y: 0, // Torna al centro
+        scale: 1,
+        opacity: 1,
+      }
     };
   };
 
@@ -176,20 +185,16 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
   const handleClose = () => {
     console.log('❌ Close triggered - calling onClose immediately');
     setIsClosing(true);
+    // Chiama onClose immediatamente per liberare l'interfaccia
     onClose();
   };
 
-  // Configurazioni animate
+  // Configurazione spring per animazione naturale stile iOS
   const springConfig = {
     type: "spring" as const,
-    damping: isClosing ? 35 : 25,
-    stiffness: isClosing ? 400 : 300,
+    damping: isClosing ? 35 : 25,        // Chiusura più veloce
+    stiffness: isClosing ? 400 : 300,    // Chiusura più snappy
     mass: 0.8,
-  };
-
-  const blurConfig = {
-    duration: 0.15,
-    ease: "easeOut" as const,
   };
 
   const handleCall = () => {
@@ -209,6 +214,7 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
     }
   };
 
+  // Chiudi la modale quando si preme ESC
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -226,21 +232,21 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={handleClose}
     >
-      {/* Background overlay SEMPLICE senza blur */}
+      {/* Background overlay animato */}
       <motion.div
-        initial={{ opacity: 0 }}
+        initial={{ opacity: 1 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={blurConfig}
+        transition={{ duration: 0.2 }}
         className="absolute inset-0 bg-black/40"
       />
       
-      {/* Modal container responsivo */}
+      {/* Modal container con animazione iOS */}
       <motion.div 
-        className="relative z-10 w-full max-w-lg mx-auto"
+        className="relative z-10 w-full max-w-lg mx-4 sm:mx-6"
         onClick={(e) => e.stopPropagation()}
         initial={coords.initial}
         animate={coords.animate}
@@ -251,114 +257,105 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
         }}
         transition={springConfig}
         style={{
-          transformOrigin: "center center",
-          willChange: 'transform, opacity'
+          transformOrigin: "center center"
         }}
       >
-        {/* Container del modale con classe CSS personalizzata */}
-        <div className="modal-backdrop rounded-[24px] shadow-2xl overflow-hidden">
-          
-          {/* Pulsante chiusura e stato */}
-          <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
-            <button
-              onClick={handleClose}
-              className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-            {/* StatusBadge ridotto e spostato */}
-            <div className="scale-75 origin-top-right">
-              <StatusBadge status={contact.status} />
+        <SmoothCorners 
+          corners="2.5"
+          borderRadius="24"
+        />
+        
+        <div className="relative bg-zinc-50/80 dark:bg-zinc-100/10 rounded-[24px] shadow-xl overflow-hidden backdrop-blur-md backdrop-saturate-150">
+          {/* Header minimale con solo bottone chiudi e status */}
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+            <div className="w-6"></div> {/* Spacer per centrare il contenuto */}
+            <div className="flex items-center gap-3">
+              <div className="scale-75">
+                <StatusBadge status={contact.status} />
+              </div>
+              <button
+                onClick={handleClose}
+                className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
           </div>
           
-          {/* CONTENUTO responsivo */}
-          <div className="p-6 sm:p-8 space-y-6 sm:space-y-8 min-h-[400px] sm:min-h-[450px]">
-            
-            {/* Header con nome - senza stato */}
-            <div className="flex items-center space-x-3 sm:space-x-4 pr-12">
-                {contact.source === "facebook" ? (
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-100/90 dark:bg-blue-900/40 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-                    <svg 
-                      className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" 
-                      fill="currentColor" 
-                      viewBox="0 0 287.56 191"
-                      preserveAspectRatio="xMidYMid meet"
-                      style={{ minWidth: '24px', minHeight: '24px' }}
-                    >
-                      <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
-                      <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
-                      <path fill="#0082fb" d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
-                    </svg>
-                  </div>
-                ) : (
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-                    <Globe 
-                      className="w-6 h-6 sm:w-7 sm:h-7 text-gray-600 dark:text-gray-400" 
-                      style={{ minWidth: '24px', minHeight: '24px' }}
-                    />
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-gray-900 dark:text-white leading-tight">
-                    {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
-                  </h2>
-                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
-                    {formatSource(contact.source, contact.formType)}
-                  </p>
+          <div className="px-4 sm:px-6 pb-6 space-y-6">
+            {/* Header con nome */}
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              {contact.source === "facebook" ? (
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-100/90 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" fill="currentColor" viewBox="0 0 287.56 191" preserveAspectRatio="xMidYMid meet">
+                    <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
+                    <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
+                    <path fill="#0082fb" d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
+                  </svg>
                 </div>
+              ) : (
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100/90 dark:bg-gray-800/90 flex items-center justify-center flex-shrink-0">
+                  <Globe className="w-6 h-6 sm:w-7 sm:h-7 text-gray-600 dark:text-gray-400" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-gray-900 dark:text-white leading-tight">
+                  {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{formatSource(contact.source, contact.formType)}</p>
+              </div>
             </div>
             
-            {/* Info contatto con spaziatura responsiva */}
-            <div className="grid grid-cols-1 gap-4 sm:gap-6">
-              <div className="space-y-1 sm:space-y-2">
-                <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Email</p>
-                <p className="text-primary text-sm sm:text-base break-all">{contact.email}</p>
+            {/* Info contatto */}
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Email</p>
+                <p className="text-sm sm:text-base text-primary break-all">{contact.email}</p>
               </div>
               
-              <div className="space-y-1 sm:space-y-2">
-                <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Telefono</p>
-                <p className="text-gray-900 dark:text-white text-sm sm:text-base">{contact.phone || "Non disponibile"}</p>
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Telefono</p>
+                <p className="text-sm sm:text-base text-gray-900 dark:text-white">{contact.phone || "Non disponibile"}</p>
               </div>
               
-              <div className="space-y-1 sm:space-y-2">
-                <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Data creazione</p>
-                <p className="text-gray-900 dark:text-white text-sm sm:text-base">{formatDate(contact.createdAt)}</p>
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Data creazione</p>
+                <p className="text-sm sm:text-base text-gray-900 dark:text-white">{formatDate(contact.createdAt)}</p>
               </div>
               
               {service && (
-                <div className="space-y-1 sm:space-y-2">
-                  <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Servizio</p>
-                  <p className="text-gray-900 dark:text-white text-sm sm:text-base">{service}</p>
+                <div className="space-y-1">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Servizio</p>
+                  <p className="text-sm sm:text-base text-gray-900 dark:text-white">{service}</p>
                 </div>
               )}
               
               {value !== undefined && value > 0 && (
-                <div className="space-y-1 sm:space-y-2">
-                  <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Valore</p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-semibold text-green-600">€{value.toLocaleString('it-IT')}</p>
+                <div className="space-y-1">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Valore</p>
+                  <p className="text-base sm:text-lg lg:text-xl font-semibold text-green-600">€{value.toLocaleString('it-IT')}</p>
                 </div>
               )}
             </div>
             
-            {/* Messaggio con typography responsiva */}
+            {/* Messaggio */}
             {message && (
-              <div className="space-y-2 sm:space-y-3">
-                <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Messaggio</p>
-                <div className="p-4 sm:p-5 bg-white/40 dark:bg-black/30 backdrop-blur-sm rounded-2xl text-sm sm:text-base text-gray-700 dark:text-gray-300 border border-white/30 dark:border-white/20">
+              <div className="space-y-2">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Messaggio</p>
+                <div className="p-3 sm:p-4 bg-white/50 dark:bg-black/40 rounded-2xl text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
                   {message}
                 </div>
               </div>
             )}
             
-            {/* Pulsanti azione con dimensioni responsive */}
-            <div className="flex gap-3 sm:gap-4 pt-2 sm:pt-4">
+            {/* Pulsanti azione */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
               <button
                 onClick={handleCall}
-                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 text-sm sm:text-base"
+                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/50 dark:bg-white/20 hover:bg-white/70 dark:hover:bg-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 text-sm sm:text-base"
               >
                 <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
                 Chiama
@@ -366,7 +363,7 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
               
               <button
                 onClick={handleWhatsApp}
-                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 text-sm sm:text-base"
+                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/50 dark:bg-white/20 hover:bg-white/70 dark:hover:bg-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 text-sm sm:text-base"
               >
                 <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                 WhatsApp
@@ -619,13 +616,7 @@ export default function ContactsPage() {
     if (contact.source === 'facebook') {
       return (
         <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-          <svg 
-            className="w-4 h-4 text-blue-600" 
-            fill="currentColor" 
-            viewBox="0 0 287.56 191"
-            preserveAspectRatio="xMidYMid meet"
-            style={{ minWidth: '16px', minHeight: '16px' }}
-          >
+          <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 287.56 191" preserveAspectRatio="xMidYMid meet">
             <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
             <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
             <path fill="#0082fb" d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
@@ -635,10 +626,7 @@ export default function ContactsPage() {
     } else {
       return (
         <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0">
-          <Globe 
-            className="w-4 h-4 text-zinc-600 dark:text-zinc-400" 
-            style={{ minWidth: '16px', minHeight: '16px' }}
-          />
+          <Globe className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
         </div>
       );
     }

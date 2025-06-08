@@ -71,9 +71,9 @@ html {
 }
 
 /* Touch behavior configuration */
+/* Touch behavior configuration - ottimizzato per Android */
 html, body {
-  touch-action: none;
-  -ms-touch-action: none;
+  -ms-touch-action: manipulation;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -205,33 +205,14 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 ==================================== */
 
 /* Squircle design system */
-.sidebar .card,
-.content-area .bg-zinc-900,
-.content-area .bg-zinc-800,
-.sidebar .rounded-lg {
+.card,
+.bg-zinc-900,
+.bg-zinc-800,
+.bg-zinc-700,
+.rounded-lg,
+.rounded-md {
   border-radius: var(--squircle-radius) !important;
   border: none !important;
-}
-
-.card:not(.modal-backdrop),
-.bg-zinc-900:not(.modal-backdrop),
-.bg-zinc-800:not(.modal-backdrop),
-.rounded-lg:not(.modal-backdrop) {
-  border-radius: var(--squircle-radius) !important;
-  border: none !important;
-}
-
-/* SOLUZIONE 4: CSS specifico per il backdrop-blur del modale */
-.modal-backdrop {
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  background: rgba(250, 250, 250, 0.6) !important;
-}
-
-.dark .modal-backdrop {
-  background: rgba(39, 39, 42, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
 .rounded-xl {
@@ -249,14 +230,17 @@ textarea {
 }
 
 /* Remove all existing borders */
-.sidebar .border,
-.sidebar .border-zinc-700,
-.sidebar .border-zinc-800,
-.card .border-t,
-.card .border-b {
+.border,
+.border-zinc-700,
+.border-zinc-800,
+.border-t,
+.border-b,
+.border-l,
+.border-r {
   border: none !important;
 }
 
+/* Responsive adjustments */
 /* Responsive adjustments */
 @media (max-width: 768px) {
   :root {
@@ -264,34 +248,18 @@ textarea {
     --squircle-small: 6px;
     --squircle-large: 14px;
   }
-}
-
-@keyframes modalBlurIn {
-  from { 
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
+  
+  /* Ottimizzazioni per Android */
+  * {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
-  to { 
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+  
+  /* Disable blur animations on mobile for better performance */
+  .backdrop-blur-md,
+  .backdrop-blur-lg {
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    transition: none !important;
   }
-}
-
-@keyframes modalBlurOut {
-  from { 
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-  }
-  to { 
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
-  }
-}
-
-.blur-animate-in {
-  animation: modalBlurIn 300ms ease-out forwards;
-}
-
-.blur-animate-out {
-  animation: modalBlurOut 300ms ease-out forwards;
 }
