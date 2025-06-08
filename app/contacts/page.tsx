@@ -131,7 +131,7 @@ function formatSource(source: string, formType: string): string {
 }
 
 // Componente modale aggiornato con animazione iOS-style
-// Componente modale con estetica originale e responsività migliorata
+// Componente modale con glassmorphic che funziona ovunque
 function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -230,17 +230,13 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={handleClose}
     >
-      {/* Background overlay ottimizzato per Android */}
+      {/* Background overlay con backdrop-blur Tailwind */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={blurConfig}
-        className="absolute inset-0 bg-black/40"
-        style={{
-          willChange: 'opacity',
-          transform: 'translateZ(0)',
-        }}
+        className="absolute inset-0 bg-black/40 backdrop-blur-md"
       />
       
       {/* Modal container responsivo */}
@@ -265,10 +261,10 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
           borderRadius="24"
         />
         
-        {/* RIPRISTINATA: Estetica originale con blur grigio chiaro */}
-        <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden backdrop-blur-lg">
+        {/* Container del modale con backdrop-blur Tailwind */}
+        <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 backdrop-blur-xl rounded-[24px] border border-white/30 dark:border-white/20 shadow-2xl overflow-hidden">
           
-          {/* Pulsante chiusura in alto a destra - senza header */}
+          {/* Pulsante chiusura in alto a destra */}
           <button
             onClick={handleClose}
             className="absolute top-4 right-4 z-10 p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
@@ -279,14 +275,14 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
             </svg>
           </button>
           
-          {/* CONTENUTO CON PADDING RESPONSIVO */}
+          {/* CONTENUTO responsivo */}
           <div className="p-6 sm:p-8 space-y-6 sm:space-y-8 min-h-[400px] sm:min-h-[450px]">
             
             {/* Header con nome e stato - Typography responsiva */}
             <div className="flex justify-between items-start pr-12">
               <div className="flex items-center space-x-3 sm:space-x-4">
                 {contact.source === "facebook" ? (
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-100/90 dark:bg-blue-900/40 flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-100/90 dark:bg-blue-900/40 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
                     <svg 
                       className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" 
                       fill="currentColor" 
@@ -300,7 +296,7 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
                     </svg>
                   </div>
                 ) : (
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100/90 dark:bg-gray-800/90 flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
                     <Globe 
                       className="w-6 h-6 sm:w-7 sm:h-7 text-gray-600 dark:text-gray-400" 
                       style={{ minWidth: '24px', minHeight: '24px' }}
