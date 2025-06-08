@@ -131,6 +131,7 @@ function formatSource(source: string, formType: string): string {
 }
 
 // Componente modale aggiornato con animazione iOS-style
+// Componente modale con estetica originale e responsività migliorata
 function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -226,25 +227,25 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={handleClose}
     >
-      {/* Background overlay ottimizzato */}
+      {/* Background overlay ottimizzato per Android */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={blurConfig}
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40"
         style={{
           willChange: 'opacity',
           transform: 'translateZ(0)',
         }}
       />
       
-      {/* Modal container */}
+      {/* Modal container responsivo */}
       <motion.div 
-        className="relative z-10 w-full max-w-lg mx-6"
+        className="relative z-10 w-full max-w-lg mx-auto"
         onClick={(e) => e.stopPropagation()}
         initial={coords.initial}
         animate={coords.animate}
@@ -264,34 +265,34 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
           borderRadius="24"
         />
         
-        {/* CORREZIONE: Container del modale senza fallback che sovrascrive */}
-        <div className="relative bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[24px] border border-white/20 dark:border-white/10 shadow-2xl overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/20 dark:border-white/10 bg-white/50 dark:bg-zinc-800/50 backdrop-blur-sm">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Dettagli contatto</h3>
-            <button
-              onClick={handleClose}
-              className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
+        {/* RIPRISTINATA: Estetica originale con blur grigio chiaro */}
+        <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden backdrop-blur-lg">
           
-          <div className="p-6 space-y-6">
-            {/* Header con nome e stato */}
-            <div className="flex justify-between items-start">
-              <div className="flex items-center space-x-3">
+          {/* Pulsante chiusura in alto a destra - senza header */}
+          <button
+            onClick={handleClose}
+            className="absolute top-4 right-4 z-10 p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          
+          {/* CONTENUTO CON PADDING RESPONSIVO */}
+          <div className="p-6 sm:p-8 space-y-6 sm:space-y-8 min-h-[400px] sm:min-h-[450px]">
+            
+            {/* Header con nome e stato - Typography responsiva */}
+            <div className="flex justify-between items-start pr-12">
+              <div className="flex items-center space-x-3 sm:space-x-4">
                 {contact.source === "facebook" ? (
-                  <div className="w-10 h-10 rounded-full bg-blue-100/90 dark:bg-blue-900/40 flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-100/90 dark:bg-blue-900/40 flex items-center justify-center backdrop-blur-sm flex-shrink-0">
                     <svg 
-                      className="w-5 h-5 text-blue-600" 
+                      className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" 
                       fill="currentColor" 
                       viewBox="0 0 287.56 191"
                       preserveAspectRatio="xMidYMid meet"
-                      style={{ minWidth: '20px', minHeight: '20px' }}
+                      style={{ minWidth: '24px', minHeight: '24px' }}
                     >
                       <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
                       <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
@@ -299,80 +300,84 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
                     </svg>
                   </div>
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-100/90 dark:bg-gray-800/90 flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100/90 dark:bg-gray-800/90 flex items-center justify-center backdrop-blur-sm flex-shrink-0">
                     <Globe 
-                      className="w-5 h-5 text-gray-600 dark:text-gray-400" 
-                      style={{ minWidth: '20px', minHeight: '20px' }}
+                      className="w-6 h-6 sm:w-7 sm:h-7 text-gray-600 dark:text-gray-400" 
+                      style={{ minWidth: '24px', minHeight: '24px' }}
                     />
                   </div>
                 )}
-                <div>
-                  <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-gray-900 dark:text-white leading-tight">
                     {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                   </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{formatSource(contact.source, contact.formType)}</p>
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
+                    {formatSource(contact.source, contact.formType)}
+                  </p>
                 </div>
               </div>
-              <StatusBadge status={contact.status} />
+              <div className="flex-shrink-0 mt-1">
+                <StatusBadge status={contact.status} />
+              </div>
             </div>
             
-            {/* Info contatto */}
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Email</p>
-                <p className="text-primary">{contact.email}</p>
+            {/* Info contatto con spaziatura responsiva */}
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+              <div className="space-y-1 sm:space-y-2">
+                <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Email</p>
+                <p className="text-primary text-sm sm:text-base break-all">{contact.email}</p>
               </div>
               
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Telefono</p>
-                <p className="text-gray-900 dark:text-white">{contact.phone || "Non disponibile"}</p>
+              <div className="space-y-1 sm:space-y-2">
+                <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Telefono</p>
+                <p className="text-gray-900 dark:text-white text-sm sm:text-base">{contact.phone || "Non disponibile"}</p>
               </div>
               
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Data creazione</p>
-                <p className="text-gray-900 dark:text-white">{formatDate(contact.createdAt)}</p>
+              <div className="space-y-1 sm:space-y-2">
+                <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Data creazione</p>
+                <p className="text-gray-900 dark:text-white text-sm sm:text-base">{formatDate(contact.createdAt)}</p>
               </div>
               
               {service && (
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Servizio</p>
-                  <p className="text-gray-900 dark:text-white">{service}</p>
+                <div className="space-y-1 sm:space-y-2">
+                  <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Servizio</p>
+                  <p className="text-gray-900 dark:text-white text-sm sm:text-base">{service}</p>
                 </div>
               )}
               
               {value !== undefined && value > 0 && (
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Valore</p>
-                  <p className="text-lg font-semibold text-green-600">€{value.toLocaleString('it-IT')}</p>
+                <div className="space-y-1 sm:space-y-2">
+                  <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Valore</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-semibold text-green-600">€{value.toLocaleString('it-IT')}</p>
                 </div>
               )}
             </div>
             
-            {/* Messaggio */}
+            {/* Messaggio con typography responsiva */}
             {message && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Messaggio</p>
-                <div className="p-4 bg-white/40 dark:bg-black/30 backdrop-blur-sm rounded-2xl text-sm text-gray-700 dark:text-gray-300 border border-white/30 dark:border-white/20">
+              <div className="space-y-2 sm:space-y-3">
+                <p className="text-sm sm:text-base font-medium text-gray-600 dark:text-gray-400">Messaggio</p>
+                <div className="p-4 sm:p-5 bg-white/40 dark:bg-black/30 backdrop-blur-sm rounded-2xl text-sm sm:text-base text-gray-700 dark:text-gray-300 border border-white/30 dark:border-white/20">
                   {message}
                 </div>
               </div>
             )}
             
-            {/* Pulsanti azione */}
-            <div className="flex gap-3 pt-2">
+            {/* Pulsanti azione con dimensioni responsive */}
+            <div className="flex gap-3 sm:gap-4 pt-2 sm:pt-4">
               <button
                 onClick={handleCall}
-                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
+                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 text-sm sm:text-base"
               >
-                <Phone className="w-4 h-4" />
+                <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
                 Chiama
               </button>
               
               <button
                 onClick={handleWhatsApp}
-                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200"
+                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/40 dark:bg-white/20 hover:bg-white/60 dark:hover:bg-white/30 backdrop-blur-sm border border-white/40 dark:border-white/30 font-medium py-3 sm:py-4 px-4 sm:px-6 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 text-sm sm:text-base"
               >
-                <MessageCircle className="w-4 h-4" />
+                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                 WhatsApp
               </button>
             </div>
