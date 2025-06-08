@@ -80,7 +80,7 @@ export default function AnalyticsPage() {
           animate={{ opacity: 1, y: 0 }}
         >
           <SmoothCorners corners="0" borderRadius="0" />
-          <div className="absolute inset-0 bg-white/30 dark:bg-zinc-100/5" />
+          <div className="absolute inset-0" />
           
           <div className="relative flex items-center justify-between p-4 sm:p-6">
             <div className="flex items-center gap-3 sm:gap-4">
@@ -123,7 +123,7 @@ export default function AnalyticsPage() {
         </motion.div>
 
         {/* Contenuto principale */}
-        <div className="p-4 sm:p-6">
+        <div>
           <TemporalPatternsSimple
             data={temporalData}
             isLoading={isLoading}

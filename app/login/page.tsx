@@ -1,55 +1,284 @@
 // app/login/page.tsx
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-// Componente per le linee animate del circuito
-function AnimatedCircuitLines() {
+// Tipi per il sistema di linee dinamiche
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface CircuitLine {
+  id: string;
+  startPoint: Point;
+  currentPoint: Point;
+  direction: number; // 0, 90, 180, 270 gradi
+  length: number;
+  maxLength: number;
+  speed: number;
+  phase: 'growing' | 'stable' | 'shrinking' | 'dead';
+  opacity: number;
+  thickness: number;
+  canBranch: boolean;
+  parentId?: string;
+  segments: Point[];
+}
+
+// Componente per le linee animate del circuito dinamiche
+function DynamicCircuitLines() {
+  const [lines, setLines] = useState<CircuitLine[]>([]);
+  const [nextId, setNextId] = useState(0);
+
+  // Funzione per creare una nuova linea
+  const createLine = useCallback((startPoint?: Point, direction?: number, parentId?: string): CircuitLine => {
+    const directions = [0, 45, 90, 135, 180, 225, 270, 315];
+    const randomDirection = direction ?? directions[Math.floor(Math.random() * directions.length)];
+    const randomStart = startPoint ?? {
+      x: Math.random() * 100,
+      y: Math.random() * 100
+    };
+
+    return {
+      id: `line-${nextId}`,
+      startPoint: randomStart,
+      currentPoint: randomStart,
+      direction: randomDirection,
+      length: 0,
+      maxLength: Math.random() * 30 + 10, // 10-40% dello schermo
+      speed: Math.random() * 0.5 + 0.3, // velocità variabile
+      phase: 'growing',
+      opacity: Math.random() * 0.6 + 0.4,
+      thickness: Math.random() * 2 + 1,
+      canBranch: Math.random() > 0.6, // 40% di possibilità di ramificarsi
+      parentId,
+      segments: [randomStart]
+    };
+  }, [nextId]);
+
+  // Funzione per aggiornare una linea
+  const updateLine = useCallback((line: CircuitLine): CircuitLine => {
+    if (line.phase === 'dead') return line;
+
+    const newLine = { ...line };
+    
+    if (line.phase === 'growing') {
+      // Calcola il nuovo punto basato su direzione e velocità
+      const radians = (line.direction * Math.PI) / 180;
+      const deltaX = Math.cos(radians) * line.speed;
+      const deltaY = Math.sin(radians) * line.speed;
+      
+      newLine.currentPoint = {
+        x: Math.max(0, Math.min(100, line.currentPoint.x + deltaX)),
+        y: Math.max(0, Math.min(100, line.currentPoint.y + deltaY))
+      };
+      
+      newLine.length += line.speed;
+      newLine.segments = [...line.segments, newLine.currentPoint];
+      
+      // Controlla se ha raggiunto la lunghezza massima o i bordi
+      if (newLine.length >= line.maxLength || 
+          newLine.currentPoint.x <= 0 || newLine.currentPoint.x >= 100 ||
+          newLine.currentPoint.y <= 0 || newLine.currentPoint.y >= 100) {
+        newLine.phase = 'stable';
+        setTimeout(() => {
+          setLines(prev => prev.map(l => 
+            l.id === line.id ? { ...l, phase: 'shrinking' } : l
+          ));
+        }, Math.random() * 2000 + 1000); // Rimane stabile per 1-3 secondi
+      }
+    } else if (line.phase === 'shrinking') {
+      newLine.length -= line.speed * 1.5; // Si accorcia più velocemente
+      newLine.opacity -= 0.02;
+      
+      // Rimuovi segmenti dal retro
+      if (newLine.segments.length > 1) {
+        newLine.segments = newLine.segments.slice(1);
+      }
+      
+      if (newLine.length <= 0 || newLine.opacity <= 0) {
+        newLine.phase = 'dead';
+      }
+    }
+    
+    return newLine;
+  }, []);
+
+  // Funzione per controllare le collisioni e interazioni
+  const checkInteractions = useCallback((lines: CircuitLine[]) => {
+    const newLines = [...lines];
+    let addedLines: CircuitLine[] = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      if (line.phase !== 'growing') continue;
+      
+      // Possibilità di ramificazione
+      if (line.canBranch && Math.random() < 0.003 && !line.parentId) { // 0.3% per frame
+        const branchDirections = [line.direction + 90, line.direction - 90].filter(dir => dir !== line.direction);
+        const branchDirection = branchDirections[Math.floor(Math.random() * branchDirections.length)];
+        
+        const branchLine = createLine(line.currentPoint, branchDirection, line.id);
+        addedLines.push(branchLine);
+        
+        // Disabilita ulteriori ramificazioni per questa linea
+        newLines[i] = { ...line, canBranch: false };
+        setNextId(prev => prev + 1);
+      }
+      
+      // Controlla collisioni con altre linee
+      for (let j = i + 1; j < lines.length; j++) {
+        const otherLine = lines[j];
+        if (otherLine.phase !== 'growing') continue;
+        
+        const distance = Math.sqrt(
+          Math.pow(line.currentPoint.x - otherLine.currentPoint.x, 2) +
+          Math.pow(line.currentPoint.y - otherLine.currentPoint.y, 2)
+        );
+        
+        // Se le linee si incontrano (distanza < 3%), cambiano direzione o si fermano
+        if (distance < 3 && line.id !== otherLine.id) {
+          if (Math.random() < 0.7) { // 70% di possibilità di cambio direzione
+            const newDirection = (line.direction + 90) % 360;
+            newLines[i] = { ...line, direction: newDirection };
+            
+            const otherNewDirection = (otherLine.direction - 90 + 360) % 360;
+            newLines[j] = { ...otherLine, direction: otherNewDirection };
+          } else { // 30% di possibilità di fermarsi
+            newLines[i] = { ...line, phase: 'stable' };
+            newLines[j] = { ...otherLine, phase: 'stable' };
+          }
+        }
+      }
+    }
+    
+    return [...newLines, ...addedLines];
+  }, [createLine]);
+
+  // Loop principale di animazione
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLines(prevLines => {
+        // Rimuovi linee morte
+        let activeLines = prevLines.filter(line => line.phase !== 'dead');
+        
+        // Aggiorna tutte le linee
+        activeLines = activeLines.map(updateLine);
+        
+        // Controlla interazioni
+        activeLines = checkInteractions(activeLines);
+        
+        // Aggiungi nuove linee casuali (max 4-6 linee simultanee)
+        if (activeLines.length < 4 && Math.random() < 0.02) { // 2% di possibilità per frame
+          const newLine = createLine();
+          activeLines.push(newLine);
+          setNextId(prev => prev + 1);
+        }
+        
+        return activeLines;
+      });
+    }, 50); // 20 FPS
+    
+    return () => clearInterval(interval);
+  }, [updateLine, checkInteractions, createLine]);
+
+  // Genera il path SVG per una linea
+  const generatePath = (line: CircuitLine): string => {
+    if (line.segments.length < 2) return '';
+    
+    let path = `M ${line.segments[0].x} ${line.segments[0].y}`;
+    for (let i = 1; i < line.segments.length; i++) {
+      path += ` L ${line.segments[i].x} ${line.segments[i].y}`;
+    }
+    return path;
+  };
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Linee orizzontali */}
-      <div className="absolute top-1/4 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#FF6B00] to-transparent opacity-60">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FF6B00] to-transparent animate-pulse shadow-[0_0_10px_#FF6B00]"></div>
-        <div className="absolute top-0 left-0 w-2 h-2 -mt-[3px] bg-[#FF6B00] rounded-full shadow-[0_0_8px_#FF6B00] animate-ping"></div>
-        <div className="absolute top-0 right-1/3 w-1 h-1 -mt-[2px] bg-[#FF6B00] rounded-full animate-pulse"></div>
-      </div>
+      <svg
+        className="absolute inset-0 w-full h-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="0.5" result="coloredBlur"/>
+            <feMerge> 
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        
+        {lines.map(line => (
+          <g key={line.id}>
+            {/* Linea principale */}
+            <path
+              d={generatePath(line)}
+              stroke="#FF6B00"
+              strokeWidth={line.thickness / 10}
+              fill="none"
+              opacity={line.opacity}
+              filter="url(#glow)"
+              className="transition-opacity duration-300"
+            />
+            
+            {/* Punti di connessione */}
+            {line.segments.map((point, index) => {
+              if (index === 0 || index === line.segments.length - 1) {
+                return (
+                  <circle
+                    key={`${line.id}-point-${index}`}
+                    cx={point.x}
+                    cy={point.y}
+                    r={line.thickness / 20}
+                    fill="#FF6B00"
+                    opacity={line.opacity * 1.5}
+                    filter="url(#glow)"
+                  >
+                    <animate
+                      attributeName="r"
+                      values={`${line.thickness / 20};${line.thickness / 10};${line.thickness / 20}`}
+                      dur="2s"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                );
+              }
+              return null;
+            })}
+            
+            {/* Effetto di movimento sulla punta */}
+            {line.phase === 'growing' && line.segments.length > 0 && (
+              <circle
+                cx={line.currentPoint.x}
+                cy={line.currentPoint.y}
+                r="0.3"
+                fill="#FF6B00"
+                opacity="0.8"
+                filter="url(#glow)"
+              >
+                <animate
+                  attributeName="opacity"
+                  values="0.8;0.2;0.8"
+                  dur="0.5s"
+                  repeatCount="indefinite"
+                />
+              </circle>
+            )}
+          </g>
+        ))}
+      </svg>
       
-      <div className="absolute top-3/4 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#FF6B00]/40 to-transparent opacity-40">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FF6B00]/60 to-transparent animate-pulse shadow-[0_0_6px_#FF6B00]"></div>
-        <div className="absolute top-0 right-0 w-2 h-2 -mt-[3px] bg-[#FF6B00] rounded-full shadow-[0_0_8px_#FF6B00] animate-ping" style={{ animationDelay: '1s' }}></div>
-      </div>
-
-      {/* Linee verticali */}
-      <div className="absolute left-1/4 top-0 w-[1px] h-full bg-gradient-to-b from-transparent via-[#FF6B00]/50 to-transparent opacity-50">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#FF6B00]/70 to-transparent animate-pulse shadow-[0_0_8px_#FF6B00]"></div>
-        <div className="absolute left-0 top-1/3 w-2 h-2 -ml-[3px] bg-[#FF6B00] rounded-full shadow-[0_0_8px_#FF6B00] animate-ping" style={{ animationDelay: '2s' }}></div>
-      </div>
-      
-      <div className="absolute right-1/4 top-0 w-[1px] h-full bg-gradient-to-b from-transparent via-[#FF6B00]/30 to-transparent opacity-30">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#FF6B00]/50 to-transparent animate-pulse shadow-[0_0_6px_#FF6B00]"></div>
-        <div className="absolute left-0 bottom-1/4 w-1 h-1 -ml-[2px] bg-[#FF6B00] rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-      </div>
-
-      {/* Connessioni angolari */}
-      <div className="absolute top-1/4 left-1/4 w-4 h-4">
-        <div className="absolute inset-0 border-l border-t border-[#FF6B00]/60 rounded-tl-sm shadow-[0_0_6px_#FF6B00] animate-pulse"></div>
-      </div>
-      
-      <div className="absolute top-3/4 right-1/4 w-4 h-4">
-        <div className="absolute inset-0 border-r border-b border-[#FF6B00]/40 rounded-br-sm shadow-[0_0_4px_#FF6B00] animate-pulse" style={{ animationDelay: '1.5s' }}></div>
-      </div>
-
-      {/* Effetti di movimento per simulare dati che scorrono */}
-      <div className="absolute top-1/4 left-0 w-full h-[1px] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FF6B00] to-transparent w-20 animate-pulse-move shadow-[0_0_10px_#FF6B00]"></div>
-      </div>
-      
-      <div className="absolute left-1/4 top-0 w-[1px] h-full overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#FF6B00] to-transparent h-20 animate-pulse-move-vertical shadow-[0_0_8px_#FF6B00]" style={{ animationDelay: '3s' }}></div>
-      </div>
+      {/* Punti di riferimento fissi per dare contesto */}
+      <div className="absolute top-10 left-10 w-1 h-1 bg-[#FF6B00]/30 rounded-full animate-pulse"></div>
+      <div className="absolute top-20 right-20 w-1 h-1 bg-[#FF6B00]/30 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+      <div className="absolute bottom-20 left-20 w-1 h-1 bg-[#FF6B00]/30 rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute bottom-10 right-10 w-1 h-1 bg-[#FF6B00]/30 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
     </div>
   );
 }
@@ -160,8 +389,8 @@ export default function LoginPage() {
       {/* Background dotted pattern */}
       <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#FF6B00_1px,transparent_1px)]" style={{ backgroundSize: '30px 30px' }}></div>
       
-      {/* Linee animate del circuito */}
-      <AnimatedCircuitLines />
+      {/* Sistema di linee dinamiche */}
+      <DynamicCircuitLines />
       
       {/* Gradiente radiale per effetto depth */}
       <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black/20"></div>
@@ -218,26 +447,6 @@ export default function LoginPage() {
       
       {/* Stili CSS personalizzati */}
       <style jsx>{`
-        @keyframes pulse-move {
-          0% { transform: translateX(-100px); opacity: 0; }
-          50% { opacity: 1; }
-          100% { transform: translateX(calc(100vw + 100px)); opacity: 0; }
-        }
-        
-        @keyframes pulse-move-vertical {
-          0% { transform: translateY(-100px); opacity: 0; }
-          50% { opacity: 1; }
-          100% { transform: translateY(calc(100vh + 100px)); opacity: 0; }
-        }
-        
-        .animate-pulse-move {
-          animation: pulse-move 8s infinite linear;
-        }
-        
-        .animate-pulse-move-vertical {
-          animation: pulse-move-vertical 10s infinite linear;
-        }
-        
         .bg-radial-gradient {
           background: radial-gradient(circle at 50% 50%, rgba(255, 107, 0, 0.1) 0%, transparent 70%);
         }
