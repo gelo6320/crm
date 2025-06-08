@@ -203,13 +203,33 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
     setSelectedResultIndex(-1);
   }, [searchResults]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (showSearchResults && searchInputRef.current) {
+        updateSearchTriggerRect();
+      }
+    };
+  
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [showSearchResults]);
+
   // Function to perform the search
+  const updateSearchTriggerRect = () => {
+    if (searchInputRef.current) {
+      const rect = searchInputRef.current.getBoundingClientRect();
+      setSearchTriggerRect(rect);
+      return rect;
+    }
+    return null;
+  };
+  
+  // Modifica la funzione performSearch
   const performSearch = async () => {
     if (!searchQuery || searchQuery.length < 2) return;
     
     setIsSearching(true);
     try {
-      // Use the global search API to get results from multiple sections
       const response = await axios.get(`${API_BASE_URL}/api/global-search?query=${encodeURIComponent(searchQuery)}&limit=8`,
         { withCredentials: true }
       );
@@ -217,12 +237,8 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
       if (response.data.success && response.data.data.length > 0) {
         setSearchResults(response.data.data);
         
-        // Ottieni le coordinate dell'input di ricerca per l'animazione
-        if (searchInputRef.current) {
-          const rect = searchInputRef.current.getBoundingClientRect();
-          setSearchTriggerRect(rect);
-        }
-        
+        // ✅ Calcola SEMPRE le coordinate prima di mostrare i risultati
+        updateSearchTriggerRect();
         setShowSearchResults(true);
       } else {
         setSearchResults([]);
@@ -548,9 +564,9 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onFocus={() => {
-                  if (searchResults.length > 0 && searchInputRef.current) {
-                    const rect = searchInputRef.current.getBoundingClientRect();
-                    setSearchTriggerRect(rect);
+                  if (searchResults.length > 0) {
+                    // ✅ Ricalcola sempre le coordinate al focus
+                    updateSearchTriggerRect();
                     setShowSearchResults(true);
                   }
                 }}
@@ -599,15 +615,18 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
             <motion.div 
               className="absolute w-full max-w-md"
               style={{
-                top: searchTriggerRect ? searchTriggerRect.bottom + 12 : '84px',
-                left: searchTriggerRect ? searchTriggerRect.left + (searchTriggerRect.width / 2) : '50%',
-                transform: 'translateX(-50%)'
+                top: searchTriggerRect ? searchTriggerRect.bottom + 8 : '80px', // Riduci il gap
+                left: '50%', // Usa sempre il centro
+                transform: 'translateX(-50%)',
+                // ✅ Aggiungi questi per debugging
+                minWidth: searchTriggerRect ? `${searchTriggerRect.width}px` : '300px',
+                maxWidth: '90vw' // Previeni overflow su mobile
               }}
               onClick={(e) => e.stopPropagation()}
               initial={getSearchAnimationCoordinates().initial}
               animate={getSearchAnimationCoordinates().animate}
               exit={{
-                y: -52, // -(searchTriggerRect.height / 2 + 12) approssimativo
+                y: -52,
                 scaleY: 0.1,
                 scaleX: 0.8,
                 opacity: 0,
