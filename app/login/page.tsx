@@ -6,107 +6,229 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-// Componente per il pattern esagonale tecnologico animato
-function TechHexagonalPattern() {
-  const [activeCells, setActiveCells] = useState<Set<string>>(new Set());
+// Tipi per i nodi della rete blockchain
+interface NetworkNode {
+  id: string;
+  x: number;
+  y: number;
+  vx: number; // velocità x
+  vy: number; // velocità y
+  size: number;
+  opacity: number;
+  connections: string[];
+}
 
-  // Genera le celle esagonali attive con animazione casuale
+// Componente per il pattern blockchain/network nodes animato
+function AnimatedNetworkNodes() {
+  const [nodes, setNodes] = useState<NetworkNode[]>([]);
+  const [connections, setConnections] = useState<Array<{from: NetworkNode, to: NetworkNode, opacity: number}>>([]);
+
+  // Inizializza i nodi
   useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveCells(prev => {
-        const newActiveCells = new Set(prev);
-        
-        // Rimuovi alcune celle casuali (fade out)
-        if (newActiveCells.size > 0 && Math.random() < 0.3) {
-          const cellsArray = Array.from(newActiveCells);
-          const randomCell = cellsArray[Math.floor(Math.random() * cellsArray.length)];
-          newActiveCells.delete(randomCell);
-        }
-        
-        // Aggiungi nuove celle casuali (fade in) - max 8-12 attive
-        if (newActiveCells.size < 10 && Math.random() < 0.4) {
-          const row = Math.floor(Math.random() * 20);
-          const col = Math.floor(Math.random() * 20);
-          newActiveCells.add(`${row}-${col}`);
-        }
-        
-        return newActiveCells;
-      });
-    }, 800 + Math.random() * 1200); // Intervallo variabile per naturalezza
-    
-    return () => clearInterval(interval);
+    const initialNodes: NetworkNode[] = Array.from({ length: 25 }, (_, i) => ({
+      id: `node-${i}`,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      vx: (Math.random() - 0.5) * 0.02, // velocità molto lenta
+      vy: (Math.random() - 0.5) * 0.02,
+      size: Math.random() * 2 + 1, // 1-3px
+      opacity: Math.random() * 0.4 + 0.3, // 0.3-0.7
+      connections: []
+    }));
+    setNodes(initialNodes);
   }, []);
 
+  // Animazione principale
+  useEffect(() => {
+    if (nodes.length === 0) return;
+
+    const interval = setInterval(() => {
+      setNodes(prevNodes => {
+        const newNodes = prevNodes.map(node => {
+          let newX = node.x + node.vx;
+          let newY = node.y + node.vy;
+          let newVx = node.vx;
+          let newVy = node.vy;
+
+          // Rimbalzo sui bordi con fade
+          if (newX <= 0 || newX >= 100) {
+            newVx = -newVx;
+            newX = Math.max(0, Math.min(100, newX));
+          }
+          if (newY <= 0 || newY >= 100) {
+            newVy = -newVy;
+            newY = Math.max(0, Math.min(100, newY));
+          }
+
+          // Piccola variazione casuale nella velocità per movimento naturale
+          if (Math.random() < 0.01) {
+            newVx += (Math.random() - 0.5) * 0.002;
+            newVy += (Math.random() - 0.5) * 0.002;
+          }
+
+          // Limita velocità massima
+          const maxSpeed = 0.03;
+          if (Math.abs(newVx) > maxSpeed) newVx = Math.sign(newVx) * maxSpeed;
+          if (Math.abs(newVy) > maxSpeed) newVy = Math.sign(newVy) * maxSpeed;
+
+          return {
+            ...node,
+            x: newX,
+            y: newY,
+            vx: newVx,
+            vy: newVy
+          };
+        });
+
+        // Calcola connessioni
+        const newConnections: Array<{from: NetworkNode, to: NetworkNode, opacity: number}> = [];
+        const maxDistance = 15; // distanza massima per connessione (in %)
+
+        for (let i = 0; i < newNodes.length; i++) {
+          for (let j = i + 1; j < newNodes.length; j++) {
+            const nodeA = newNodes[i];
+            const nodeB = newNodes[j];
+            const distance = Math.sqrt(
+              Math.pow(nodeA.x - nodeB.x, 2) + Math.pow(nodeA.y - nodeB.y, 2)
+            );
+
+            if (distance < maxDistance) {
+              // Calcola opacità basata sulla distanza (più vicini = più opachi)
+              const opacity = Math.max(0, (maxDistance - distance) / maxDistance) * 0.6;
+              newConnections.push({
+                from: nodeA,
+                to: nodeB,
+                opacity
+              });
+            }
+          }
+        }
+
+        setConnections(newConnections);
+        return newNodes;
+      });
+    }, 50); // 20 FPS per animazione fluida
+
+    return () => clearInterval(interval);
+  }, [nodes.length]);
+
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-      {/* Pattern esagonale base con CSS */}
-      <div 
-        className="absolute inset-0 opacity-30"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at 50% 50%, transparent 20%, transparent 80%),
-            conic-gradient(from 30deg, transparent 60deg, #FF6B00 60deg, #FF6B00 120deg, transparent 120deg, transparent 180deg, #FF6B00 180deg, #FF6B00 240deg, transparent 240deg, transparent 300deg, #FF6B00 300deg, #FF6B00 360deg, transparent 360deg)
-          `,
-          backgroundSize: '40px 35px, 40px 35px',
-          backgroundPosition: '0 0, 20px 17.5px',
-          mask: 'radial-gradient(circle at center, transparent 3px, black 4px)',
-          WebkitMask: 'radial-gradient(circle at center, transparent 3px, black 4px)'
-        }}
-      />
-      
-      {/* Overlay con celle attive animate */}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* SVG per le connessioni */}
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FF6B00" stopOpacity="0.8" />
+            <stop offset="50%" stopColor="#FF8533" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#FF6B00" stopOpacity="0.8" />
+          </linearGradient>
+          <filter id="connectionGlow">
+            <feGaussianBlur stdDeviation="0.3" result="coloredBlur"/>
+            <feMerge> 
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        
+        {/* Renderizza le connessioni */}
+        {connections.map((connection, index) => (
+          <line
+            key={`connection-${connection.from.id}-${connection.to.id}`}
+            x1={connection.from.x}
+            y1={connection.from.y}
+            x2={connection.to.x}
+            y2={connection.to.y}
+            stroke="url(#connectionGradient)"
+            strokeWidth="0.1"
+            opacity={connection.opacity}
+            filter="url(#connectionGlow)"
+            className="transition-opacity duration-300"
+          >
+            <animate
+              attributeName="opacity"
+              values={`${connection.opacity * 0.3};${connection.opacity};${connection.opacity * 0.3}`}
+              dur="3s"
+              repeatCount="indefinite"
+            />
+          </line>
+        ))}
+      </svg>
+
+      {/* Nodi */}
       <div className="absolute inset-0">
-        {Array.from({ length: 20 }, (_, row) => 
-          Array.from({ length: 20 }, (_, col) => {
-            const cellKey = `${row}-${col}`;
-            const isActive = activeCells.has(cellKey);
-            const offsetX = (col % 2) * 20; // Offset per pattern esagonale
+        {nodes.map(node => (
+          <div
+            key={node.id}
+            className="absolute transition-all duration-100 ease-linear"
+            style={{
+              left: `${node.x}%`,
+              top: `${node.y}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            {/* Nodo principale */}
+            <div
+              className="rounded-full bg-[#FF6B00] shadow-lg transition-all duration-300"
+              style={{
+                width: `${node.size * 2}px`,
+                height: `${node.size * 2}px`,
+                opacity: node.opacity,
+                boxShadow: `0 0 ${node.size * 3}px rgba(255, 107, 0, ${node.opacity * 0.6})`,
+              }}
+            />
             
-            return (
+            {/* Anello esterno animato */}
+            <div
+              className="absolute inset-0 rounded-full border border-[#FF6B00]/40 animate-ping"
+              style={{
+                width: `${node.size * 4}px`,
+                height: `${node.size * 4}px`,
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                animationDuration: `${2 + Math.random() * 2}s`,
+                animationDelay: `${Math.random() * 2}s`,
+              }}
+            />
+
+            {/* Pulse effect per nodi più grandi */}
+            {node.size > 2 && (
               <div
-                key={cellKey}
-                className={`absolute transition-all duration-1000 ${
-                  isActive ? 'opacity-80 scale-110' : 'opacity-0 scale-95'
-                }`}
+                className="absolute inset-0 rounded-full bg-[#FF6B00]/20 animate-pulse"
                 style={{
-                  left: `${col * 40 + offsetX}px`,
-                  top: `${row * 35}px`,
-                  width: '40px',
-                  height: '35px',
-                  background: isActive
-                    ? `radial-gradient(circle at center, #FF6B00 0%, rgba(255, 107, 0, 0.3) 70%, transparent 100%)`
-                    : 'transparent',
-                  clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
-                  filter: isActive ? 'drop-shadow(0 0 8px rgba(255, 107, 0, 0.6))' : 'none',
+                  width: `${node.size * 6}px`,
+                  height: `${node.size * 6}px`,
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  animationDuration: `${3 + Math.random()}s`,
                 }}
               />
-            );
-          })
-        )}
+            )}
+          </div>
+        ))}
       </div>
-      
-      {/* Pattern di connessione sottile */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `
-            linear-gradient(60deg, transparent 45%, #FF6B00 50%, transparent 55%),
-            linear-gradient(-60deg, transparent 45%, #FF6B00 50%, transparent 55%)
-          `,
-          backgroundSize: '120px 104px',
-          backgroundPosition: '0 0, 60px 52px'
-        }}
-      />
-      
-      {/* Punti di riferimento tecnologici */}
-      <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-[#FF6B00]/40 rounded-full animate-pulse" 
-           style={{ animationDelay: '0s', animationDuration: '3s' }} />
-      <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-[#FF6B00]/60 rounded-full animate-pulse" 
-           style={{ animationDelay: '1s', animationDuration: '2s' }} />
-      <div className="absolute bottom-1/3 left-1/3 w-1.5 h-1.5 bg-[#FF6B00]/50 rounded-full animate-pulse" 
-           style={{ animationDelay: '2s', animationDuration: '4s' }} />
-      <div className="absolute bottom-1/4 right-1/3 w-1 h-1 bg-[#FF6B00]/70 rounded-full animate-pulse" 
-           style={{ animationDelay: '0.5s', animationDuration: '2.5s' }} />
+
+      {/* Effetti ambientali aggiuntivi */}
+      <div className="absolute inset-0 opacity-30">
+        {/* Gradient overlay per depth */}
+        <div className="absolute inset-0 bg-gradient-radial from-transparent via-[#FF6B00]/5 to-transparent" />
+        
+        {/* Particelle di background statiche */}
+        {Array.from({ length: 15 }, (_, i) => (
+          <div
+            key={`static-${i}`}
+            className="absolute w-0.5 h-0.5 bg-[#FF6B00]/20 rounded-full animate-pulse"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`,
+              animationDuration: `${2 + Math.random() * 3}s`,
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -217,8 +339,8 @@ export default function LoginPage() {
       {/* Background dotted pattern */}
       <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#FF6B00_1px,transparent_1px)]" style={{ backgroundSize: '30px 30px' }}></div>
       
-      {/* Pattern esagonale tecnologico */}
-      <TechHexagonalPattern />
+      {/* Pattern blockchain/network nodes animato */}
+      <AnimatedNetworkNodes />
       
       {/* Gradiente radiale per effetto depth */}
       <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black/20"></div>
@@ -277,6 +399,9 @@ export default function LoginPage() {
       <style jsx>{`
         .bg-radial-gradient {
           background: radial-gradient(circle at 50% 50%, rgba(255, 107, 0, 0.1) 0%, transparent 70%);
+        }
+        .bg-gradient-radial {
+          background: radial-gradient(circle at center, var(--tw-gradient-stops));
         }
       `}</style>
     </div>
