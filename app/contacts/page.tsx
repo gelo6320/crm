@@ -266,7 +266,7 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
           borderRadius="24"
         />
         
-        <div className="relative bg-zinc-50/80 dark:bg-zinc-300/50 rounded-[24px] shadow-lg overflow-hidden">
+        <div className="relative bg-zinc-50/80 dark:bg-zinc-50/60 rounded-[24px] shadow-lg overflow-hidden">
           {/* Header minimale con solo bottone chiudi e status */}
           <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
             <div className="w-6"></div> {/* Spacer per centrare il contenuto */}
