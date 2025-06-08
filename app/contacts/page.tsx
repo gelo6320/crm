@@ -131,10 +131,22 @@ function formatSource(source: string, formType: string): string {
 }
 
 // Componente modale aggiornato con animazione iOS-style
+// Componente modale aggiornato con animazione iOS-style e correzioni per Android
 function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModalProps) {
   const [isClosing, setIsClosing] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   console.log('🔄 Modal render - triggerRect:', triggerRect);
+
+  // Effetto per gestire il mounting del modale
+  useEffect(() => {
+    // Piccolo delay per permettere al DOM di essere pronto
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+    }, 10);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Calcola le coordinate iniziali e finali per l'animazione
   const getAnimationCoordinates = () => {
@@ -189,12 +201,18 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
     onClose();
   };
 
-  // Configurazione spring per animazione naturale stile iOS
+  // Configurazione spring ottimizzata per Android
   const springConfig = {
     type: "spring" as const,
-    damping: isClosing ? 35 : 25,        // Chiusura più veloce
-    stiffness: isClosing ? 400 : 300,    // Chiusura più snappy
+    damping: isClosing ? 35 : 25,
+    stiffness: isClosing ? 400 : 300,
     mass: 0.8,
+  };
+
+  // Configurazione separata per il blur background
+  const blurConfig = {
+    duration: 0.15, // Durata più breve per il blur
+    ease: "easeOut" as const,
   };
 
   const handleCall = () => {
@@ -234,14 +252,34 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={handleClose}
+      style={{
+        // Aggiunge will-change per ottimizzare le performance su Android
+        willChange: 'backdrop-filter, opacity'
+      }}
     >
-      {/* Background overlay animato */}
+      {/* Background overlay con gestione ottimizzata per Android */}
       <motion.div
-        initial={{ opacity: 1 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
+        initial={{ 
+          opacity: 0,
+          backdropFilter: "blur(0px)" 
+        }}
+        animate={{ 
+          opacity: 1,
+          backdropFilter: isMounted ? "blur(8px)" : "blur(0px)"
+        }}
+        exit={{ 
+          opacity: 0,
+          backdropFilter: "blur(0px)"
+        }}
+        transition={blurConfig}
         className="absolute inset-0 bg-black/40"
+        style={{
+          // Fallback per browser che non supportano backdrop-filter
+          background: 'rgba(0, 0, 0, 0.4)',
+          willChange: 'backdrop-filter, opacity',
+          // Pre-compone il layer per migliori performance
+          transform: 'translateZ(0)',
+        }}
       />
       
       {/* Modal container con animazione iOS */}
@@ -257,7 +295,8 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
         }}
         transition={springConfig}
         style={{
-          transformOrigin: "center center"
+          transformOrigin: "center center",
+          willChange: 'transform, opacity' // Ottimizzazione per le trasformazioni
         }}
       >
         <SmoothCorners 
@@ -265,7 +304,14 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
           borderRadius="24"
         />
         
-        <div className="relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden backdrop-blur-lg">
+        <div 
+          className="relative bg-zinc-50/60 dark:bg-zinc-100/5 rounded-[24px] border border-white/30 dark:border-white/20 shadow-lg overflow-hidden backdrop-blur-lg"
+          style={{
+            // Fallback per il backdrop-blur del container
+            background: 'rgba(250, 250, 250, 0.8)',
+            willChange: 'transform'
+          }}
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/30 dark:border-white/20">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Dettagli contatto</h3>
@@ -285,16 +331,25 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
             <div className="flex justify-between items-start">
               <div className="flex items-center space-x-3">
                 {contact.source === "facebook" ? (
-                  <div className="w-10 h-10 rounded-full bg-blue-100/90 dark:bg-blue-900/40 flex items-center justify-center backdrop-blur-sm">
-                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 287.56 191">
+                  <div className="w-10 h-10 rounded-full bg-blue-100/90 dark:bg-blue-900/40 flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+                    <svg 
+                      className="w-5 h-5 text-blue-600" 
+                      fill="currentColor" 
+                      viewBox="0 0 287.56 191"
+                      preserveAspectRatio="xMidYMid meet"
+                      style={{ minWidth: '20px', minHeight: '20px' }}
+                    >
                       <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
                       <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
                       <path fill="#0082fb" d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
                     </svg>
                   </div>
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-100/90 dark:bg-gray-800/90 flex items-center justify-center backdrop-blur-sm">
-                    <Globe className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  <div className="w-10 h-10 rounded-full bg-gray-100/90 dark:bg-gray-800/90 flex items-center justify-center backdrop-blur-sm flex-shrink-0">
+                    <Globe 
+                      className="w-5 h-5 text-gray-600 dark:text-gray-400" 
+                      style={{ minWidth: '20px', minHeight: '20px' }}
+                    />
                   </div>
                 )}
                 <div>
@@ -613,8 +668,14 @@ export default function ContactsPage() {
   const getSourceIcon = (contact: Contact) => {
     if (contact.source === 'facebook') {
       return (
-        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-          <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 287.56 191">
+        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+          <svg 
+            className="w-4 h-4 text-blue-600" 
+            fill="currentColor" 
+            viewBox="0 0 287.56 191"
+            preserveAspectRatio="xMidYMid meet"
+            style={{ minWidth: '16px', minHeight: '16px' }}
+          >
             <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
             <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
             <path fill="#0082fb" d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
@@ -623,8 +684,11 @@ export default function ContactsPage() {
       );
     } else {
       return (
-        <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-          <Globe className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+        <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0">
+          <Globe 
+            className="w-4 h-4 text-zinc-600 dark:text-zinc-400" 
+            style={{ minWidth: '16px', minHeight: '16px' }}
+          />
         </div>
       );
     }
