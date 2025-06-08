@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Facebook, RefreshCw } from "lucide-react";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import AdsList from "@/components/advertising/AdsList";
 import AdDetails from "@/components/advertising/AdDetails";
@@ -48,26 +47,6 @@ export default function AdvertisingPage() {
 
   return (
     <div className="max-w-full p-2 sm:p-4 space-y-3 sm:space-y-4">
-      {/* Header con titolo e pulsante di aggiornamento */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center">
-          <div className="p-2 mr-3 rounded-full bg-primary/10">
-            <Facebook size={20} className="text-primary" />
-          </div>
-          <h1 className="text-xl font-semibold">Pubblicità</h1>
-        </div>
-        <motion.button 
-          onClick={loadAds}
-          className="btn flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-700 hover:border-primary hover:bg-primary/10 text-sm"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          title="Aggiorna dati"
-        >
-          <RefreshCw size={16} />
-          Aggiorna
-        </motion.button>
-      </div>
-      
       {/* Lista inserzioni (full width) */}
       <div className="w-full">
         <AdsList 

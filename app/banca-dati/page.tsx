@@ -290,7 +290,7 @@ export default function BancaDatiPage() {
     switch(activeTab) {
       case "visits": return "Visite al sito";
       case "clients": return "Clienti registrati";
-      case "audiences": return "Facebook Custom Audience";
+      case "audiences": return "Conversioni registrate";
       default: return "Seleziona categoria";
     }
   };
@@ -320,7 +320,7 @@ export default function BancaDatiPage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
       <div className="w-full">
         {/* Tab selector mobile-first */}
-        <div className="px-4 py-4 sm:px-6">
+        <div className="py-4 sm:px-6">
           <div className="flex space-x-1 bg-white dark:bg-zinc-800 rounded-lg p-1 border border-zinc-200 dark:border-zinc-700">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -343,7 +343,7 @@ export default function BancaDatiPage() {
         </div>
 
         {/* Main Content */}
-        <div className="px-4 sm:px-6">
+        <div className="sm:px-6">
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm overflow-hidden">
             {/* Header con statistiche */}
             <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">

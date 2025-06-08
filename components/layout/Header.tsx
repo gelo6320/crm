@@ -12,6 +12,9 @@ import Image from "next/image";
 import Link from "next/link";
 import axios from "axios";
 import { getUsers, switchUser, restoreAdmin, checkAuth } from "@/lib/api/auth";
+// AGGIORNATO: Nuovo import per Motion
+import { animate, motion, AnimatePresence } from "motion/react";
+import { SmoothCorners } from 'react-smooth-corners';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
 
@@ -62,6 +65,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedResultIndex, setSelectedResultIndex] = useState(-1);
+  const [searchTriggerRect, setSearchTriggerRect] = useState<DOMRect | null>(null); // NUOVO STATO per animazione
   const userMenuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -83,6 +87,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
       }
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowSearchResults(false);
+        setSearchTriggerRect(null);
       }
       if (userSwitcherRef.current && !userSwitcherRef.current.contains(event.target as Node)) {
         setShowUserSwitcher(false);
@@ -186,6 +191,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
       } else {
         setSearchResults([]);
         setShowSearchResults(false);
+        setSearchTriggerRect(null);
       }
     }, 300); // 300ms debounce
 
@@ -197,16 +203,6 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
     setSelectedResultIndex(-1);
   }, [searchResults]);
 
-  // Effect to scroll selected item into view
-  useEffect(() => {
-    if (selectedResultIndex >= 0 && showSearchResults) {
-      const selectedElement = document.getElementById(`search-result-${selectedResultIndex}`);
-      if (selectedElement) {
-        selectedElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
-    }
-  }, [selectedResultIndex, showSearchResults]);
-
   // Function to perform the search
   const performSearch = async () => {
     if (!searchQuery || searchQuery.length < 2) return;
@@ -214,16 +210,24 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
     setIsSearching(true);
     try {
       // Use the global search API to get results from multiple sections
-      const response = await axios.get(`${API_BASE_URL}/api/global-search?query=${encodeURIComponent(searchQuery)}&limit=10`,
+      const response = await axios.get(`${API_BASE_URL}/api/global-search?query=${encodeURIComponent(searchQuery)}&limit=8`,
         { withCredentials: true }
       );
       
       if (response.data.success && response.data.data.length > 0) {
         setSearchResults(response.data.data);
+        
+        // Ottieni le coordinate dell'input di ricerca per l'animazione
+        if (searchInputRef.current) {
+          const rect = searchInputRef.current.getBoundingClientRect();
+          setSearchTriggerRect(rect);
+        }
+        
         setShowSearchResults(true);
       } else {
         setSearchResults([]);
         setShowSearchResults(false);
+        setSearchTriggerRect(null);
       }
     } catch (error) {
       console.error("Error performing search:", error);
@@ -266,6 +270,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
     if (e.key === 'Escape') {
       e.preventDefault();
       setShowSearchResults(false);
+      setSearchTriggerRect(null);
       setSelectedResultIndex(-1);
       searchInputRef.current?.blur();
     }
@@ -275,6 +280,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   const handleSearchResultClick = (result: SearchResult) => {
     console.log('Search result clicked:', result);
     setShowSearchResults(false);
+    setSearchTriggerRect(null);
     setSearchQuery("");
     
     // Check if we're already on the target page
@@ -311,68 +317,55 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   // Helper functions for search results rendering
   const getResultIcon = (result: SearchResult) => {
     if (result.section === "Contatti") {
-      return <User size={12} className="text-primary" />;
+      return <User size={14} className="text-blue-500" />;
     } else if (result.section === "Sales Funnel") {
-      return <TrendingUp size={12} className="text-orange-500" />;
+      return <TrendingUp size={14} className="text-orange-500" />;
     } else if (result.section === "Calendario") {
-      return <CalendarIcon size={12} className="text-blue-400" />;
+      return <CalendarIcon size={14} className="text-green-500" />;
     } else if (result.section === "Progetti") {
-      return <Briefcase size={12} className="text-green-400" />;
+      return <Briefcase size={14} className="text-purple-500" />;
     } else if (result.section === "Chat WhatsApp") {
-      return <MessageCircle size={12} className="text-green-500" />;
+      return <MessageCircle size={14} className="text-green-600" />;
     } else if (result.section.includes("Banca Dati")) {
-      if (result.type === 'visit') {
-        return <Globe size={12} className="text-purple-400" />;
-      } else if (result.type === 'client') {
-        return <Users size={12} className="text-blue-500" />;
-      } else if (result.type === 'audience') {
-        return <TrendingUp size={12} className="text-orange-400" />;
-      }
-      return <Database size={12} className="text-gray-400" />;
+      return <Database size={14} className="text-indigo-500" />;
     }
-    return <Search size={12} className="text-gray-400" />;
+    return <Search size={14} className="text-gray-400" />;
   };
 
-  const getSecondaryInfo = (result: SearchResult) => {
-    if (result.section === "Contatti") {
-      return result.email || result.phone || '';
-    } else if (result.section === "Sales Funnel") {
-      return `${result.email || result.phone || ''} • ${result.status || 'new'}`;
-    } else if (result.section === "Calendario" && result.start) {
-      return `${new Date(result.start).toLocaleDateString('it-IT')} ${new Date(result.start).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
-    } else if (result.section === "Progetti" && result.client) {
-      return `Cliente: ${result.client}`;
-    } else if (result.section === "Chat WhatsApp") {
-      return result.phone || 'Conversazione WhatsApp';
-    } else if (result.section.includes("Banca Dati")) {
-      if (result.type === 'visit') {
-        return `${result.location || result.ip || ''} • ${result.timestamp ? new Date(result.timestamp).toLocaleDateString('it-IT') : ''}`;
-      } else if (result.type === 'client') {
-        return `${result.email || ''} • ${result.value ? `€${result.value.toLocaleString('it-IT')}` : ''}`;
-      } else if (result.type === 'audience') {
-        return `${result.email || ''} • ${result.source || 'Facebook'}`;
-      }
-    }
-    return '';
+  // Configurazione spring per animazione naturale stile iOS - ottimizzata per l'espansione verso il basso
+  const springConfig = {
+    type: "spring" as const,
+    damping: 30,
+    stiffness: 400,
+    mass: 0.6,
   };
 
-  const getStatusColor = (result: SearchResult) => {
-    if (result.status) {
-      switch (result.status) {
-        case 'new': return 'bg-zinc-600';
-        case 'contacted': return 'bg-blue-600';
-        case 'qualified': return 'bg-purple-600';
-        case 'opportunity': return 'bg-yellow-600';
-        case 'customer': case 'converted': return 'bg-green-600';
-        case 'lost': case 'cancelled': return 'bg-red-600';
-        case 'pending': return 'bg-orange-600';
-        case 'confirmed': return 'bg-green-600';
-        case 'completed': return 'bg-gray-600';
-        case 'active': return 'bg-green-600';
-        default: return 'bg-zinc-600';
-      }
+  // Calcola le coordinate per l'animazione dei risultati di ricerca
+  const getSearchAnimationCoordinates = () => {
+    if (!searchTriggerRect) {
+      return {
+        initial: { scale: 0.1, opacity: 0, y: -40, transformOrigin: "top center" },
+        animate: { scale: 1, opacity: 1, y: 0, transformOrigin: "top center" }
+      };
     }
-    return '';
+
+    // L'animazione parte dal centro della search bar (altezza 0) e si espande verso il basso
+    return {
+      initial: {
+        y: -searchTriggerRect.height / 2, // Parte dal centro verticale della search bar
+        scaleY: 0.1,
+        scaleX: 0.8,
+        opacity: 0,
+        transformOrigin: "top center"
+      },
+      animate: {
+        y: 0, // Arriva alla posizione naturale (sotto la search bar)
+        scaleY: 1,
+        scaleX: 1,
+        opacity: 1,
+        transformOrigin: "top center"
+      }
+    };
   };
 
   const getHeaderTitle = () => {
@@ -407,301 +400,308 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
   };
   
   return (
-    <header className="bg-black backdrop-blur-md sticky top-0 z-[60] w-full shadow-lg">
-      <div className="relative flex items-center justify-between px-4 py-2.5 md:justify-start">
-        {/* Left section with logo and title */}
-        <div className="flex items-center space-x-4 z-10">
-          <button 
-            onClick={() => setSidebarOpen(true)}
-            className="md:hidden text-zinc-400 hover:text-white"
-          >
-            <Menu size={20} />
-          </button>
-          
-          <div className="flex items-center space-x-3">
-            {/* Admin User Switcher */}
-            {(isAdmin || isImpersonating || originalAdmin) && (
-              <div className="relative" ref={userSwitcherRef}>
-                <button
-                  onClick={() => {
-                    setShowUserSwitcher(!showUserSwitcher);
-                    if (!showUserSwitcher) {
-                      loadUsers();
+    <>
+      <header className="bg-black backdrop-blur-md sticky top-0 z-[60] w-full shadow-lg">
+        <div className="relative flex items-center justify-between px-4 py-2.5 md:justify-start">
+          {/* Left section with logo and title */}
+          <div className="flex items-center space-x-4 z-10">
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden text-zinc-400 hover:text-white"
+            >
+              <Menu size={20} />
+            </button>
+            
+            <div className="flex items-center space-x-3">
+              {/* Admin User Switcher */}
+              {(isAdmin || isImpersonating || originalAdmin) && (
+                <div className="relative" ref={userSwitcherRef}>
+                  <button
+                    onClick={() => {
+                      setShowUserSwitcher(!showUserSwitcher);
+                      if (!showUserSwitcher) {
+                        loadUsers();
+                      }
+                    }}
+                    className={`p-2 rounded-full transition-colors ${
+                      isImpersonating 
+                        ? 'bg-orange-600 text-white' 
+                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                    }`}
+                    title={isImpersonating 
+                      ? `Stai operando come: ${currentUser?.username}` 
+                      : 'Cambia profilo utente (Admin)'
                     }
-                  }}
-                  className={`p-2 rounded-full transition-colors ${
-                    isImpersonating 
-                      ? 'bg-orange-600 text-white' 
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                  }`}
-                  title={isImpersonating 
-                    ? `Stai operando come: ${currentUser?.username}` 
-                    : 'Cambia profilo utente (Admin)'
-                  }
-                >
-                  <UserCog size={16} />
-                </button>
+                  >
+                    <UserCog size={16} />
+                  </button>
 
-                {showUserSwitcher && (
-                  <div className="absolute left-0 mt-2 w-64 bg-zinc-800/95 backdrop-blur-sm rounded-md shadow-lg z-50">
-                    <div className="p-3 border-b border-zinc-700/50">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-zinc-400 uppercase tracking-wide">
-                          Gestione Utenti
-                        </span>
+                  {showUserSwitcher && (
+                    <div className="absolute left-0 mt-2 w-64 bg-zinc-800/95 backdrop-blur-sm rounded-md shadow-lg z-50">
+                      <div className="p-3 border-b border-zinc-700/50">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-zinc-400 uppercase tracking-wide">
+                            Gestione Utenti
+                          </span>
+                          {isImpersonating && (
+                            <button
+                              onClick={handleRestoreAdmin}
+                              className="text-xs bg-orange-600 text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-orange-700"
+                              title="Torna al profilo admin"
+                            >
+                              <RotateCcw size={10} />
+                              Ripristina Admin
+                            </button>
+                          )}
+                        </div>
+                        
                         {isImpersonating && (
-                          <button
-                            onClick={handleRestoreAdmin}
-                            className="text-xs bg-orange-600 text-white px-2 py-1 rounded flex items-center gap-1 hover:bg-orange-700"
-                            title="Torna al profilo admin"
-                          >
-                            <RotateCcw size={10} />
-                            Ripristina Admin
-                          </button>
+                          <div className="mt-2 p-2 bg-orange-900/30 rounded text-xs">
+                            <div className="text-orange-200">
+                              👤 Profilo corrente: <strong>{currentUser?.username}</strong>
+                            </div>
+                            <div className="text-zinc-400">
+                              🔧 Admin originale: {originalAdmin?.username}
+                            </div>
+                          </div>
                         )}
                       </div>
-                      
-                      {isImpersonating && (
-                        <div className="mt-2 p-2 bg-orange-900/30 rounded text-xs">
-                          <div className="text-orange-200">
-                            👤 Profilo corrente: <strong>{currentUser?.username}</strong>
-                          </div>
-                          <div className="text-zinc-400">
-                            🔧 Admin originale: {originalAdmin?.username}
-                          </div>
-                        </div>
-                      )}
-                    </div>
 
-                    <div className="max-h-64 overflow-y-auto">
-                      {isLoadingUsers ? (
-                        <div className="flex items-center justify-center p-4">
-                          <Loader2 size={16} className="animate-spin text-zinc-400" />
-                          <span className="ml-2 text-sm text-zinc-400">Caricamento...</span>
-                        </div>
-                      ) : (
-                        <div className="py-1">
-                          {users.map((user) => (
-                            <button
-                              key={user._id}
-                              onClick={() => handleUserSwitch(user.username)}
-                              disabled={currentUser?.username === user.username}
-                              className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-700/50 transition-colors ${
-                                currentUser?.username === user.username
-                                  ? 'bg-zinc-700/50 text-white'
-                                  : 'text-zinc-300'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="font-medium">{user.username}</div>
-                                  <div className="text-xs text-zinc-400">
-                                    {user.role === 'admin' ? '👑 Admin' : '👤 Utente'}
+                      <div className="max-h-64 overflow-y-auto">
+                        {isLoadingUsers ? (
+                          <div className="flex items-center justify-center p-4">
+                            <Loader2 size={16} className="animate-spin text-zinc-400" />
+                            <span className="ml-2 text-sm text-zinc-400">Caricamento...</span>
+                          </div>
+                        ) : (
+                          <div className="py-1">
+                            {users.map((user) => (
+                              <button
+                                key={user._id}
+                                onClick={() => handleUserSwitch(user.username)}
+                                disabled={currentUser?.username === user.username}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-700/50 transition-colors ${
+                                  currentUser?.username === user.username
+                                    ? 'bg-zinc-700/50 text-white'
+                                    : 'text-zinc-300'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="font-medium">{user.username}</div>
+                                    <div className="text-xs text-zinc-400">
+                                      {user.role === 'admin' ? '👑 Admin' : '👤 Utente'}
+                                    </div>
                                   </div>
+                                  {currentUser?.username === user.username && (
+                                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                                  )}
                                 </div>
-                                {currentUser?.username === user.username && (
-                                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                                )}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {/* Logo che ora è sempre visibile */}
-            <Link href="/" className="flex items-center space-x-2 text-white hover:text-primary transition hidden md:flex">
-
-              <Image 
-                src="/logosito.webp" 
-                width={30} 
-                height={20} 
-                alt="Logo" 
-                className="h-6 w-9"
-              />
-              <div className="font-semibold text-sm hidden md:block">
-                <span>Costruzione </span>
-                <span className="text-primary">Digitale</span>
-              </div>
-            </Link>
-            
-            {/* Separatore verticale */}
-            <div className="h-6 w-px bg-zinc-700/50 hidden md:block"></div>
-            
-            <span className="font-semibold text-sm md:text-base hidden md:block">
-              {getHeaderTitle()}
-            </span>
-          </div>
-        </div>
-        
-        {/* Center section with enhanced search */}
-        <div className="relative flex-1 mx-3 md:absolute md:left-1/2 md:transform md:-translate-x-1/2 md:w-full md:max-w-lg md:px-3" ref={searchRef}>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
-              {isSearching ? (
-                <Loader2 size={16} className="text-zinc-300 animate-spin" />
-              ) : (
-                <Search size={16} className="text-primary relative z-10" />
-              )}
-            </div>
-            <input
-              type="text"
-              ref={searchInputRef}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onFocus={() => {
-                if (searchResults.length > 0) {
-                  setShowSearchResults(true);
-                }
-              }}
-              className="bg-zinc-900/90 backdrop-blur-sm text-white text-xs rounded-full w-full py-1.5 pl-8 pr-3 focus:outline-none focus:ring-1 focus:ring-primary/50"
-              placeholder="Cerca in tutto il CRM..."
-            />
-            
-            {searchQuery && (
-              <button 
-                className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400 hover:text-white"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSearchResults([]);
-                  setShowSearchResults(false);
-                }}
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          
-          {/* Search results dropdown */}
-          {showSearchResults && (
-            <div className="absolute z-50 mt-1 w-full bg-zinc-800 backdrop-blur-sm rounded-md shadow-lg max-h-80 overflow-auto">
-              {searchResults.length === 0 ? (
-                <div className="py-3 px-4 text-sm text-zinc-400">
-                  {isSearching ? (
-                    <div className="flex items-center">
-                      <Loader2 size={14} className="animate-spin mr-2" />
-                      Ricerca in corso...
-                    </div>
-                  ) : (
-                    'Nessun risultato trovato'
                   )}
                 </div>
-              ) : (
-                <div>
-                  <div className="px-4 py-2 text-xs text-zinc-400 bg-zinc-900/50">
-                    {searchResults.length} risultati trovati per "{searchQuery}"
+              )}
+              
+              {/* Logo che ora è sempre visibile */}
+              <Link href="/" className="flex items-center space-x-2 text-white hover:text-primary transition hidden md:flex">
+                <Image 
+                  src="/logosito.webp" 
+                  width={30} 
+                  height={20} 
+                  alt="Logo" 
+                  className="h-6 w-9"
+                />
+                <div className="font-semibold text-sm hidden md:block">
+                  <span>Costruzione </span>
+                  <span className="text-primary">Digitale</span>
+                </div>
+              </Link>
+              
+              {/* Separatore verticale */}
+              <div className="h-6 w-px bg-zinc-700/50 hidden md:block"></div>
+              
+              <span className="font-semibold text-sm md:text-base hidden md:block">
+                {getHeaderTitle()}
+              </span>
+            </div>
+          </div>
+          
+          {/* Center section with enhanced search */}
+          <div className="relative flex-1 mx-3 md:absolute md:left-1/2 md:transform md:-translate-x-1/2 md:w-full md:max-w-lg md:px-3" ref={searchRef}>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
+                {isSearching ? (
+                  <Loader2 size={16} className="text-zinc-300 animate-spin" />
+                ) : (
+                  <Search size={16} className="text-primary relative z-10" />
+                )}
+              </div>
+              <input
+                type="text"
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onFocus={() => {
+                  if (searchResults.length > 0 && searchInputRef.current) {
+                    const rect = searchInputRef.current.getBoundingClientRect();
+                    setSearchTriggerRect(rect);
+                    setShowSearchResults(true);
+                  }
+                }}
+                className="bg-zinc-900/90 backdrop-blur-sm text-white text-xs rounded-full w-full py-1.5 pl-8 pr-3 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                placeholder="Cerca in tutto il CRM..."
+              />
+              
+              {searchQuery && (
+                <button 
+                  className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400 hover:text-white"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSearchResults([]);
+                    setShowSearchResults(false);
+                    setSearchTriggerRect(null);
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Search Results Modal con animazione Apple-like */}
+      <AnimatePresence mode="wait">
+        {showSearchResults && (
+          <div 
+            className="fixed inset-0 z-50 overflow-hidden"
+            onClick={() => {
+              setShowSearchResults(false);
+              setSearchTriggerRect(null);
+            }}
+          >
+            {/* Background overlay */}
+            <motion.div 
+              className="absolute inset-0 bg-black/40 backdrop-blur-xs backdrop-saturate-150"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={springConfig}
+            />
+            
+            {/* Results container posizionato sotto la search bar */}
+            <motion.div 
+              className="absolute left-1/2 transform -translate-x-1/2 w-full max-w-md mx-4 sm:mx-6"
+              style={{
+                top: searchTriggerRect ? searchTriggerRect.bottom + 4 : '80px'
+              }}
+              onClick={(e) => e.stopPropagation()}
+              initial={getSearchAnimationCoordinates().initial}
+              animate={getSearchAnimationCoordinates().animate}
+              exit={{
+                y: -40,
+                scaleY: 0.1,
+                scaleX: 0.8,
+                opacity: 0,
+                transformOrigin: "top center"
+              }}
+              transition={springConfig}
+            >
+              <SmoothCorners 
+                corners="2.5"
+                borderRadius="24"
+              />
+              
+              <div className="relative bg-white/85 dark:bg-zinc-800/85 backdrop-blur-xs rounded-[24px] shadow-lg overflow-hidden backdrop-saturate-150">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200/50 dark:border-zinc-700/50">
+                  <div className="flex items-center gap-2">
+                    <Search size={16} className="text-zinc-500" />
+                    <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      "{searchQuery}"
+                    </span>
                   </div>
-                  <ul className="divide-y divide-zinc-700/30">
-                    {searchResults.map((result, index) => {
-                      const secondaryInfo = getSecondaryInfo(result);
-                      const statusColor = getStatusColor(result);
-                      
-                      return (
-                        <li 
+                  <button
+                    onClick={() => {
+                      setShowSearchResults(false);
+                      setSearchTriggerRect(null);
+                    }}
+                    className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                
+                {/* Results */}
+                <div className="py-2">
+                  {searchResults.length === 0 ? (
+                    <div className="px-5 py-6 text-center text-sm text-zinc-500">
+                      {isSearching ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 size={16} className="animate-spin" />
+                          Ricerca in corso...
+                        </div>
+                      ) : (
+                        'Nessun risultato trovato'
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {searchResults.map((result, index) => (
+                        <motion.button
                           key={`${result.section}-${result.id}`}
-                          id={`search-result-${index}`}
-                          className={`cursor-pointer p-3 text-sm transition-colors group ${
+                          className={`w-full text-left px-5 py-3 transition-colors group ${
                             selectedResultIndex === index 
-                              ? 'bg-zinc-700/70' 
-                              : 'hover:bg-zinc-700/50'
+                              ? 'bg-zinc-100/70 dark:bg-zinc-700/70' 
+                              : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                           }`}
                           onClick={() => handleSearchResultClick(result)}
                           onMouseEnter={() => setSelectedResultIndex(index)}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
                         >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-3 flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
                               {/* Icon */}
-                              <div className="flex-shrink-0 mt-0.5">
+                              <div className="flex-shrink-0">
                                 {getResultIcon(result)}
                               </div>
                               
                               {/* Content */}
                               <div className="flex-1 min-w-0">
-                                {/* Title */}
-                                <div className="font-medium text-white truncate pr-2">
+                                <div className="font-medium text-zinc-900 dark:text-white truncate">
                                   {result.name}
                                 </div>
-                                
-                                {/* Secondary info */}
-                                {secondaryInfo && (
-                                  <div className="text-xs text-zinc-400 mt-0.5 truncate">
-                                    {secondaryInfo}
-                                  </div>
-                                )}
-                                
-                                {/* Additional info for specific types */}
-                                {result.description && result.section === "Calendario" && (
-                                  <div className="text-xs text-zinc-500 mt-1 line-clamp-1">
-                                    {result.description}
-                                  </div>
-                                )}
+                                <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                                  {result.section}
+                                </div>
                               </div>
                             </div>
                             
-                            {/* Section badge and status */}
-                            <div className="flex flex-col items-end space-y-1 flex-shrink-0 ml-2">
-                              <div className="text-xs text-zinc-400 px-2 py-0.5 bg-zinc-700/50 rounded-full flex items-center gap-1">
-                                {getResultIcon(result)}
-                                <span className="max-w-20 truncate">{result.section}</span>
-                              </div>
-                              
-                              {/* Status indicator */}
-                              {result.status && statusColor && (
-                                <div className={`text-xs text-white px-1.5 py-0.5 rounded-full ${statusColor}`}>
-                                  {result.status}
-                                </div>
-                              )}
-                              
-                              {/* Value for clients */}
-                              {result.value && result.value > 0 && (
-                                <div className="text-xs text-green-400 font-medium">
-                                  €{result.value.toLocaleString('it-IT')}
-                                </div>
-                              )}
+                            {/* Arrow indicator */}
+                            <div className="flex-shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400">
+                                <polyline points="9,18 15,12 9,6"></polyline>
+                              </svg>
                             </div>
                           </div>
-                          
-                          {/* Show type-specific details on hover */}
-                          {selectedResultIndex === index && (
-                            <div className="mt-2 pt-2 border-t border-zinc-600/50">
-                              <div className="text-xs text-zinc-500">
-                                {result.type === 'visit' && result.timestamp && (
-                                  <span>Visita del {new Date(result.timestamp).toLocaleString('it-IT')}</span>
-                                )}
-                                {result.type === 'conversation' && result.startTime && (
-                                  <span>Chat iniziata il {new Date(result.startTime).toLocaleString('it-IT')}</span>
-                                )}
-                                {result.type === 'event' && result.start && result.end && (
-                                  <span>
-                                    {new Date(result.start).toLocaleDateString('it-IT')} • 
-                                    {new Date(result.start).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} - 
-                                    {new Date(result.end).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                )}
-                                {result.type === 'audience' && result.lastSeen && (
-                                  <span>Ultima attività: {new Date(result.lastSeen).toLocaleDateString('it-IT')}</span>
-                                )}
-                                {result.createdAt && ['contact', 'client', 'project'].includes(result.type || '') && (
-                                  <span>Creato il {new Date(result.createdAt).toLocaleDateString('it-IT')}</span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
+                        </motion.button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </header>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
