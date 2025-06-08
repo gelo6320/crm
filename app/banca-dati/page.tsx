@@ -2,13 +2,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, Database, Users, RefreshCw, Search, BarChart2, AlertCircle, CheckCircle2, Info } from "lucide-react";
+import { Download, Database, Users, BarChart2, ChevronDown } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { SmoothCorners } from 'react-smooth-corners';
 import Pagination from "@/components/ui/Pagination";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "@/components/ui/toaster";
 import { formatDateTime } from "@/lib/utils/date";
 import axios from "axios";
-import { EnhancedCapiStatus, CapiDetailsModal } from "@/components/banca/CapiDetailsComponent";
+import { EnhancedCapiStatus } from "@/components/banca/CapiDetailsComponent";
 
 // Definiamo l'URL base per le API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
@@ -49,7 +51,6 @@ interface Visit {
     country: string;
     country_code: string;
   };
-  // Campo facebookCapi
   facebookCapi?: FacebookCapi;
 }
 
@@ -81,7 +82,6 @@ interface Client {
     analytics: boolean;
     thirdParty: boolean;
   };
-  // Campo facebookCapi
   facebookCapi?: FacebookCapi;
 }
 
@@ -95,12 +95,10 @@ interface FacebookAudience {
   fbclid: string;
   hashedEmail: string;
   hashedPhone: string;
-  // Campi di localizzazione sia nella radice che nella struttura nidificata
   country: string;
   city: string;
   region: string;
   country_code: string;
-  // Struttura nidificata opzionale per il nuovo formato
   location?: {
     city: string;
     region: string;
@@ -116,7 +114,6 @@ interface FacebookAudience {
   lastSeen: string;
   lastUpdated: string;
   syncedToFacebook: boolean;
-  // Campo facebookCapi
   facebookCapi?: FacebookCapi;
 }
 
@@ -151,7 +148,6 @@ export default function BancaDatiPage() {
   const [audiencesPagination, setAudiencesPagination] = useState({ page: 1, total: 0, pages: 1 });
 
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
-
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -192,10 +188,10 @@ export default function BancaDatiPage() {
           const element = document.getElementById(`banca-item-${itemId}`);
           if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            element.classList.add('bg-primary/10', 'ring-2', 'ring-primary');
+            element.classList.add('bg-orange-50', 'dark:bg-orange-900/20', 'ring-1', 'ring-orange-300/40');
             
             setTimeout(() => {
-              element.classList.remove('bg-primary/10', 'ring-2', 'ring-primary');
+              element.classList.remove('bg-orange-50', 'dark:bg-orange-900/20', 'ring-1', 'ring-orange-300/40');
               setHighlightedItemId(null);
             }, 3000);
           }
@@ -210,9 +206,6 @@ export default function BancaDatiPage() {
       }
     }
   }, [visits, clients, audiences, activeTab, isLoading]);
-  
-  // Stato per la ricerca
-  const [searchQuery, setSearchQuery] = useState("");
   
   // Carica dati in base al tab attivo
   useEffect(() => {
@@ -279,13 +272,11 @@ export default function BancaDatiPage() {
   // Funzione per cambiare tab
   const handleTabChange = (tab: ActiveTab) => {
     setActiveTab(tab);
-    setSearchQuery("");
   };
   
   // Funzione per esportare in CSV
   const handleExport = async (type: "clients" | "audiences") => {
     try {
-      // Usa window.location per iniziare il download del file
       window.location.href = `${API_BASE_URL}/api/banca-dati/${type}/export`;
       toast("success", "Esportazione avviata", "Il file CSV verrà scaricato a breve");
     } catch (error) {
@@ -293,162 +284,148 @@ export default function BancaDatiPage() {
       toast("error", "Errore", `Impossibile esportare i dati per ${type}`);
     }
   };
-  
-  // Funzione per gestire la ricerca
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    loadData();
+
+  // Ottieni l'etichetta del tab attivo
+  const getActiveTabLabel = () => {
+    switch(activeTab) {
+      case "visits": return "Visite al sito";
+      case "clients": return "Clienti registrati";
+      case "audiences": return "Facebook Custom Audience";
+      default: return "Seleziona categoria";
+    }
   };
-  
-  // Funzione di refresh
-  const handleRefresh = () => {
-    loadData();
+
+  // Ottieni il totale per il tab attivo
+  const getActiveTabTotal = () => {
+    switch(activeTab) {
+      case "visits": return visitsPagination.total;
+      case "clients": return clientsPagination.total;
+      case "audiences": return audiencesPagination.total;
+      default: return 0;
+    }
   };
+
+  // Definizioni dei tabs
+  const tabs = [
+    { key: "visits" as ActiveTab, label: "Visite", icon: Database },
+    { key: "audiences" as ActiveTab, label: "Conversioni", icon: BarChart2 },
+    { key: "clients" as ActiveTab, label: "Clienti", icon: Users }
+  ];
   
   if (isLoading && visits.length === 0 && clients.length === 0 && audiences.length === 0) {
     return <LoadingSpinner />;
   }
   
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <form onSubmit={handleSearch} className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cerca..."
-              className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 pl-9 text-sm w-full focus:ring-primary focus:border-primary"
-            />
-            <Search size={16} className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-zinc-400" />
-          </form>
-          
-          <button 
-            onClick={handleRefresh}
-            className="btn btn-outline p-1.5"
-            disabled={isLoading}
-          >
-            <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-          </button>
-        </div>
-      </div>
-      
-      {/* Tabs */}
-      <div className="flex border-b border-zinc-700">
-        <button
-          onClick={() => handleTabChange("visits")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 ${
-            activeTab === "visits" 
-              ? "border-primary text-primary" 
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
-        >
-          <Database size={16} className="inline-block mr-1 -mt-0.5" /> Visite
-        </button>
-        <button
-          onClick={() => handleTabChange("audiences")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 ${
-            activeTab === "audiences" 
-              ? "border-primary text-primary" 
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
-        >
-          <BarChart2 size={16} className="inline-block mr-1 -mt-0.5" /> Conversioni
-        </button>
-        <button
-          onClick={() => handleTabChange("clients")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 ${
-            activeTab === "clients" 
-              ? "border-primary text-primary" 
-              : "border-transparent text-zinc-400 hover:text-white"
-          }`}
-        >
-          <Users size={16} className="inline-block mr-1 -mt-0.5" /> Clienti
-        </button>
-      </div>
-      
-      {/* Contenuto del tab attivo */}
-      <div className="card overflow-hidden">
-        <div className="p-3 border-b border-zinc-700 bg-zinc-900/50 flex justify-between items-center">
-          <div>
-            <h2 className="text-sm font-medium">
-              {activeTab === "visits" && "Visite al sito"}
-              {activeTab === "clients" && "Clienti registrati"}
-              {activeTab === "audiences" && "Facebook Custom Audience"}
-            </h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
-              {activeTab === "visits" && visitsPagination.total} 
-              {activeTab === "clients" && clientsPagination.total} 
-              {activeTab === "audiences" && audiencesPagination.total} 
-               record trovati
-            </p>
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
+      <div className="w-full">
+        {/* Tab selector mobile-first */}
+        <div className="px-4 py-4 sm:px-6">
+          <div className="flex space-x-1 bg-white dark:bg-zinc-800 rounded-lg p-1 border border-zinc-200 dark:border-zinc-700">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => handleTabChange(tab.key)}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-md transition-all ${
+                    activeTab === tab.key
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                  }`}
+                >
+                  <Icon size={16} />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
-          
-          {activeTab !== "visits" && (
-            <button
-              onClick={() => handleExport(activeTab === "clients" ? "clients" : "audiences")}
-              className="btn btn-outline inline-flex items-center space-x-1 text-xs py-1.5 px-2.5"
-              title="Esporta per lookalike audience in Facebook Ads"
-            >
-              <Download size={14} />
-              <span>Esporta CSV</span>
-            </button>
-          )}
         </div>
-        
-        {/* Content basato sul tab attivo */}
-        <div className="overflow-x-auto">
-          {/* Visits Table */}
-          {activeTab === "visits" && (
-            <VisitsTable 
-              visits={visits} 
-              isLoading={isLoading} 
-            />
-          )}
-          
-          {/* Clients Table */}
-          {activeTab === "clients" && (
-            <ClientsTable 
-              clients={clients} 
-              isLoading={isLoading} 
-            />
-          )}
-          
-          {/* Audiences Table */}
-          {activeTab === "audiences" && (
-            <AudiencesTable 
-              audiences={audiences} 
-              isLoading={isLoading} 
-            />
-          )}
-        </div>
-        
-        {/* Pagination */}
-        <div className="p-4 border-t border-zinc-700">
-          {activeTab === "visits" && (
-            <Pagination
-              currentPage={visitsPagination.page}
-              totalPages={visitsPagination.pages}
-              onPageChange={(page) => setVisitsPagination(prev => ({ ...prev, page }))}
-            />
-          )}
-          
-          {activeTab === "clients" && (
-            <Pagination
-              currentPage={clientsPagination.page}
-              totalPages={clientsPagination.pages}
-              onPageChange={(page) => setClientsPagination(prev => ({ ...prev, page }))}
-            />
-          )}
-          
-          {activeTab === "audiences" && (
-            <Pagination
-              currentPage={audiencesPagination.page}
-              totalPages={audiencesPagination.pages}
-              onPageChange={(page) => setAudiencesPagination(prev => ({ ...prev, page }))}
-            />
-          )}
+
+        {/* Main Content */}
+        <div className="px-4 sm:px-6">
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm overflow-hidden">
+            {/* Header con statistiche */}
+            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-lg font-medium text-zinc-900 dark:text-white">
+                    {getActiveTabLabel()}
+                  </h2>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                    {getActiveTabTotal().toLocaleString('it-IT')} record trovati
+                  </p>
+                </div>
+                
+                {activeTab !== "visits" && (
+                  <button
+                    onClick={() => handleExport(activeTab === "clients" ? "clients" : "audiences")}
+                    className="bg-white dark:bg-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium py-2 px-4 rounded-lg border border-zinc-200 dark:border-zinc-600 flex items-center gap-2 transition-colors"
+                    title="Esporta per lookalike audience in Facebook Ads"
+                  >
+                    <Download size={16} />
+                    <span className="hidden sm:inline">Esporta CSV</span>
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {/* Content basato sul tab attivo */}
+            <div className="overflow-x-auto">
+              {/* Visits Table */}
+              {activeTab === "visits" && (
+                <VisitsTable 
+                  visits={visits} 
+                  isLoading={isLoading} 
+                />
+              )}
+              
+              {/* Clients Table */}
+              {activeTab === "clients" && (
+                <ClientsTable 
+                  clients={clients} 
+                  isLoading={isLoading} 
+                />
+              )}
+              
+              {/* Audiences Table */}
+              {activeTab === "audiences" && (
+                <AudiencesTable 
+                  audiences={audiences} 
+                  isLoading={isLoading} 
+                />
+              )}
+            </div>
+            
+            {/* Pagination */}
+            {getActiveTabTotal() > 0 && (
+              <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-700">
+                {activeTab === "visits" && (
+                  <Pagination
+                    currentPage={visitsPagination.page}
+                    totalPages={visitsPagination.pages}
+                    onPageChange={(page) => setVisitsPagination(prev => ({ ...prev, page }))}
+                  />
+                )}
+                
+                {activeTab === "clients" && (
+                  <Pagination
+                    currentPage={clientsPagination.page}
+                    totalPages={clientsPagination.pages}
+                    onPageChange={(page) => setClientsPagination(prev => ({ ...prev, page }))}
+                  />
+                )}
+                
+                {activeTab === "audiences" && (
+                  <Pagination
+                    currentPage={audiencesPagination.page}
+                    totalPages={audiencesPagination.pages}
+                    onPageChange={(page) => setAudiencesPagination(prev => ({ ...prev, page }))}
+                  />
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -459,7 +436,7 @@ export default function BancaDatiPage() {
 function VisitsTable({ visits, isLoading }: { visits: Visit[], isLoading: boolean }) {
   if (isLoading && visits.length === 0) {
     return (
-      <div className="p-8 text-center text-zinc-500">
+      <div className="p-12 text-center text-zinc-500">
         <div className="animate-spin h-8 w-8 border-t-2 border-primary mx-auto mb-4"></div>
         <p>Caricamento in corso...</p>
       </div>
@@ -468,57 +445,59 @@ function VisitsTable({ visits, isLoading }: { visits: Visit[], isLoading: boolea
   
   if (visits.length === 0) {
     return (
-      <div className="p-8 text-center text-zinc-500">
+      <div className="p-12 text-center text-zinc-500">
         Nessuna visita trovata
       </div>
     );
   }
   
   return (
-    <table className="w-full text-sm">
-      <thead className="text-xs uppercase text-zinc-500 bg-zinc-900/50">
-        <tr>
-          <th className="px-4 py-2 text-left">Data</th>
-          <th className="px-4 py-2 text-left">URL</th>
-          <th className="px-4 py-2 text-left">Sessione</th>
-          <th className="px-4 py-2 text-left">Referrer</th>
-          <th className="px-4 py-2 text-left">IP</th>
-          <th className="px-4 py-2 text-left">Località</th>
-          <th className="px-4 py-2 text-left">Durata</th>
-          <th className="px-4 py-2 text-left">FB CAPI</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-zinc-800">
-        {visits.map((visit) => (
-          <tr key={visit._id} className="hover:bg-zinc-800/50 transition-colors">
-            <td className="px-4 py-2.5 whitespace-nowrap">
-              {formatDateTime(visit.timestamp)}
-            </td>
-            <td className="px-4 py-2.5 max-w-xs truncate">
-              {visit.url || visit.path || "-"}
-            </td>
-            <td className="px-4 py-2.5 font-mono text-xs">
-              {visit.sessionId.substring(0, 8)}...
-            </td>
-            <td className="px-4 py-2.5 max-w-xs truncate">
-              {visit.referrer || "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              {visit.ip || "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              {visit.location ? `${visit.location.city || ''}, ${visit.location.region || ''}` : "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              {visit.timeOnPage ? `${Math.round(visit.timeOnPage)}s` : "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              <EnhancedCapiStatus capiData={visit.facebookCapi} />
-            </td>
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead className="bg-zinc-50 dark:bg-zinc-700/50">
+          <tr>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Data</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">URL</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Sessione</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Referrer</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">IP</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Località</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Durata</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">FB CAPI</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+          {visits.map((visit) => (
+            <tr key={visit._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-900 dark:text-white">
+                {formatDateTime(visit.timestamp)}
+              </td>
+              <td className="px-6 py-4 max-w-xs truncate text-sm text-primary">
+                {visit.url || visit.path || "-"}
+              </td>
+              <td className="px-6 py-4 font-mono text-xs text-zinc-600 dark:text-zinc-400">
+                {visit.sessionId.substring(0, 8)}...
+              </td>
+              <td className="px-6 py-4 max-w-xs truncate text-sm text-zinc-600 dark:text-zinc-400">
+                {visit.referrer || "-"}
+              </td>
+              <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                {visit.ip || "-"}
+              </td>
+              <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                {visit.location ? `${visit.location.city || ''}, ${visit.location.region || ''}` : "-"}
+              </td>
+              <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                {visit.timeOnPage ? `${Math.round(visit.timeOnPage)}s` : "-"}
+              </td>
+              <td className="px-6 py-4">
+                <EnhancedCapiStatus capiData={visit.facebookCapi} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -526,7 +505,7 @@ function VisitsTable({ visits, isLoading }: { visits: Visit[], isLoading: boolea
 function ClientsTable({ clients, isLoading }: { clients: Client[], isLoading: boolean }) {
   if (isLoading && clients.length === 0) {
     return (
-      <div className="p-8 text-center text-zinc-500">
+      <div className="p-12 text-center text-zinc-500">
         <div className="animate-spin h-8 w-8 border-t-2 border-primary mx-auto mb-4"></div>
         <p>Caricamento in corso...</p>
       </div>
@@ -535,85 +514,88 @@ function ClientsTable({ clients, isLoading }: { clients: Client[], isLoading: bo
   
   if (clients.length === 0) {
     return (
-      <div className="p-8 text-center text-zinc-500">
+      <div className="p-12 text-center text-zinc-500">
         Nessun cliente trovato
       </div>
     );
   }
   
   return (
-    <table className="w-full text-sm">
-      <thead className="text-xs uppercase text-zinc-500 bg-zinc-900/50">
-        <tr>
-          <th className="px-4 py-2 text-left">Nome</th>
-          <th className="px-4 py-2 text-left">Email</th>
-          <th className="px-4 py-2 text-left">Telefono</th>
-          <th className="px-4 py-2 text-left">Località</th>
-          <th className="px-4 py-2 text-left">Fonte</th>
-          <th className="px-4 py-2 text-left">Valore</th>
-          <th className="px-4 py-2 text-left">Stato</th>
-          <th className="px-4 py-2 text-left">Data</th>
-          <th className="px-4 py-2 text-left">Consenso</th>
-          <th className="px-4 py-2 text-left">FB CAPI</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-zinc-800">
-        {clients.map((client) => (
-          <tr key={client._id} className="hover:bg-zinc-800/50 transition-colors">
-            <td className="px-4 py-2.5 font-medium">
-              {client.fullName || `${client.firstName || ''} ${client.lastName || ''}`.trim() || '-'}
-            </td>
-            <td className="px-4 py-2.5">
-              {client.email}
-            </td>
-            <td className="px-4 py-2.5">
-              {client.phone || "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              {client.location ? `${client.location.city || ''}, ${client.location.region || ''}` : "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              {client.leadSource || "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              {client.value ? `€${client.value.toLocaleString('it-IT')}` : "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              <span className={`badge badge-${client.status}`}>
-                {client.status}
-              </span>
-            </td>
-            <td className="px-4 py-2.5 whitespace-nowrap">
-              {formatDateTime(client.createdAt)}
-            </td>
-            <td className="px-4 py-2.5">
-              <div className="flex space-x-1">
-                <Tooltip content="Marketing">
-                  <span className={`w-2 h-2 rounded-full ${client.consent?.marketing ? 'bg-success' : 'bg-danger'}`} 
-                        title={client.consent?.marketing ? 'Marketing: Sì' : 'Marketing: No'}></span>
-                </Tooltip>
-                <Tooltip content="Analytics">
-                  <span className={`w-2 h-2 rounded-full ${client.consent?.analytics ? 'bg-success' : 'bg-danger'}`}
-                        title={client.consent?.analytics ? 'Analytics: Sì' : 'Analytics: No'}></span>
-                </Tooltip>
-                <Tooltip content="Terze parti">
-                  <span className={`w-2 h-2 rounded-full ${client.consent?.thirdParty ? 'bg-success' : 'bg-danger'}`}
-                        title={client.consent?.thirdParty ? 'Terze parti: Sì' : 'Terze parti: No'}></span>
-                </Tooltip>
-              </div>
-            </td>
-            <td className="px-4 py-2.5">
-              <EnhancedCapiStatus capiData={client.facebookCapi} />
-              {client.facebookCapi?.eventId && !client.facebookCapi?.error && (
-                <div className="text-xs text-zinc-500 font-mono mt-1 truncate max-w-[120px]" title={client.facebookCapi.eventId}>
-                  {client.facebookCapi.eventId.substring(0, 10)}...
-                </div>
-              )}
-            </td>
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead className="bg-zinc-50 dark:bg-zinc-700/50">
+          <tr>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Nome</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Email</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Telefono</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Località</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Fonte</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Valore</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Stato</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Data</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Consenso</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">FB CAPI</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+          {clients.map((client) => (
+            <tr key={client._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors">
+              <td className="px-6 py-4 font-medium text-sm text-zinc-900 dark:text-white">
+                {client.fullName || `${client.firstName || ''} ${client.lastName || ''}`.trim() || '-'}
+              </td>
+              <td className="px-6 py-4 text-sm text-primary">
+                {client.email}
+              </td>
+              <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                {client.phone || "-"}
+              </td>
+              <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                {client.location ? `${client.location.city || ''}, ${client.location.region || ''}` : "-"}
+              </td>
+              <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                {client.leadSource || "-"}
+              </td>
+              <td className="px-6 py-4 text-sm font-semibold text-green-600">
+                {client.value ? `€${client.value.toLocaleString('it-IT')}` : "-"}
+              </td>
+              <td className="px-6 py-4">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  client.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                  client.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                  'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                }`}>
+                  {client.status}
+                </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-400">
+                {formatDateTime(client.createdAt)}
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex space-x-1.5">
+                  <Tooltip content="Marketing">
+                    <span className={`w-2.5 h-2.5 rounded-full ${client.consent?.marketing ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  </Tooltip>
+                  <Tooltip content="Analytics">
+                    <span className={`w-2.5 h-2.5 rounded-full ${client.consent?.analytics ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  </Tooltip>
+                  <Tooltip content="Terze parti">
+                    <span className={`w-2.5 h-2.5 rounded-full ${client.consent?.thirdParty ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  </Tooltip>
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <EnhancedCapiStatus capiData={client.facebookCapi} />
+                {client.facebookCapi?.eventId && !client.facebookCapi?.error && (
+                  <div className="text-xs text-zinc-500 font-mono mt-1 truncate max-w-[120px]" title={client.facebookCapi.eventId}>
+                    {client.facebookCapi.eventId.substring(0, 10)}...
+                  </div>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -621,7 +603,7 @@ function ClientsTable({ clients, isLoading }: { clients: Client[], isLoading: bo
 function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[], isLoading: boolean }) {
   if (isLoading && audiences.length === 0) {
     return (
-      <div className="p-8 text-center text-zinc-500">
+      <div className="p-12 text-center text-zinc-500">
         <div className="animate-spin h-8 w-8 border-t-2 border-primary mx-auto mb-4"></div>
         <p>Caricamento in corso...</p>
       </div>
@@ -630,7 +612,7 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
   
   if (audiences.length === 0) {
     return (
-      <div className="p-8 text-center text-zinc-500">
+      <div className="p-12 text-center text-zinc-500">
         Nessuna audience trovata
       </div>
     );
@@ -638,10 +620,8 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
 
   // Helper function per estrarre informazioni dall'utente
   const getUserInfo = (audience: any, field: string) => {
-    // Prima controlla se esiste a livello principale
     if (audience[field] && audience[field] !== "") return audience[field];
     
-    // Poi cerca nell'ultima conversione se presente
     if (audience.conversions && audience.conversions.length > 0) {
       const lastConversion = audience.conversions[audience.conversions.length - 1];
       if (lastConversion.metadata?.formData?.[field] && lastConversion.metadata.formData[field] !== "") {
@@ -664,75 +644,75 @@ function AudiencesTable({ audiences, isLoading }: { audiences: FacebookAudience[
   };
   
   return (
-    <table className="w-full text-sm">
-      <thead className="text-xs uppercase text-zinc-500 bg-zinc-900/50">
-        <tr>
-          <th className="px-4 py-2 text-left">Email</th>
-          <th className="px-4 py-2 text-left">Telefono</th>
-          <th className="px-4 py-2 text-left">Nome</th>
-          <th className="px-4 py-2 text-left">Località</th>
-          <th className="px-4 py-2 text-left">Fonte</th>
-          <th className="px-4 py-2 text-left">Consenso Ads</th>
-          <th className="px-4 py-2 text-left">Prima visita</th>
-          <th className="px-4 py-2 text-left">Ultima visita</th>
-          <th className="px-4 py-2 text-left">FB CAPI</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-zinc-800">
-        {audiences.map((audience) => (
-          <tr key={audience._id} className="hover:bg-zinc-800/50 transition-colors">
-            <td className="px-4 py-2.5">
-              {getUserInfo(audience, 'email') || "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              {getUserInfo(audience, 'phone') || "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              {getFullName(audience) || "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              {audience.location ? 
-                `${audience.location.city || ''}, ${audience.location.region || ''}` : 
-                (audience.city ? `${audience.city || ''}, ${audience.region || ''}` : "-")}
-            </td>
-            <td className="px-4 py-2.5">
-              {audience.source || "-"}
-            </td>
-            <td className="px-4 py-2.5">
-              <span className={`
-                px-2 py-0.5 rounded-full text-xs
-                ${audience.adOptimizationConsent === 'GRANTED' 
-                  ? 'bg-success/20 text-success' 
-                  : audience.adOptimizationConsent === 'DENIED'
-                    ? 'bg-danger/20 text-danger'
-                    : 'bg-zinc-500/20 text-zinc-400'
-                }
-              `}>
-                {audience.adOptimizationConsent === 'GRANTED' 
-                  ? 'Concesso' 
-                  : audience.adOptimizationConsent === 'DENIED'
-                    ? 'Negato'
-                    : 'Non specificato'
-                }
-              </span>
-            </td>
-            <td className="px-4 py-2.5 whitespace-nowrap">
-              {formatDateTime(audience.firstSeen)}
-            </td>
-            <td className="px-4 py-2.5 whitespace-nowrap">
-              {formatDateTime(audience.lastSeen)}
-            </td>
-            <td className="px-4 py-2.5">
-              <EnhancedCapiStatus capiData={audience.facebookCapi} />
-              {audience.facebookCapi?.eventId && !audience.facebookCapi?.error && (
-                <div className="text-xs text-zinc-500 font-mono mt-1 truncate max-w-[120px]" title={audience.facebookCapi.eventId}>
-                  {audience.facebookCapi.eventId.substring(0, 10)}...
-                </div>
-              )}
-            </td>
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead className="bg-zinc-50 dark:bg-zinc-700/50">
+          <tr>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Email</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Telefono</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Nome</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Località</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Fonte</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Consenso Ads</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Prima visita</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">Ultima visita</th>
+            <th className="px-6 py-4 text-left text-sm font-medium text-zinc-600 dark:text-zinc-400">FB CAPI</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+          {audiences.map((audience) => (
+            <tr key={audience._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors">
+              <td className="px-6 py-4 text-sm text-primary">
+                {getUserInfo(audience, 'email') || "-"}
+              </td>
+              <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                {getUserInfo(audience, 'phone') || "-"}
+              </td>
+              <td className="px-6 py-4 text-sm font-medium text-zinc-900 dark:text-white">
+                {getFullName(audience) || "-"}
+              </td>
+              <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                {audience.location ? 
+                  `${audience.location.city || ''}, ${audience.location.region || ''}` : 
+                  (audience.city ? `${audience.city || ''}, ${audience.region || ''}` : "-")}
+              </td>
+              <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
+                {audience.source || "-"}
+              </td>
+              <td className="px-6 py-4">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  audience.adOptimizationConsent === 'GRANTED' 
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                    : audience.adOptimizationConsent === 'DENIED'
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                      : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                }`}>
+                  {audience.adOptimizationConsent === 'GRANTED' 
+                    ? 'Concesso' 
+                    : audience.adOptimizationConsent === 'DENIED'
+                      ? 'Negato'
+                      : 'Non specificato'
+                  }
+                </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-400">
+                {formatDateTime(audience.firstSeen)}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-400">
+                {formatDateTime(audience.lastSeen)}
+              </td>
+              <td className="px-6 py-4">
+                <EnhancedCapiStatus capiData={audience.facebookCapi} />
+                {audience.facebookCapi?.eventId && !audience.facebookCapi?.error && (
+                  <div className="text-xs text-zinc-500 font-mono mt-1 truncate max-w-[120px]" title={audience.facebookCapi.eventId}>
+                    {audience.facebookCapi.eventId.substring(0, 10)}...
+                  </div>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
