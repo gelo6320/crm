@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, DollarSign, CreditCard, FileText } from "lucide-react";
+import { X, CreditCard, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SmoothCorners } from 'react-smooth-corners';
 import { FunnelItem } from "@/types";
@@ -151,9 +151,7 @@ export default function EditValueModal({ lead, onClose, onSave, triggerRect }: E
         
         <div className="relative bg-zinc-200/85 dark:bg-zinc-700/80 backdrop-blur-xs rounded-[24px] shadow-lg overflow-hidden backdrop-saturate-150">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
-            <div className="w-6"></div> {/* Spacer per centrare il contenuto */}
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Modifica dati lead</h3>
+          <div className="flex items-center justify-end px-4 sm:px-6 py-3 sm:py-4">
             <button
               onClick={handleClose}
               className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
@@ -166,7 +164,7 @@ export default function EditValueModal({ lead, onClose, onSave, triggerRect }: E
             {/* Info lead */}
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <DollarSign className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
+                {/* Removed DollarSign icon */}
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-tight">
@@ -183,24 +181,16 @@ export default function EditValueModal({ lead, onClose, onSave, triggerRect }: E
                 <label htmlFor="value" className="block text-sm font-medium text-gray-600 dark:text-gray-400">
                   Valore stimato (€)
                 </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                    €
-                  </span>
-                  <input
-                    type="number"
-                    id="value"
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    min="0"
-                    step="100"
-                    placeholder="0"
-                    className="w-full bg-white/50 dark:bg-black/40 border border-gray-300 dark:border-gray-600 rounded-2xl py-3 pl-8 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Valore stimato del progetto
-                </p>
+                <input
+                  type="number"
+                  id="value"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  min="0"
+                  step="100"
+                  placeholder="0"
+                  className="w-full bg-white/50 dark:bg-black/40 border border-gray-300 dark:border-gray-600 rounded-2xl py-3 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                />
               </div>
               
               {/* Servizio */}
@@ -221,9 +211,6 @@ export default function EditValueModal({ lead, onClose, onSave, triggerRect }: E
                     className="w-full bg-white/50 dark:bg-black/40 border border-gray-300 dark:border-gray-600 rounded-2xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Categoria di lavoro richiesto
-                </p>
               </div>
 
               {/* Note */}
@@ -244,9 +231,6 @@ export default function EditValueModal({ lead, onClose, onSave, triggerRect }: E
                     className="w-full bg-white/50 dark:bg-black/40 border border-gray-300 dark:border-gray-600 rounded-2xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none"
                   />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Informazioni aggiuntive sul lead o sul progetto
-                </p>
               </div>
             </div>
             

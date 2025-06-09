@@ -342,8 +342,8 @@ export async function updateLeadMetadata(
   notes?: string
 ): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/leads/${leadId}/metadata`, {
-      method: 'PATCH',
+    const response = await fetch(`${API_BASE_URL}/api/leads/${leadId}/update-metadata`, {
+      method: 'POST',  // ← Cambiato da PATCH a POST
       headers: {
         'Content-Type': 'application/json',
       },
@@ -352,7 +352,7 @@ export async function updateLeadMetadata(
         leadType,
         value,
         service,
-        notes, // NUOVO PARAMETRO
+        notes,
       }),
     });
 
