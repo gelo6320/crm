@@ -89,10 +89,11 @@ export default function MySitesPage() {
   }
   
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <div className="w-full">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 relative">
+      {/* Container principale con posizionamento relativo */}
+      <div className="w-full relative z-0">
         {/* Header con pulsante aggiungi - Mobile ottimizzato */}
-        <div className="px-4 py-4 sm:px-6">
+        <div className="px-4 py-4 sm:px-6 relative z-10">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
@@ -105,7 +106,7 @@ export default function MySitesPage() {
             
             <button
               onClick={handleAddButtonClick}
-              className="bg-primary hover:bg-primary-hover text-white font-medium py-2.5 px-4 rounded-xl flex items-center gap-2 transition-colors shadow-sm"
+              className="bg-primary hover:bg-primary-hover text-white font-medium py-2.5 px-4 rounded-xl flex items-center gap-2 transition-colors shadow-sm relative z-10"
             >
               <Plus size={18} />
               <span className="hidden sm:inline">Aggiungi sito</span>
@@ -113,11 +114,11 @@ export default function MySitesPage() {
           </div>
         </div>
 
-        {/* Lista siti */}
-        <div className="w-full">
+        {/* Lista siti con posizionamento corretto */}
+        <div className="w-full relative z-0">
           {sites.length === 0 ? (
             <div className="px-4 sm:px-6">
-              <div className="bg-white dark:bg-zinc-800 rounded-2xl p-8 sm:p-12 text-center border border-zinc-200 dark:border-zinc-700">
+              <div className="bg-white dark:bg-zinc-800 rounded-2xl p-8 sm:p-12 text-center border border-zinc-200 dark:border-zinc-700 relative z-0">
                 <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center mx-auto mb-4">
                   <Globe className="w-8 h-8 text-zinc-400" />
                 </div>
@@ -129,7 +130,7 @@ export default function MySitesPage() {
                 </p>
                 <button
                   onClick={handleAddButtonClick}
-                  className="bg-primary hover:bg-primary-hover text-white font-medium py-3 px-6 rounded-xl inline-flex items-center gap-2 transition-colors"
+                  className="bg-primary hover:bg-primary-hover text-white font-medium py-3 px-6 rounded-xl inline-flex items-center gap-2 transition-colors relative z-10"
                 >
                   <Plus size={18} />
                   Aggiungi il tuo primo sito
@@ -139,11 +140,12 @@ export default function MySitesPage() {
           ) : (
             <>
               {/* Mobile: Lista a card */}
-              <div className="sm:hidden px-4 space-y-3">
-                {sites.map((site) => (
+              <div className="sm:hidden px-4 space-y-3 relative z-0">
+                {sites.map((site, index) => (
                   <div 
                     key={site._id}
-                    className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer"
+                    className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer relative"
+                    style={{ zIndex: sites.length - index }} // Z-index decrescente per evitare sovrapposizioni
                   >
                     {/* Header con dominio */}
                     <div className="p-4 border-b border-zinc-100 dark:border-zinc-700">
@@ -184,7 +186,7 @@ export default function MySitesPage() {
                         href={site.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="absolute bottom-3 right-3 bg-primary hover:bg-primary-hover p-2 rounded-full text-white shadow-lg transition-all hover:scale-105"
+                        className="absolute bottom-3 right-3 bg-primary hover:bg-primary-hover p-2 rounded-full text-white shadow-lg transition-all hover:scale-105 z-10"
                         title="Visita il sito"
                       >
                         <ExternalLink size={16} />
@@ -221,12 +223,13 @@ export default function MySitesPage() {
               </div>
 
               {/* Desktop: Griglia a card con anteprima */}
-              <div className="hidden sm:block px-6">
+              <div className="hidden sm:block px-6 relative z-0">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {sites.map((site) => (
+                  {sites.map((site, index) => (
                     <div 
                       key={site._id}
-                      className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-lg transition-all duration-200 group"
+                      className="bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-lg transition-all duration-200 group relative"
+                      style={{ zIndex: sites.length - index }} // Z-index decrescente
                     >
                       <div className="flex">
                         {/* Anteprima del sito */}
@@ -253,7 +256,7 @@ export default function MySitesPage() {
                             href={site.url} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="absolute bottom-3 right-3 bg-primary hover:bg-primary-hover p-2.5 rounded-full text-white shadow-lg transition-all hover:scale-105"
+                            className="absolute bottom-3 right-3 bg-primary hover:bg-primary-hover p-2.5 rounded-full text-white shadow-lg transition-all hover:scale-105 z-10"
                             title="Visita il sito"
                           >
                             <ExternalLink size={16} />
@@ -335,16 +338,18 @@ export default function MySitesPage() {
         </div>
       </div>
       
-      {/* Modale aggiungi sito con stile dei contatti */}
+      {/* Modale aggiungi sito con z-index massimo */}
       {showAddModal && (
-        <AddSiteModal 
-          onClose={() => {
-            setShowAddModal(false);
-            setModalTriggerRect(null);
-          }}
-          onSave={handleAddSite}
-          triggerRect={modalTriggerRect}
-        />
+        <div className="fixed inset-0 z-[9999]">
+          <AddSiteModal 
+            onClose={() => {
+              setShowAddModal(false);
+              setModalTriggerRect(null);
+            }}
+            onSave={handleAddSite}
+            triggerRect={modalTriggerRect}
+          />
+        </div>
       )}
     </div>
   );

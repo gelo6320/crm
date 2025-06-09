@@ -135,8 +135,9 @@ export default function AddSiteModal({ onClose, onSave, triggerRect }: AddSiteMo
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 flex items-center justify-center"
       onClick={handleClose}
+      style={{ zIndex: 10000 }} // Z-index esplicito massimo
     >
       {/* Background overlay FISSO senza animazioni per evitare conflitti blur */}
       <motion.div 
@@ -145,11 +146,12 @@ export default function AddSiteModal({ onClose, onSave, triggerRect }: AddSiteMo
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={springConfig}
+        style={{ zIndex: 1 }}
       />
       
       {/* Modal container con animazione iOS */}
       <motion.div 
-        className="relative z-10 w-full max-w-lg mx-4 sm:mx-6"
+        className="relative w-full max-w-lg mx-4 sm:mx-6"
         onClick={(e) => e.stopPropagation()}
         initial={coords.initial}
         animate={coords.animate}
@@ -160,7 +162,8 @@ export default function AddSiteModal({ onClose, onSave, triggerRect }: AddSiteMo
         }}
         transition={springConfig}
         style={{
-          transformOrigin: "center center"
+          transformOrigin: "center center",
+          zIndex: 10
         }}
       >
         <SmoothCorners 
@@ -170,7 +173,7 @@ export default function AddSiteModal({ onClose, onSave, triggerRect }: AddSiteMo
         
         <div className="relative bg-zinc-200/85 dark:bg-zinc-700/80 backdrop-blur-xs rounded-[24px] shadow-lg overflow-hidden backdrop-saturate-150">
           {/* Header con icona e bottone chiudi */}
-          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 relative z-10">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                 <Plus className="w-4 h-4 text-primary" />
@@ -182,14 +185,14 @@ export default function AddSiteModal({ onClose, onSave, triggerRect }: AddSiteMo
             <button
               onClick={handleClose}
               disabled={isLoading}
-              className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
+              className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors disabled:opacity-50 relative z-10"
             >
               <X size={20} />
             </button>
           </div>
           
           {/* Form content */}
-          <form onSubmit={handleSubmit} className="px-4 sm:px-6 pb-6 space-y-4">
+          <form onSubmit={handleSubmit} className="px-4 sm:px-6 pb-6 space-y-4 relative z-10">
             {/* Messaggio di errore */}
             {error && (
               <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-sm">
@@ -203,7 +206,7 @@ export default function AddSiteModal({ onClose, onSave, triggerRect }: AddSiteMo
                 URL del sito *
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                   <Globe className="h-4 w-4 text-gray-400" />
                 </div>
                 <input
@@ -212,7 +215,7 @@ export default function AddSiteModal({ onClose, onSave, triggerRect }: AddSiteMo
                   onChange={(e) => setFormData({ url: e.target.value })}
                   placeholder="https://www.esempio.com"
                   disabled={isLoading}
-                  className="w-full pl-10 pr-4 py-3 bg-white/50 dark:bg-black/40 border border-white/30 dark:border-white/20 rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all disabled:opacity-50"
+                  className="w-full pl-10 pr-4 py-3 bg-white/50 dark:bg-black/40 border border-white/30 dark:border-white/20 rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all disabled:opacity-50 relative z-0"
                   required
                 />
               </div>
@@ -238,7 +241,7 @@ export default function AddSiteModal({ onClose, onSave, triggerRect }: AddSiteMo
                 type="button"
                 onClick={handleClose}
                 disabled={isLoading}
-                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/50 dark:bg-white/20 hover:bg-white/70 dark:hover:bg-white/30 font-medium py-3 px-4 rounded-2xl transition-all duration-200 disabled:opacity-50"
+                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/50 dark:bg-white/20 hover:bg-white/70 dark:hover:bg-white/30 font-medium py-3 px-4 rounded-2xl transition-all duration-200 disabled:opacity-50 relative z-10"
               >
                 Annulla
               </button>
@@ -246,7 +249,7 @@ export default function AddSiteModal({ onClose, onSave, triggerRect }: AddSiteMo
               <button
                 type="submit"
                 disabled={isLoading || !formData.url.trim()}
-                className="flex-1 bg-primary hover:bg-primary-hover text-white font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-primary hover:bg-primary-hover text-white font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative z-10"
               >
                 {isLoading ? (
                   <>
