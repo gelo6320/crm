@@ -40,9 +40,9 @@ export async function fetchLandingPages(
       url: page.url,
       title: page.title || page.url,
       totalVisits: page.totalVisits || 0,
-      uniqueUsers: page.uniqueUsers || 0, 
+      uniqueUsers: page.uniqueUsers || page.uniqueVisitors || 0,  // <-- CORREZIONE: Prova entrambi i campi
       conversionRate: page.conversionRate || 0,
-      lastAccess: new Date(page.lastAccess || Date.now()).toISOString() // Convert to ISO string
+      lastAccess: new Date(page.lastAccess || Date.now()).toISOString()
     }));
     
     return landingPages;

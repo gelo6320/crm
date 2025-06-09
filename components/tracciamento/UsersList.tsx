@@ -77,10 +77,20 @@ export default function UsersList({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-700">
-              {users.map(user => {
-                // Simuliamo la conversione per ora (in futuro da API)
-                const hasConversion = Math.random() > 0.7; // 30% conversione simulata
-                const userName = hasConversion ? `User ${user.fingerprint.substring(0, 8)}` : '';
+            {users.map((user, index) => {
+                // CORREZIONE: Usa un identificatore stabile basato sul fingerprint
+                // invece di Math.random() che cambia ad ogni render
+                const userIdHash = user.fingerprint.split('').reduce((a, b) => {
+                  a = ((a << 5) - a) + b.charCodeAt(0);
+                  return a & a;
+                }, 0);
+                
+                // Determina se ha convertito basandosi su dati reali o simulazione stabile
+                const hasConversion = Math.abs(userIdHash) % 10 < 3; // 30% conversione simulata ma stabile
+                
+                // Crea un nome utente leggibile
+                const userName = `User ${user.fingerprint.substring(0, 8)}`;
+                const displayName = userName || `Visitor ${index + 1}`;
                 
                 return (
                   <tr 
@@ -97,7 +107,7 @@ export default function UsersList({
                           <div className="flex items-center">
                             <Monitor size={14} className="text-primary mr-2" />
                             <span className="font-medium">
-                              {userName || user.fingerprint.substring(0, 12)}
+                              {displayName}
                             </span>
                           </div>
                           <div className="flex items-center mt-1 text-xs text-zinc-400">
