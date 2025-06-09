@@ -1,6 +1,6 @@
 // components/sites/SiteCard.tsx
 import { useState } from "react";
-import { ExternalLink, BarChart, RefreshCw, Trash2 } from "lucide-react";
+import { ExternalLink, BarChart, RefreshCw, Trash2, Globe } from "lucide-react";
 import { Site } from "@/types";
 import { refreshSiteMetrics, deleteSite } from "@/lib/api/sites";
 import { toast } from "@/components/ui/toaster";
@@ -45,115 +45,271 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
   };
   
   const getScoreColor = (score: number) => {
-    if (score >= 0.9) return "text-success";
-    if (score >= 0.5) return "text-warning";
-    return "text-danger";
+    if (score >= 0.9) return "text-green-500";
+    if (score >= 0.5) return "text-yellow-500";
+    return "text-red-500";
+  };
+
+  const getScoreBgColor = (score: number) => {
+    if (score >= 0.9) return "bg-green-500/10 border-green-500/20";
+    if (score >= 0.5) return "bg-yellow-500/10 border-yellow-500/20";
+    return "bg-red-500/10 border-red-500/20";
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return "Oggi";
+    if (diffDays <= 7) return `${diffDays} giorni fa`;
+    return date.toLocaleDateString('it-IT', { 
+      day: 'numeric', 
+      month: 'short',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
   };
   
   return (
-    <div className="card overflow-hidden">
-      <div className="flex flex-col md:flex-row">
-        {/* Anteprima del sito */}
-        <div className="w-full md:w-2/5 lg:w-1/3 bg-black relative">
-          <div className="aspect-w-16 aspect-h-9 md:h-full">
+    <>
+      {/* Mobile Layout */}
+      <div className="sm:hidden bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+        {/* Header con dominio e azioni */}
+        <div className="p-4 border-b border-zinc-100 dark:border-zinc-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center">
+                <Globe className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-zinc-900 dark:text-white">{site.domain}</h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">{site.url}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
+                title="Aggiorna metriche"
+              >
+                <RefreshCw size={16} className={`text-zinc-600 dark:text-zinc-400 ${isRefreshing ? "animate-spin" : ""}`} />
+              </button>
+              
+              <a 
+                href={site.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="p-2 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+                title="Visita il sito"
+              >
+                <ExternalLink size={16} className="text-primary" />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Anteprima */}
+        <div className="relative bg-zinc-50 dark:bg-zinc-900">
+          <div className="aspect-[16/10]">
             {site.screenshotUrl ? (
               <img 
                 src={site.screenshotUrl} 
                 alt={site.domain} 
-                className="object-contain w-full h-full"
+                className="w-full h-full object-cover"
               />
             ) : (
-              <div className="flex items-center justify-center h-full bg-zinc-900 text-zinc-500">
-                <span>Anteprima non disponibile</span>
+              <div className="flex items-center justify-center h-full text-zinc-400">
+                <div className="text-center">
+                  <Globe className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <span className="text-sm">Anteprima non disponibile</span>
+                </div>
               </div>
             )}
           </div>
-          
-          <a 
-            href={site.url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="absolute bottom-2 right-2 bg-primary hover:bg-primary-hover p-1.5 rounded-full text-white shadow-lg transition-all"
-            title="Visita il sito"
-          >
-            <ExternalLink size={16} />
-          </a>
         </div>
-        
-        {/* Informazioni e punteggi */}
-        <div className="flex-1 p-4">
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <h2 className="text-lg font-medium">{site.domain}</h2>
-              <p className="text-sm text-zinc-400">{site.url}</p>
-            </div>
-            
-            <div className="flex space-x-2">
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="btn btn-outline p-1.5"
-                title="Aggiorna metriche"
-              >
-                <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
-              </button>
-              
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="btn btn-outline border-danger text-danger hover:bg-danger/10 p-1.5"
-                title="Elimina sito"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          </div>
-          
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {/* Performance Score */}
-            <div className="card bg-zinc-900/50 p-3">
-              <div className="text-center mb-1">
-                <span className={`text-2xl font-bold ${getScoreColor(site.metrics.performance)}`}>
+
+        {/* Metriche */}
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className={`p-3 rounded-xl border ${getScoreBgColor(site.metrics.performance)}`}>
+              <div className="text-center">
+                <div className={`text-xl font-bold ${getScoreColor(site.metrics.performance)}`}>
                   {formatScore(site.metrics.performance)}
-                </span>
+                </div>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Performance</div>
               </div>
-              <div className="text-xs text-center text-zinc-400">Performance</div>
             </div>
             
-            {/* Accessibility Score */}
-            <div className="card bg-zinc-900/50 p-3">
-              <div className="text-center mb-1">
-                <span className={`text-2xl font-bold ${getScoreColor(site.metrics.accessibility)}`}>
+            <div className={`p-3 rounded-xl border ${getScoreBgColor(site.metrics.accessibility)}`}>
+              <div className="text-center">
+                <div className={`text-xl font-bold ${getScoreColor(site.metrics.accessibility)}`}>
                   {formatScore(site.metrics.accessibility)}
-                </span>
+                </div>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Accessibilità</div>
               </div>
-              <div className="text-xs text-center text-zinc-400">Accessibilità</div>
             </div>
             
-            {/* Best Practices Score */}
-            <div className="card bg-zinc-900/50 p-3">
-              <div className="text-center mb-1">
-                <span className={`text-2xl font-bold ${getScoreColor(site.metrics.bestPractices)}`}>
+            <div className={`p-3 rounded-xl border ${getScoreBgColor(site.metrics.bestPractices)}`}>
+              <div className="text-center">
+                <div className={`text-xl font-bold ${getScoreColor(site.metrics.bestPractices)}`}>
                   {formatScore(site.metrics.bestPractices)}
-                </span>
+                </div>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Best Practices</div>
               </div>
-              <div className="text-xs text-center text-zinc-400">Best Practices</div>
             </div>
             
-            {/* SEO Score */}
-            <div className="card bg-zinc-900/50 p-3">
-              <div className="text-center mb-1">
-                <span className={`text-2xl font-bold ${getScoreColor(site.metrics.seo)}`}>
+            <div className={`p-3 rounded-xl border ${getScoreBgColor(site.metrics.seo)}`}>
+              <div className="text-center">
+                <div className={`text-xl font-bold ${getScoreColor(site.metrics.seo)}`}>
                   {formatScore(site.metrics.seo)}
-                </span>
+                </div>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">SEO</div>
               </div>
-              <div className="text-xs text-center text-zinc-400">SEO</div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-3 border-t border-zinc-100 dark:border-zinc-700">
+            <span className="text-xs text-zinc-500">
+              Scansione: {formatDate(site.lastScan)}
+            </span>
+            
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="text-xs text-red-500 hover:text-red-600 font-medium transition-colors"
+            >
+              Elimina
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden sm:block bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm hover:shadow-lg hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 group">
+        <div className="flex">
+          {/* Anteprima del sito */}
+          <div className="w-80 bg-zinc-50 dark:bg-zinc-900 relative">
+            <div className="aspect-[4/3] h-full">
+              {site.screenshotUrl ? (
+                <img 
+                  src={site.screenshotUrl} 
+                  alt={site.domain} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-zinc-400">
+                  <div className="text-center">
+                    <Globe className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <span className="text-sm">Anteprima non disponibile</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Overlay con link */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <a 
+                href={site.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-sm p-3 rounded-full text-zinc-800 dark:text-white hover:bg-white dark:hover:bg-zinc-700 transition-all shadow-lg"
+                title="Visita il sito"
+              >
+                <ExternalLink size={20} />
+              </a>
             </div>
           </div>
           
-          <div className="mt-4 text-sm">
-            <div className="flex justify-between text-zinc-400">
-              <div>Ultima scansione:</div>
-              <div>{new Date(site.lastScan).toLocaleString('it-IT')}</div>
+          {/* Contenuto principale */}
+          <div className="flex-1 p-6">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-xl font-semibold text-zinc-900 dark:text-white group-hover:text-primary transition-colors">
+                  {site.domain}
+                </h2>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{site.url}</p>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
+                  title="Aggiorna metriche"
+                >
+                  <RefreshCw size={18} className={`text-zinc-600 dark:text-zinc-400 ${isRefreshing ? "animate-spin" : ""}`} />
+                </button>
+                
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="p-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 transition-colors"
+                  title="Elimina sito"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+            
+            {/* Metriche Performance */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.performance)} text-center`}>
+                <div className={`text-3xl font-bold ${getScoreColor(site.metrics.performance)} mb-1`}>
+                  {formatScore(site.metrics.performance)}
+                </div>
+                <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                  Performance
+                </div>
+              </div>
+              
+              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.accessibility)} text-center`}>
+                <div className={`text-3xl font-bold ${getScoreColor(site.metrics.accessibility)} mb-1`}>
+                  {formatScore(site.metrics.accessibility)}
+                </div>
+                <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                  Accessibilità
+                </div>
+              </div>
+              
+              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.bestPractices)} text-center`}>
+                <div className={`text-3xl font-bold ${getScoreColor(site.metrics.bestPractices)} mb-1`}>
+                  {formatScore(site.metrics.bestPractices)}
+                </div>
+                <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                  Best Practices
+                </div>
+              </div>
+              
+              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.seo)} text-center`}>
+                <div className={`text-3xl font-bold ${getScoreColor(site.metrics.seo)} mb-1`}>
+                  {formatScore(site.metrics.seo)}
+                </div>
+                <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+                  SEO
+                </div>
+              </div>
+            </div>
+
+            {/* Punteggio generale e ultimo aggiornamento */}
+            <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-700">
+              <div className="flex items-center space-x-4">
+                <div>
+                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Punteggio medio:</span>
+                  <span className={`ml-2 text-lg font-bold ${getScoreColor((site.metrics.performance + site.metrics.accessibility + site.metrics.bestPractices + site.metrics.seo) / 4)}`}>
+                    {formatScore((site.metrics.performance + site.metrics.accessibility + site.metrics.bestPractices + site.metrics.seo) / 4)}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="text-right">
+                <div className="text-xs text-zinc-500 dark:text-zinc-400">Ultima scansione</div>
+                <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  {formatDate(site.lastScan)}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -167,6 +323,6 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
           onCancel={() => setShowDeleteModal(false)}
         />
       )}
-    </div>
+    </>
   );
 }

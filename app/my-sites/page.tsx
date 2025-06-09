@@ -14,6 +14,7 @@ export default function MySitesPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [modalTriggerRect, setModalTriggerRect] = useState<DOMRect | null>(null);
   
   useEffect(() => {
     loadSites();
@@ -35,7 +36,17 @@ export default function MySitesPage() {
   const handleAddSite = (newSite: Site) => {
     setSites([...sites, newSite]);
     setShowAddModal(false);
+    setModalTriggerRect(null);
     toast("success", "Sito aggiunto", `${newSite.domain} è stato aggiunto con successo`);
+  };
+
+  // Gestisce il click del pulsante aggiungi con coordinate per l'animazione
+  const handleAddButtonClick = (event: React.MouseEvent) => {
+    const targetElement = event.currentTarget as HTMLElement;
+    const rect = targetElement.getBoundingClientRect();
+    
+    setModalTriggerRect(rect);
+    setShowAddModal(true);
   };
 
   // Ottiene l'icona di stato per il sito
@@ -87,8 +98,8 @@ export default function MySitesPage() {
             </div>
             
             <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-xl flex items-center gap-2 transition-colors shadow-sm"
+              onClick={handleAddButtonClick}
+              className="bg-primary hover:bg-primary-hover text-white font-medium py-2.5 px-4 rounded-xl flex items-center gap-2 transition-colors shadow-sm"
             >
               <Plus size={18} />
               <span className="hidden sm:inline">Aggiungi sito</span>
@@ -111,8 +122,8 @@ export default function MySitesPage() {
                   Inizia aggiungendo il tuo primo sito per monitorare le performance e gestire i contenuti.
                 </p>
                 <button
-                  onClick={() => setShowAddModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl inline-flex items-center gap-2 transition-colors"
+                  onClick={handleAddButtonClick}
+                  className="bg-primary hover:bg-primary-hover text-white font-medium py-3 px-6 rounded-xl inline-flex items-center gap-2 transition-colors"
                 >
                   <Plus size={18} />
                   Aggiungi il tuo primo sito
@@ -187,7 +198,7 @@ export default function MySitesPage() {
                           <div className="flex items-center space-x-3">
                             {getSiteStatusIcon(site)}
                             <div className="min-w-0 flex-1">
-                              <h3 className="font-semibold text-zinc-900 dark:text-white truncate group-hover:text-blue-600 transition-colors">
+                              <h3 className="font-semibold text-zinc-900 dark:text-white truncate group-hover:text-primary transition-colors">
                                 {site.domain}
                               </h3>
                               <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">
@@ -233,7 +244,7 @@ export default function MySitesPage() {
                               <span>85%</span>
                             </div>
                             <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
-                              <div className="bg-blue-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+                              <div className="bg-primary h-2 rounded-full" style={{ width: '85%' }}></div>
                             </div>
                           </div>
                         </div>
@@ -263,7 +274,7 @@ export default function MySitesPage() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-blue-600">
+                  <p className="text-3xl font-bold text-primary">
                     {sites.reduce((acc, site) => acc + getSiteMetrics(site).visitors, 0).toLocaleString()}
                   </p>
                   <p className="text-sm text-zinc-500 mt-1">Visitatori totali oggi</p>
@@ -282,11 +293,15 @@ export default function MySitesPage() {
         )}
       </div>
       
-      {/* Modale aggiungi sito */}
+      {/* Modale aggiungi sito con stile dei contatti */}
       {showAddModal && (
         <AddSiteModal 
-          onClose={() => setShowAddModal(false)} 
+          onClose={() => {
+            setShowAddModal(false);
+            setModalTriggerRect(null);
+          }}
           onSave={handleAddSite}
+          triggerRect={modalTriggerRect}
         />
       )}
     </div>
