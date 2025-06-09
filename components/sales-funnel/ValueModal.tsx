@@ -150,28 +150,21 @@ export default function EditValueModal({ lead, onClose, onSave, triggerRect }: E
         />
         
         <div className="relative bg-zinc-200/85 dark:bg-zinc-700/80 backdrop-blur-xs rounded-[24px] shadow-lg overflow-hidden backdrop-saturate-150">
-          {/* Header */}
-          <div className="flex items-center justify-end px-4 sm:px-6 py-3 sm:py-4">
-            <button
-              onClick={handleClose}
-              className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          
-          <form onSubmit={handleSubmit} className="px-4 sm:px-6 pb-6 space-y-6">
+          <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-6 space-y-6">
             {/* Info lead */}
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                {/* Removed DollarSign icon */}
-              </div>
+            <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white leading-tight">
                   {lead.name}
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{lead.email}</p>
               </div>
+              <button
+                onClick={handleClose}
+                className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors ml-4"
+              >
+                <X size={20} />
+              </button>
             </div>
             
             {/* Form fields */}
