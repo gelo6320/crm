@@ -8,6 +8,7 @@ import ValueModal from "./ValueModal";
 import { toast } from "@/components/ui/toaster";
 import axios from "axios";
 import { updateLeadMetadata } from "@/lib/api/funnel";
+import { AnimatePresence } from "motion/react";
 
 // dnd-kit imports
 import {
@@ -90,6 +91,7 @@ export default function CustomFunnelBoard({
 }: CustomFunnelBoardProps) {
   // State per modali e operazioni sulle lead
   const [editingLead, setEditingLead] = useState<FunnelItem | null>(null);
+  const [editTriggerRect, setEditTriggerRect] = useState<DOMRect | null>(null); // NUOVO STATO per coordinate
   const [isMoving, setIsMoving] = useState(false);
   const [movingLead, setMovingLead] = useState<{
     lead: FunnelItem;
@@ -235,9 +237,6 @@ export default function CustomFunnelBoard({
   const handleMoveLead = async (lead: FunnelItem, targetStatus: string) => {
     if (!lead || lead.status === targetStatus) return;
 
-    // Implementazione esistente...
-    // (Conserviamo il resto della logica esistente per gli aggiornamenti e la gestione degli errori)
-    
     // Mappa lo stato della lead da stato database a stato funnel se necessario
     const mappedPrevStatus = mapDatabaseStatusToFunnelStatus(lead.status);
     
@@ -327,9 +326,6 @@ export default function CustomFunnelBoard({
     }
   };
 
-  // Il resto delle funzioni (updateLeadDirectly, handleConfirmMove, ecc.) rimane invariato
-  // ...
-  
   // Funzione per aggiornare direttamente una lead senza mostrare il modale
   const updateLeadDirectly = async (lead: FunnelItem, fromStage: string, toStage: string) => {
     try {
@@ -580,13 +576,30 @@ export default function CustomFunnelBoard({
     }
   };
 
-  // Gestisce la modifica di valore e servizio di una lead
-  const handleEditLead = (lead: FunnelItem) => {
-    setEditingLead(lead);
+  // AGGIORNATO: Gestisce la modifica di valore e servizio di una lead CON COORDINATE
+  const handleEditLead = (lead: FunnelItem, event: React.MouseEvent) => {
+    // Se c'è già un modal aperto, chiudilo immediatamente
+    if (editingLead) {
+      setEditingLead(null);
+      setEditTriggerRect(null);
+    }
+    
+    // Ottieni le coordinate dell'elemento cliccato
+    const targetElement = event.currentTarget as HTMLElement;
+    const rect = targetElement.getBoundingClientRect();
+    
+    console.log('Edit lead clicked:', lead.name, 'at coordinates:', rect);
+    
+    // Piccolo delay per assicurarsi che il cleanup sia completato
+    setTimeout(() => {
+      // Imposta il nuovo lead da modificare con le coordinate
+      setEditTriggerRect(rect);
+      setEditingLead(lead);
+    }, 10);
   };
 
-  // Gestisce il salvataggio delle modifiche a una lead
-  const handleSaveLeadValue = async (value: number, service: string) => {
+  // AGGIORNATO: Gestisce il salvataggio delle modifiche a una lead CON SUPPORTO ALLE NOTE
+  const handleSaveLeadValue = async (value: number, service: string, notes?: string) => {
     if (!editingLead) return;
 
     try {
@@ -595,7 +608,8 @@ export default function CustomFunnelBoard({
         editingLead.leadId || editingLead._id, // Usa leadId con fallback
         editingLead.type,
         value,
-        service
+        service,
+        notes // Aggiungi il parametro notes
       );
 
       // Aggiorna lo state locale per un aggiornamento immediato dell'UI
@@ -609,10 +623,18 @@ export default function CustomFunnelBoard({
       ) {
         updatedFunnelData[mappedStatus as keyof FunnelData] = updatedFunnelData[
           mappedStatus as keyof FunnelData
-        ].map((item) => (item._id === editingLead._id ? { ...item, value, service } : item));
+        ].map((item) => (item._id === editingLead._id ? { 
+          ...item, 
+          value, 
+          service,
+          extendedData: {
+            ...item.extendedData,
+            notes: notes || item.extendedData?.notes
+          }
+        } : item));
 
         setFunnelData(updatedFunnelData);
-        toast("success", "Lead aggiornato", "Valore e servizio aggiornati con successo");
+        toast("success", "Lead aggiornato", "Dati aggiornati con successo");
       } else {
         // Se non riusciamo a trovare la colonna, aggiorna i dati del funnel
         console.warn(`Could not find column ${mappedStatus} for edited lead`);
@@ -621,6 +643,7 @@ export default function CustomFunnelBoard({
       }
 
       setEditingLead(null);
+      setEditTriggerRect(null);
     } catch (error) {
       console.error("Error updating lead value:", error);
       toast(
@@ -680,7 +703,7 @@ export default function CustomFunnelBoard({
                 style={{ color: colors.borderColor }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleEditLead(lead);
+                  handleEditLead(lead, e); // PASSA L'EVENTO
                 }}
               >
                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
@@ -697,6 +720,9 @@ export default function CustomFunnelBoard({
             ) : null}
             {lead.service ? (
               <div className="text-zinc-300 italic truncate">{lead.service}</div>
+            ) : null}
+            {lead.extendedData?.notes ? (
+              <div className="text-zinc-400 text-xs truncate italic">Note: {lead.extendedData.notes}</div>
             ) : null}
           </div>
         </div>
@@ -860,14 +886,21 @@ export default function CustomFunnelBoard({
         />
       )}
 
-      {/* Modale per la modifica del valore */}
-      {editingLead && (
-        <ValueModal
-          lead={editingLead}
-          onClose={() => setEditingLead(null)}
-          onSave={handleSaveLeadValue}
-        />
-      )}
+      {/* AGGIORNATO: Modale per la modifica del valore con AnimatePresence e coordinate */}
+      <AnimatePresence mode="wait">
+        {editingLead && (
+          <ValueModal
+            key={editingLead._id} // Key unica per ogni modal
+            lead={editingLead}
+            onClose={() => {
+              setEditingLead(null);
+              setEditTriggerRect(null);
+            }}
+            onSave={handleSaveLeadValue}
+            triggerRect={editTriggerRect}
+          />
+        )}
+      </AnimatePresence>
     </DndContext>
   );
 }

@@ -335,31 +335,38 @@ export async function updateLeadStage(
 
 // Updated function to handle value/service updates with the new schema
 export async function updateLeadMetadata(
-  leadId: string,
-  leadType: string,
-  value?: number,
-  service?: string
-): Promise<{
-  success: boolean;
-  message: string;
-}> {
+  leadId: string, 
+  leadType: string, 
+  value: number, 
+  service: string,
+  notes?: string
+): Promise<void> {
   try {
-    // Use the unified API endpoint for all lead types
-    const endpoint = `${API_BASE_URL}/api/leads/${leadId}/update-metadata`;
-    
-    const response = await axios.post(
-      endpoint,
-      {
-        value: value !== undefined ? value : null,
-        service: service || null,
-        leadType: leadType // Include leadType in request body for reference
+    const response = await fetch(`${API_BASE_URL}/api/leads/${leadId}/metadata`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      { withCredentials: true }
-    );
-    
-    return response.data;
+      credentials: 'include',
+      body: JSON.stringify({
+        leadType,
+        value,
+        service,
+        notes, // NUOVO PARAMETRO
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Errore durante l\'aggiornamento dei metadati');
+    }
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Errore durante l\'aggiornamento dei metadati');
+    }
   } catch (error) {
-    console.error("Errore durante l'aggiornamento dei metadati del lead:", error);
+    console.error('Error updating lead metadata:', error);
     throw error;
   }
 }
