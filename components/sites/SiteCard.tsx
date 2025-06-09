@@ -111,17 +111,17 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
           </div>
         </div>
 
-        {/* Anteprima */}
-        <div className="relative bg-zinc-50 dark:bg-zinc-900">
+        {/* Anteprima Screenshot */}
+        <div className="relative bg-black">
           <div className="aspect-[16/10]">
             {site.screenshotUrl ? (
               <img 
                 src={site.screenshotUrl} 
-                alt={site.domain} 
-                className="w-full h-full object-cover"
+                alt={`Screenshot di ${site.domain}`}
+                className="w-full h-full object-contain"
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-zinc-400">
+              <div className="flex items-center justify-center h-full bg-zinc-900 text-zinc-500">
                 <div className="text-center">
                   <Globe className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <span className="text-sm">Anteprima non disponibile</span>
@@ -129,6 +129,17 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
               </div>
             )}
           </div>
+          
+          {/* Link per visitare il sito sovrapposto */}
+          <a 
+            href={site.url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="absolute bottom-3 right-3 bg-primary hover:bg-primary-hover p-2 rounded-full text-white shadow-lg transition-all hover:scale-105"
+            title="Visita il sito"
+          >
+            <ExternalLink size={16} />
+          </a>
         </div>
 
         {/* Metriche */}
@@ -191,16 +202,16 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
       <div className="hidden sm:block bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm hover:shadow-lg hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 group">
         <div className="flex">
           {/* Anteprima del sito */}
-          <div className="w-80 bg-zinc-50 dark:bg-zinc-900 relative">
+          <div className="w-80 bg-black relative">
             <div className="aspect-[4/3] h-full">
               {site.screenshotUrl ? (
                 <img 
                   src={site.screenshotUrl} 
-                  alt={site.domain} 
-                  className="w-full h-full object-cover"
+                  alt={`Screenshot di ${site.domain}`}
+                  className="w-full h-full object-contain"
                 />
               ) : (
-                <div className="flex items-center justify-center h-full text-zinc-400">
+                <div className="flex items-center justify-center h-full text-zinc-500">
                   <div className="text-center">
                     <Globe className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <span className="text-sm">Anteprima non disponibile</span>
@@ -209,17 +220,22 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
               )}
             </div>
             
-            {/* Overlay con link */}
+            {/* Link overlay permanente in basso a destra */}
+            <a 
+              href={site.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="absolute bottom-3 right-3 bg-primary hover:bg-primary-hover p-2.5 rounded-full text-white shadow-lg transition-all hover:scale-105"
+              title="Visita il sito"
+            >
+              <ExternalLink size={18} />
+            </a>
+            
+            {/* Overlay hover aggiuntivo per l'area centrale */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-              <a 
-                href={site.url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-sm p-3 rounded-full text-zinc-800 dark:text-white hover:bg-white dark:hover:bg-zinc-700 transition-all shadow-lg"
-                title="Visita il sito"
-              >
-                <ExternalLink size={20} />
-              </a>
+              <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl text-white/80 text-sm font-medium">
+                Clicca per visitare
+              </div>
             </div>
           </div>
           

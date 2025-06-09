@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Globe, Activity, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Globe, Activity } from "lucide-react";
 import { fetchUserSites } from "@/lib/api/sites"; 
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "@/components/ui/toaster";
@@ -51,8 +51,11 @@ export default function MySitesPage() {
 
   // Ottiene l'icona di stato per il sito
   const getSiteStatusIcon = (site: Site) => {
-    // Simuliamo lo stato basandoci su dati del sito
-    const isActive = true; // Questo dovrebbe venire dai dati reali del sito
+    // Controlliamo se il sito ha metriche recenti (ultimo aggiornamento nelle ultime 24h)
+    const lastScan = new Date(site.lastScan);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - lastScan.getTime()) / (1000 * 60 * 60);
+    const isActive = hoursDiff < 24;
     
     if (isActive) {
       return (
@@ -69,13 +72,16 @@ export default function MySitesPage() {
     }
   };
 
-  // Simula metriche per il sito (in un'app reale verrebbero dall'API)
-  const getSiteMetrics = (site: Site) => {
-    return {
-      visitors: Math.floor(Math.random() * 1000) + 100,
-      trend: Math.random() > 0.5 ? 'up' : 'down',
-      trendValue: Math.floor(Math.random() * 20) + 1
-    };
+  // Formatta il punteggio PageSpeed (da 0-1 a 0-100)
+  const formatScore = (score: number) => {
+    return Math.round(score * 100);
+  };
+
+  // Ottiene il colore del punteggio basato sui range di PageSpeed
+  const getScoreColor = (score: number) => {
+    if (score >= 0.9) return "text-green-500";
+    if (score >= 0.5) return "text-yellow-500";
+    return "text-red-500";
   };
   
   if (isLoading && sites.length === 0) {
@@ -134,163 +140,131 @@ export default function MySitesPage() {
             <>
               {/* Mobile: Lista a card */}
               <div className="sm:hidden px-4 space-y-3">
-                {sites.map((site) => {
-                  const metrics = getSiteMetrics(site);
-                  return (
-                    <div 
-                      key={site._id}
-                      className="bg-white dark:bg-zinc-800 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-start space-x-4">
-                        {getSiteStatusIcon(site)}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-zinc-900 dark:text-white truncate">
-                            {site.domain}
-                          </h3>
-                          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 truncate">
-                            {site.url || `https://${site.domain}`}
-                          </p>
-                          
-                          {/* Metriche mobile */}
-                          <div className="flex items-center justify-between mt-4">
-                            <div className="flex items-center space-x-4">
-                              <div>
-                                <p className="text-xs text-zinc-400">Visitatori</p>
-                                <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                                  {metrics.visitors.toLocaleString()}
-                                </p>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                {metrics.trend === 'up' ? (
-                                  <TrendingUp className="w-4 h-4 text-green-500" />
-                                ) : (
-                                  <TrendingDown className="w-4 h-4 text-red-500" />
-                                )}
-                                <span className={`text-xs font-medium ${
-                                  metrics.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                                }`}>
-                                  {metrics.trendValue}%
-                                </span>
-                              </div>
+                {sites.map((site) => (
+                  <div 
+                    key={site._id}
+                    className="bg-white dark:bg-zinc-800 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-start space-x-4">
+                      {getSiteStatusIcon(site)}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-zinc-900 dark:text-white truncate">
+                          {site.domain}
+                        </h3>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 truncate">
+                          {site.url || `https://${site.domain}`}
+                        </p>
+                        
+                        {/* Punteggi PageSpeed */}
+                        <div className="grid grid-cols-2 gap-2 mt-4">
+                          <div className="text-center">
+                            <div className={`text-lg font-bold ${getScoreColor(site.metrics.performance)}`}>
+                              {formatScore(site.metrics.performance)}
                             </div>
-                            
-                            <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                            <div className="text-xs text-zinc-400">Performance</div>
                           </div>
+                          <div className="text-center">
+                            <div className={`text-lg font-bold ${getScoreColor(site.metrics.seo)}`}>
+                              {formatScore(site.metrics.seo)}
+                            </div>
+                            <div className="text-xs text-zinc-400">SEO</div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-3">
+                          <span className="text-xs text-zinc-400">
+                            Aggiornato: {new Date(site.lastScan).toLocaleDateString('it-IT')}
+                          </span>
+                          <div className="w-3 h-3 rounded-full bg-green-400"></div>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
 
               {/* Desktop: Griglia a card */}
               <div className="hidden sm:block px-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {sites.map((site) => {
-                    const metrics = getSiteMetrics(site);
-                    return (
-                      <div 
-                        key={site._id}
-                        className="bg-white dark:bg-zinc-800 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-lg transition-all duration-200 cursor-pointer group"
-                      >
-                        {/* Header della card */}
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center space-x-3">
-                            {getSiteStatusIcon(site)}
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-semibold text-zinc-900 dark:text-white truncate group-hover:text-primary transition-colors">
-                                {site.domain}
-                              </h3>
-                              <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">
-                                {site.url || `https://${site.domain}`}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {/* Indicatore stato */}
-                          <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                            <span className="text-xs text-zinc-500">Attivo</span>
+                  {sites.map((site) => (
+                    <div 
+                      key={site._id}
+                      className="bg-white dark:bg-zinc-800 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                    >
+                      {/* Header della card */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          {getSiteStatusIcon(site)}
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-zinc-900 dark:text-white truncate group-hover:text-primary transition-colors">
+                              {site.domain}
+                            </h3>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">
+                              {site.url || `https://${site.domain}`}
+                            </p>
                           </div>
                         </div>
-
-                        {/* Metriche */}
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-xs text-zinc-400 uppercase tracking-wide">Visitatori oggi</p>
-                              <p className="text-2xl font-bold text-zinc-900 dark:text-white">
-                                {metrics.visitors.toLocaleString()}
-                              </p>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              {metrics.trend === 'up' ? (
-                                <TrendingUp className="w-5 h-5 text-green-500" />
-                              ) : (
-                                <TrendingDown className="w-5 h-5 text-red-500" />
-                              )}
-                              <span className={`text-sm font-medium ${
-                                metrics.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                {metrics.trendValue}%
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Barra di progresso simulata */}
-                          <div>
-                            <div className="flex justify-between text-xs text-zinc-500 mb-2">
-                              <span>Performance</span>
-                              <span>85%</span>
-                            </div>
-                            <div className="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
-                              <div className="bg-primary h-2 rounded-full" style={{ width: '85%' }}></div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Footer della card */}
-                        <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-700">
-                          <div className="flex items-center justify-between text-xs text-zinc-500">
-                            <span>Ultimo aggiornamento</span>
-                            <span>2 min fa</span>
-                          </div>
+                        
+                        {/* Indicatore stato */}
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                          <span className="text-xs text-zinc-500">Attivo</span>
                         </div>
                       </div>
-                    );
-                  })}
+
+                      {/* Punteggi PageSpeed */}
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-700/50 rounded-xl">
+                          <div className={`text-2xl font-bold ${getScoreColor(site.metrics.performance)}`}>
+                            {formatScore(site.metrics.performance)}
+                          </div>
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Performance</div>
+                        </div>
+                        
+                        <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-700/50 rounded-xl">
+                          <div className={`text-2xl font-bold ${getScoreColor(site.metrics.accessibility)}`}>
+                            {formatScore(site.metrics.accessibility)}
+                          </div>
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Accessibilità</div>
+                        </div>
+                        
+                        <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-700/50 rounded-xl">
+                          <div className={`text-2xl font-bold ${getScoreColor(site.metrics.bestPractices)}`}>
+                            {formatScore(site.metrics.bestPractices)}
+                          </div>
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Best Practices</div>
+                        </div>
+                        
+                        <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-700/50 rounded-xl">
+                          <div className={`text-2xl font-bold ${getScoreColor(site.metrics.seo)}`}>
+                            {formatScore(site.metrics.seo)}
+                          </div>
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">SEO</div>
+                        </div>
+                      </div>
+
+                      {/* Punteggio medio */}
+                      <div className="text-center p-3 bg-primary/5 rounded-xl mb-4">
+                        <div className="text-lg font-bold text-primary">
+                          {formatScore((site.metrics.performance + site.metrics.accessibility + site.metrics.bestPractices + site.metrics.seo) / 4)}
+                        </div>
+                        <div className="text-xs text-zinc-500 dark:text-zinc-400">Punteggio medio</div>
+                      </div>
+
+                      {/* Footer della card */}
+                      <div className="pt-4 border-t border-zinc-100 dark:border-zinc-700">
+                        <div className="flex items-center justify-between text-xs text-zinc-500">
+                          <span>Ultima scansione</span>
+                          <span>{new Date(site.lastScan).toLocaleDateString('it-IT')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </>
           )}
         </div>
-
-        {/* Sezione statistiche aggiuntive per desktop */}
-        {sites.length > 0 && (
-          <div className="hidden lg:block px-6 mt-8">
-            <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-700">
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-                Panoramica generale
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-primary">
-                    {sites.reduce((acc, site) => acc + getSiteMetrics(site).visitors, 0).toLocaleString()}
-                  </p>
-                  <p className="text-sm text-zinc-500 mt-1">Visitatori totali oggi</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-green-600">{sites.length}</p>
-                  <p className="text-sm text-zinc-500 mt-1">Siti attivi</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-3xl font-bold text-purple-600">98.5%</p>
-                  <p className="text-sm text-zinc-500 mt-1">Uptime medio</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
       
       {/* Modale aggiungi sito con stile dei contatti */}
