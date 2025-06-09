@@ -597,7 +597,7 @@ export default function Header({ setSidebarOpen }: HeaderProps) {
             
             {/* Results container posizionato sotto la search bar */}
             <motion.div 
-              className="absolute w-full max-w-md mr-4 md:mr-0"
+              className="absolute max-w-md mr-4 md:mr-0"
               style={{
                 top: searchTriggerRect ? searchTriggerRect.bottom + 12 : '84px',
                 left: searchTriggerRect ? searchTriggerRect.left : '50%',
