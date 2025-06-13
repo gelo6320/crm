@@ -29,6 +29,9 @@ export default function RootLayout({
   
   // Check if current page is login page
   const isLoginPage = pathname === "/login";
+  
+  // ✨ NUOVO: Check if current page needs full screen layout (like WhatsApp)
+  const isFullScreenPage = pathname?.includes('/whatsapp') || pathname?.includes('/chat');
 
   useEffect(() => {
     const checkMobile = () => {
@@ -90,8 +93,8 @@ export default function RootLayout({
 
   // Calculate content margin based on sidebar state
   const getContentMargin = () => {
-    if (isMobile) {
-      return 'ml-0'; // On mobile, sidebar is overlay, no margin needed
+    if (isMobile || isFullScreenPage) {
+      return 'ml-0'; // On mobile or full-screen pages, sidebar is overlay, no margin needed
     }
     return 'ml-16'; // Always 16px margin for the collapsed sidebar width
   };
@@ -116,8 +119,45 @@ export default function RootLayout({
             <div className="min-h-screen">
               {children}
             </div>
+          ) : isFullScreenPage ? (
+            // ✨ NUOVO: Full screen layout for WhatsApp/Chat pages
+            <div className="h-screen overflow-hidden flex">
+              {/* Sidebar for full-screen pages (overlay only) */}
+              <div
+                onMouseEnter={() => !isMobile && setSidebarHovered(true)}
+                onMouseLeave={() => !isMobile && setSidebarHovered(false)}
+                className="absolute inset-0 pointer-events-none z-30"
+              >
+                <div className="pointer-events-auto">
+                  <Sidebar 
+                    open={sidebarOpen} 
+                    setOpen={setSidebarOpen} 
+                    isMobile={true} // Force overlay mode for full-screen pages
+                    isHovered={sidebarHovered}
+                  />
+                </div>
+              </div>
+              
+              {/* Full screen content without header */}
+              <main className="flex-1 h-screen overflow-hidden">
+                {children}
+              </main>
+
+              {/* Floating header button for full-screen pages */}
+              <div className="absolute top-4 left-4 z-20">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="p-3 bg-zinc-800/80 backdrop-blur-xl text-white rounded-xl shadow-lg hover:bg-zinc-700/80 transition-all duration-300 border border-zinc-700/50"
+                  title="Apri Menu"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           ) : (
-            // Main layout with adaptive sidebar
+            // ✨ MODIFICATO: Standard layout with normal header/sidebar
             <div className="flex flex-col h-screen overflow-hidden">
               {/* Header extends across full width */}
               <Header setSidebarOpen={setSidebarOpen} />
