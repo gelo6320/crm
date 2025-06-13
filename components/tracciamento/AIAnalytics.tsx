@@ -76,6 +76,15 @@ interface AIAnalysisResult {
     nextMonthConversions: number;
     confidence: number;
   };
+  // ✅ Nuovi campi per Claude 4
+  _meta?: {
+    source: string;
+    model?: string;
+    timestamp: string;
+    dataPoints?: number;
+    reason?: string;
+    fallbackUsed?: boolean;
+  };
 }
 
 interface AIAnalyticsProps {
@@ -103,38 +112,38 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
     setError(null);
     
     try {
-      console.log('[AI Analytics] Caricamento dati reali...');
+      console.log('[AI Analytics] Caricamento dati reali con Claude 4...');
       
       // 1. Carica dati statistici degli ultimi 6 mesi per l'analisi mensile
       const monthlyStatsResponse = await axios.get(`${API_BASE_URL}/api/tracciamento/statistics`, {
-        params: { timeRange: 'all' }, // Prendi tutti i dati disponibili
+        params: { timeRange: 'all' },
         withCredentials: true,
         timeout: 15000
       });
-
+  
       console.log('[AI Analytics] Dati statistici ricevuti:', monthlyStatsResponse.data?.length || 0);
-
+  
       // 2. Carica landing pages per dati aggiuntivi
       const landingPagesResponse = await axios.get(`${API_BASE_URL}/api/tracciamento/landing-pages-stats`, {
         params: { timeRange: '30d' },
         withCredentials: true,
         timeout: 15000
       });
-
+  
       console.log('[AI Analytics] Landing pages ricevute:', landingPagesResponse.data?.length || 0);
-
+  
       // 3. Processa i dati reali
       const processedData = processRealData(monthlyStatsResponse.data, landingPagesResponse.data);
       
       if (processedData.monthlyData.length === 0) {
         throw new Error('Nessun dato disponibile per l\'analisi');
       }
-
+  
       setMonthlyData(processedData.monthlyData);
       setWeeklyComparisons(processedData.weeklyComparisons);
-
-      // 4. Chiama l'analisi AI con i dati reali
-      console.log('[AI Analytics] Avvio analisi AI...');
+  
+      // 4. ✅ Chiama l'analisi AI Claude 4 con dati migliorati
+      console.log('[AI Analytics] Avvio analisi Claude 4...');
       
       const aiAnalysisResponse = await axios.post(`${API_BASE_URL}/api/ai/analyze-performance`, {
         monthlyData: processedData.monthlyData,
@@ -142,16 +151,25 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
         timeRange,
         additionalContext: {
           totalLandingPages: landingPagesResponse.data?.length || 0,
-          dataSource: 'real_analytics'
+          dataSource: 'real_analytics',
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          // ✅ Informazioni aggiuntive per Claude 4
+          analysisType: 'comprehensive',
+          expectedInsights: 4,
+          preferredModel: 'claude-4'
         }
       }, {
         withCredentials: true,
-        timeout: 30000 // 30 secondi per l'AI
+        timeout: 60000 // ✅ 60 secondi per Claude 4
       });
-
-      console.log('[AI Analytics] Analisi AI completata');
-      setAiAnalysis(aiAnalysisResponse.data);
-
+  
+      console.log('[AI Analytics] Analisi Claude 4 completata');
+      
+      // ✅ Valida la risposta prima di impostare lo stato
+      const analysisResult = validateAndSanitizeAnalysis(aiAnalysisResponse.data);
+      setAiAnalysis(analysisResult);
+  
     } catch (error) {
       console.error('[AI Analytics] Errore nel caricamento:', error);
       
@@ -159,11 +177,13 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
       
       if (axios.isAxiosError(error)) {
         if (error.code === 'ECONNABORTED') {
-          errorMessage = 'Timeout durante il caricamento dei dati';
+          errorMessage = 'Timeout durante l\'analisi AI (60s scaduti)';
         } else if (error.response?.status === 404) {
-          errorMessage = 'Endpoint analytics non disponibile';
+          errorMessage = 'Endpoint AI non disponibile';
         } else if (error.response?.status === 500) {
-          errorMessage = 'Errore del server durante l\'analisi';
+          errorMessage = 'Errore del server durante l\'analisi AI';
+        } else if (error.response?.status === 429) {
+          errorMessage = 'Limite di utilizzo API Claude raggiunto';
         }
       }
       
@@ -172,6 +192,48 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
       setIsLoading(false);
     }
   };
+
+  const validateAndSanitizeAnalysis = (data: any): AIAnalysisResult => {
+    // Validazione base
+    if (!data || typeof data !== 'object') {
+      throw new Error('Risposta AI non valida');
+    }
+  
+    // Assicura campi obbligatori
+    const sanitized: AIAnalysisResult = {
+      overallScore: Math.max(0, Math.min(100, parseInt(data.overallScore) || 0)),
+      verdict: data.verdict || 'Analisi non disponibile',
+      monthlyTrend: ['growing', 'declining', 'stable'].includes(data.monthlyTrend) 
+        ? data.monthlyTrend : 'stable',
+      weeklyTrend: ['improving', 'deteriorating', 'steady'].includes(data.weeklyTrend) 
+        ? data.weeklyTrend : 'steady',
+      insights: Array.isArray(data.insights) && data.insights.length > 0 
+        ? data.insights : [{
+            type: 'neutral' as const,
+            title: 'Analisi in corso',
+            description: 'I dati stanno ancora venendo processati.',
+            impact: 'low' as const,
+            recommendation: 'Riprovare tra qualche minuto.'
+          }],
+      keyMetrics: {
+        bestMonth: data.keyMetrics?.bestMonth || 'N/A',
+        worstMonth: data.keyMetrics?.worstMonth || 'N/A',
+        averageGrowth: parseFloat(data.keyMetrics?.averageGrowth) || 0,
+        consistencyScore: Math.max(0, Math.min(100, parseInt(data.keyMetrics?.consistencyScore) || 0))
+      },
+      predictions: {
+        nextMonthVisits: Math.max(0, parseInt(data.predictions?.nextMonthVisits) || 0),
+        nextMonthConversions: Math.max(0, parseInt(data.predictions?.nextMonthConversions) || 0),
+        confidence: Math.max(0, Math.min(100, parseInt(data.predictions?.confidence) || 0))
+      },
+      _meta: data._meta || {
+        source: 'unknown',
+        timestamp: new Date().toISOString()
+      }
+    };
+  
+    return sanitized;
+  };  
 
   // Processa i dati reali dall'API
   const processRealData = (statsData: any[], landingPagesData: any[]) => {
@@ -311,17 +373,32 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-semibold text-zinc-900">AI Analytics</h2>
-            <p className="text-xs text-red-600">Errore nel caricamento dei dati</p>
+              <p className="text-xs text-red-600">
+                {error && error.includes('Claude') ? 'Errore API Claude 4' : 'Errore nel caricamento dei dati'}
+              </p>
           </div>
         </div>
         
         <div className="bg-red-50 rounded-xl p-3">
           <p className="text-red-700 text-xs mb-2">{error}</p>
+          
+          {/* ✅ Suggerimenti specifici per Claude 4 */}
+          {error.includes('Limite') && (
+            <p className="text-red-600 text-xs mb-2">
+              💡 Il limite di utilizzo di Claude 4 è stato raggiunto. Riprova tra qualche minuto.
+            </p>
+          )}
+          {error.includes('Timeout') && (
+            <p className="text-red-600 text-xs mb-2">
+              💡 L'analisi Claude 4 richiede più tempo del previsto. Riprova con meno dati.
+            </p>
+          )}
+          
           <button
             onClick={loadRealAnalyticsData}
             className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors"
           >
-            Riprova
+            Riprova con Claude 4
           </button>
         </div>
       </motion.div>
@@ -417,19 +494,38 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold text-zinc-900">AI Analytics</h2>
               <p className="text-xs text-zinc-500 truncate">
-                Analisi di {monthlyData.length} periodi • Dati reali
+                {/* ✅ Mostra informazioni Claude 4 */}
+                {aiAnalysis?._meta?.source === 'claude_4_analysis' 
+                  ? `Claude 4 • ${monthlyData.length} periodi • ${aiAnalysis._meta.model || 'Sonnet-4'}`
+                  : aiAnalysis?._meta?.fallbackUsed 
+                    ? `Analisi automatica • ${monthlyData.length} periodi`
+                    : `Analisi di ${monthlyData.length} periodi • Dati reali`
+                }
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
             {/* Score Badge */}
+            {/* ✅ Badge Claude 4 con informazioni avanzate */}
             <div className={`px-2 py-1 rounded-full ${getScoreBackground(aiAnalysis.overallScore)} flex items-center gap-1`}>
+              {aiAnalysis?._meta?.source === 'claude_4_analysis' && (
+                <Sparkles className="w-3 h-3 text-blue-500" />
+              )}
               <Target className={`w-3 h-3 ${getScoreColor(aiAnalysis.overallScore)}`} />
               <span className={`text-xs font-semibold ${getScoreColor(aiAnalysis.overallScore)}`}>
                 {aiAnalysis.overallScore}/100
               </span>
             </div>
+            
+            {/* ✅ Badge Confidence per Claude 4 */}
+            {aiAnalysis?.predictions?.confidence && aiAnalysis.predictions.confidence > 0 && (
+              <div className="px-2 py-1 rounded-full bg-purple-100 flex items-center gap-1">
+                <span className="text-xs font-medium text-purple-700">
+                  {aiAnalysis.predictions.confidence}% conf.
+                </span>
+              </div>
+            )}
             
             <motion.div
               animate={{ rotate: isExpanded ? 90 : 0 }}
@@ -452,11 +548,48 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
           >
             {/* Verdict Section */}
             <div className="px-4 pb-4">
-              <div className="bg-zinc-50 rounded-xl p-3 mb-4">
-                <h3 className="text-base font-semibold text-zinc-900 mb-2">Verdetto AI</h3>
-                <p className="text-zinc-700 text-sm leading-relaxed">{aiAnalysis.verdict}</p>
+            <div className="bg-zinc-50 rounded-xl p-3 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-base font-semibold text-zinc-900">
+                  {aiAnalysis?._meta?.source === 'claude_4_analysis' ? 'Analisi Claude 4' : 'Verdetto AI'}
+                </h3>
+                {/* ✅ Timestamp e fonte */}
+                {aiAnalysis?._meta?.timestamp && (
+                  <span className="text-xs text-zinc-400">
+                    {new Date(aiAnalysis._meta.timestamp).toLocaleTimeString('it-IT', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                )}
               </div>
-
+              
+              <p className="text-zinc-700 text-sm leading-relaxed mb-2">
+                {aiAnalysis.verdict}
+              </p>
+              
+              {/* ✅ Informazioni aggiuntive Claude 4 */}
+              {aiAnalysis?._meta && (
+                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  {aiAnalysis._meta.source === 'claude_4_analysis' && (
+                    <span className="flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      Powered by Claude 4
+                    </span>
+                  )}
+                  {aiAnalysis._meta.fallbackUsed && (
+                    <span className="flex items-center gap-1 text-yellow-600">
+                      <AlertTriangle className="w-3 h-3" />
+                      Analisi automatica
+                    </span>
+                  )}
+                  {aiAnalysis._meta.dataPoints && (
+                    <span>{aiAnalysis._meta.dataPoints} data points</span>
+                  )}
+                </div>
+              )}
+            </div>
+            
               {/* Tabs - Mobile Optimized */}
               <div className="flex gap-0.5 mb-4 bg-zinc-100 rounded-xl p-0.5">
                 {[
