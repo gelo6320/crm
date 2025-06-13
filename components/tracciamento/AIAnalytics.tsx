@@ -177,6 +177,12 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
   const processRealData = (statsData: any[], landingPagesData: any[]) => {
     console.log('[AI Analytics] Processamento dati reali...');
     
+    // Validazione di sicurezza
+    if (!statsData || !Array.isArray(statsData)) {
+      console.warn('[AI Analytics] statsData non è un array valido:', statsData);
+      return { monthlyData: [], weeklyComparisons: [] };
+    }
+    
     let monthlyData: MonthlyData[] = [];
     let weeklyComparisons: WeeklyComparison[] = [];
 
@@ -200,16 +206,32 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
           displayMonth = `Periodo ${index + 1}`;
         }
 
+        // Gestisci conversioni che potrebbero essere oggetti o numeri
+        let conversionsValue = 0;
+        if (typeof stat.conversions === 'object' && stat.conversions !== null) {
+          conversionsValue = stat.conversions.total || 0;
+        } else {
+          conversionsValue = stat.conversions || 0;
+        }
+
+        // Gestisci uniqueVisitors che potrebbero essere oggetti
+        let uniqueVisitorsValue = 0;
+        if (typeof stat.uniqueVisitors === 'object' && stat.uniqueVisitors !== null) {
+          uniqueVisitorsValue = stat.uniqueVisitors.total || stat.uniqueVisitors.count || 0;
+        } else {
+          uniqueVisitorsValue = stat.uniqueVisitors || Math.floor((stat.totalVisits || 0) * 0.7);
+        }
+
         return {
           month: displayMonth,
           monthKey: dateKey,
-          visits: stat.totalVisits || stat.visits || 0,
-          uniqueVisitors: stat.uniqueVisitors || Math.floor((stat.totalVisits || 0) * 0.7),
-          conversions: stat.conversions?.total || stat.conversions || 0,
-          conversionRate: stat.conversionRate || (stat.conversions?.total && stat.uniqueVisitors ? 
-            (stat.conversions.total / stat.uniqueVisitors) * 100 : 0),
-          avgTimeOnSite: stat.avgTimeOnSite || 0,
-          bounceRate: stat.bounceRate || 0
+          visits: Number(stat.totalVisits || stat.visits || 0),
+          uniqueVisitors: Number(uniqueVisitorsValue),
+          conversions: Number(conversionsValue),
+          conversionRate: Number(stat.conversionRate || (conversionsValue && uniqueVisitorsValue ? 
+            (conversionsValue / uniqueVisitorsValue) * 100 : 0)),
+          avgTimeOnSite: Number(stat.avgTimeOnSite || 0),
+          bounceRate: Number(stat.bounceRate || 0)
         };
       }).filter(item => item.visits > 0); // Filtra periodi senza dati
 
