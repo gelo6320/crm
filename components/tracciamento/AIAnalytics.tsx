@@ -286,13 +286,13 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
   const getTrendIcon = (type: 'positive' | 'negative' | 'neutral' | 'warning') => {
     switch (type) {
       case 'positive':
-        return <ArrowUp className="w-4 h-4 text-emerald-500" />;
+        return <ArrowUp className="w-3 h-3 text-emerald-500" />;
       case 'negative':
-        return <ArrowDown className="w-4 h-4 text-red-500" />;
+        return <ArrowDown className="w-3 h-3 text-red-500" />;
       case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+        return <AlertTriangle className="w-3 h-3 text-yellow-500" />;
       default:
-        return <Minus className="w-4 h-4 text-zinc-400" />;
+        return <Minus className="w-3 h-3 text-zinc-400" />;
     }
   };
 
@@ -300,26 +300,26 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
   if (error) {
     return (
       <motion.div 
-        className="bg-white rounded-3xl p-8 mb-6 border border-red-100"
+        className="bg-white rounded-2xl p-4 mb-4 border border-red-100"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center">
-            <AlertTriangle className="w-6 h-6 text-red-600" />
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="w-4 h-4 text-red-600" />
           </div>
-          <div>
-            <h2 className="text-xl font-semibold text-zinc-900">AI Analytics</h2>
-            <p className="text-sm text-red-600">Errore nel caricamento dei dati</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold text-zinc-900">AI Analytics</h2>
+            <p className="text-xs text-red-600">Errore nel caricamento dei dati</p>
           </div>
         </div>
         
-        <div className="bg-red-50 rounded-2xl p-4">
-          <p className="text-red-700 text-sm mb-3">{error}</p>
+        <div className="bg-red-50 rounded-xl p-3">
+          <p className="text-red-700 text-xs mb-2">{error}</p>
           <button
             onClick={loadRealAnalyticsData}
-            className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
+            className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors"
           >
             Riprova
           </button>
@@ -332,30 +332,30 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
   if (isLoading) {
     return (
       <motion.div 
-        className="bg-white rounded-3xl p-8 mb-6 border border-zinc-100"
+        className="bg-white rounded-2xl p-4 mb-4 border border-zinc-100"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
-              <Brain className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <Brain className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-zinc-900">AI Analytics</h2>
-              <p className="text-sm text-zinc-500">Analisi intelligente delle performance</p>
+              <h2 className="text-lg font-semibold text-zinc-900">AI Analytics</h2>
+              <p className="text-xs text-zinc-500">Analisi intelligente</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-purple-500 animate-pulse" />
-            <span className="text-sm font-medium text-purple-600">Analizzando dati reali...</span>
+          <div className="flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-purple-500 animate-pulse" />
+            <span className="text-xs font-medium text-purple-600">Analizzando...</span>
           </div>
         </div>
         
-        <div className="space-y-4">
+        <div className="space-y-2">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-16 bg-zinc-50 rounded-2xl animate-pulse" />
+            <div key={i} className="h-12 bg-zinc-50 rounded-xl animate-pulse" />
           ))}
         </div>
       </motion.div>
@@ -366,29 +366,29 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
   if (!aiAnalysis || monthlyData.length === 0) {
     return (
       <motion.div 
-        className="bg-white rounded-3xl p-8 mb-6 border border-zinc-100"
+        className="bg-white rounded-2xl p-4 mb-4 border border-zinc-100"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-12 h-12 bg-zinc-100 rounded-2xl flex items-center justify-center">
-            <Brain className="w-6 h-6 text-zinc-400" />
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 bg-zinc-100 rounded-xl flex items-center justify-center">
+            <Brain className="w-4 h-4 text-zinc-400" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-zinc-900">AI Analytics</h2>
-            <p className="text-sm text-zinc-500">Nessun dato disponibile per l'analisi</p>
+            <h2 className="text-lg font-semibold text-zinc-900">AI Analytics</h2>
+            <p className="text-xs text-zinc-500">Nessun dato disponibile</p>
           </div>
         </div>
         
-        <div className="bg-zinc-50 rounded-2xl p-6 text-center">
-          <p className="text-zinc-600 mb-4">
+        <div className="bg-zinc-50 rounded-xl p-4 text-center">
+          <p className="text-zinc-600 text-xs mb-3">
             Non ci sono dati sufficienti per generare un'analisi AI. 
             Assicurati che il sistema di tracciamento sia attivo.
           </p>
           <button
             onClick={loadRealAnalyticsData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
           >
             Ricarica Dati
           </button>
@@ -399,34 +399,34 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
 
   return (
     <motion.div 
-      className="bg-white rounded-3xl border border-zinc-100 mb-6 overflow-hidden"
+      className="bg-white rounded-2xl border border-zinc-100 mb-4 overflow-hidden"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
     >
       {/* Header */}
       <div 
-        className="p-6 cursor-pointer"
+        className="p-4 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <Brain className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+              <Brain className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-zinc-900">AI Analytics</h2>
-              <p className="text-sm text-zinc-500">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-semibold text-zinc-900">AI Analytics</h2>
+              <p className="text-xs text-zinc-500 truncate">
                 Analisi di {monthlyData.length} periodi • Dati reali
               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             {/* Score Badge */}
-            <div className={`px-4 py-2 rounded-full ${getScoreBackground(aiAnalysis.overallScore)} flex items-center gap-2`}>
-              <Target className={`w-4 h-4 ${getScoreColor(aiAnalysis.overallScore)}`} />
-              <span className={`font-semibold ${getScoreColor(aiAnalysis.overallScore)}`}>
+            <div className={`px-2 py-1 rounded-full ${getScoreBackground(aiAnalysis.overallScore)} flex items-center gap-1`}>
+              <Target className={`w-3 h-3 ${getScoreColor(aiAnalysis.overallScore)}`} />
+              <span className={`text-xs font-semibold ${getScoreColor(aiAnalysis.overallScore)}`}>
                 {aiAnalysis.overallScore}/100
               </span>
             </div>
@@ -435,7 +435,7 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
               animate={{ rotate: isExpanded ? 90 : 0 }}
               transition={{ duration: 0.2 }}
             >
-              <ChevronRight className="w-5 h-5 text-zinc-400" />
+              <ChevronRight className="w-4 h-4 text-zinc-400" />
             </motion.div>
           </div>
         </div>
@@ -451,14 +451,14 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
             transition={{ duration: 0.3 }}
           >
             {/* Verdict Section */}
-            <div className="px-6 pb-6">
-              <div className="bg-zinc-50 rounded-2xl p-6 mb-6">
-                <h3 className="text-lg font-semibold text-zinc-900 mb-3">Verdetto AI</h3>
-                <p className="text-zinc-700 leading-relaxed">{aiAnalysis.verdict}</p>
+            <div className="px-4 pb-4">
+              <div className="bg-zinc-50 rounded-xl p-3 mb-4">
+                <h3 className="text-base font-semibold text-zinc-900 mb-2">Verdetto AI</h3>
+                <p className="text-zinc-700 text-sm leading-relaxed">{aiAnalysis.verdict}</p>
               </div>
 
-              {/* Tabs */}
-              <div className="flex gap-1 mb-6 bg-zinc-100 rounded-2xl p-1">
+              {/* Tabs - Mobile Optimized */}
+              <div className="flex gap-0.5 mb-4 bg-zinc-100 rounded-xl p-0.5">
                 {[
                   { id: 'overview', label: 'Panoramica', icon: BarChart3 },
                   { id: 'trends', label: 'Tendenze', icon: TrendingUp },
@@ -467,14 +467,14 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-1 py-2 px-2 rounded-lg font-medium transition-all text-xs ${
                       activeTab === tab.id
                         ? 'bg-white text-zinc-900 shadow-sm'
                         : 'text-zinc-600 hover:text-zinc-900'
                     }`}
                   >
-                    <tab.icon className="w-4 h-4" />
-                    {tab.label}
+                    <tab.icon className="w-3 h-3" />
+                    <span className="hidden sm:inline">{tab.label}</span>
                   </button>
                 ))}
               </div>
@@ -488,43 +488,43 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="space-y-6"
+                    className="space-y-4"
                   >
-                    {/* Key Metrics Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="bg-zinc-50 rounded-2xl p-4 text-center">
-                        <div className="text-2xl font-bold text-emerald-600 mb-1">
+                    {/* Key Metrics Grid - Mobile Optimized */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-zinc-50 rounded-xl p-3 text-center">
+                        <div className="text-lg font-bold text-emerald-600 mb-0.5">
                           {aiAnalysis.keyMetrics.bestMonth}
                         </div>
-                        <div className="text-sm text-zinc-600">Mese migliore</div>
+                        <div className="text-xs text-zinc-600">Mese migliore</div>
                       </div>
                       
-                      <div className="bg-zinc-50 rounded-2xl p-4 text-center">
-                        <div className="text-2xl font-bold text-blue-600 mb-1">
+                      <div className="bg-zinc-50 rounded-xl p-3 text-center">
+                        <div className="text-lg font-bold text-blue-600 mb-0.5">
                           {aiAnalysis.keyMetrics.averageGrowth > 0 ? '+' : ''}{aiAnalysis.keyMetrics.averageGrowth.toFixed(1)}%
                         </div>
-                        <div className="text-sm text-zinc-600">Crescita media</div>
+                        <div className="text-xs text-zinc-600">Crescita media</div>
                       </div>
                       
-                      <div className="bg-zinc-50 rounded-2xl p-4 text-center">
-                        <div className="text-2xl font-bold text-purple-600 mb-1">
+                      <div className="bg-zinc-50 rounded-xl p-3 text-center">
+                        <div className="text-lg font-bold text-purple-600 mb-0.5">
                           {aiAnalysis.keyMetrics.consistencyScore}%
                         </div>
-                        <div className="text-sm text-zinc-600">Consistenza</div>
+                        <div className="text-xs text-zinc-600">Consistenza</div>
                       </div>
                       
-                      <div className="bg-zinc-50 rounded-2xl p-4 text-center">
-                        <div className="text-2xl font-bold text-orange-600 mb-1">
+                      <div className="bg-zinc-50 rounded-xl p-3 text-center">
+                        <div className="text-lg font-bold text-orange-600 mb-0.5">
                           {aiAnalysis.predictions.confidence}%
                         </div>
-                        <div className="text-sm text-zinc-600">Affidabilità</div>
+                        <div className="text-xs text-zinc-600">Affidabilità</div>
                       </div>
                     </div>
 
-                    {/* Monthly Chart */}
-                    <div className="bg-zinc-50 rounded-2xl p-6">
-                      <h4 className="text-lg font-semibold text-zinc-900 mb-4">Andamento nel Tempo</h4>
-                      <div className="h-64">
+                    {/* Monthly Chart - Mobile Optimized */}
+                    <div className="bg-zinc-50 rounded-xl p-3">
+                      <h4 className="text-base font-semibold text-zinc-900 mb-3">Andamento nel Tempo</h4>
+                      <div className="h-48">
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={monthlyData}>
                             <defs>
@@ -542,19 +542,20 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                               dataKey="month" 
                               axisLine={false}
                               tickLine={false}
-                              tick={{ fontSize: 12, fill: '#6b7280' }}
+                              tick={{ fontSize: 10, fill: '#6b7280' }}
                             />
                             <YAxis 
                               axisLine={false}
                               tickLine={false}
-                              tick={{ fontSize: 12, fill: '#6b7280' }}
+                              tick={{ fontSize: 10, fill: '#6b7280' }}
                             />
                             <Tooltip 
                               contentStyle={{ 
                                 backgroundColor: 'white', 
                                 border: 'none',
-                                borderRadius: '12px',
-                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.1)',
+                                fontSize: '12px'
                               }}
                             />
                             <Area
@@ -587,28 +588,28 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="space-y-6"
+                    className="space-y-4"
                   >
-                    {/* Period Comparisons */}
-                    <div className="bg-zinc-50 rounded-2xl p-6">
-                      <h4 className="text-lg font-semibold text-zinc-900 mb-4">Confronto Periodi</h4>
-                      <div className="space-y-4">
+                    {/* Period Comparisons - Mobile Optimized */}
+                    <div className="bg-zinc-50 rounded-xl p-3">
+                      <h4 className="text-base font-semibold text-zinc-900 mb-3">Confronto Periodi</h4>
+                      <div className="space-y-2">
                         {weeklyComparisons.map((period, index) => (
-                          <div key={index} className="flex items-center justify-between p-4 bg-white rounded-xl">
-                            <div>
-                              <div className="font-medium text-zinc-900">{period.weekRange}</div>
-                              <div className="text-sm text-zinc-500">
+                          <div key={index} className="flex items-center justify-between p-2 bg-white rounded-lg">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium text-zinc-900 text-sm truncate">{period.weekRange}</div>
+                              <div className="text-xs text-zinc-500">
                                 {(period.currentWeek || 0).toLocaleString()} visite
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                               <div className={`flex items-center gap-1 ${period.change >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                                 {period.change >= 0 ? (
-                                  <ArrowUp className="w-4 h-4" />
+                                  <ArrowUp className="w-3 h-3" />
                                 ) : (
-                                  <ArrowDown className="w-4 h-4" />
+                                  <ArrowDown className="w-3 h-3" />
                                 )}
-                                <span className="font-medium">
+                                <span className="font-medium text-xs">
                                   {Math.abs(period.changePercent).toFixed(1)}%
                                 </span>
                               </div>
@@ -618,21 +619,21 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                       </div>
                     </div>
 
-                    {/* Predictions */}
-                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6">
-                      <h4 className="text-lg font-semibold text-zinc-900 mb-4">Previsioni AI</h4>
-                      <div className="grid grid-cols-2 gap-4">
+                    {/* Predictions - Mobile Optimized */}
+                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-3">
+                      <h4 className="text-base font-semibold text-zinc-900 mb-3">Previsioni AI</h4>
+                      <div className="grid grid-cols-2 gap-3">
                         <div className="text-center">
-                          <div className="text-3xl font-bold text-blue-600 mb-1">
+                          <div className="text-xl font-bold text-blue-600 mb-0.5">
                             {(aiAnalysis.predictions?.nextMonthVisits || 0).toLocaleString()}
                           </div>
-                          <div className="text-sm text-zinc-600">Visite previste</div>
+                          <div className="text-xs text-zinc-600">Visite previste</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-3xl font-bold text-emerald-600 mb-1">
+                          <div className="text-xl font-bold text-emerald-600 mb-0.5">
                             {(aiAnalysis.predictions?.nextMonthConversions || 0).toLocaleString()}
                           </div>
-                          <div className="text-sm text-zinc-600">Conversioni previste</div>
+                          <div className="text-xs text-zinc-600">Conversioni previste</div>
                         </div>
                       </div>
                     </div>
@@ -646,7 +647,7 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
-                    className="space-y-4"
+                    className="space-y-3"
                   >
                     {aiAnalysis.insights.map((insight, index) => (
                       <motion.div
@@ -654,29 +655,29 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        className="bg-zinc-50 rounded-2xl p-6"
+                        className="bg-zinc-50 rounded-xl p-3"
                       >
-                        <div className="flex items-start gap-4">
-                          <div className="flex-shrink-0">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 mt-0.5">
                             {getTrendIcon(insight.type)}
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h5 className="font-semibold text-zinc-900">{insight.title}</h5>
-                              <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start gap-2 mb-2">
+                              <h5 className="font-semibold text-zinc-900 text-sm leading-tight flex-1">{insight.title}</h5>
+                              <span className={`px-1.5 py-0.5 rounded-md text-xs font-medium flex-shrink-0 ${
                                 insight.impact === 'high' ? 'bg-red-100 text-red-700' :
                                 insight.impact === 'medium' ? 'bg-yellow-100 text-yellow-700' :
                                 'bg-blue-100 text-blue-700'
                               }`}>
-                                {insight.impact === 'high' ? 'Alto impatto' :
-                                 insight.impact === 'medium' ? 'Medio impatto' :
-                                 'Basso impatto'}
+                                {insight.impact === 'high' ? 'Alto' :
+                                 insight.impact === 'medium' ? 'Medio' :
+                                 'Basso'}
                               </span>
                             </div>
-                            <p className="text-zinc-700 text-sm mb-3">{insight.description}</p>
+                            <p className="text-zinc-700 text-xs mb-2 leading-relaxed">{insight.description}</p>
                             {insight.recommendation && (
-                              <div className="bg-white rounded-xl p-3">
-                                <p className="text-sm text-zinc-600">
+                              <div className="bg-white rounded-lg p-2">
+                                <p className="text-xs text-zinc-600">
                                   <span className="font-medium">Raccomandazione:</span> {insight.recommendation}
                                 </p>
                               </div>
