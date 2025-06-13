@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { ChartBar, Filter, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import AIAnalytics from "@/components/tracciamento/AIAnalytics";
 import LandingPageList from "@/components/tracciamento/LandingPageList";
 import MarketingApiOverview from "@/components/tracciamento/MarketingApiOverview";
 import UsersList from "@/components/tracciamento/UsersList";
@@ -215,6 +216,11 @@ export default function TracciamentoPage() {
           </div>
         </div>
       </div>
+      
+      {/* AI Analytics - Nuova sezione sopra la lista delle landing page */}
+      {!selectedLandingPage && (
+        <AIAnalytics timeRange={timeRange} />
+      )}
       
       {/* Breadcrumb di navigazione */}
       {(selectedLandingPage || selectedUser || selectedSession) && (

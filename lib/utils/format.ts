@@ -47,7 +47,6 @@ export function formatPhoneNumber(phone: string): string {
     // Formato italiano mobile: 333 1234567
     return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2$3');
   } else if (isItalianLandline) {
-    // Formato italiano fisso: 02 12345678
     const prefixLength = 2; // La maggior parte dei prefissi è di 2-4 cifre
     const prefix = cleaned.substring(0, prefixLength);
     const rest = cleaned.substring(prefixLength);
