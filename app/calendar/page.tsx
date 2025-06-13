@@ -257,6 +257,10 @@ const appleCalendarStyles = `
     background: transparent;
   }
 
+  .fc-theme-standard .fc-list {
+    border: none !important;
+  }
+
   .fc .fc-list-day-cushion {
     background: var(--fc-neutral-bg-color);
     padding: 1rem;
@@ -297,6 +301,10 @@ const appleCalendarStyles = `
   /* Rimuovi bordi inutili */
   .fc-theme-standard .fc-scrollgrid {
     border: none;
+  }
+
+  .fc-theme-standard td, .fc-theme-standard th {
+    border-color: var(--fc-border-color);
   }
 
   /* Popover */
