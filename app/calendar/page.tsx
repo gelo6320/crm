@@ -299,10 +299,6 @@ const appleCalendarStyles = `
     border: none;
   }
 
-  .fc-theme-standard td, .fc-theme-standard th {
-    border-color: var(--fc-border-color);
-  }
-
   /* Popover */
   .fc-popover {
     background: var(--fc-neutral-bg-color);
