@@ -986,7 +986,7 @@ const WhatsAppChats: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-zinc-900 text-white flex flex-col overflow-hidden">
+    <div className="h-full bg-zinc-900 text-white flex flex-col overflow-hidden">
       {/* Dashboard delle statistiche - Fissato in alto */}
       <AnimatePresence>
         {showStats && whatsappStats && (

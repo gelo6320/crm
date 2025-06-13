@@ -147,11 +147,13 @@ export default function RootLayout({
                 <main className={`
                   flex-1 bg-zinc-900 transition-all duration-300 ease-in-out
                   ${getContentMargin()}
-                  ${isFullScreenPage ? 'overflow-hidden' : 'overflow-y-auto'}
+                  ${isFullScreenPage ? 'overflow-hidden h-full' : 'overflow-y-auto'}
                 `}>
                   {isFullScreenPage ? (
-                    // No padding wrapper for full-screen pages like WhatsApp
-                    children
+                    // No padding wrapper for full-screen pages like WhatsApp, but ensure it starts below header
+                    <div className="h-full">
+                      {children}
+                    </div>
                   ) : (
                     // Standard padding wrapper for regular pages
                     <div className="px-2 py-2 md:p-4 max-w-full min-h-full">
