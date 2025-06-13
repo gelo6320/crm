@@ -269,7 +269,7 @@ export default function TracciamentoPage() {
             <>
               <ChevronRight size={12} />
               <span className="text-zinc-300">
-                Sessione {new Date(selectedSession.startTime).toLocaleString('it-IT')}
+                Sessione {selectedSession?.startTime ? new Date(selectedSession.startTime).toLocaleString('it-IT') : 'Data non disponibile'}
               </span>
             </>
           )}

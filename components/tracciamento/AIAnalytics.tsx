@@ -598,7 +598,7 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                             <div>
                               <div className="font-medium text-zinc-900">{period.weekRange}</div>
                               <div className="text-sm text-zinc-500">
-                                {period.currentWeek.toLocaleString()} visite
+                                {(period.currentWeek || 0).toLocaleString()} visite
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -624,13 +624,13 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
                           <div className="text-3xl font-bold text-blue-600 mb-1">
-                            {aiAnalysis.predictions.nextMonthVisits.toLocaleString()}
+                            {(aiAnalysis.predictions?.nextMonthVisits || 0).toLocaleString()}
                           </div>
                           <div className="text-sm text-zinc-600">Visite previste</div>
                         </div>
                         <div className="text-center">
                           <div className="text-3xl font-bold text-emerald-600 mb-1">
-                            {aiAnalysis.predictions.nextMonthConversions.toLocaleString()}
+                            {(aiAnalysis.predictions?.nextMonthConversions || 0).toLocaleString()}
                           </div>
                           <div className="text-sm text-zinc-600">Conversioni previste</div>
                         </div>
