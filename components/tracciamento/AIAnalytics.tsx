@@ -13,7 +13,8 @@ import {
   ArrowUp,
   ArrowDown,
   Minus,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -76,7 +77,6 @@ interface AIAnalysisResult {
     nextMonthConversions: number;
     confidence: number;
   };
-  // ✅ Nuovi campi per Claude 4
   _meta?: {
     source: string;
     model?: string;
@@ -85,6 +85,15 @@ interface AIAnalysisResult {
     reason?: string;
     fallbackUsed?: boolean;
   };
+}
+
+// ✅ Interface per il caching
+interface CachedAnalysis {
+  data: AIAnalysisResult;
+  monthlyData: MonthlyData[];
+  weeklyComparisons: WeeklyComparison[];
+  timestamp: number;
+  timeRange: string;
 }
 
 interface AIAnalyticsProps {
@@ -97,19 +106,81 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
   const [weeklyComparisons, setWeeklyComparisons] = useState<WeeklyComparison[]>([]);
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'trends' | 'insights'>('overview');
+  // ✅ Cambiato: insights prima, poi analisi (che raggruppa overview + trends)
+  const [activeTab, setActiveTab] = useState<'insights' | 'analysis'>('insights');
   const [error, setError] = useState<string | null>(null);
+  // ✅ Stato per il caching
+  const [cachedData, setCachedData] = useState<CachedAnalysis | null>(null);
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+  
+  // ✅ Costanti per il caching
+  const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 ore in millisecondi
+  const CACHE_KEY = 'ai_analytics_cache';
+
+  // ✅ Funzioni per il caching (in memoria per l'artifact, localStorage per il progetto reale)
+  const saveToCache = (data: CachedAnalysis) => {
+    setCachedData(data);
+    // Per il progetto reale, decommentare questa riga:
+    // localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+  };
+
+  const loadFromCache = (): CachedAnalysis | null => {
+    // In memoria per l'artifact
+    if (cachedData && cachedData.timeRange === timeRange) {
+      const now = Date.now();
+      if (now - cachedData.timestamp < CACHE_DURATION) {
+        return cachedData;
+      }
+    }
+    
+    // Per il progetto reale, decommentare questo blocco:
+    /*
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const data: CachedAnalysis = JSON.parse(cached);
+        const now = Date.now();
+        if (now - data.timestamp < CACHE_DURATION && data.timeRange === timeRange) {
+          return data;
+        }
+      }
+    } catch (error) {
+      console.warn('[AI Analytics] Errore nel caricamento cache:', error);
+    }
+    */
+    
+    return null;
+  };
+
+  const clearCache = () => {
+    setCachedData(null);
+    // Per il progetto reale, decommentare questa riga:
+    // localStorage.removeItem(CACHE_KEY);
+  };
 
   // Carica i dati reali quando cambia il timeRange
   useEffect(() => {
-    loadRealAnalyticsData();
+    loadRealAnalyticsData(false);
   }, [timeRange]);
 
-  const loadRealAnalyticsData = async () => {
+  const loadRealAnalyticsData = async (forceReload = false) => {
     setIsLoading(true);
     setError(null);
+    
+    // ✅ Controlla cache se non è un reload forzato
+    if (!forceReload) {
+      const cached = loadFromCache();
+      if (cached) {
+        console.log('[AI Analytics] Caricamento da cache');
+        setMonthlyData(cached.monthlyData);
+        setWeeklyComparisons(cached.weeklyComparisons);
+        setAiAnalysis(cached.data);
+        setIsLoading(false);
+        return;
+      }
+    }
     
     try {
       console.log('[AI Analytics] Caricamento dati reali con Claude 4...');
@@ -154,7 +225,6 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
           dataSource: 'real_analytics',
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
-          // ✅ Informazioni aggiuntive per Claude 4
           analysisType: 'comprehensive',
           expectedInsights: 4,
           preferredModel: 'claude-4'
@@ -169,6 +239,16 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
       // ✅ Valida la risposta prima di impostare lo stato
       const analysisResult = validateAndSanitizeAnalysis(aiAnalysisResponse.data);
       setAiAnalysis(analysisResult);
+      
+      // ✅ Salva nel cache
+      const cacheData: CachedAnalysis = {
+        data: analysisResult,
+        monthlyData: processedData.monthlyData,
+        weeklyComparisons: processedData.weeklyComparisons,
+        timestamp: Date.now(),
+        timeRange
+      };
+      saveToCache(cacheData);
   
     } catch (error) {
       console.error('[AI Analytics] Errore nel caricamento:', error);
@@ -190,7 +270,15 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
       setError(errorMessage);
     } finally {
       setIsLoading(false);
+      setIsReanalyzing(false);
     }
+  };
+
+  // ✅ Funzione per ri-analizzare
+  const handleReanalyze = async () => {
+    setIsReanalyzing(true);
+    clearCache();
+    await loadRealAnalyticsData(true);
   };
 
   const validateAndSanitizeAnalysis = (data: any): AIAnalysisResult => {
@@ -395,7 +483,7 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
           )}
           
           <button
-            onClick={loadRealAnalyticsData}
+            onClick={() => loadRealAnalyticsData(true)}
             className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors"
           >
             Riprova con Claude 4
@@ -405,7 +493,7 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
     );
   }
 
-  // Stato di caricamento
+  // ✅ Stato di caricamento - CENTRATO
   if (isLoading) {
     return (
       <motion.div 
@@ -424,16 +512,23 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
               <p className="text-xs text-zinc-500">Analisi intelligente</p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-purple-500 animate-pulse" />
-            <span className="text-xs font-medium text-purple-600">Analizzando...</span>
-          </div>
         </div>
         
-        <div className="space-y-2">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-12 bg-zinc-50 rounded-xl animate-pulse" />
-          ))}
+        {/* ✅ Loading centrato */}
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-4 h-4 text-purple-500 animate-pulse" />
+            <span className="text-sm font-medium text-purple-600">
+              {isReanalyzing ? 'Ri-analizzando...' : 'Analizzando con Claude 4...'}
+            </span>
+          </div>
+          
+          <div className="space-y-2 w-full max-w-md">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-3 bg-zinc-100 rounded-full animate-pulse" 
+                   style={{ animationDelay: `${i * 0.2}s` }} />
+            ))}
+          </div>
         </div>
       </motion.div>
     );
@@ -464,7 +559,7 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
             Assicurati che il sistema di tracciamento sia attivo.
           </p>
           <button
-            onClick={loadRealAnalyticsData}
+            onClick={() => loadRealAnalyticsData(true)}
             className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
           >
             Ricarica Dati
@@ -494,20 +589,33 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold text-zinc-900">AI Analytics</h2>
               <p className="text-xs text-zinc-500 truncate">
-                {/* ✅ Mostra informazioni Claude 4 */}
+                {/* ✅ Mostra informazioni Claude 4 + cache */}
                 {aiAnalysis?._meta?.source === 'claude_4_analysis' 
                   ? `Claude 4 • ${monthlyData.length} periodi • ${aiAnalysis._meta.model || 'Sonnet-4'}`
                   : aiAnalysis?._meta?.fallbackUsed 
                     ? `Analisi automatica • ${monthlyData.length} periodi`
                     : `Analisi di ${monthlyData.length} periodi • Dati reali`
                 }
+                {cachedData && ' • Cache 24h'}
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
+            {/* ✅ Pulsante ri-analizza piccolo e minimale */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleReanalyze();
+              }}
+              disabled={isReanalyzing}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Ri-analizza con Claude 4"
+            >
+              <RefreshCw className={`w-3 h-3 ${isReanalyzing ? 'animate-spin' : ''}`} />
+            </button>
+
             {/* Score Badge */}
-            {/* ✅ Badge Claude 4 con informazioni avanzate */}
             <div className={`px-2 py-1 rounded-full ${getScoreBackground(aiAnalysis.overallScore)} flex items-center gap-1`}>
               {aiAnalysis?._meta?.source === 'claude_4_analysis' && (
                 <Sparkles className="w-3 h-3 text-blue-500" />
@@ -586,16 +694,21 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                   {aiAnalysis._meta.dataPoints && (
                     <span>{aiAnalysis._meta.dataPoints} data points</span>
                   )}
+                  {cachedData && (
+                    <span className="flex items-center gap-1 text-green-600">
+                      <Target className="w-3 h-3" />
+                      Cache attiva 24h
+                    </span>
+                  )}
                 </div>
               )}
             </div>
             
-              {/* Tabs - Mobile Optimized */}
+              {/* ✅ Tabs modificati - Insights prima, poi Analisi */}
               <div className="flex gap-0.5 mb-4 bg-zinc-100 rounded-xl p-0.5">
                 {[
-                  { id: 'overview', label: 'Panoramica', icon: BarChart3 },
-                  { id: 'trends', label: 'Tendenze', icon: TrendingUp },
-                  { id: 'insights', label: 'Insights', icon: Sparkles }
+                  { id: 'insights', label: 'Insights', icon: Sparkles },
+                  { id: 'analysis', label: 'Analisi', icon: BarChart3 }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -614,49 +727,69 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
 
               {/* Tab Content */}
               <AnimatePresence mode="wait">
-                {activeTab === 'overview' && (
+                {/* ✅ Insights per primi */}
+                {activeTab === 'insights' && (
                   <motion.div
-                    key="overview"
+                    key="insights"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-3"
+                  >
+                    {aiAnalysis.insights.map((insight, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="bg-zinc-50 rounded-xl p-3"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 mt-0.5">
+                            {getTrendIcon(insight.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start gap-2 mb-2">
+                              <h5 className="font-semibold text-zinc-900 text-sm leading-tight flex-1">{insight.title}</h5>
+                              <span className={`px-1.5 py-0.5 rounded-md text-xs font-medium flex-shrink-0 ${
+                                insight.impact === 'high' ? 'bg-red-100 text-red-700' :
+                                insight.impact === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-blue-100 text-blue-700'
+                              }`}>
+                                {insight.impact === 'high' ? 'Alto' :
+                                 insight.impact === 'medium' ? 'Medio' :
+                                 'Basso'}
+                              </span>
+                            </div>
+                            <p className="text-zinc-700 text-xs mb-2 leading-relaxed">{insight.description}</p>
+                            {insight.recommendation && (
+                              <div className="bg-white rounded-lg p-2">
+                                <p className="text-xs text-zinc-600">
+                                  <span className="font-medium">Raccomandazione:</span> {insight.recommendation}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+
+                {/* ✅ Analisi (overview + trends semplificati) */}
+                {activeTab === 'analysis' && (
+                  <motion.div
+                    key="analysis"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.3 }}
                     className="space-y-4"
                   >
-                    {/* Key Metrics Grid - Mobile Optimized */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-zinc-50 rounded-xl p-3 text-center">
-                        <div className="text-lg font-bold text-emerald-600 mb-0.5">
-                          {aiAnalysis.keyMetrics.bestMonth}
-                        </div>
-                        <div className="text-xs text-zinc-600">Mese migliore</div>
-                      </div>
-                      
-                      <div className="bg-zinc-50 rounded-xl p-3 text-center">
-                        <div className="text-lg font-bold text-blue-600 mb-0.5">
-                          {aiAnalysis.keyMetrics.averageGrowth > 0 ? '+' : ''}{aiAnalysis.keyMetrics.averageGrowth.toFixed(1)}%
-                        </div>
-                        <div className="text-xs text-zinc-600">Crescita media</div>
-                      </div>
-                      
-                      <div className="bg-zinc-50 rounded-xl p-3 text-center">
-                        <div className="text-lg font-bold text-purple-600 mb-0.5">
-                          {aiAnalysis.keyMetrics.consistencyScore}%
-                        </div>
-                        <div className="text-xs text-zinc-600">Consistenza</div>
-                      </div>
-                      
-                      <div className="bg-zinc-50 rounded-xl p-3 text-center">
-                        <div className="text-lg font-bold text-orange-600 mb-0.5">
-                          {aiAnalysis.predictions.confidence}%
-                        </div>
-                        <div className="text-xs text-zinc-600">Affidabilità</div>
-                      </div>
-                    </div>
-
-                    {/* Monthly Chart - Mobile Optimized */}
+                    {/* ✅ Solo grafico delle tendenze */}
                     <div className="bg-zinc-50 rounded-xl p-3">
-                      <h4 className="text-base font-semibold text-zinc-900 mb-3">Andamento nel Tempo</h4>
+                      <h4 className="text-base font-semibold text-zinc-900 mb-3">Tendenze nel Tempo</h4>
                       <div className="h-48">
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={monthlyData}>
@@ -711,23 +844,12 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                         </ResponsiveContainer>
                       </div>
                     </div>
-                  </motion.div>
-                )}
 
-                {activeTab === 'trends' && (
-                  <motion.div
-                    key="trends"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-4"
-                  >
-                    {/* Period Comparisons - Mobile Optimized */}
+                    {/* ✅ Confronto periodi semplificato */}
                     <div className="bg-zinc-50 rounded-xl p-3">
                       <h4 className="text-base font-semibold text-zinc-900 mb-3">Confronto Periodi</h4>
                       <div className="space-y-2">
-                        {weeklyComparisons.map((period, index) => (
+                        {weeklyComparisons.slice(-3).map((period, index) => (
                           <div key={index} className="flex items-center justify-between p-2 bg-white rounded-lg">
                             <div className="min-w-0 flex-1">
                               <div className="font-medium text-zinc-900 text-sm truncate">{period.weekRange}</div>
@@ -752,7 +874,7 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                       </div>
                     </div>
 
-                    {/* Predictions - Mobile Optimized */}
+                    {/* ✅ Previsioni */}
                     <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-3">
                       <h4 className="text-base font-semibold text-zinc-900 mb-3">Previsioni AI</h4>
                       <div className="grid grid-cols-2 gap-3">
@@ -769,56 +891,14 @@ const AIAnalytics: React.FC<AIAnalyticsProps> = ({ timeRange }) => {
                           <div className="text-xs text-zinc-600">Conversioni previste</div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {activeTab === 'insights' && (
-                  <motion.div
-                    key="insights"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-3"
-                  >
-                    {aiAnalysis.insights.map((insight, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="bg-zinc-50 rounded-xl p-3"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 mt-0.5">
-                            {getTrendIcon(insight.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start gap-2 mb-2">
-                              <h5 className="font-semibold text-zinc-900 text-sm leading-tight flex-1">{insight.title}</h5>
-                              <span className={`px-1.5 py-0.5 rounded-md text-xs font-medium flex-shrink-0 ${
-                                insight.impact === 'high' ? 'bg-red-100 text-red-700' :
-                                insight.impact === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-blue-100 text-blue-700'
-                              }`}>
-                                {insight.impact === 'high' ? 'Alto' :
-                                 insight.impact === 'medium' ? 'Medio' :
-                                 'Basso'}
-                              </span>
-                            </div>
-                            <p className="text-zinc-700 text-xs mb-2 leading-relaxed">{insight.description}</p>
-                            {insight.recommendation && (
-                              <div className="bg-white rounded-lg p-2">
-                                <p className="text-xs text-zinc-600">
-                                  <span className="font-medium">Raccomandazione:</span> {insight.recommendation}
-                                </p>
-                              </div>
-                            )}
-                          </div>
+                      {aiAnalysis.predictions?.confidence && (
+                        <div className="text-center mt-2">
+                          <span className="text-xs text-zinc-500">
+                            Affidabilità: {aiAnalysis.predictions.confidence}%
+                          </span>
                         </div>
-                      </motion.div>
-                    ))}
+                      )}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
