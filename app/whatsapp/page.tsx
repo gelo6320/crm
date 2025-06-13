@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useSpring, useMotionValue, useTransform } from 'framer-motion';
 import axios from 'axios';
 import { 
   MessageCircle, 
@@ -29,7 +29,28 @@ import {
 // Definizione dell'URL base dell'API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.costruzionedigitale.com';
 
-// Interfacce TypeScript
+// Cache per i messaggi in draft (5 minuti di timeout)
+interface MessageDraft {
+  content: string;
+  timestamp: number;
+}
+
+const DRAFT_CACHE_TIMEOUT = 5 * 60 * 1000; // 5 minuti
+
+// Animazioni Apple-like
+const appleEasing = [0.4, 0.0, 0.2, 1];
+const springTransition = {
+  type: "spring",
+  damping: 25,
+  stiffness: 300,
+};
+
+const smoothTransition = {
+  duration: 0.4,
+  ease: appleEasing,
+};
+
+// Interfacce TypeScript (mantengo le stesse del codice originale)
 interface Cliente {
   nome?: string;
   email?: string;
@@ -152,18 +173,31 @@ const BotStatusIndicator: React.FC<{
     conversationId: string;
     botControlStates: Map<string, any>;
   }> = ({ conversationId, botControlStates }) => {
-    // ✅ SOLO lettura dallo stato, nessuna richiesta API
     const status = botControlStates.get(conversationId) || { isPaused: false };
     
     return (
-      <div className="flex items-center text-xs">
-        <div className={`w-2 h-2 rounded-full mr-2 ${
-          status.isPaused ? 'bg-orange-500' : 'bg-green-500'
-        }`}></div>
+      <motion.div 
+        className="flex items-center text-xs"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={springTransition}
+      >
+        <motion.div 
+          className={`w-2 h-2 rounded-full mr-2 ${
+            status.isPaused ? 'bg-orange-500' : 'bg-green-500'
+          }`}
+          animate={{ 
+            scale: status.isPaused ? [1, 1.2, 1] : 1,
+          }}
+          transition={{ 
+            repeat: status.isPaused ? Infinity : 0,
+            duration: 2,
+          }}
+        />
         <span className={status.isPaused ? 'text-orange-400' : 'text-green-400'}>
           Bot {status.isPaused ? 'In Pausa' : 'Attivo'}
         </span>
-      </div>
+      </motion.div>
     );
   };
 
@@ -179,25 +213,31 @@ const BotControlButtons: React.FC<{
   
   if (status.isPaused) {
     return (
-      <button
+      <motion.button
         onClick={onResumeBot}
         disabled={isResponding}
-        className="p-2 rounded-lg bg-green-600 hover:bg-green-500 disabled:bg-zinc-600 transition-colors"
+        className="p-2 rounded-xl bg-green-600 hover:bg-green-500 disabled:bg-zinc-600 transition-all duration-300"
         title="Riattiva Bot Automatico"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        transition={springTransition}
       >
         <Play size={16} />
-      </button>
+      </motion.button>
     );
   } else {
     return (
-      <button
+      <motion.button
         onClick={onPauseBot}
         disabled={isResponding}
-        className="p-2 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-600 transition-colors"
+        className="p-2 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-600 transition-all duration-300"
         title="Metti in Pausa Bot (Gestione Manuale)"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        transition={springTransition}
       >
         <Pause size={16} />
-      </button>
+      </motion.button>
     );
   }
 };
@@ -214,49 +254,66 @@ const ConversationActionsMenu: React.FC<{
   
   return (
     <div className="relative">
-      <button 
+      <motion.button 
         onClick={() => setShowMenu(!showMenu)}
-        className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
+        className="p-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 transition-all duration-300"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        transition={springTransition}
       >
         <MoreVertical size={16} />
-      </button>
+      </motion.button>
       
-      {showMenu && (
-        <div className="absolute right-0 mt-2 w-48 bg-zinc-800 rounded-lg shadow-lg border border-zinc-700 z-10">
-          <div className="p-1">
-            {status.isPaused ? (
-              <button
-                onClick={() => {
-                  onResumeBot();
-                  setShowMenu(false);
-                }}
-                className="w-full text-left px-3 py-2 text-sm text-green-400 hover:bg-zinc-700 rounded flex items-center"
+      <AnimatePresence>
+        {showMenu && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -10 }}
+            transition={smoothTransition}
+            className="absolute right-0 mt-2 w-48 bg-zinc-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-zinc-700/50 z-10"
+          >
+            <div className="p-2">
+              {status.isPaused ? (
+                <motion.button
+                  onClick={() => {
+                    onResumeBot();
+                    setShowMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-3 text-sm text-green-400 hover:bg-zinc-700/50 rounded-xl flex items-center transition-colors duration-200"
+                  whileHover={{ x: 4 }}
+                  transition={springTransition}
+                >
+                  <Play size={14} className="mr-3" />
+                  Riattiva Bot
+                </motion.button>
+              ) : (
+                <motion.button
+                  onClick={() => {
+                    onPauseBot();
+                    setShowMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-3 text-sm text-orange-400 hover:bg-zinc-700/50 rounded-xl flex items-center transition-colors duration-200"
+                  whileHover={{ x: 4 }}
+                  transition={springTransition}
+                >
+                  <Pause size={14} className="mr-3" />
+                  Gestione Manuale
+                </motion.button>
+              )}
+              <motion.button
+                onClick={() => setShowMenu(false)}
+                className="w-full text-left px-3 py-3 text-sm text-zinc-400 hover:bg-zinc-700/50 rounded-xl flex items-center transition-colors duration-200"
+                whileHover={{ x: 4 }}
+                transition={springTransition}
               >
-                <Play size={14} className="mr-2" />
-                Riattiva Bot
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  onPauseBot();
-                  setShowMenu(false);
-                }}
-                className="w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-zinc-700 rounded flex items-center"
-              >
-                <Pause size={14} className="mr-2" />
-                Gestione Manuale
-              </button>
-            )}
-            <button
-              onClick={() => setShowMenu(false)}
-              className="w-full text-left px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-700 rounded flex items-center"
-            >
-              <Calendar size={14} className="mr-2" />
-              Pianifica Follow-up
-            </button>
-          </div>
-        </div>
-      )}
+                <Calendar size={14} className="mr-3" />
+                Pianifica Follow-up
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -288,6 +345,85 @@ const WhatsAppChats: React.FC = () => {
   const [botControlAction, setBotControlAction] = useState<'pause' | 'resume' | null>(null);
   const [pauseReason, setPauseReason] = useState<string>('');
 
+  // ✨ NUOVO: Sistema di caching per draft messaggi
+  const [messageDrafts, setMessageDrafts] = useState<Map<string, MessageDraft>>(new Map());
+  const [previousConversationId, setPreviousConversationId] = useState<string | null>(null);
+
+  // ✨ NUOVO: Motion values per animazioni fluide
+  const y = useMotionValue(0);
+  const opacity = useTransform(y, [-50, 0, 50], [0, 1, 0]);
+
+  // ✨ NUOVO: Gestione cache messaggi
+  const saveDraftMessage = (conversationId: string, content: string) => {
+    if (!content.trim()) {
+      // Se il messaggio è vuoto, rimuovi il draft
+      setMessageDrafts(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(conversationId);
+        return newMap;
+      });
+      return;
+    }
+
+    setMessageDrafts(prev => new Map(prev.set(conversationId, {
+      content: content,
+      timestamp: Date.now()
+    })));
+  };
+
+  const loadDraftMessage = (conversationId: string): string => {
+    const draft = messageDrafts.get(conversationId);
+    if (!draft) return '';
+
+    // Controlla se il draft è scaduto
+    if (Date.now() - draft.timestamp > DRAFT_CACHE_TIMEOUT) {
+      setMessageDrafts(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(conversationId);
+        return newMap;
+      });
+      return '';
+    }
+
+    return draft.content;
+  };
+
+  // ✨ NUOVO: Cleanup automatico dei draft scaduti
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      const now = Date.now();
+      setMessageDrafts(prev => {
+        const newMap = new Map();
+        prev.forEach((draft, conversationId) => {
+          if (now - draft.timestamp < DRAFT_CACHE_TIMEOUT) {
+            newMap.set(conversationId, draft);
+          }
+        });
+        return newMap;
+      });
+    }, 60000); // Cleanup ogni minuto
+
+    return () => clearInterval(cleanup);
+  }, []);
+
+  // ✨ NUOVO: Gestione cambio conversazione con caching
+  const handleConversationSelect = (conversationId: string) => {
+    // Salva il draft della conversazione corrente
+    if (selectedConversation && newMessage.trim()) {
+      saveDraftMessage(selectedConversation.conversation.conversationId, newMessage);
+    }
+
+    // Carica il draft della nuova conversazione
+    const draft = loadDraftMessage(conversationId);
+    setNewMessage(draft);
+
+    // Imposta la conversazione precedente
+    setPreviousConversationId(selectedConversation?.conversation.conversationId || null);
+
+    // Carica la nuova conversazione
+    fetchConversationDetails(conversationId);
+  };
+
   // Fetch configurazione utente
   useEffect(() => {
     fetchUserConfig();
@@ -297,14 +433,12 @@ const WhatsAppChats: React.FC = () => {
   const isRefreshing = useRef(false);
 
   useEffect(() => {
-    // Fetch gli stati del bot quando le conversazioni sono caricate E il config è disponibile
     if (config && config.whatsapp_access_token && conversations.length > 0) {
       console.log('🔄 Initial bot states fetch after conversations loaded');
       fetchBotStatesForVisibleConversations();
     }
-  }, [conversations, config]); // Dipende da conversations E config
+  }, [conversations, config]);
   
-  // 2. MODIFICA il useEffect esistente per separare meglio i timing
   useEffect(() => {
     if (config && config.whatsapp_access_token) {
       testWhatsAppConnection();
@@ -321,14 +455,11 @@ const WhatsAppChats: React.FC = () => {
         console.log('🔄 Auto-refresh (conversazioni + stati bot)');
         
         try {
-          // Prima carica conversazioni e stats
           await Promise.all([
             fetchConversations(),
             fetchWhatsAppStats()
           ]);
           
-          // POI carica gli stati del bot (dopo che conversations è aggiornato)
-          // Aspetta un piccolo delay per assicurarsi che filteredConversations sia aggiornato
           setTimeout(() => {
             fetchBotStatesForVisibleConversations();
           }, 100);
@@ -351,10 +482,8 @@ const WhatsAppChats: React.FC = () => {
       const selectedConv = conversations.find(c => c.conversationId === conversationId);
       
       if (selectedConv) {
-        // Seleziona automaticamente la conversazione
-        fetchConversationDetails(conversationId);
+        handleConversationSelect(conversationId);
         
-        // Evidenzia temporaneamente la conversazione nella lista
         setTimeout(() => {
           const element = document.querySelector(`[data-conversation-id="${conversationId}"]`);
           if (element) {
@@ -367,7 +496,6 @@ const WhatsAppChats: React.FC = () => {
           }
         }, 500);
         
-        // Pulisci l'URL
         if (window.history.replaceState) {
           const url = new URL(window.location.href);
           url.searchParams.delete('id');
@@ -378,9 +506,8 @@ const WhatsAppChats: React.FC = () => {
   }, [conversations]);
 
   const fetchBotStatesForVisibleConversations = async (): Promise<void> => {
-    // Evita richieste troppo frequenti
     const now = Date.now();
-    if (now - lastBotStatesFetch < 3000) { // Riduci a 3 secondi
+    if (now - lastBotStatesFetch < 3000) {
       console.log('⏭️ Skipping bot states fetch - too recent');
       return;
     }
@@ -390,7 +517,6 @@ const WhatsAppChats: React.FC = () => {
       return;
     }
     
-    // AGGIORNA: Usa conversations direttamente invece di filteredConversations per evitare problemi di timing
     const conversationsToFetch = conversations.slice(0, 10);
     
     if (conversationsToFetch.length === 0) {
@@ -436,7 +562,6 @@ const WhatsAppChats: React.FC = () => {
       
       const results = await Promise.allSettled(statePromises);
       
-      // Aggiorna la mappa
       setBotControlStates(prev => {
         const newMap = new Map(prev);
         results.forEach((result) => {
@@ -457,10 +582,10 @@ const WhatsAppChats: React.FC = () => {
     }
   };
   
-    // Scroll ai messaggi più recenti
-    useEffect(() => {
-      scrollToBottom();
-    }, [selectedConversation]);
+  // Scroll ai messaggi più recenti
+  useEffect(() => {
+    scrollToBottom();
+  }, [selectedConversation]);
 
   const filteredConversations = conversations.filter(conv => {
     const matchesSearch = !searchTerm || 
@@ -555,7 +680,7 @@ const WhatsAppChats: React.FC = () => {
       
       if (data.status === 'success' && data.data) {
         setSelectedConversation(data.data);
-        setShowChatOnMobile(true); // Mostra chat su mobile
+        setShowChatOnMobile(true);
       }
     } catch (error) {
       console.error('Errore fetch dettagli conversazione:', error);
@@ -578,7 +703,6 @@ const WhatsAppChats: React.FC = () => {
       const data = await response.json();
   
       if (data.success) {
-        // AGGIORNA immediatamente lo stato locale
         setBotControlStates(prev => new Map(prev.set(conversationId, {
           isPaused: true,
           pausedAt: new Date(),
@@ -588,7 +712,6 @@ const WhatsAppChats: React.FC = () => {
         
         console.log('✅ Bot messo in pausa per conversazione:', conversationId);
         
-        // FORZA un refresh dello stato dal server per essere sicuri
         setTimeout(() => {
           fetchBotStateForSingleConversation(conversationId);
         }, 500);
@@ -621,7 +744,6 @@ const WhatsAppChats: React.FC = () => {
       const data = await response.json();
   
       if (data.success) {
-        // AGGIORNA immediatamente lo stato locale
         setBotControlStates(prev => new Map(prev.set(conversationId, {
           isPaused: false,
           resumedAt: new Date(),
@@ -630,7 +752,6 @@ const WhatsAppChats: React.FC = () => {
         
         console.log('✅ Bot riattivato per conversazione:', conversationId);
         
-        // FORZA un refresh dello stato dal server per essere sicuri
         setTimeout(() => {
           fetchBotStateForSingleConversation(conversationId);
         }, 500);
@@ -645,7 +766,6 @@ const WhatsAppChats: React.FC = () => {
     }
   };
   
-  // 5. AGGIUNGI funzione helper per fetch di una singola conversazione
   const fetchBotStateForSingleConversation = async (conversationId: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/whatsapp/bot-status/${conversationId}`, {
@@ -705,6 +825,8 @@ const WhatsAppChats: React.FC = () => {
           };
         });
         
+        // ✨ Pulisci il draft dopo l'invio
+        saveDraftMessage(selectedConversation.conversation.conversationId, '');
         setNewMessage('');
         scrollToBottom();
         
@@ -835,222 +957,315 @@ const WhatsAppChats: React.FC = () => {
     }
   };
 
+  // ✨ NUOVO: Aggiorna draft in tempo reale
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewMessage(value);
+    
+    // Salva il draft solo se c'è una conversazione selezionata
+    if (selectedConversation) {
+      saveDraftMessage(selectedConversation.conversation.conversationId, value);
+    }
+  };
+
   if (!config?.whatsapp_access_token) {
     return (
       <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
-        <div className="text-center text-zinc-400">
+        <motion.div 
+          className="text-center text-zinc-400"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={smoothTransition}
+        >
           <MessageCircle size={48} className="mx-auto mb-4 text-zinc-600" />
           <h2 className="text-xl font-semibold mb-2">Configurazione WhatsApp mancante</h2>
           <p>Configura WhatsApp Business API nelle impostazioni per utilizzare questa funzione.</p>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-white">
-      {/* Dashboard delle statistiche */}
-      {showStats && whatsappStats && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className="p-4 bg-zinc-800 border-b border-zinc-700"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Statistiche WhatsApp</h2>
-            <button
-              onClick={() => setShowStats(false)}
-              className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-            <div className="bg-zinc-700 rounded-lg p-4">
-              <div className="text-sm text-zinc-400">Conversazioni Totali</div>
-              <div className="text-2xl font-bold text-white">{whatsappStats.totalConversations}</div>
-            </div>
-            <div className="bg-zinc-700 rounded-lg p-4">
-              <div className="text-sm text-zinc-400">Attive</div>
-              <div className="text-2xl font-bold text-green-400">{whatsappStats.activeConversations}</div>
-            </div>
-            <div className="bg-zinc-700 rounded-lg p-4">
-              <div className="text-sm text-zinc-400">Completate</div>
-              <div className="text-2xl font-bold text-blue-400">{whatsappStats.completedConversations}</div>
-            </div>
-            <div className="bg-zinc-700 rounded-lg p-4">
-              <div className="text-sm text-zinc-400">Bot in Pausa</div>
-              <div className="text-2xl font-bold text-orange-400">
-                {Array.from(botControlStates.values()).filter(state => state.isPaused).length}
-              </div>
-            </div>
-            <div className="bg-zinc-700 rounded-lg p-4">
-              <div className="text-sm text-zinc-400">Messaggi Totali</div>
-              <div className="text-2xl font-bold text-white">{whatsappStats.totalMessages}</div>
-            </div>
-            <div className="bg-zinc-700 rounded-lg p-4">
-              <div className="text-sm text-zinc-400">Conversion Rate</div>
-              <div className="text-2xl font-bold text-purple-400">{whatsappStats.conversionRate}%</div>
-            </div>
-          </div>
-
-          {/* Lista conversazioni in pausa */}
-          {Array.from(botControlStates.entries()).filter(([_, state]) => state.isPaused).length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-sm font-medium text-zinc-300 mb-2">Conversazioni in Gestione Manuale:</h3>
-              <div className="space-y-1">
-                {Array.from(botControlStates.entries())
-                  .filter(([_, state]) => state.isPaused)
-                  .slice(0, 3)
-                  .map(([conversationId, state]) => {
-                    const conv = filteredConversations.find(c => c.conversationId === conversationId);
-                    return (
-                      <div key={conversationId} className="text-xs text-orange-300 bg-orange-900/20 rounded px-2 py-1">
-                        {conv?.cliente.nome || 'Utente'} - In pausa da: {state.pausedBy}
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-          )}
-        </motion.div>
-      )}
-
-      <div className="flex h-screen">
-        {/* Sidebar - Lista conversazioni */}
-        <div className={`${showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-zinc-800 flex-col`}>
-          {/* Header sidebar */}
-          <div className="p-4 border-b border-zinc-800 bg-zinc-800/50">
+    <div className="h-screen bg-zinc-900 text-white flex flex-col overflow-hidden">
+      {/* Dashboard delle statistiche - Fissato in alto */}
+      <AnimatePresence>
+        {showStats && whatsappStats && (
+          <motion.div
+            initial={{ opacity: 0, y: -100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -100 }}
+            transition={smoothTransition}
+            className="p-4 bg-zinc-800/95 backdrop-blur-xl border-b border-zinc-700/50 relative z-10"
+          >
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-xl font-bold flex items-center">
+              <h2 className="text-lg font-semibold">Statistiche WhatsApp</h2>
+              <motion.button
+                onClick={() => setShowStats(false)}
+                className="p-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 transition-all duration-300"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <X size={16} />
+              </motion.button>
+            </div>
+            
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+              {[
+                { label: 'Conversazioni Totali', value: whatsappStats.totalConversations, color: 'text-white' },
+                { label: 'Attive', value: whatsappStats.activeConversations, color: 'text-green-400' },
+                { label: 'Completate', value: whatsappStats.completedConversations, color: 'text-blue-400' },
+                { label: 'Bot in Pausa', value: Array.from(botControlStates.values()).filter(state => state.isPaused).length, color: 'text-orange-400' },
+                { label: 'Messaggi Totali', value: whatsappStats.totalMessages, color: 'text-white' },
+                { label: 'Conversion Rate', value: `${whatsappStats.conversionRate}%`, color: 'text-purple-400' }
+              ].map((stat, index) => (
+                <motion.div 
+                  key={stat.label}
+                  className="bg-zinc-700/50 backdrop-blur-sm rounded-2xl p-4"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, ...smoothTransition }}
+                >
+                  <div className="text-sm text-zinc-400">{stat.label}</div>
+                  <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Lista conversazioni in pausa */}
+            {Array.from(botControlStates.entries()).filter(([_, state]) => state.isPaused).length > 0 && (
+              <motion.div 
+                className="mt-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3, ...smoothTransition }}
+              >
+                <h3 className="text-sm font-medium text-zinc-300 mb-2">Conversazioni in Gestione Manuale:</h3>
+                <div className="space-y-1">
+                  {Array.from(botControlStates.entries())
+                    .filter(([_, state]) => state.isPaused)
+                    .slice(0, 3)
+                    .map(([conversationId, state]) => {
+                      const conv = filteredConversations.find(c => c.conversationId === conversationId);
+                      return (
+                        <motion.div 
+                          key={conversationId} 
+                          className="text-xs text-orange-300 bg-orange-900/20 backdrop-blur-sm rounded-xl px-3 py-2"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={springTransition}
+                        >
+                          {conv?.cliente.nome || 'Utente'} - In pausa da: {state.pausedBy}
+                        </motion.div>
+                      );
+                    })}
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Contenuto principale - Layout fisso */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar - Lista conversazioni */}
+        <div className={`${showChatOnMobile ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-zinc-800/50 flex-col`}>
+          {/* Header sidebar - Fisso */}
+          <div className="p-4 border-b border-zinc-800/50 bg-zinc-800/30 backdrop-blur-xl">
+            <div className="flex items-center justify-between mb-4">
+              <motion.h1 
+                className="text-xl font-bold flex items-center"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={springTransition}
+              >
                 <MessageCircle className="mr-2 text-green-400" size={24} />
                 WhatsApp Chats
-              </h1>
+              </motion.h1>
               <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setShowNewChatModal(true)}
-                  className="p-2 rounded-lg bg-green-600 hover:bg-green-500 transition-colors"
-                  title="Nuova Conversazione"
-                >
-                  <Plus size={16} />
-                </button>
-                <button
-                  onClick={() => setShowStats(!showStats)}
-                  className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
-                  title="Mostra/Nascondi Statistiche"
-                >
-                  <BarChart size={16} />
-                </button>
-                <button
-                  onClick={fetchConversations}
-                  disabled={loading}
-                  className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
-                >
-                  <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                </button>
+                {[
+                  { icon: Plus, onClick: () => setShowNewChatModal(true), title: "Nuova Conversazione", bg: "bg-green-600 hover:bg-green-500" },
+                  { icon: BarChart, onClick: () => setShowStats(!showStats), title: "Mostra/Nascondi Statistiche", bg: "bg-zinc-700 hover:bg-zinc-600" },
+                  { icon: RefreshCw, onClick: fetchConversations, title: "Aggiorna", bg: "bg-zinc-700 hover:bg-zinc-600", loading }
+                ].map((button, index) => (
+                  <motion.button
+                    key={index}
+                    onClick={button.onClick}
+                    disabled={button.loading}
+                    className={`p-2 rounded-xl ${button.bg} transition-all duration-300`}
+                    title={button.title}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={springTransition}
+                  >
+                    <button.icon size={16} className={button.loading ? 'animate-spin' : ''} />
+                  </motion.button>
+                ))}
               </div>
             </div>
 
             {/* Stato connessione */}
-            <div className="flex items-center mb-3 text-sm">
-              <div className={`w-2 h-2 rounded-full mr-2 ${getConnectionStatusColor(connectionStatus).replace('text-', 'bg-')}`}></div>
+            <motion.div 
+              className="flex items-center mb-3 text-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2, ...smoothTransition }}
+            >
+              <motion.div 
+                className={`w-2 h-2 rounded-full mr-2 ${getConnectionStatusColor(connectionStatus).replace('text-', 'bg-')}`}
+                animate={{ 
+                  scale: connectionStatus === 'checking' ? [1, 1.2, 1] : 1,
+                }}
+                transition={{ 
+                  repeat: connectionStatus === 'checking' ? Infinity : 0,
+                  duration: 1.5,
+                }}
+              />
               <span className={getConnectionStatusColor(connectionStatus)}>
                 {getConnectionStatusLabel(connectionStatus)}
               </span>
-            </div>
+            </motion.div>
             
             {/* Search */}
-            <div className="relative mb-3">
+            <motion.div 
+              className="relative mb-3"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, ...smoothTransition }}
+            >
               <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400" />
               <input
                 type="text"
                 placeholder="Cerca conversazioni..."
-                className="w-full pl-10 pr-4 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 bg-zinc-700/50 backdrop-blur-sm border border-zinc-600/50 rounded-2xl text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-            </div>
+            </motion.div>
 
             {/* Filter */}
-            <select
+            <motion.select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className="w-full p-2 bg-zinc-700 border border-zinc-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+              className="w-full p-3 bg-zinc-700/50 backdrop-blur-sm border border-zinc-600/50 rounded-2xl text-sm focus:ring-2 focus:ring-green-500 transition-all duration-300"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, ...smoothTransition }}
             >
               <option value="all">Tutti gli stati</option>
               <option value="active">Attive</option>
               <option value="completed">Completate</option>
               <option value="abandoned">Abbandonate</option>
-            </select>
+            </motion.select>
           </div>
 
-          {/* Lista conversazioni */}
+          {/* Lista conversazioni - Scrollabile */}
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="p-4 text-center text-zinc-400">
+              <motion.div 
+                className="p-4 text-center text-zinc-400"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
                 <RefreshCw size={24} className="animate-spin mx-auto mb-2" />
                 Caricamento conversazioni...
-              </div>
+              </motion.div>
             ) : (
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 {filteredConversations.map((conversation, index) => {
                   const botStatus = botControlStates.get(conversation.conversationId) || { isPaused: false };
+                  const isSelected = selectedConversation?.conversation.conversationId === conversation.conversationId;
                   
                   return (
                     <motion.div
                       key={conversation.conversationId}
-                      initial={{ opacity: 0, y: 20 }}
+                      layout
+                      initial={{ opacity: 0, y: 50 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      onClick={() => {
-                        fetchConversationDetails(conversation.conversationId);
+                      exit={{ opacity: 0, y: -50 }}
+                      whileHover={{ 
+                        backgroundColor: "rgba(63, 63, 70, 0.3)",
+                        transition: { duration: 0.2 }
                       }}
-                      className={`p-4 border-b border-zinc-800 cursor-pointer hover:bg-zinc-800/50 transition-colors ${
-                        selectedConversation?.conversation.conversationId === conversation.conversationId 
-                          ? 'bg-zinc-800 border-l-4 border-green-400' 
+                      transition={{ delay: index * 0.05, ...springTransition }}
+                      onClick={() => handleConversationSelect(conversation.conversationId)}
+                      className={`p-4 border-b border-zinc-800/30 cursor-pointer transition-all duration-300 ${
+                        isSelected
+                          ? 'bg-zinc-800/50 backdrop-blur-sm border-l-4 border-green-400' 
                           : ''
                       } ${botStatus.isPaused ? 'border-l-4 border-l-orange-500' : ''}`}
+                      data-conversation-id={conversation.conversationId}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center mb-1">
+                          <motion.div 
+                            className="flex items-center mb-1"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 + 0.1, ...smoothTransition }}
+                          >
                             <User size={16} className="mr-2 text-zinc-400" />
                             <span className="font-medium text-sm">
                               {conversation.cliente.nome || conversation.cliente.contactName || 'Utente'}
                             </span>
                             
                             {/* Indicatore stato bot */}
-                            {botStatus.isPaused && (
-                              <div className="ml-2 flex items-center">
-                                <Pause size={12} className="text-orange-400 mr-1" />
-                                <span className="text-xs text-orange-400 font-medium">MANUALE</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center text-xs text-zinc-400 mb-2">
+                            <AnimatePresence>
+                              {botStatus.isPaused && (
+                                <motion.div 
+                                  className="ml-2 flex items-center"
+                                  initial={{ opacity: 0, scale: 0.8 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.8 }}
+                                  transition={springTransition}
+                                >
+                                  <Pause size={12} className="text-orange-400 mr-1" />
+                                  <span className="text-xs text-orange-400 font-medium">MANUALE</span>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </motion.div>
+                          
+                          <motion.div 
+                            className="flex items-center text-xs text-zinc-400 mb-2"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 + 0.2, ...smoothTransition }}
+                          >
                             <Phone size={12} className="mr-1" />
                             {conversation.cliente.telefono}
-                          </div>
-                          <div className="flex items-center justify-between">
+                          </motion.div>
+                          
+                          <motion.div 
+                            className="flex items-center justify-between"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 + 0.3, ...smoothTransition }}
+                          >
                             <span className={`text-xs font-medium ${getStatusColor(conversation.status)}`}>
                               {getStatusLabel(conversation.status)}
                             </span>
                             <span className="text-xs text-zinc-500">
                               {formatTime(conversation.lastActivity)}
                             </span>
-                          </div>
+                          </motion.div>
                           
                           {/* Info aggiuntive se bot in pausa */}
-                          {botStatus.isPaused && botStatus.pausedBy && (
-                            <div className="mt-2 text-xs text-orange-300 bg-orange-900/20 rounded px-2 py-1">
-                              In pausa da: {botStatus.pausedBy}
-                              {botStatus.pauseReason && (
-                                <div className="text-orange-400">{botStatus.pauseReason}</div>
-                              )}
-                            </div>
-                          )}
+                          <AnimatePresence>
+                            {botStatus.isPaused && botStatus.pausedBy && (
+                              <motion.div 
+                                className="mt-2 text-xs text-orange-300 bg-orange-900/20 backdrop-blur-sm rounded-xl px-2 py-1"
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={springTransition}
+                              >
+                                In pausa da: {botStatus.pausedBy}
+                                {botStatus.pauseReason && (
+                                  <div className="text-orange-400">{botStatus.pauseReason}</div>
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       </div>
                     </motion.div>
@@ -1060,10 +1275,15 @@ const WhatsAppChats: React.FC = () => {
             )}
             
             {!loading && filteredConversations.length === 0 && (
-              <div className="p-8 text-center text-zinc-500">
+              <motion.div 
+                className="p-8 text-center text-zinc-500"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={smoothTransition}
+              >
                 <MessageCircle size={48} className="mx-auto mb-4 text-zinc-600" />
                 <p>Nessuna conversazione trovata</p>
-              </div>
+              </motion.div>
             )}
           </div>
         </div>
@@ -1072,30 +1292,49 @@ const WhatsAppChats: React.FC = () => {
         <div className={`${showChatOnMobile ? 'flex' : 'hidden md:flex'} flex-1 flex-col`}>
           {selectedConversation ? (
             <>
-              {/* Header chat con controlli bot */}
-              <div className="p-4 border-b border-zinc-800 bg-zinc-800/50">
+              {/* Header chat con controlli bot - Fisso in alto */}
+              <motion.div 
+                className="p-4 border-b border-zinc-800/50 bg-zinc-800/30 backdrop-blur-xl"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={smoothTransition}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     {/* Pulsante back per mobile */}
-                    <button
+                    <motion.button
                       onClick={() => setShowChatOnMobile(false)}
-                      className="md:hidden p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors mr-2"
+                      className="md:hidden p-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 transition-all duration-300 mr-2"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
                       <ArrowLeft size={16} />
-                    </button>
-                    <User size={20} className="mr-3 text-green-400" />
-                    <div>
-                      <h2 className="font-semibold">
-                        {selectedConversation.conversation.cliente.nome || 
-                         selectedConversation.conversation.cliente.contactName || 
-                         'Utente'}
-                      </h2>
-                      <p className="text-sm text-zinc-400">
-                        {selectedConversation.conversation.cliente.telefono}
-                      </p>
-                    </div>
+                    </motion.button>
+                    <motion.div
+                      className="flex items-center"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1, ...smoothTransition }}
+                    >
+                      <User size={20} className="mr-3 text-green-400" />
+                      <div>
+                        <h2 className="font-semibold">
+                          {selectedConversation.conversation.cliente.nome || 
+                           selectedConversation.conversation.cliente.contactName || 
+                           'Utente'}
+                        </h2>
+                        <p className="text-sm text-zinc-400">
+                          {selectedConversation.conversation.cliente.telefono}
+                        </p>
+                      </div>
+                    </motion.div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <motion.div 
+                    className="flex items-center space-x-2"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2, ...smoothTransition }}
+                  >
                     {/* Stato Bot */}
                     <BotStatusIndicator 
                       conversationId={selectedConversation.conversation.conversationId}
@@ -1114,9 +1353,14 @@ const WhatsAppChats: React.FC = () => {
                       isResponding={isResponding}
                     />
                     
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedConversation.conversation.status)}`}>
+                    <motion.span 
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedConversation.conversation.status)}`}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={springTransition}
+                    >
                       {getStatusLabel(selectedConversation.conversation.status)}
-                    </span>
+                    </motion.span>
                     
                     <ConversationActionsMenu
                       conversationId={selectedConversation.conversation.conversationId}
@@ -1127,292 +1371,392 @@ const WhatsAppChats: React.FC = () => {
                       }}
                       onResumeBot={() => resumeBot(selectedConversation.conversation.conversationId)}
                     />
-                  </div>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Messaggi */}
+              {/* Messaggi - Scrollabile */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {selectedConversation.messages.map((message, index) => (
-                  <motion.div
-                    key={`${message.messageId || index}`}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.02 }}
-                    className={`flex ${message.role === 'user' ? 'justify-start' : 'justify-end'}`}
-                  >
-                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.role === 'user' 
-                        ? 'bg-zinc-700 text-white' 
-                        : 'bg-green-600 text-white'
-                    }`}>
-                      <div className="flex items-start space-x-2">
-                        {message.role === 'user' ? (
-                          <User size={16} className="mt-1 text-zinc-400" />
-                        ) : (
-                          <Bot size={16} className="mt-1 text-green-200" />
-                        )}
-                        <div className="flex-1">
-                          <p className="text-sm">{message.content}</p>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-xs opacity-70">
-                              {formatTime(message.timestamp)}
-                            </span>
-                            {message.role === 'assistant' && (
-                              <CheckCheck size={12} className={message.delivered ? 'text-green-200' : 'text-zinc-400'} />
-                            )}
+                <AnimatePresence mode="popLayout">
+                  {selectedConversation.messages.map((message, index) => (
+                    <motion.div
+                      key={`${message.messageId || index}`}
+                      layout
+                      initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                      transition={{ delay: index * 0.02, ...springTransition }}
+                      className={`flex ${message.role === 'user' ? 'justify-start' : 'justify-end'}`}
+                    >
+                      <motion.div 
+                        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
+                          message.role === 'user' 
+                            ? 'bg-zinc-700/50 backdrop-blur-sm text-white' 
+                            : 'bg-green-600/90 backdrop-blur-sm text-white'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        transition={springTransition}
+                      >
+                        <div className="flex items-start space-x-2">
+                          {message.role === 'user' ? (
+                            <User size={16} className="mt-1 text-zinc-400" />
+                          ) : (
+                            <Bot size={16} className="mt-1 text-green-200" />
+                          )}
+                          <div className="flex-1">
+                            <p className="text-sm">{message.content}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-xs opacity-70">
+                                {formatTime(message.timestamp)}
+                              </span>
+                              {message.role === 'assistant' && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ delay: 0.5, ...springTransition }}
+                                >
+                                  <CheckCheck size={12} className={message.delivered ? 'text-green-200' : 'text-zinc-400'} />
+                                </motion.div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+                      </motion.div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input messaggio */}
-              <div className="p-4 border-t border-zinc-800 bg-zinc-800/50">
-                <div className="flex space-x-2">
-                  <input
+              {/* Input messaggio - Fisso in basso */}
+              <motion.div 
+                className="p-4 border-t border-zinc-800/50 bg-zinc-800/30 backdrop-blur-xl"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={smoothTransition}
+              >
+                <div className="flex space-x-3">
+                  <motion.input
                     type="text"
                     placeholder="Scrivi un messaggio..."
-                    className="flex-1 px-4 py-2 bg-zinc-700 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="flex-1 px-4 py-3 bg-zinc-700/50 backdrop-blur-sm border border-zinc-600/50 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={handleMessageChange}
                     onKeyPress={handleKeyPress}
                     disabled={isResponding}
+                    whileFocus={{ scale: 1.02 }}
+                    transition={springTransition}
                   />
-                  <button
+                  <motion.button
                     onClick={sendMessage}
                     disabled={!newMessage.trim() || isResponding}
-                    className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-zinc-600 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center"
+                    className="px-4 py-3 bg-green-600 hover:bg-green-500 disabled:bg-zinc-600 disabled:cursor-not-allowed rounded-2xl transition-all duration-300 flex items-center"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={springTransition}
                   >
                     {isResponding ? (
                       <RefreshCw size={16} className="animate-spin" />
                     ) : (
                       <Send size={16} />
                     )}
-                  </button>
+                  </motion.button>
                 </div>
-              </div>
+              </motion.div>
             </>
           ) : (
-            <div className="hidden md:flex flex-1 flex-col items-center justify-center text-zinc-500">
+            <motion.div 
+              className="hidden md:flex flex-1 flex-col items-center justify-center text-zinc-500"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={smoothTransition}
+            >
               <div className="text-center">
-                <MessageCircle size={64} className="mx-auto mb-4 text-zinc-600" />
+                <motion.div
+                  animate={{ 
+                    rotate: [0, 10, -10, 0],
+                    scale: [1, 1.1, 1]
+                  }}
+                  transition={{ 
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                >
+                  <MessageCircle size={64} className="mx-auto mb-4 text-zinc-600" />
+                </motion.div>
                 <h3 className="text-xl font-medium mb-2">Seleziona una conversazione</h3>
                 <p>Scegli una conversazione dalla lista per iniziare a chattare</p>
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
 
       {/* Modal Nuova Conversazione */}
-      {showNewChatModal && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                  onClick={(e) => {
-                    if (e.target === e.currentTarget) {
-                      setShowNewChatModal(false);
-                    }
-                  }}
+      <AnimatePresence>
+        {showNewChatModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowNewChatModal(false);
+              }
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={springTransition}
+              className="bg-zinc-800/95 backdrop-blur-xl rounded-3xl p-6 w-full max-w-md mx-4 border border-zinc-700/50"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold">Nuova Conversazione</h2>
+                <motion.button
+                  onClick={() => setShowNewChatModal(false)}
+                  className="p-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 transition-all duration-300"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.95, opacity: 0 }}
-                    className="bg-zinc-800 rounded-lg p-6 w-full max-w-md mx-4"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-semibold">Nuova Conversazione</h2>
-                      <button
-                        onClick={() => setShowNewChatModal(false)}
-                        className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-300 mb-2">
-                          Numero di Telefono *
-                        </label>
-                        <input
-                          type="tel"
-                          placeholder="+39 123 456 7890 o 0123456789"
-                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                          value={newChatPhone}
-                          onChange={(e) => setNewChatPhone(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              startNewConversation();
-                            }
-                          }}
-                        />
-                        <div className="text-xs text-zinc-400 mt-1">
-                          Formato: +39 oppure inizia con 0 per numeri italiani
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-300 mb-2">
-                          Nome (opzionale)
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Nome del contatto"
-                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                          value={newChatName}
-                          onChange={(e) => setNewChatName(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              startNewConversation();
-                            }
-                          }}
-                        />
-                      </div>
-                      
-                      <div className="flex space-x-3 pt-4">
-                        <button
-                          onClick={() => setShowNewChatModal(false)}
-                          className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
-                        >
-                          Annulla
-                        </button>
-                        <button
-                          onClick={startNewConversation}
-                          disabled={!newChatPhone.trim() || isResponding}
-                          className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-zinc-600 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center"
-                        >
-                          {isResponding ? (
-                            <RefreshCw size={16} className="animate-spin" />
-                          ) : (
-                            'Inizia Chat'
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
+                  <X size={16} />
+                </motion.button>
+              </div>
+              
+              <div className="space-y-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1, ...smoothTransition }}
+                >
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Numero di Telefono *
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="+39 123 456 7890 o 0123456789"
+                    className="w-full px-4 py-3 bg-zinc-700/50 backdrop-blur-sm border border-zinc-600/50 rounded-2xl text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+                    value={newChatPhone}
+                    onChange={(e) => setNewChatPhone(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        startNewConversation();
+                      }
+                    }}
+                  />
+                  <div className="text-xs text-zinc-400 mt-1">
+                    Formato: +39 oppure inizia con 0 per numeri italiani
+                  </div>
                 </motion.div>
-              )}
-
-              {/* Modal per controllo bot */}
-              {showBotControlModal && (
+                
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                  onClick={(e) => {
-                    if (e.target === e.currentTarget) {
-                      setShowBotControlModal(false);
-                    }
-                  }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, ...smoothTransition }}
                 >
-                  <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.95, opacity: 0 }}
-                    className="bg-zinc-800 rounded-lg p-6 w-full max-w-md mx-4"
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Nome (opzionale)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Nome del contatto"
+                    className="w-full px-4 py-3 bg-zinc-700/50 backdrop-blur-sm border border-zinc-600/50 rounded-2xl text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+                    value={newChatName}
+                    onChange={(e) => setNewChatName(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        startNewConversation();
+                      }
+                    }}
+                  />
+                </motion.div>
+                
+                <motion.div 
+                  className="flex space-x-3 pt-4"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, ...smoothTransition }}
+                >
+                  <motion.button
+                    onClick={() => setShowNewChatModal(false)}
+                    className="flex-1 px-4 py-3 bg-zinc-700 hover:bg-zinc-600 rounded-2xl transition-all duration-300"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-semibold">
-                        {botControlAction === 'pause' ? 'Metti in Pausa Bot' : 'Riattiva Bot'}
-                      </h2>
-                      <button
-                        onClick={() => setShowBotControlModal(false)}
-                        className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 transition-colors"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                    
-                    {botControlAction === 'pause' ? (
-                      <div className="space-y-4">
-                        <div className="bg-orange-900/30 border border-orange-600/50 rounded-lg p-3">
-                          <div className="flex items-start">
-                            <AlertTriangle size={16} className="text-orange-400 mt-0.5 mr-2 flex-shrink-0" />
-                            <div className="text-sm">
-                              <p className="text-orange-200 font-medium mb-1">Gestione Manuale</p>
-                              <p className="text-orange-300">
-                                Il bot smetterà di rispondere automaticamente. Dovrai gestire manualmente i messaggi di questo cliente.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-zinc-300 mb-2">
-                            Motivo (opzionale)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="es: Cliente VIP, richieste complesse, follow-up personalizzato..."
-                            className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                            value={pauseReason}
-                            onChange={(e) => setPauseReason(e.target.value)}
-                          />
-                        </div>
-                        
-                        <div className="flex space-x-3 pt-4">
-                          <button
-                            onClick={() => setShowBotControlModal(false)}
-                            className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
-                          >
-                            Annulla
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (selectedConversation) {
-                                pauseBot(selectedConversation.conversation.conversationId, pauseReason);
-                              }
-                            }}
-                            disabled={isResponding}
-                            className="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-600 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center"
-                          >
-                            {isResponding ? (
-                              <RefreshCw size={16} className="animate-spin" />
-                            ) : (
-                              'Metti in Pausa'
-                            )}
-                          </button>
-                        </div>
-                      </div>
+                    Annulla
+                  </motion.button>
+                  <motion.button
+                    onClick={startNewConversation}
+                    disabled={!newChatPhone.trim() || isResponding}
+                    className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-500 disabled:bg-zinc-600 disabled:cursor-not-allowed rounded-2xl transition-all duration-300 flex items-center justify-center"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {isResponding ? (
+                      <RefreshCw size={16} className="animate-spin" />
                     ) : (
-                      <div className="space-y-4">
-                        <p className="text-zinc-300">
-                          Vuoi riattivare il bot automatico per questa conversazione?
-                        </p>
-                        
-                        <div className="flex space-x-3 pt-4">
-                          <button
-                            onClick={() => setShowBotControlModal(false)}
-                            className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
-                          >
-                            Annulla
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (selectedConversation) {
-                                resumeBot(selectedConversation.conversation.conversationId);
-                              }
-                            }}
-                            disabled={isResponding}
-                            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-zinc-600 disabled:cursor-not-allowed rounded-lg transition-colors"
-                          >
-                            Riattiva Bot
-                          </button>
-                        </div>
-                      </div>
+                      'Inizia Chat'
                     )}
-                  </motion.div>
+                  </motion.button>
                 </motion.div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal per controllo bot */}
+      <AnimatePresence>
+        {showBotControlModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowBotControlModal(false);
+              }
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={springTransition}
+              className="bg-zinc-800/95 backdrop-blur-xl rounded-3xl p-6 w-full max-w-md mx-4 border border-zinc-700/50"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold">
+                  {botControlAction === 'pause' ? 'Metti in Pausa Bot' : 'Riattiva Bot'}
+                </h2>
+                <motion.button
+                  onClick={() => setShowBotControlModal(false)}
+                  className="p-2 rounded-xl bg-zinc-700 hover:bg-zinc-600 transition-all duration-300"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <X size={16} />
+                </motion.button>
+              </div>
+              
+              {botControlAction === 'pause' ? (
+                <div className="space-y-4">
+                  <motion.div 
+                    className="bg-orange-900/30 border border-orange-600/50 rounded-2xl p-4"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1, ...smoothTransition }}
+                  >
+                    <div className="flex items-start">
+                      <AlertTriangle size={16} className="text-orange-400 mt-0.5 mr-2 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="text-orange-200 font-medium mb-1">Gestione Manuale</p>
+                        <p className="text-orange-300">
+                          Il bot smetterà di rispondere automaticamente. Dovrai gestire manualmente i messaggi di questo cliente.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                  
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, ...smoothTransition }}
+                  >
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
+                      Motivo (opzionale)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="es: Cliente VIP, richieste complesse, follow-up personalizzato..."
+                      className="w-full px-4 py-3 bg-zinc-700/50 backdrop-blur-sm border border-zinc-600/50 rounded-2xl text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
+                      value={pauseReason}
+                      onChange={(e) => setPauseReason(e.target.value)}
+                    />
+                  </motion.div>
+                  
+                  <motion.div 
+                    className="flex space-x-3 pt-4"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, ...smoothTransition }}
+                  >
+                    <motion.button
+                      onClick={() => setShowBotControlModal(false)}
+                      className="flex-1 px-4 py-3 bg-zinc-700 hover:bg-zinc-600 rounded-2xl transition-all duration-300"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Annulla
+                    </motion.button>
+                    <motion.button
+                      onClick={() => {
+                        if (selectedConversation) {
+                          pauseBot(selectedConversation.conversation.conversationId, pauseReason);
+                        }
+                      }}
+                      disabled={isResponding}
+                      className="flex-1 px-4 py-3 bg-orange-600 hover:bg-orange-500 disabled:bg-zinc-600 disabled:cursor-not-allowed rounded-2xl transition-all duration-300 flex items-center justify-center"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {isResponding ? (
+                        <RefreshCw size={16} className="animate-spin" />
+                      ) : (
+                        'Metti in Pausa'
+                      )}
+                    </motion.button>
+                  </motion.div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <motion.p 
+                    className="text-zinc-300"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1, ...smoothTransition }}
+                  >
+                    Vuoi riattivare il bot automatico per questa conversazione?
+                  </motion.p>
+                  
+                  <motion.div 
+                    className="flex space-x-3 pt-4"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, ...smoothTransition }}
+                  >
+                    <motion.button
+                      onClick={() => setShowBotControlModal(false)}
+                      className="flex-1 px-4 py-3 bg-zinc-700 hover:bg-zinc-600 rounded-2xl transition-all duration-300"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Annulla
+                    </motion.button>
+                    <motion.button
+                      onClick={() => {
+                        if (selectedConversation) {
+                          resumeBot(selectedConversation.conversation.conversationId);
+                        }
+                      }}
+                      disabled={isResponding}
+                      className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-500 disabled:bg-zinc-600 disabled:cursor-not-allowed rounded-2xl transition-all duration-300"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Riattiva Bot
+                    </motion.button>
+                  </motion.div>
+                </div>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
