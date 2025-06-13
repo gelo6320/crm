@@ -359,6 +359,12 @@ export default function CalendarPage() {
   const [currentEvent, setCurrentEvent] = useState<CalendarEvent | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [eventTriggerRect, setEventTriggerRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -479,6 +485,15 @@ export default function CalendarPage() {
     const eventId = clickInfo.event.id;
     const event = events.find(e => e.id === eventId || (e as any)._id === eventId);
     if (event) {
+      // Cattura le coordinate dell'elemento cliccato
+      const domRect = clickInfo.el.getBoundingClientRect();
+      const rect = {
+        left: domRect.left,
+        top: domRect.top,
+        width: domRect.width,
+        height: domRect.height
+      };
+      setEventTriggerRect(rect);
       handleEditEvent(event);
     }
   };
@@ -525,7 +540,22 @@ export default function CalendarPage() {
     }
   };
 
-  const handleNewEvent = () => {
+  const handleNewEvent = (event?: React.MouseEvent) => {
+    if (event) {
+      // Cattura le coordinate del bottone "Nuovo" cliccato
+      const domRect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      const rect = {
+        left: domRect.left,
+        top: domRect.top,
+        width: domRect.width,
+        height: domRect.height
+      };
+      setEventTriggerRect(rect);
+    } else {
+      // Fallback al centro dello schermo
+      setEventTriggerRect(null);
+    }
+    
     const now = new Date();
     const start = new Date(selectedDate);
     start.setHours(now.getHours() + 1, 0, 0, 0);
@@ -564,6 +594,7 @@ export default function CalendarPage() {
       
       await loadEvents();
       setCurrentEvent(null);
+      setEventTriggerRect(null);
     } catch (error) {
       console.error("Error saving event:", error);
       toast.error(isEditing ? "Errore nell'aggiornamento dell'evento" : "Errore nella creazione dell'evento");
@@ -575,6 +606,7 @@ export default function CalendarPage() {
       await deleteCalendarEvent(event.id);
       await loadEvents();
       setCurrentEvent(null);
+      setEventTriggerRect(null);
       toast.success("Evento eliminato con successo");
     } catch (error) {
       console.error("Error deleting event:", error);
@@ -799,10 +831,14 @@ export default function CalendarPage() {
               key={currentEvent.id || 'new'}
               event={currentEvent}
               isEditing={isEditing}
-              onClose={() => setCurrentEvent(null)}
+              onClose={() => {
+                setCurrentEvent(null);
+                setEventTriggerRect(null);
+              }}
               onSave={handleSaveEvent}
               onDelete={handleDeleteEvent}
               isMobile={isMobile}
+              triggerRect={eventTriggerRect}
             />
           )}
         </AnimatePresence>

@@ -14,7 +14,12 @@ interface EventModalProps {
   onSave: (event: CalendarEvent) => void;
   onDelete: (event: CalendarEvent) => void;
   isMobile?: boolean;
-  triggerRect?: DOMRect | null;
+  triggerRect?: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null;
 }
 
 export default function EventModal({
@@ -57,8 +62,8 @@ export default function EventModal({
 
     const triggerCenterX = triggerRect.left + (triggerRect.width / 2);
     const triggerCenterY = triggerRect.top + (triggerRect.height / 2);
-    const finalX = window.innerWidth / 2;
-    const finalY = window.innerHeight / 2;
+    const finalX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0;
+    const finalY = typeof window !== 'undefined' ? window.innerHeight / 2 : 0;
 
     return {
       initial: {
@@ -159,6 +164,15 @@ export default function EventModal({
 
   // Calcola le dimensioni responsive del modale
   const getModalSize = () => {
+    if (typeof window === 'undefined') {
+      // Fallback per server-side rendering
+      return {
+        width: 'auto',
+        maxWidth: '600px',
+        maxHeight: 'calc(100vh - 160px)'
+      };
+    }
+    
     const width = window.innerWidth;
     const height = window.innerHeight;
     
