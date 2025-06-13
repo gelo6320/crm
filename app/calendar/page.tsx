@@ -14,7 +14,12 @@ interface EventModalProps {
   onSave: (event: CalendarEvent) => void;
   onDelete: (event: CalendarEvent) => void;
   isMobile?: boolean;
-  triggerRect?: DOMRect | null;
+  triggerRect?: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null;
 }
 
 export default function EventModal({
