@@ -669,19 +669,6 @@ export default function CalendarPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
-          <div className="flex items-center gap-3">
-            <motion.div 
-              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500 flex items-center justify-center"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </motion.div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
-              Calendario
-            </h1>
-          </div>
-          
           {/* Navigation and new event */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Navigation buttons */}

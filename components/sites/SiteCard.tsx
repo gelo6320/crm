@@ -74,9 +74,9 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
   return (
     <>
       {/* Mobile Layout */}
-      <div className="sm:hidden bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+      <div className="sm:hidden bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 relative">
         {/* Header con dominio e azioni */}
-        <div className="p-4 border-b border-zinc-100 dark:border-zinc-700">
+        <div className="p-4 border-b border-zinc-100 dark:border-zinc-700 relative z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center">
@@ -92,7 +92,7 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
               <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
+                className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors relative z-20"
                 title="Aggiorna metriche"
               >
                 <RefreshCw size={16} className={`text-zinc-600 dark:text-zinc-400 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -102,8 +102,9 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
                 href={site.url} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="p-2 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+                className="p-2 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors relative z-20"
                 title="Visita il sito"
+                onClick={(e) => e.stopPropagation()}
               >
                 <ExternalLink size={16} className="text-primary" />
               </a>
@@ -135,15 +136,16 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
             href={site.url} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="absolute bottom-3 right-3 bg-primary hover:bg-primary-hover p-2 rounded-full text-white shadow-lg transition-all hover:scale-105"
+            className="absolute bottom-3 right-3 bg-primary hover:bg-primary-hover p-2 rounded-full text-white shadow-lg transition-all hover:scale-105 z-20"
             title="Visita il sito"
+            onClick={(e) => e.stopPropagation()}
           >
             <ExternalLink size={16} />
           </a>
         </div>
 
         {/* Metriche */}
-        <div className="p-4">
+        <div className="p-4 relative z-10">
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className={`p-3 rounded-xl border ${getScoreBgColor(site.metrics.performance)}`}>
               <div className="text-center">
@@ -190,7 +192,7 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
             
             <button
               onClick={() => setShowDeleteModal(true)}
-              className="text-xs text-red-500 hover:text-red-600 font-medium transition-colors"
+              className="text-xs text-red-500 hover:text-red-600 font-medium transition-colors relative z-20"
             >
               Elimina
             </button>
@@ -199,7 +201,7 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
       </div>
 
       {/* Desktop Layout */}
-      <div className="hidden sm:block bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm hover:shadow-lg hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 group">
+      <div className="hidden sm:block bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm hover:shadow-lg hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 group relative">
         <div className="flex">
           {/* Anteprima del sito */}
           <div className="w-80 bg-black relative">
@@ -225,14 +227,15 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
               href={site.url} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="absolute bottom-3 right-3 bg-primary hover:bg-primary-hover p-2.5 rounded-full text-white shadow-lg transition-all hover:scale-105"
+              className="absolute bottom-3 right-3 bg-primary hover:bg-primary-hover p-2.5 rounded-full text-white shadow-lg transition-all hover:scale-105 z-20"
               title="Visita il sito"
+              onClick={(e) => e.stopPropagation()}
             >
               <ExternalLink size={18} />
             </a>
             
             {/* Overlay hover aggiuntivo per l'area centrale */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 z-10">
               <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl text-white/80 text-sm font-medium">
                 Clicca per visitare
               </div>
@@ -240,7 +243,7 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
           </div>
           
           {/* Contenuto principale */}
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-6 relative z-10">
             {/* Header */}
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -254,7 +257,7 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
                 <button
                   onClick={handleRefresh}
                   disabled={isRefreshing}
-                  className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
+                  className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors relative z-20"
                   title="Aggiorna metriche"
                 >
                   <RefreshCw size={18} className={`text-zinc-600 dark:text-zinc-400 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -262,7 +265,7 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
                 
                 <button
                   onClick={() => setShowDeleteModal(true)}
-                  className="p-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 transition-colors"
+                  className="p-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 transition-colors relative z-20"
                   title="Elimina sito"
                 >
                   <Trash2 size={18} />
@@ -331,13 +334,16 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
         </div>
       </div>
       
+      {/* Modal per la conferma di eliminazione */}
       {showDeleteModal && (
-        <DeleteConfirmModal
-          title="Elimina sito"
-          message={`Sei sicuro di voler eliminare il sito ${site.domain}? Questa azione non può essere annullata.`}
-          onConfirm={handleDelete}
-          onCancel={() => setShowDeleteModal(false)}
-        />
+        <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm">
+          <DeleteConfirmModal
+            title="Elimina sito"
+            message={`Sei sicuro di voler eliminare il sito ${site.domain}? Questa azione non può essere annullata.`}
+            onConfirm={handleDelete}
+            onCancel={() => setShowDeleteModal(false)}
+          />
+        </div>
       )}
     </>
   );
