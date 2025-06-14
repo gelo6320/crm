@@ -200,11 +200,11 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
         </div>
       </div>
 
-      {/* Desktop Layout */}
+      {/* Desktop Layout - Ottimizzato per griglia */}
       <div className="hidden sm:block bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm hover:shadow-lg hover:border-zinc-300 dark:hover:border-zinc-600 transition-all duration-200 group relative">
-        <div className="flex">
+        <div className="flex h-full">
           {/* Anteprima del sito */}
-          <div className="w-80 bg-black relative">
+          <div className="w-64 xl:w-72 bg-black relative flex-shrink-0">
             <div className="aspect-[4/3] h-full">
               {site.screenshotUrl ? (
                 <img 
@@ -243,17 +243,17 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
           </div>
           
           {/* Contenuto principale */}
-          <div className="flex-1 p-6 relative z-10">
+          <div className="flex-1 p-6 relative z-10 flex flex-col">
             {/* Header */}
             <div className="flex justify-between items-start mb-6">
-              <div>
-                <h2 className="text-xl font-semibold text-zinc-900 dark:text-white group-hover:text-primary transition-colors">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl font-semibold text-zinc-900 dark:text-white group-hover:text-primary transition-colors truncate">
                   {site.domain}
                 </h2>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{site.url}</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 truncate">{site.url}</p>
               </div>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 ml-4">
                 <button
                   onClick={handleRefresh}
                   disabled={isRefreshing}
@@ -274,9 +274,9 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
             </div>
             
             {/* Metriche Performance */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.performance)} text-center`}>
-                <div className={`text-3xl font-bold ${getScoreColor(site.metrics.performance)} mb-1`}>
+            <div className="grid grid-cols-2 gap-3 mb-6 flex-1">
+              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.performance)} text-center flex flex-col justify-center`}>
+                <div className={`text-2xl xl:text-3xl font-bold ${getScoreColor(site.metrics.performance)} mb-1`}>
                   {formatScore(site.metrics.performance)}
                 </div>
                 <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
@@ -284,8 +284,8 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
                 </div>
               </div>
               
-              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.accessibility)} text-center`}>
-                <div className={`text-3xl font-bold ${getScoreColor(site.metrics.accessibility)} mb-1`}>
+              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.accessibility)} text-center flex flex-col justify-center`}>
+                <div className={`text-2xl xl:text-3xl font-bold ${getScoreColor(site.metrics.accessibility)} mb-1`}>
                   {formatScore(site.metrics.accessibility)}
                 </div>
                 <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
@@ -293,8 +293,8 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
                 </div>
               </div>
               
-              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.bestPractices)} text-center`}>
-                <div className={`text-3xl font-bold ${getScoreColor(site.metrics.bestPractices)} mb-1`}>
+              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.bestPractices)} text-center flex flex-col justify-center`}>
+                <div className={`text-2xl xl:text-3xl font-bold ${getScoreColor(site.metrics.bestPractices)} mb-1`}>
                   {formatScore(site.metrics.bestPractices)}
                 </div>
                 <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
@@ -302,8 +302,8 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
                 </div>
               </div>
               
-              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.seo)} text-center`}>
-                <div className={`text-3xl font-bold ${getScoreColor(site.metrics.seo)} mb-1`}>
+              <div className={`p-4 rounded-2xl border ${getScoreBgColor(site.metrics.seo)} text-center flex flex-col justify-center`}>
+                <div className={`text-2xl xl:text-3xl font-bold ${getScoreColor(site.metrics.seo)} mb-1`}>
                   {formatScore(site.metrics.seo)}
                 </div>
                 <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
@@ -313,20 +313,22 @@ export default function SiteCard({ site, onRefresh }: SiteCardProps) {
             </div>
 
             {/* Punteggio generale e ultimo aggiornamento */}
-            <div className="flex items-center justify-between pt-4 border-t border-zinc-100 dark:border-zinc-700">
-              <div className="flex items-center space-x-4">
-                <div>
-                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Punteggio medio:</span>
-                  <span className={`ml-2 text-lg font-bold ${getScoreColor((site.metrics.performance + site.metrics.accessibility + site.metrics.bestPractices + site.metrics.seo) / 4)}`}>
-                    {formatScore((site.metrics.performance + site.metrics.accessibility + site.metrics.bestPractices + site.metrics.seo) / 4)}
-                  </span>
+            <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div>
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Punteggio medio:</span>
+                    <span className={`ml-2 text-lg font-bold ${getScoreColor((site.metrics.performance + site.metrics.accessibility + site.metrics.bestPractices + site.metrics.seo) / 4)}`}>
+                      {formatScore((site.metrics.performance + site.metrics.accessibility + site.metrics.bestPractices + site.metrics.seo) / 4)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="text-right">
-                <div className="text-xs text-zinc-500 dark:text-zinc-400">Ultima scansione</div>
-                <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  {formatDate(site.lastScan)}
+                
+                <div className="text-right">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400">Ultima scansione</div>
+                  <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    {formatDate(site.lastScan)}
+                  </div>
                 </div>
               </div>
             </div>
