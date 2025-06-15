@@ -1,178 +1,253 @@
-"use client"
+// app/contacts/page.tsx
+"use client";
 
-import type React from "react"
+import { useState, useEffect, useRef } from "react";
+import { Users, Phone, MessageCircle, Globe, ChevronDown } from "lucide-react";
+// AGGIORNATO: Nuovo import per Motion
+import { animate, motion, AnimatePresence } from "motion/react";
+import { SmoothCorners } from 'react-smooth-corners';
 
-import { useState, useEffect, useRef } from "react"
-import { Users, Phone, MessageCircle, Globe, ChevronDown, Filter } from "lucide-react"
-import { animate, motion, AnimatePresence } from "motion/react"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com";
+import { useRouter } from "next/navigation";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import StatusBadge from "@/components/ui/StatusBadge";
+import Pagination from "@/components/ui/Pagination";
+import { formatDate } from "@/lib/utils/date";
+import { toast } from "@/components/ui/toaster";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.costruzionedigitale.com"
-import { useRouter } from "next/navigation"
-import LoadingSpinner from "@/components/ui/LoadingSpinner"
-import StatusBadge from "@/components/ui/StatusBadge"
-import Pagination from "@/components/ui/Pagination"
-import { formatDate } from "@/lib/utils/date"
-import { toast } from "@/components/ui/toaster"
-
-// Smooth scroll functions
-function smoothScrollToElement(element: HTMLElement, duration = 800) {
+// METODO 1: Usando la moderna API scrollIntoView (RACCOMANDATO)
+function smoothScrollToElement(element: HTMLElement, duration: number = 800) {
+  console.log('Starting smooth scroll with scrollIntoView API');
+  
+  // Usa la moderna API scrollIntoView che è supportata da tutti i browser moderni
   element.scrollIntoView({
-    behavior: "smooth",
-    block: "center",
-    inline: "nearest",
-  })
+    behavior: 'smooth',
+    block: 'center', // Centra l'elemento nel viewport
+    inline: 'nearest'
+  });
+  
+  console.log('Scroll completed using native scrollIntoView');
 }
 
-function motionSmoothScrollToElement(element: HTMLElement, duration = 800) {
-  const elementRect = element.getBoundingClientRect()
-  const absoluteElementTop = elementRect.top + window.scrollY
-  const middle = absoluteElementTop - window.innerHeight / 2 + elementRect.height / 2
-
+// METODO 2: Usando Motion con controllo personalizzato (se preferisci Motion)
+function motionSmoothScrollToElement(element: HTMLElement, duration: number = 800) {
+  const elementRect = element.getBoundingClientRect();
+  const absoluteElementTop = elementRect.top + window.scrollY;
+  const middle = absoluteElementTop - (window.innerHeight / 2) + (elementRect.height / 2);
+  
+  console.log('Motion scroll animation started:', {
+    elementRect,
+    absoluteElementTop,
+    middle,
+    currentScroll: window.scrollY
+  });
+  
+  // SISTEMATO: Usa il nuovo animate da motion/react con parametri corretti
   animate(window.scrollY, middle, {
-    duration: duration / 1000,
-    ease: "easeInOut",
+    duration: duration / 1000, // Motion usa secondi, non millisecondi
+    ease: "easeInOut", // Easing semplificato e più affidabile
     onUpdate: (value) => {
-      window.scrollTo(0, value)
+      window.scrollTo(0, value);
     },
-  })
+    onComplete: () => {
+      console.log('Motion scroll animation completed, final position:', window.scrollY);
+    }
+  });
 }
 
-// Contact interface
+// METODO 3: Implementazione personalizzata con requestAnimationFrame (controllo totale)
+function customSmoothScrollToElement(element: HTMLElement, duration: number = 800) {
+  const elementRect = element.getBoundingClientRect();
+  const absoluteElementTop = elementRect.top + window.scrollY;
+  const targetPosition = absoluteElementTop - (window.innerHeight / 2) + (elementRect.height / 2);
+  const startPosition = window.scrollY;
+  const distance = targetPosition - startPosition;
+  const startTime = performance.now();
+
+  function easeInOutCubic(t: number): number {
+    return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+  }
+
+  function animation(currentTime: number) {
+    const timeElapsed = currentTime - startTime;
+    const progress = Math.min(timeElapsed / duration, 1);
+    
+    const ease = easeInOutCubic(progress);
+    const currentPosition = startPosition + (distance * ease);
+    
+    window.scrollTo(0, currentPosition);
+    
+    if (progress < 1) {
+      requestAnimationFrame(animation);
+    } else {
+      console.log('Custom scroll animation completed');
+    }
+  }
+  
+  console.log('Custom scroll animation started');
+  requestAnimationFrame(animation);
+}
+
+// Definizione dell'interfaccia per i contatti unificati basata sul nuovo schema
 interface Contact {
-  _id: string
-  leadId?: string
-  name: string
-  firstName?: string
-  lastName?: string
-  email: string
-  phone: string
-  source: string
-  formType: string
-  status: string
-  createdAt: string
-  updatedAt?: string
-  message?: string
-  service?: string
-  value?: number
+  _id: string;
+  leadId?: string;
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  phone: string;
+  source: string;
+  formType: string;
+  status: string;
+  createdAt: string;
+  updatedAt?: string;
+  message?: string;
+  service?: string;
+  value?: number;
   extendedData?: {
     formData?: {
-      message?: string
-      service?: string
-    }
-    value?: number
-  }
+      message?: string;
+      service?: string;
+    },
+    value?: number;
+  };
 }
 
+// Interfaccia aggiornata per i dettagli di un contatto
 interface ContactDetailModalProps {
-  contact: Contact
-  onClose: () => void
-  triggerRect?: DOMRect | null
+  contact: Contact;
+  onClose: () => void;
+  triggerRect?: DOMRect | null; // Coordinate del contatto cliccato
 }
 
+// Funzione per ottenere la fonte in formato leggibile
 function formatSource(source: string, formType: string): string {
-  if (source === "facebook") return "Facebook"
-  if (formType === "booking") return "Prenotazione"
-  if (source) return source
-  if (formType === "form" || formType === "contact") return "Form di contatto"
-  return "Sconosciuto"
+  if (source === "facebook") return "Facebook";
+  if (formType === "booking") return "Prenotazione";
+  if (source) return source;
+  if (formType === "form" || formType === "contact") return "Form di contatto";
+  return "Sconosciuto";
 }
 
-// Enhanced Contact Detail Modal
+// Componente modale aggiornato con animazione iOS-style
+// Componente modale aggiornato con animazione iOS-style
 function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModalProps) {
-  const [isClosing, setIsClosing] = useState(false)
+  const [isClosing, setIsClosing] = useState(false);
 
+  console.log('🔄 Modal render - triggerRect:', triggerRect);
+
+  // Calcola le coordinate iniziali e finali per l'animazione
   const getAnimationCoordinates = () => {
     if (!triggerRect) {
+      // Fallback al centro dello schermo se non abbiamo coordinate
       return {
-        initial: { x: 0, y: 0, scale: 0.1, opacity: 1 },
-        animate: { x: 0, y: 0, scale: 1, opacity: 1 },
-      }
+        initial: {
+          x: 0,
+          y: 0,
+          scale: 0.1,
+          opacity: 1,
+        },
+        animate: {
+          x: 0,
+          y: 0,
+          scale: 1,
+          opacity: 1,
+        }
+      };
     }
 
-    const triggerCenterX = triggerRect.left + triggerRect.width / 2
-    const triggerCenterY = triggerRect.top + triggerRect.height / 2
-    const finalX = window.innerWidth / 2
-    const finalY = window.innerHeight / 2
+    // Coordinate del centro del contatto cliccato
+    const triggerCenterX = triggerRect.left + (triggerRect.width / 2);
+    const triggerCenterY = triggerRect.top + (triggerRect.height / 2);
+
+    // Coordinate finali (centro dello schermo)
+    const finalX = window.innerWidth / 2;
+    const finalY = window.innerHeight / 2;
 
     return {
       initial: {
-        x: triggerCenterX - finalX,
-        y: triggerCenterY - finalY,
+        x: triggerCenterX - finalX, // Offset dal centro
+        y: triggerCenterY - finalY, // Offset dal centro
         scale: 0.1,
         opacity: 1,
       },
       animate: {
-        x: 0,
-        y: 0,
+        x: 0, // Torna al centro
+        y: 0, // Torna al centro
         scale: 1,
         opacity: 1,
-      },
-    }
-  }
+      }
+    };
+  };
 
-  const coords = getAnimationCoordinates()
+  const coords = getAnimationCoordinates();
 
   const handleClose = () => {
-    setIsClosing(true)
-    onClose()
-  }
+    console.log('❌ Close triggered - calling onClose immediately');
+    setIsClosing(true);
+    // Chiama onClose immediatamente per liberare l'interfaccia
+    onClose();
+  };
 
+  // Configurazione spring per animazione naturale stile iOS
   const springConfig = {
     type: "spring" as const,
-    damping: isClosing ? 35 : 25,
-    stiffness: isClosing ? 400 : 300,
+    damping: isClosing ? 35 : 25,        // Chiusura più veloce
+    stiffness: isClosing ? 400 : 300,    // Chiusura più snappy
     mass: 0.8,
-  }
+  };
 
   const handleCall = () => {
     if (contact.phone) {
-      window.location.href = `tel:${contact.phone}`
+      window.location.href = `tel:${contact.phone}`;
     } else {
-      toast("error", "Numero non disponibile", "Questo contatto non ha un numero di telefono.")
+      toast("error", "Numero non disponibile", "Questo contatto non ha un numero di telefono.");
     }
-  }
+  };
 
   const handleWhatsApp = () => {
     if (contact.phone) {
-      const formattedPhone = contact.phone.replace(/\s+/g, "").replace(/[()-]/g, "")
-      window.open(
-        `https://wa.me/${formattedPhone.startsWith("+") ? formattedPhone.substring(1) : formattedPhone}`,
-        "_blank",
-      )
+      const formattedPhone = contact.phone.replace(/\s+/g, '').replace(/[()-]/g, '');
+      window.open(`https://wa.me/${formattedPhone.startsWith('+') ? formattedPhone.substring(1) : formattedPhone}`, '_blank');
     } else {
-      toast("error", "Numero non disponibile", "Questo contatto non ha un numero di telefono.")
+      toast("error", "Numero non disponibile", "Questo contatto non ha un numero di telefono.");
     }
-  }
+  };
 
+  // Chiudi la modale quando si preme ESC
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        handleClose()
+        handleClose();
       }
-    }
+    };
+    
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, []);
 
-    window.addEventListener("keydown", handleEscape)
-    return () => window.removeEventListener("keydown", handleEscape)
-  }, [])
-
-  const message = contact.extendedData?.formData?.message || contact.message || ""
-  const service = contact.service || contact.extendedData?.formData?.service || ""
-  const value = contact.value !== undefined ? contact.value : contact.extendedData?.value || 0
+  const message = contact.extendedData?.formData?.message || contact.message || "";
+  const service = contact.service || contact.extendedData?.formData?.service || "";
+  const value = contact.value !== undefined ? contact.value : (contact.extendedData?.value || 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={handleClose}>
-      {/* Enhanced backdrop */}
-      <motion.div
-        className="absolute inset-0 bg-black/60 backdrop-blur-md"
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onClick={handleClose}
+    >
+      {/* Background overlay FISSO senza animazioni per evitare conflitti blur */}
+      <motion.div 
+        className="absolute inset-0 bg-black/40 backdrop-blur-xs backdrop-saturate-150"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={springConfig}
       />
-
-      {/* Enhanced modal container */}
-      <motion.div
-        className="relative z-10 w-full max-w-2xl"
+      
+      {/* Modal container con animazione iOS */}
+      <motion.div 
+        className="relative z-10 w-full max-w-lg mx-4 sm:mx-6"
         onClick={(e) => e.stopPropagation()}
         initial={coords.initial}
         animate={coords.animate}
@@ -182,135 +257,116 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
           opacity: 0,
         }}
         transition={springConfig}
-        style={{ transformOrigin: "center center" }}
+        style={{
+          transformOrigin: "center center"
+        }}
       >
-        <div className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-gray-200/50 dark:border-gray-700/50">
-          {/* Enhanced header */}
-          <div className="flex items-center justify-between px-8 py-6 border-b border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-gray-50/50 to-white/50 dark:from-gray-800/50 dark:to-gray-900/50">
-            <div className="flex items-center gap-4">
-              <div className="scale-90">
+        <SmoothCorners 
+          corners="2.5"
+          borderRadius="24"
+        />
+        
+        <div className="relative bg-zinc-200/85 dark:bg-zinc-700/80 backdrop-blur-xs rounded-[24px] shadow-lg overflow-hidden backdrop-saturate-150">
+          {/* Header minimale con solo bottone chiudi e status */}
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+            <div className="w-6"></div> {/* Spacer per centrare il contenuto */}
+            <div className="flex items-center gap-3">
+              <div className="scale-75">
                 <StatusBadge status={contact.status} />
               </div>
-              <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                {formatSource(contact.source, contact.formType)}
-              </div>
-            </div>
-            <button
-              onClick={handleClose}
-              className="p-3 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-all duration-200"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <button
+                onClick={handleClose}
+                className="p-2 rounded-full hover:bg-white/30 dark:hover:bg-white/20 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
               >
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
           </div>
-
-          <div className="px-8 py-8 space-y-8">
-            {/* Enhanced contact header */}
-            <div className="flex items-start space-x-6">
+          
+          <div className="px-4 sm:px-6 pb-6 space-y-6">
+            {/* Header con nome */}
+            <div className="flex items-center space-x-3 sm:space-x-4">
               {contact.source === "facebook" ? (
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <svg
-                    className="w-8 h-8 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 287.56 191"
-                    preserveAspectRatio="xMidYMid meet"
-                  >
-                    <path
-                      fill="currentColor"
-                      d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"
-                    />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-100/90 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" fill="currentColor" viewBox="0 0 287.56 191" preserveAspectRatio="xMidYMid meet">
+                    <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
+                    <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
+                    <path fill="#0082fb" d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
                   </svg>
                 </div>
               ) : (
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Globe className="w-8 h-8 text-white" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100/90 dark:bg-gray-800/90 flex items-center justify-center flex-shrink-0">
+                  <Globe className="w-6 h-6 sm:w-7 sm:h-7 text-gray-600 dark:text-gray-400" />
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-white leading-tight mb-2">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-gray-900 dark:text-white leading-tight">
                   {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                 </h2>
-                <p className="text-lg text-blue-600 dark:text-blue-400 font-medium">{contact.email}</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{formatSource(contact.source, contact.formType)}</p>
               </div>
             </div>
-
-            {/* Enhanced contact info grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Telefono
-                </p>
-                <p className="text-lg text-gray-900 dark:text-white font-medium">
-                  {contact.phone || "Non disponibile"}
-                </p>
+            
+            {/* Info contatto */}
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Email</p>
+                <p className="text-sm sm:text-base text-primary break-all">{contact.email}</p>
               </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Data creazione
-                </p>
-                <p className="text-lg text-gray-900 dark:text-white font-medium">{formatDate(contact.createdAt)}</p>
+              
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Telefono</p>
+                <p className="text-sm sm:text-base text-gray-900 dark:text-white">{contact.phone || "Non disponibile"}</p>
               </div>
-
+              
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Data creazione</p>
+                <p className="text-sm sm:text-base text-gray-900 dark:text-white">{formatDate(contact.createdAt)}</p>
+              </div>
+              
               {service && (
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    Servizio
-                  </p>
-                  <p className="text-lg text-gray-900 dark:text-white font-medium">{service}</p>
+                <div className="space-y-1">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Servizio</p>
+                  <p className="text-sm sm:text-base text-gray-900 dark:text-white">{service}</p>
                 </div>
               )}
-
+              
               {value !== undefined && value > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    Valore
-                  </p>
-                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                    €{value.toLocaleString("it-IT")}
-                  </p>
+                <div className="space-y-1">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Valore</p>
+                  <p className="text-base sm:text-lg lg:text-xl font-semibold text-green-600">€{value.toLocaleString('it-IT')}</p>
                 </div>
               )}
             </div>
-
-            {/* Enhanced message section */}
+            
+            {/* Messaggio */}
             {message && (
-              <div className="space-y-4">
-                <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Messaggio
-                </p>
-                <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-2xl border border-gray-200/50 dark:border-gray-600/50">
-                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{message}</p>
+              <div className="space-y-2">
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Messaggio</p>
+                <div className="p-3 sm:p-4 bg-white/50 dark:bg-black/40 rounded-2xl text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {message}
                 </div>
               </div>
             )}
-
-            {/* Enhanced action buttons */}
-            <div className="flex gap-4 pt-4">
+            
+            {/* Pulsanti azione */}
+            <div className="flex gap-2 sm:gap-3 pt-2">
               <button
                 onClick={handleCall}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/50 dark:bg-white/20 hover:bg-white/70 dark:hover:bg-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 text-sm sm:text-base"
               >
-                <Phone className="w-5 h-5" />
+                <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
                 Chiama
               </button>
-
+              
               <button
                 onClick={handleWhatsApp}
-                className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                className="flex-1 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white bg-white/50 dark:bg-white/20 hover:bg-white/70 dark:hover:bg-white/30 font-medium py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 text-sm sm:text-base"
               >
-                <MessageCircle className="w-5 h-5" />
+                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                 WhatsApp
               </button>
             </div>
@@ -318,147 +374,188 @@ function ContactDetailModal({ contact, onClose, triggerRect }: ContactDetailModa
         </div>
       </motion.div>
     </div>
-  )
+  );
 }
 
 export default function ContactsPage() {
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [selectedStatus, setSelectedStatus] = useState("")
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
-  const [contactTriggerRect, setContactTriggerRect] = useState<DOMRect | null>(null)
-  const [highlightedContactId, setHighlightedContactId] = useState<string | null>(null)
-  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
-  const filterDropdownRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [contactTriggerRect, setContactTriggerRect] = useState<DOMRect | null>(null); // NUOVO STATO
+  const [highlightedContactId, setHighlightedContactId] = useState<string | null>(null);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
-  // Handle click outside dropdown
+  // Gestisci il click fuori dal dropdown per chiuderlo
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
-        setIsFilterDropdownOpen(false)
+        setIsFilterDropdownOpen(false);
       }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
-  // Load contacts on mount and filter changes
+  // Carica i contatti all'avvio e quando cambiano i filtri
   useEffect(() => {
-    loadContacts()
-  }, [currentPage, selectedStatus])
+    loadContacts();
+  }, [currentPage, selectedStatus]);
 
+  // FUNZIONE SISTEMATA per gestire l'highlight e scroll del contatto
   const highlightAndScrollToContact = (contactId: string) => {
+    console.log('highlightAndScrollToContact called with ID:', contactId);
+    
+    // Se c'è già un modal aperto, chiudilo immediatamente
     if (selectedContact) {
-      setSelectedContact(null)
-      setContactTriggerRect(null)
+      setSelectedContact(null);
+      setContactTriggerRect(null);
     }
-
-    const targetContact = contacts.find((contact) => contact._id === contactId || contact.leadId === contactId)
-
+    
+    // Cerca il contatto nella lista corrente
+    const targetContact = contacts.find(contact => 
+      contact._id === contactId || contact.leadId === contactId
+    );
+    
+    console.log('Target contact found:', targetContact);
+    
     if (targetContact) {
-      setHighlightedContactId(contactId)
-
+      // Se il contatto è nella lista, evidenzialo
+      setHighlightedContactId(contactId);
+      
+      // Schedule scroll con timing ottimizzato
       setTimeout(() => {
-        let element = document.getElementById(`contact-${contactId}`)
-
+        let element = document.getElementById(`contact-${contactId}`);
+        
+        // Se non troviamo l'elemento con l'ID diretto, prova a cercarlo con leadId
         if (!element && targetContact.leadId) {
-          element = document.getElementById(`contact-${targetContact.leadId}`)
+          element = document.getElementById(`contact-${targetContact.leadId}`);
         }
-
+        
+        // Se ancora non lo troviamo, prova a cercare per data-lead-id
         if (!element) {
-          element = document.querySelector(`[data-lead-id="${contactId}"]`) as HTMLElement
+          element = document.querySelector(`[data-lead-id="${contactId}"]`) as HTMLElement;
         }
-
+        
+        console.log('Element found for scroll:', element);
         if (element) {
-          smoothScrollToElement(element, 1000)
+          // SCELTA IL METODO PREFERITO:
+          
+          // Opzione 1: API nativa moderna (RACCOMANDATO - più semplice e performante)
+          smoothScrollToElement(element, 1000);
+          
+          // Opzione 2: Motion per controllo avanzato (se preferisci Motion)
+          // motionSmoothScrollToElement(element, 1000);
+          
+          // Opzione 3: Controllo totale personalizzato (se hai bisogni specifici)
+          // customSmoothScrollToElement(element, 1000);
+          
+        } else {
+          console.warn('Element not found for scroll animation');
         }
-
+        
+        // Remove the highlight after 1200ms e apri la modale
         setTimeout(() => {
-          setHighlightedContactId(null)
+          setHighlightedContactId(null);
           if (element) {
-            const rect = element.getBoundingClientRect()
+            const rect = element.getBoundingClientRect();
+            // Piccolo delay aggiuntivo per assicurarsi che il cleanup sia completato
             setTimeout(() => {
-              setContactTriggerRect(rect)
-              setSelectedContact(targetContact)
-            }, 50)
+              setContactTriggerRect(rect);
+              setSelectedContact(targetContact);
+            }, 50);
           }
-        }, 1200)
-      }, 100)
+        }, 1200);
+      }, 100); // Timing ridotto per migliori performance
+    } else {
+      console.log('Contact not found in current list');
     }
-
+    
+    // Clean up URL parameters after a delay
     setTimeout(() => {
       if (window.history.replaceState) {
-        const url = new URL(window.location.href)
-        url.searchParams.delete("id")
-        url.searchParams.delete("t")
-        window.history.replaceState({}, document.title, url.toString())
+        const url = new URL(window.location.href);
+        url.searchParams.delete('id');
+        url.searchParams.delete('t');
+        window.history.replaceState({}, document.title, url.toString());
       }
-    }, 500)
-  }
+    }, 500);
+  };
 
-  // Event listeners for search and URL changes
+  // Listener per l'evento custom dalla search bar
   useEffect(() => {
     const handleSearchResultSelected = (event: CustomEvent) => {
-      const { id } = event.detail
+      console.log('Search result selected event received:', event.detail);
+      const { id } = event.detail;
       if (id) {
-        highlightAndScrollToContact(id)
+        highlightAndScrollToContact(id);
       }
-    }
+    };
 
-    window.addEventListener("searchResultSelected", handleSearchResultSelected as EventListener)
-
+    console.log('Adding search result listener');
+    window.addEventListener('searchResultSelected', handleSearchResultSelected as EventListener);
+    
     return () => {
-      window.removeEventListener("searchResultSelected", handleSearchResultSelected as EventListener)
-    }
-  }, [contacts])
+      console.log('Removing search result listener');
+      window.removeEventListener('searchResultSelected', handleSearchResultSelected as EventListener);
+    };
+  }, [contacts]);
 
+  // Listener per i cambiamenti dell'URL (popstate)
   useEffect(() => {
     const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search)
-      const contactId = params.get("id")
-
+      console.log('Pop state event received');
+      const params = new URLSearchParams(window.location.search);
+      const contactId = params.get('id');
+      
+      console.log('Contact ID from URL:', contactId);
       if (contactId && contacts.length > 0) {
-        highlightAndScrollToContact(contactId)
+        highlightAndScrollToContact(contactId);
       }
-    }
+    };
 
-    window.addEventListener("popstate", handlePopState)
-
+    console.log('Adding popstate listener');
+    window.addEventListener('popstate', handlePopState);
+    
     return () => {
-      window.removeEventListener("popstate", handlePopState)
-    }
-  }, [contacts])
+      console.log('Removing popstate listener');
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [contacts]);
 
+  // Gestisci l'highlight del contatto dalla URL
   useEffect(() => {
     if (!isLoading && contacts.length > 0) {
-      const params = new URLSearchParams(window.location.search)
-      const contactId = params.get("id")
-
+      const params = new URLSearchParams(window.location.search);
+      const contactId = params.get('id');
+      
       if (contactId) {
-        highlightAndScrollToContact(contactId)
+        highlightAndScrollToContact(contactId);
       }
     }
-  }, [contacts, isLoading])
-
+  }, [contacts, isLoading]);
+  
+  // Funzione per caricare i contatti
   const loadContacts = async () => {
     try {
-      setIsLoading(true)
-
-      const queryParams = new URLSearchParams()
-      queryParams.append("page", currentPage.toString())
-      if (selectedStatus) queryParams.append("status", selectedStatus)
-
+      setIsLoading(true);
+      
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', currentPage.toString());
+      if (selectedStatus) queryParams.append('status', selectedStatus);
+      
       const response = await fetch(`${API_BASE_URL}/api/leads?${queryParams.toString()}`, {
-        credentials: "include",
-      })
-      const result = await response.json()
-
+        credentials: 'include'
+      });
+      const result = await response.json();
+      
       if (result.success) {
         const transformedContacts: Contact[] = result.data.map((lead: any) => ({
           _id: lead._id,
@@ -475,87 +572,84 @@ export default function ContactsPage() {
           updatedAt: lead.updatedAt,
           message: lead.message || lead.extendedData?.formData?.message || "",
           service: lead.service || lead.extendedData?.formData?.service || "",
-          value: lead.value !== undefined ? lead.value : lead.extendedData?.value || 0,
-          extendedData: lead.extendedData,
-        }))
-
-        setContacts(transformedContacts)
-        setTotalPages(Math.ceil(result.pagination.total / result.pagination.limit) || 1)
+          value: lead.value !== undefined ? lead.value : (lead.extendedData?.value || 0),
+          extendedData: lead.extendedData
+        }));
+        
+        setContacts(transformedContacts);
+        setTotalPages(Math.ceil(result.pagination.total / result.pagination.limit) || 1);
       } else {
-        toast("error", "Errore", "Impossibile caricare i contatti")
+        toast("error", "Errore", "Impossibile caricare i contatti");
       }
-
-      setIsLoading(false)
+      
+      setIsLoading(false);
     } catch (error) {
-      console.error("Error loading contacts:", error)
-      setIsLoading(false)
-      toast("error", "Errore", "Impossibile caricare i contatti")
+      console.error("Error loading contacts:", error);
+      setIsLoading(false);
+      toast("error", "Errore", "Impossibile caricare i contatti");
     }
-  }
-
+  };
+  
+  // FUNZIONE AGGIORNATA: Gestisce il click su un contatto con coordinate
   const handleContactClick = (contact: Contact, event: React.MouseEvent) => {
+    // Se c'è già un modal aperto, chiudilo immediatamente senza animazione
     if (selectedContact) {
-      setSelectedContact(null)
-      setContactTriggerRect(null)
+      setSelectedContact(null);
+      setContactTriggerRect(null);
     }
-
-    const targetElement = event.currentTarget as HTMLElement
-    const rect = targetElement.getBoundingClientRect()
-
+    
+    // Ottieni le coordinate dell'elemento cliccato
+    const targetElement = event.currentTarget as HTMLElement;
+    const rect = targetElement.getBoundingClientRect();
+    
+    console.log('Contact clicked:', contact.name, 'at coordinates:', rect);
+    
+    // Piccolo delay per assicurarsi che il cleanup sia completato
     setTimeout(() => {
-      setContactTriggerRect(rect)
-      setSelectedContact(contact)
-    }, 10)
-  }
-
+      // Imposta il nuovo contatto selezionato con le coordinate
+      setContactTriggerRect(rect);
+      setSelectedContact(contact);
+    }, 10);
+  };
+  
+  // Ottiene l'icona appropriata per il tipo di fonte
   const getSourceIcon = (contact: Contact) => {
-    if (contact.source === "facebook") {
+    if (contact.source === 'facebook') {
       return (
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-md">
-          <svg
-            className="w-5 h-5 text-white"
-            fill="currentColor"
-            viewBox="0 0 287.56 191"
-            preserveAspectRatio="xMidYMid meet"
-          >
-            <path
-              fill="currentColor"
-              d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"
-            />
+        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+          <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 287.56 191" preserveAspectRatio="xMidYMid meet">
+            <path fill="#0081fb" d="M31.06,126c0,11,2.41,19.41,5.56,24.51A19,19,0,0,0,53.19,160c8.1,0,15.51-2,29.79-21.76,11.44-15.83,24.92-38,34-52l15.36-23.6c10.67-16.39,23-34.61,37.18-47C181.07,5.6,193.54,0,206.09,0c21.07,0,41.14,12.21,56.5,35.11,16.81,25.08,25,56.67,25,89.27,0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191V160c17.63,0,22-16.2,22-34.74,0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16c-18.2,32.27-22.81,39.62-31.91,51.75C84.74,183,71.12,191,53.19,191c-21.27,0-34.72-9.21-43-23.09C3.34,156.6,0,141.76,0,124.85Z"/>
+            <path fill="#0064e1" d="M24.49,37.3C38.73,15.35,59.28,0,82.85,0c13.65,0,27.22,4,41.39,15.61,15.5,12.65,32,33.48,52.63,67.81l7.39,12.32c17.84,29.72,28,45,33.93,52.22,7.64,9.26,13,12,19.94,12,17.63,0,22-16.2,22-34.74l27.4-.86c0,19.38-3.82,33.62-10.32,44.87C271,180.13,258.72,191,238.13,191c-12.8,0-24.14-2.78-36.68-14.61-9.64-9.08-20.91-25.21-29.58-39.71L146.08,93.6c-12.94-21.62-24.81-37.74-31.68-45C107,40.71,97.51,31.23,82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78Z"/>
+            <path fill="#0082fb" d="M82.35,31.23c-12.27,0-22.69,8.61-31.41,21.78C38.61,71.62,31.06,99.34,31.06,126c0,11,2.41,19.41,5.56,24.51L10.14,167.91C3.34,156.6,0,141.76,0,124.85,0,94.1,8.44,62.05,24.49,37.3,38.73,15.35,59.28,0,82.85,0Z"/>
           </svg>
         </div>
-      )
+      );
     } else {
       return (
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center flex-shrink-0 shadow-md">
-          <Globe className="w-5 h-5 text-white" />
+        <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0">
+          <Globe className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
         </div>
-      )
+      );
     }
-  }
+  };
 
+  // Ottiene l'etichetta del filtro attivo
   const getActiveFilterLabel = () => {
     if (selectedStatus) {
-      switch (selectedStatus) {
-        case "new":
-          return "Nuovi"
-        case "contacted":
-          return "Contattati"
-        case "qualified":
-          return "Qualificati"
-        case "opportunity":
-          return "Opportunità"
-        case "customer":
-          return "Clienti"
-        case "lost":
-          return "Persi"
-        default:
-          return selectedStatus
+      switch(selectedStatus) {
+        case "new": return "Nuovi";
+        case "contacted": return "Contattati";
+        case "qualified": return "Qualificati";
+        case "opportunity": return "Opportunità";
+        case "customer": return "Clienti";
+        case "lost": return "Persi";
+        default: return selectedStatus;
       }
     }
-    return "Tutti gli stati"
-  }
+    return "Tutti gli stati";
+  };
 
+  // Definizioni dei filtri
   const statusFilters = [
     { key: "", label: "Tutti" },
     { key: "new", label: "Nuovi" },
@@ -563,157 +657,122 @@ export default function ContactsPage() {
     { key: "qualified", label: "Qualificati" },
     { key: "opportunity", label: "Opportunità" },
     { key: "customer", label: "Clienti" },
-    { key: "lost", label: "Persi" },
-  ]
-
+    { key: "lost", label: "Persi" }
+  ];
+  
   if (isLoading && contacts.length === 0) {
-    return <LoadingSpinner />
+    return <LoadingSpinner />;
   }
-
+  
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
       <div className="w-full">
-        {/* Enhanced page header */}
-        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 sticky top-0 z-40">
-          <div className="px-6 py-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Contatti</h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">Gestisci i tuoi lead e contatti</p>
+        {/* Dropdown filtro stato mobile-first */}
+        <div className="px-4 py-4 sm:px-6">
+          <div className="relative" ref={filterDropdownRef}>
+            <button
+              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+              className="w-full sm:w-auto bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-left flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+            >
+              <span className="text-sm font-medium text-zinc-900 dark:text-white">{getActiveFilterLabel()}</span>
+              <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isFilterDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 sm:right-auto sm:w-64 mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-20 animate-fade-in">
+                <div className="p-2">
+                  {statusFilters.map((filter) => (
+                    <button
+                      key={filter.key}
+                      onClick={() => {
+                        setSelectedStatus(filter.key);
+                        setCurrentPage(1);
+                        setIsFilterDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+                        selectedStatus === filter.key
+                          ? 'bg-primary text-white'
+                          : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700'
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-
-              {/* Enhanced filter dropdown */}
-              <div className="relative" ref={filterDropdownRef}>
-                <button
-                  onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                  className="w-full sm:w-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl px-6 py-3 text-left flex items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 shadow-sm hover:shadow-md min-w-[200px]"
-                >
-                  <div className="flex items-center gap-3">
-                    <Filter className="w-4 h-4 text-gray-500" />
-                    <span className="font-medium text-gray-900 dark:text-white">{getActiveFilterLabel()}</span>
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isFilterDropdownOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-
-                {isFilterDropdownOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                    className="absolute top-full left-0 right-0 sm:right-auto sm:w-64 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden"
-                  >
-                    <div className="p-2">
-                      {statusFilters.map((filter) => (
-                        <button
-                          key={filter.key}
-                          onClick={() => {
-                            setSelectedStatus(filter.key)
-                            setCurrentPage(1)
-                            setIsFilterDropdownOpen(false)
-                          }}
-                          className={`w-full text-left px-4 py-3 text-sm rounded-lg transition-all duration-200 ${
-                            selectedStatus === filter.key
-                              ? "bg-blue-600 text-white shadow-md"
-                              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          }`}
-                        >
-                          {filter.label}
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Enhanced contacts list */}
-        <div className="w-full px-6 py-6">
+        {/* Lista contatti - Mobile ottimizzato */}
+        <div className="w-full">
           {contacts.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
-                <Users className="w-12 h-12 text-gray-400" />
-              </div>
+            <div className="p-12 text-center text-zinc-500">
               {selectedStatus ? (
                 <div className="space-y-4">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Nessun contatto trovato</h3>
-                  <p className="text-gray-600 dark:text-gray-400">Non ci sono contatti con i filtri selezionati.</p>
-                  <button
-                    onClick={() => setSelectedStatus("")}
-                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  <p>Nessun contatto trovato con i filtri selezionati.</p>
+                  <button 
+                    onClick={() => {
+                      setSelectedStatus("");
+                    }}
+                    className="bg-primary hover:bg-primary-hover text-white font-medium py-2 px-4 rounded-lg transition-colors"
                   >
                     Cancella filtri
                   </button>
                 </div>
               ) : (
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Nessun contatto disponibile</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mt-2">
-                    I tuoi contatti appariranno qui quando ne avrai.
-                  </p>
-                </div>
+                <p>Nessun contatto disponibile.</p>
               )}
             </div>
           ) : (
             <>
-              {/* Mobile: Enhanced card layout */}
+              {/* Mobile: Lista a card */}
               <div className="sm:hidden">
-                <div className="space-y-4">
+                <div className="space-y-2 px-1">
                   {contacts.map((contact) => (
-                    <motion.div
-                      key={contact._id}
+                    <div 
+                      key={contact._id} 
                       id={`contact-${contact._id}`}
-                      className={`bg-white dark:bg-gray-800 rounded-2xl p-6 transition-all duration-300 cursor-pointer border border-gray-200/50 dark:border-gray-700/50 ${
-                        highlightedContactId === contact._id || highlightedContactId === contact.leadId
-                          ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 ring-2 ring-orange-300/50 shadow-lg scale-[1.02]"
-                          : "hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:shadow-md hover:scale-[1.01]"
+                      className={`bg-white dark:bg-zinc-800 rounded-lg p-4 transition-all duration-500 cursor-pointer ${
+                        (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
+                          ? 'bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-300/40 shadow-md scale-[1.01]' 
+                          : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                       }`}
                       onClick={(e) => handleContactClick(contact, e)}
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.98 }}
                     >
-                      <div className="flex items-start space-x-4">
+                      <div className="flex items-start space-x-3">
                         {getSourceIcon(contact)}
                         <div className="flex-1 min-w-0">
-                          <h3
-                            className={`text-lg font-semibold truncate transition-colors ${
-                              highlightedContactId === contact._id || highlightedContactId === contact.leadId
-                                ? "text-orange-800 dark:text-orange-200"
-                                : "text-gray-900 dark:text-white"
-                            }`}
-                          >
+                          <h3 className={`font-semibold truncate transition-colors ${
+                            (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
+                              ? 'text-orange-800 dark:text-orange-200' 
+                              : 'text-zinc-900 dark:text-white'
+                          }`}>
                             {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                           </h3>
-                          <p
-                            className={`text-sm mt-1 transition-colors font-medium ${
-                              highlightedContactId === contact._id || highlightedContactId === contact.leadId
-                                ? "text-orange-600 dark:text-orange-300"
-                                : "text-blue-600 dark:text-blue-400"
-                            }`}
-                          >
-                            {contact.email}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{contact.phone}</p>
-                          <div className="flex items-center justify-between mt-4">
-                            <p className="text-xs text-gray-500 font-medium">{formatDate(contact.createdAt)}</p>
+                          <p className={`text-sm mt-1 transition-colors ${
+                            (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
+                              ? 'text-orange-600 dark:text-orange-300' 
+                              : 'text-primary'
+                          }`}>{contact.email}</p>
+                          <p className="text-sm text-zinc-500 mt-1">{contact.phone}</p>
+                          <div className="flex items-center justify-between mt-3">
+                            <p className="text-xs text-zinc-400">{formatDate(contact.createdAt)}</p>
                             <StatusBadge status={contact.status} />
                           </div>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               </div>
 
-              {/* Desktop: Enhanced table */}
-              <div className="hidden sm:block">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-200/50 dark:border-gray-700/50">
-                  {/* Enhanced table header */}
-                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-8 py-5 border-b border-gray-200/50 dark:border-gray-700/50">
-                    <div className="grid grid-cols-12 gap-6 items-center text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+              {/* Desktop: Tabella vera e propria */}
+              <div className="hidden sm:block overflow-x-auto mx-4 sm:mx-6">
+                <div className="min-w-full bg-white dark:bg-zinc-800 rounded-xl shadow-sm overflow-hidden">
+                  {/* Header della tabella */}
+                  <div className="bg-zinc-50 dark:bg-zinc-700/50 px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
+                    <div className="grid grid-cols-12 gap-4 items-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
                       <div className="col-span-3">Nome</div>
                       <div className="col-span-3">Email</div>
                       <div className="col-span-2">Telefono</div>
@@ -723,109 +782,107 @@ export default function ContactsPage() {
                     </div>
                   </div>
 
-                  {/* Enhanced table rows */}
-                  <div className="divide-y divide-gray-200/50 dark:divide-gray-700/50">
+                  {/* Righe della tabella */}
+                  <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
                     {contacts.map((contact) => (
-                      <motion.div
-                        key={contact._id}
+                      <div 
+                        key={contact._id} 
                         id={`contact-${contact._id}`}
                         data-lead-id={contact.leadId}
-                        className={`px-8 py-6 transition-all duration-300 cursor-pointer ${
-                          highlightedContactId === contact._id || highlightedContactId === contact.leadId
-                            ? "bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 ring-2 ring-orange-300/50 shadow-md scale-[1.001]"
-                            : "hover:bg-gray-50 dark:hover:bg-gray-700/30"
+                        className={`px-6 py-4 transition-all duration-500 cursor-pointer ${
+                          (highlightedContactId === contact._id || highlightedContactId === contact.leadId)
+                            ? 'bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-300/40 shadow-md scale-[1.002]' 
+                            : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50'
                         }`}
                         onClick={(e) => handleContactClick(contact, e)}
-                        whileHover={{ y: -1 }}
-                        whileTap={{ scale: 0.995 }}
                       >
-                        <div className="grid grid-cols-12 gap-6 items-center">
-                          {/* Enhanced name with icon */}
-                          <div className="col-span-3 flex items-center space-x-4">
+                        <div className="grid grid-cols-12 gap-4 items-center">
+                          {/* Nome con icona */}
+                          <div className="col-span-3 flex items-center space-x-3">
                             {getSourceIcon(contact)}
                             <div className="min-w-0 flex-1">
-                              <h3
-                                className={`font-semibold truncate transition-colors text-base ${
-                                  highlightedContactId === contact._id || highlightedContactId === contact.leadId
-                                    ? "text-orange-800 dark:text-orange-200"
-                                    : "text-gray-900 dark:text-white"
-                                }`}
-                              >
+                              <h3 className={`font-semibold truncate transition-colors ${
+                                (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
+                                  ? 'text-orange-800 dark:text-orange-200' 
+                                  : 'text-zinc-900 dark:text-white'
+                              }`}>
                                 {contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ")}
                               </h3>
                             </div>
                           </div>
 
-                          {/* Enhanced email */}
+                          {/* Email */}
                           <div className="col-span-3">
-                            <p
-                              className={`text-sm truncate transition-colors font-medium ${
-                                highlightedContactId === contact._id || highlightedContactId === contact.leadId
-                                  ? "text-orange-600 dark:text-orange-300"
-                                  : "text-blue-600 dark:text-blue-400"
-                              }`}
-                            >
+                            <p className={`text-sm truncate transition-colors ${
+                              (highlightedContactId === contact._id || highlightedContactId === contact.leadId) 
+                                ? 'text-orange-600 dark:text-orange-300' 
+                                : 'text-primary'
+                            }`}>
                               {contact.email}
                             </p>
                           </div>
 
-                          {/* Enhanced phone */}
+                          {/* Telefono */}
                           <div className="col-span-2">
-                            <p className="text-sm text-gray-900 dark:text-white truncate font-medium">
+                            <p className="text-sm text-zinc-900 dark:text-white truncate">
                               {contact.phone || "Non disponibile"}
                             </p>
                           </div>
 
-                          {/* Enhanced source */}
+                          {/* Fonte */}
                           <div className="col-span-2">
-                            <p className="text-sm text-gray-600 dark:text-gray-400 truncate font-medium">
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
                               {formatSource(contact.source, contact.formType)}
                             </p>
                           </div>
 
-                          {/* Enhanced date */}
+                          {/* Data */}
                           <div className="col-span-1">
-                            <p className="text-xs text-gray-500 truncate font-medium">
+                            <p className="text-xs text-zinc-500 truncate">
                               {formatDate(contact.createdAt)}
                             </p>
                           </div>
 
-                          {/* Enhanced status */}
+                          {/* Stato */}
                           <div className="col-span-1 flex justify-end">
                             <StatusBadge status={contact.status} />
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 </div>
               </div>
             </>
           )}
-
-          {/* Enhanced pagination */}
+          
+          {/* Paginazione */}
           {contacts.length > 0 && totalPages > 1 && (
-            <div className="mt-8 flex justify-center">
-              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            <div className="px-4 sm:px-6 py-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </div>
       </div>
-
-      {/* Enhanced modal with AnimatePresence */}
+      
+      {/* Modale dettagli contatto con AnimatePresence */}
       <AnimatePresence mode="wait">
         {selectedContact && (
-          <ContactDetailModal
-            key={selectedContact._id}
+          <ContactDetailModal 
+            key={selectedContact._id} // Key unica per ogni modal
             contact={selectedContact}
             onClose={() => {
-              setSelectedContact(null)
-              setContactTriggerRect(null)
+              setSelectedContact(null);
+              setContactTriggerRect(null);
             }}
             triggerRect={contactTriggerRect}
           />
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }
